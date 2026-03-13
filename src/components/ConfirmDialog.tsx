@@ -1,37 +1,36 @@
-import React, {
+import {
   createContext,
   useCallback,
   useContext,
   useEffect,
   useRef,
   useState,
+  type ReactNode,
 } from 'react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
-const ConfirmContext = createContext(null);
+type ConfirmTone = 'default' | 'danger';
+export interface ConfirmOptions {
+  title?: string;
+  body?: string;
+  confirmText?: string;
+  cancelText?: string;
+  tone?: ConfirmTone;
+}
 
-/**
- * Wrap your app with <ConfirmProvider>. Use `useConfirm()` anywhere
- * to ask the user to confirm something:
- *
- *   const confirm = useConfirm();
- *   const ok = await confirm({
- *     title: 'Delete item',
- *     body: 'Are you sure?',
- *     confirmText: 'Delete',
- *     cancelText: 'Cancel',
- *     tone: 'danger', // adds red accents
- *   });
- *   if (ok) { ... }
- */
-export function ConfirmProvider({ children }) {
+type ConfirmFn = (opts?: ConfirmOptions) => Promise<boolean>;
+const ConfirmContext = createContext<ConfirmFn | null>(null);
+
+export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
-  const [options, setOptions] = useState({});
-  const resolverRef = useRef(null);
-  const previouslyFocusedRef = useRef(null);
-  const confirmBtnRef = useRef(null);
+  const [options, setOptions] = useState<ConfirmOptions>({});
+  const resolverRef = useRef<((ok: boolean) => void) | null>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  const confirmBtnRef = useRef<HTMLButtonElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
 
-  const confirm = useCallback((opts = {}) => {
-    return new Promise((resolve) => {
+  const confirm = useCallback<ConfirmFn>((opts = {}) => {
+    return new Promise<boolean>((resolve) => {
       resolverRef.current = resolve;
       setOptions({
         title: 'Confirm',
@@ -41,14 +40,13 @@ export function ConfirmProvider({ children }) {
         tone: 'default',
         ...opts,
       });
-      previouslyFocusedRef.current = document.activeElement;
+      previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
       setOpen(true);
     });
   }, []);
 
   const close = useCallback(() => {
     setOpen(false);
-    // restore focus to whatever had focus before opening
     const el = previouslyFocusedRef.current;
     if (el && typeof el.focus === 'function') el.focus();
   }, []);
@@ -57,44 +55,26 @@ export function ConfirmProvider({ children }) {
     resolverRef.current?.(true);
     close();
   };
+
   const onCancel = () => {
     resolverRef.current?.(false);
     close();
   };
-
-  // ESC key + very basic focus trapping
-  useEffect(() => {
-    function onKeyDown(e) {
-      if (!open) return;
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onCancel();
-      }
-      if (e.key === 'Tab') {
-        const scope = document.querySelector('[data-confirm-dialog]');
-        if (!scope) return;
-        const focusables = Array.from(scope.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
-          .filter(el => !el.hasAttribute('disabled'));
-        if (focusables.length === 0) return;
-        const idx = focusables.indexOf(document.activeElement);
-        let nextIdx = idx;
-        if (e.shiftKey) nextIdx = idx <= 0 ? focusables.length - 1 : idx - 1;
-        else nextIdx = idx === focusables.length - 1 ? 0 : idx + 1;
-        if (idx === -1 || nextIdx !== idx) {
-          e.preventDefault();
-          focusables[nextIdx].focus();
-        }
-      }
-    }
-    document.addEventListener('keydown', onKeyDown, true);
-    return () => document.removeEventListener('keydown', onKeyDown, true);
-  }, [open, onCancel]);
 
   useEffect(() => {
     if (open && confirmBtnRef.current) {
       confirmBtnRef.current.focus();
     }
   }, [open]);
+  
+  useFocusTrap({
+    containerRef: dialogRef,
+    active: open,
+    initialFocusRef: confirmBtnRef,      // focus the confirm button on open
+    onEscape: onCancel,                  // ESC closes
+    restoreFocusRef: previouslyFocusedRef, // return focus to the opener
+    loop: true,
+  });
 
   return (
     <ConfirmContext.Provider value={confirm}>
@@ -103,12 +83,12 @@ export function ConfirmProvider({ children }) {
         <div
           role="presentation"
           onMouseDown={(e) => {
-            // close on backdrop click (not on dialog click)
             if (e.target === e.currentTarget) onCancel();
           }}
           style={overlayStyle}
         >
           <div
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="confirm-title"
@@ -123,23 +103,20 @@ export function ConfirmProvider({ children }) {
               {options.title}
             </h3>
             {options.body && (
-              <div
-                id="confirm-desc"
-                style={{ marginBottom: 16, whiteSpace: 'pre-wrap' }}
-              >
+              <div id="confirm-desc" style={{ marginBottom: 16, whiteSpace: 'pre-wrap' }}>
                 {options.body}
               </div>
             )}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
               <button onClick={onCancel}>
-                {options.cancelText || 'Cancel'}
+                {options.cancelText ?? 'Cancel'}
               </button>
               <button
                 ref={confirmBtnRef}
                 onClick={onConfirm}
                 style={options.tone === 'danger' ? dangerBtn : undefined}
               >
-                {options.confirmText || 'Confirm'}
+                {options.confirmText ?? 'Confirm'}
               </button>
             </div>
           </div>
@@ -149,15 +126,14 @@ export function ConfirmProvider({ children }) {
   );
 }
 
-export function useConfirm() {
+export function useConfirm(): ConfirmFn {
   const ctx = useContext(ConfirmContext);
   if (!ctx) throw new Error('useConfirm must be used inside a <ConfirmProvider>');
   return ctx;
 }
 
-/* ---------- Inline styles (self-contained) ---------- */
-
-const overlayStyle = {
+/* ---------- styles (same as before) ---------- */
+const overlayStyle: React.CSSProperties = {
   position: 'fixed',
   inset: 0,
   background: 'rgba(0,0,0,0.45)',
@@ -167,8 +143,7 @@ const overlayStyle = {
   padding: 16,
   zIndex: 1000,
 };
-
-const dialogStyle = {
+const dialogStyle: React.CSSProperties = {
   maxWidth: 520,
   width: '100%',
   background: '#fff',
@@ -178,13 +153,11 @@ const dialogStyle = {
   boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
   padding: 16,
 };
-
-const dialogDanger = {
+const dialogDanger: React.CSSProperties = {
   border: '1px solid #ffb4b4',
   boxShadow: '0 10px 30px rgba(255,0,0,0.12)',
 };
-
-const dangerBtn = {
+const dangerBtn: React.CSSProperties = {
   background: '#b00020',
   color: 'white',
   border: '1px solid #b00020',

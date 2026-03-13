@@ -92,6 +92,7 @@ deployment_keys.tar
 release-artifacts-*
 
 # Editor directories and files
+.vs/*
 .vscode/*
 !.vscode/extensions.json
 .idea

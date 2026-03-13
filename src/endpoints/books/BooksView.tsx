@@ -1,61 +1,27 @@
-// src/endpoints/books/BooksView.jsx
 import { useEffect, useMemo, useState } from 'react';
 import { fetchBooks, upsertBook, deleteBook } from './api';
+import type { Book } from '../../types';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 
 export default function BooksView() {
-  const [rows, setRows] = useState([]);
+  const [rows, setRows] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // search/sort
   const [query, setQuery] = useState('');
-  const [sort, setSort] = useState({ key: 'name', dir: 'asc' });
+  const [sort, setSort] = useState<{ key: keyof Book; dir: 'asc' | 'desc' }>({
+    key: 'name',
+    dir: 'asc',
+  });
 
-  // form state
   const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState(emptyBook());
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<Book>(emptyBook());
   const [formErr, setFormErr] = useState('');
 
-  // Optional: transient message area
-  const toast = useToast();
   const confirm = useConfirm();
-
-  // Add a helper to show transient messages (basic)
-  const notify = (msg) => {
-    toast({ title: msg });
-    setTimeout(() => setToast(''), 2500);
-  };
-
-  // NEW: handle delete with optimistic UI and rollback
-  const onDelete = async (row) => {
-    const id = row?.id;
-    if (!id) return;
-    
-    const ok = await confirm({
-      title: 'Delete Book',
-      body: `Delete book "${id}"? This cannot be undone.`,
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
-      tone: 'danger',
-    });
-    if (!ok) return;
-
-    // optimistic remove
-    const prev = rows;
-    setRows(prev.filter(b => b.id !== id));
-
-    try {
-      await deleteBook(id); // DELETE /rmce/objects/book/{id}
-      toast({ variant: 'success', title: 'Deleted', description: `Book "${id}" deleted.` });
-    } catch (err) {
-      // rollback on error
-      setRows(prev);
-      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err) });
-    }
-  };
+  const toast = useToast();
 
   useEffect(() => {
     let mounted = true;
@@ -71,15 +37,18 @@ export default function BooksView() {
         if (mounted) setLoading(false);
       }
     })();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return rows;
-    return rows.filter(b =>
-      [b.id, b.code, b.name, b.abbreviation, b.isbn]
-        .some(v => String(v ?? '').toLowerCase().includes(q))
+    return rows.filter((b) =>
+      [b.id, b.code, b.name, b.abbreviation, b.isbn].some((v) =>
+        String(v ?? '').toLowerCase().includes(q)
+      )
     );
   }, [rows, query]);
 
@@ -87,8 +56,8 @@ export default function BooksView() {
     const arr = [...filtered];
     const { key, dir } = sort;
     arr.sort((a, b) => {
-      const av = (a?.[key] ?? '').toString();
-      const bv = (b?.[key] ?? '').toString();
+      const av = String(a?.[key] ?? '');
+      const bv = String(b?.[key] ?? '');
       if (av < bv) return dir === 'asc' ? -1 : 1;
       if (av > bv) return dir === 'asc' ? 1 : -1;
       return 0;
@@ -96,8 +65,10 @@ export default function BooksView() {
     return arr;
   }, [filtered, sort]);
 
-  const onSort = (key) =>
-    setSort(prev => (prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
+  const onSort = (key: keyof Book) =>
+    setSort((prev) =>
+      prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }
+    );
 
   const startNew = () => {
     setEditingId(null);
@@ -106,15 +77,9 @@ export default function BooksView() {
     setShowForm(true);
   };
 
-  const startEdit = (row) => {
+  const startEdit = (row: Book) => {
     setEditingId(row.id);
-    setForm({
-      id: row.id ?? '',
-      code: row.code ?? '',
-      name: row.name ?? '',
-      abbreviation: row.abbreviation ?? '',
-      isbn: row.isbn ?? '',
-    });
+    setForm({ ...row });
     setFormErr('');
     setShowForm(true);
   };
@@ -124,17 +89,17 @@ export default function BooksView() {
     setFormErr('');
   };
 
-  const validate = (b) => {
+  const validate = (b: Book): string => {
     if (!b.id?.trim()) return 'id is required';
     if (!b.name?.trim()) return 'name is required';
     if (!b.code?.trim()) return 'code is required';
     if (!b.abbreviation?.trim()) return 'abbreviation is required';
     if (!b.isbn?.trim()) return 'isbn is required';
     return '';
-  };
+    };
 
   const saveForm = async () => {
-    const payload = {
+    const payload: Book = {
       id: form.id.trim(),
       code: form.code.trim(),
       name: form.name.trim(),
@@ -142,20 +107,21 @@ export default function BooksView() {
       isbn: form.isbn.trim(),
     };
     const msg = validate(payload);
-    if (msg) { setFormErr(msg); return; }
+    if (msg) {
+      setFormErr(msg);
+      return;
+    }
 
     try {
-      // Default: POST to collection path '/rmce/objects/book/'
-      // If your server requires PUT /rmce/objects/book/{id}, change opts below:
+      // default POST to /rmce/objects/book/
       const opts = editingId
-        ? { method: 'POST', useResourceIdPath: false } // or { method: 'PUT', useResourceIdPath: true }
-        : { method: 'POST', useResourceIdPath: false };
+        ? { method: 'POST' as const, useResourceIdPath: false }
+        : { method: 'POST' as const, useResourceIdPath: false };
 
       await upsertBook(payload, opts);
 
-      // optimistic UI update
-      setRows(prev => {
-        const idx = prev.findIndex(b => b.id === payload.id);
+      setRows((prev) => {
+        const idx = prev.findIndex((b) => b.id === payload.id);
         if (idx >= 0) {
           const copy = [...prev];
           copy[idx] = { ...copy[idx], ...payload };
@@ -165,9 +131,41 @@ export default function BooksView() {
       });
 
       setShowForm(false);
+      setFormErr('');
       toast({ variant: 'success', title: 'Saved', description: `Book "${payload.id}" saved.` });
     } catch (err) {
-      toast({ variant: 'danger', title: 'Save failed', description: String(err instanceof Error ? err.message : err) });
+      toast({
+        variant: 'danger',
+        title: 'Save failed',
+        description: String(err instanceof Error ? err.message : err),
+      });
+    }
+  };
+
+  const onDelete = async (row: Book) => {
+    const id = row?.id;
+    if (!id) return;
+    const ok = await confirm({
+      title: 'Delete Book',
+      body: `Delete book "${id}"? This cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      tone: 'danger',
+    });
+    if (!ok) return;
+
+    const prev = rows;
+    setRows(prev.filter((b) => b.id !== id));
+    try {
+      await deleteBook(id);
+      toast({ variant: 'success', title: 'Deleted', description: `Book "${id}" deleted.` });
+    } catch (err) {
+      setRows(prev);
+      toast({
+        variant: 'danger',
+        title: 'Delete failed',
+        description: String(err instanceof Error ? err.message : err),
+      });
     }
   };
 
@@ -178,31 +176,26 @@ export default function BooksView() {
     <>
       <h2>Books</h2>
 
-      {/* Simple toast */}
-      {toast && <div style={{ margin: '8px 0', color: '#044', background: '#e6f7ff', padding: 8, borderRadius: 6 }}>{toast}</div>}
-
-      {/* Create / Edit Bar */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
         <button onClick={startNew}>New Book</button>
         <input
           value={query}
-          onChange={e => setQuery(e.target.value)}
+          onChange={(e) => setQuery(e.target.value)}
           placeholder="Search books…"
           style={{ padding: 8, width: 360, maxWidth: '100%' }}
           aria-label="Search books"
         />
       </div>
 
-      {/* Form Panel */}
       {showForm && (
         <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16, background: '#fafafa' }}>
           <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Book' : 'New Book'}</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput label="ID" value={form.id} onChange={v => setForm(s => ({ ...s, id: v }))} disabled={!!editingId} />
-            <LabeledInput label="Code" value={form.code} onChange={v => setForm(s => ({ ...s, code: v }))} />
-            <LabeledInput label="Name" value={form.name} onChange={v => setForm(s => ({ ...s, name: v }))} />
-            <LabeledInput label="Abbreviation" value={form.abbreviation} onChange={v => setForm(s => ({ ...s, abbreviation: v }))} />
-            <LabeledInput label="ISBN" value={form.isbn} onChange={v => setForm(s => ({ ...s, isbn: v }))} />
+            <LabeledInput label="ID" value={form.id} onChange={(v) => setForm((s) => ({ ...s, id: v }))} disabled={!!editingId} />
+            <LabeledInput label="Code" value={form.code} onChange={(v) => setForm((s) => ({ ...s, code: v }))} />
+            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm((s) => ({ ...s, name: v }))} />
+            <LabeledInput label="Abbreviation" value={form.abbreviation} onChange={(v) => setForm((s) => ({ ...s, abbreviation: v }))} />
+            <LabeledInput label="ISBN" value={form.isbn} onChange={(v) => setForm((s) => ({ ...s, isbn: v }))} />
           </div>
           {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
@@ -212,7 +205,6 @@ export default function BooksView() {
         </div>
       )}
 
-      {/* Table */}
       <div style={{ overflowX: 'auto' }}>
         <table style={{ borderCollapse: 'collapse', minWidth: 900, width: '100%' }}>
           <thead>
@@ -229,8 +221,8 @@ export default function BooksView() {
             {sorted.length === 0 ? (
               <tr><td colSpan={6} style={emptyCell}>No results.</td></tr>
             ) : (
-              sorted.map((b, idx) => (
-                <tr key={b.id ?? idx}>
+              sorted.map((b) => (
+                <tr key={b.id}>
                   <td style={tdStyle}>{b.id}</td>
                   <td style={tdStyle}>{b.code}</td>
                   <td style={tdStyle}>{b.name}</td>
@@ -250,13 +242,25 @@ export default function BooksView() {
   );
 }
 
-function LabeledInput({ label, value, onChange, type = 'text', disabled = false }) {
+function LabeledInput({
+  label,
+  value,
+  onChange,
+  type = 'text',
+  disabled = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (val: string) => void;
+  type?: 'text' | 'number';
+  disabled?: boolean;
+}) {
   return (
     <label style={{ display: 'grid', gap: 6, fontSize: 14 }}>
       <span>{label}</span>
       <input
         value={value}
-        onChange={e => onChange(e.target.value)}
+        onChange={(e) => onChange(e.target.value)}
         type={type}
         disabled={disabled}
         style={{ padding: 8 }}
@@ -265,7 +269,17 @@ function LabeledInput({ label, value, onChange, type = 'text', disabled = false 
   );
 }
 
-function SortableTh({ onClick, label, sort, colKey }) {
+function SortableTh<T extends string>({
+  onClick,
+  label,
+  sort,
+  colKey,
+}: {
+  onClick: () => void;
+  label: string;
+  sort: { key: T; dir: 'asc' | 'desc' };
+  colKey: T;
+}) {
   const active = sort.key === colKey;
   const arrow = active ? (sort.dir === 'asc' ? ' ▲' : ' ▼') : '';
   return (
@@ -280,9 +294,9 @@ function SortableTh({ onClick, label, sort, colKey }) {
   );
 }
 
-const tdStyle = { borderBottom: '1px solid #f0f0f0', padding: '8px' };
-const emptyCell = { padding: 12, textAlign: 'center', color: '#666' };
+const tdStyle: React.CSSProperties = { borderBottom: '1px solid #f0f0f0', padding: '8px' };
+const emptyCell: React.CSSProperties = { padding: 12, textAlign: 'center', color: '#666' };
 
-function emptyBook() {
+function emptyBook(): Book {
   return { id: '', code: '', name: '', abbreviation: '', isbn: '' };
 }
