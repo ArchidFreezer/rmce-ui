@@ -1,6 +1,6 @@
 // src/endpoints/poisons/PoisonsView.jsx
 import { useEffect, useMemo, useState } from 'react';
-import { fetchPoisons, upsertPoison } from './api';
+import { fetchPoisons, upsertPoison, deletePoison } from './api';
 
 export default function PoisonsView() {
   const [rows, setRows] = useState([]);
@@ -16,6 +16,32 @@ export default function PoisonsView() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyPoison());
   const [formErr, setFormErr] = useState('');
+
+  const [toast, setToast] = useState('');
+  const notify = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 2500);
+  };
+
+  const onDelete = async (row) => {
+    const id = row?.id;
+    if (!id) return;
+    const ok = window.confirm(`Delete poison "${id}"? This cannot be undone.`);
+    if (!ok) return;
+
+    // optimistic remove
+    const prev = rows;
+    setRows(prev.filter(p => p.id !== id));
+
+    try {
+      await deletePoison(id); // DELETE /rmce/objects/poison/{id}
+      notify(`Deleted poison ${id}`);
+    } catch (err) {
+      setRows(prev);
+      const msg = err instanceof Error ? err.message : String(err);
+      notify(`Delete failed: ${msg}`);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -141,6 +167,7 @@ export default function PoisonsView() {
   return (
     <>
       <h2>Poisons</h2>
+      {toast && <div style={{ margin: '8px 0', color: '#044', background: '#e6f7ff', padding: 8, borderRadius: 6 }}>{toast}</div>}
 
       {/* Create / Edit Bar */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
@@ -201,6 +228,7 @@ export default function PoisonsView() {
                   <td style={tdStyle}>{p?.['level-variance']}</td>
                   <td style={tdStyle}>
                     <button onClick={() => startEdit(p)}>Edit</button>
+                    <button onClick={() => onDelete(p)} style={{ color: '#b00020' }}>Delete</button>
                   </td>
                 </tr>
               ))

@@ -1,6 +1,6 @@
 // src/endpoints/books/BooksView.jsx
 import { useEffect, useMemo, useState } from 'react';
-import { fetchBooks, upsertBook } from './api';
+import { fetchBooks, upsertBook, deleteBook } from './api';
 
 export default function BooksView() {
   const [rows, setRows] = useState([]);
@@ -16,6 +16,37 @@ export default function BooksView() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyBook());
   const [formErr, setFormErr] = useState('');
+
+  // Optional: transient message area
+  const [toast, setToast] = useState('');
+
+  // Add a helper to show transient messages (basic)
+  const notify = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 2500);
+  };
+
+  // NEW: handle delete with optimistic UI and rollback
+  const onDelete = async (row) => {
+    const id = row?.id;
+    if (!id) return;
+    const ok = window.confirm(`Delete book "${id}"? This cannot be undone.`);
+    if (!ok) return;
+
+    // optimistic remove
+    const prev = rows;
+    setRows(prev.filter(b => b.id !== id));
+
+    try {
+      await deleteBook(id); // DELETE /rmce/objects/book/{id}
+      notify(`Deleted book ${id}`);
+    } catch (err) {
+      // rollback on error
+      setRows(prev);
+      const msg = err instanceof Error ? err.message : String(err);
+      notify(`Delete failed: ${msg}`);
+    }
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -138,6 +169,9 @@ export default function BooksView() {
     <>
       <h2>Books</h2>
 
+      {/* Simple toast */}
+      {toast && <div style={{ margin: '8px 0', color: '#044', background: '#e6f7ff', padding: 8, borderRadius: 6 }}>{toast}</div>}
+
       {/* Create / Edit Bar */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
         <button onClick={startNew}>New Book</button>
@@ -194,7 +228,8 @@ export default function BooksView() {
                   <td style={tdStyle}>{b.abbreviation}</td>
                   <td style={tdStyle}>{b.isbn}</td>
                   <td style={tdStyle}>
-                    <button onClick={() => startEdit(b)}>Edit</button>
+                    <button onClick={() => startEdit(b)} style={{ marginRight: 6 }}>Edit</button>
+                    <button onClick={() => onDelete(b)} style={{ color: '#b00020' }}>Delete</button>
                   </td>
                 </tr>
               ))

@@ -18,3 +18,13 @@ export async function upsertPoison(poison, opts = {}) {
     : `${BASE}/`; // collection path with trailing slash
   return sendJson(url, method, poison);
 }
+  
+/**
+ * DELETE /rmce/objects/poison/{id}
+ */
+export async function deletePoison(id) {
+  if (!id) throw new Error('deletePoison: id is required');
+  const url = `${BASE}/${encodeURIComponent(id)}`;
+  // Use fetchJson so non-2xx throws; tolerate empty body
+  return fetchJson(url, { method: 'DELETE' });
+}

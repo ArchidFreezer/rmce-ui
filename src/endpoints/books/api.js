@@ -1,7 +1,7 @@
 // src/endpoints/books/api.js
 import { fetchJson, sendJson } from '../../api/client';
 
-const BASE = '/rmce/objects/book'; // trailing slash added in functions where needed
+const BASE = '/rmce/objects/book';
 
 export async function fetchBooks() {
   const data = await fetchJson(`${BASE}`);
@@ -11,17 +11,20 @@ export async function fetchBooks() {
   return data.books;
 }
 
-/**
- * Create or update a single book.
- * By default, POSTs to the collection path '/rmce/objects/book/' with a single JSON object payload:
- *   {"id":"BOOK_NEW_BOOK","code":"1560","name":"New Book","abbreviation":"NwBk*","isbn":"1-12345-123-4"}
- *
- * If your backend expects PUT /rmce/objects/book/{id}, set { useResourceIdPath: true, method: 'PUT' }.
- */
 export async function upsertBook(book, opts = {}) {
   const { method = 'POST', useResourceIdPath = false } = opts;
   const url = useResourceIdPath && book?.id
     ? `${BASE}/${encodeURIComponent(book.id)}`
-    : `${BASE}/`; // collection path with trailing slash
+    : `${BASE}/`;
   return sendJson(url, method, book);
+}
+
+/**
+ * DELETE /rmce/objects/book/{id}
+ */
+export async function deleteBook(id) {
+  if (!id) throw new Error('deleteBook: id is required');
+  const url = `${BASE}/${encodeURIComponent(id)}`;
+  // Use fetchJson so non-2xx throws; tolerate empty body
+  return fetchJson(url, { method: 'DELETE' });
 }
