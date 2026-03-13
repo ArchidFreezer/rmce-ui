@@ -1,6 +1,7 @@
 // src/endpoints/poisons/PoisonsView.jsx
 import { useEffect, useMemo, useState } from 'react';
 import { fetchPoisons, upsertPoison, deletePoison } from './api';
+import { useConfirm } from '../../components/ConfirmDialog';
 
 export default function PoisonsView() {
   const [rows, setRows] = useState([]);
@@ -18,6 +19,8 @@ export default function PoisonsView() {
   const [formErr, setFormErr] = useState('');
 
   const [toast, setToast] = useState('');
+  const confirm = useConfirm();
+
   const notify = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(''), 2500);
@@ -26,7 +29,14 @@ export default function PoisonsView() {
   const onDelete = async (row) => {
     const id = row?.id;
     if (!id) return;
-    const ok = window.confirm(`Delete poison "${id}"? This cannot be undone.`);
+
+    const ok = await confirm({
+      title: 'Delete Poison',
+      body: `Delete poison "${id}"? This cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      tone: 'danger',
+    });
     if (!ok) return;
 
     // optimistic remove
@@ -38,8 +48,7 @@ export default function PoisonsView() {
       notify(`Deleted poison ${id}`);
     } catch (err) {
       setRows(prev);
-      const msg = err instanceof Error ? err.message : String(err);
-      notify(`Delete failed: ${msg}`);
+      notify(`Delete failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 

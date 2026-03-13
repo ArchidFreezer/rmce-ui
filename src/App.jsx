@@ -2,6 +2,7 @@
 import { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useLocation } from 'react-router-dom';
 import { endpoints } from './endpoints/registry';
+import { ConfirmProvider } from './components/ConfirmDialog'; // <-- added import
 
 function Shell() {
   const location = useLocation();
@@ -41,10 +42,13 @@ function Shell() {
   );
 }
 
+
 export default function App() {
   return (
-    <BrowserRouter>
-      <Shell />
-    </BrowserRouter>
+    <ConfirmProvider>
+      <BrowserRouter>
+        <Shell />
+      </BrowserRouter>
+    </ConfirmProvider>
   );
 }

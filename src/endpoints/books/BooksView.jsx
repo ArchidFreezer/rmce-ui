@@ -1,6 +1,7 @@
 // src/endpoints/books/BooksView.jsx
 import { useEffect, useMemo, useState } from 'react';
 import { fetchBooks, upsertBook, deleteBook } from './api';
+import { useConfirm } from '../../components/ConfirmDialog';
 
 export default function BooksView() {
   const [rows, setRows] = useState([]);
@@ -19,6 +20,7 @@ export default function BooksView() {
 
   // Optional: transient message area
   const [toast, setToast] = useState('');
+  const confirm = useConfirm();
 
   // Add a helper to show transient messages (basic)
   const notify = (msg) => {
@@ -30,7 +32,14 @@ export default function BooksView() {
   const onDelete = async (row) => {
     const id = row?.id;
     if (!id) return;
-    const ok = window.confirm(`Delete book "${id}"? This cannot be undone.`);
+    
+    const ok = await confirm({
+      title: 'Delete Book',
+      body: `Delete book "${id}"? This cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      tone: 'danger',
+    });
     if (!ok) return;
 
     // optimistic remove
@@ -43,8 +52,7 @@ export default function BooksView() {
     } catch (err) {
       // rollback on error
       setRows(prev);
-      const msg = err instanceof Error ? err.message : String(err);
-      notify(`Delete failed: ${msg}`);
+      notify(`Delete failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
