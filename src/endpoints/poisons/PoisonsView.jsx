@@ -1,13 +1,21 @@
 // src/endpoints/poisons/PoisonsView.jsx
 import { useEffect, useMemo, useState } from 'react';
-import { fetchPoisons } from './api';
+import { fetchPoisons, upsertPoison } from './api';
 
 export default function PoisonsView() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // search/sort
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState({ key: 'name', dir: 'asc' });
+
+  // form state
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState(emptyPoison());
+  const [formErr, setFormErr] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -39,8 +47,12 @@ export default function PoisonsView() {
     const arr = [...filtered];
     const { key, dir } = sort;
     arr.sort((a, b) => {
-      const av = key === 'level' ? Number(a?.[key] ?? 0) : String(a?.[key] ?? (key === 'level-variance' ? a?.['level-variance'] : ''));
-      const bv = key === 'level' ? Number(b?.[key] ?? 0) : String(b?.[key] ?? (key === 'level-variance' ? b?.['level-variance'] : ''));
+      const av = key === 'level'
+        ? Number(a?.[key] ?? 0)
+        : String(a?.[key] ?? (key === 'level-variance' ? a?.['level-variance'] : ''));
+      const bv = key === 'level'
+        ? Number(b?.[key] ?? 0)
+        : String(b?.[key] ?? (key === 'level-variance' ? b?.['level-variance'] : ''));
       if (av < bv) return dir === 'asc' ? -1 : 1;
       if (av > bv) return dir === 'asc' ? 1 : -1;
       return 0;
@@ -51,13 +63,88 @@ export default function PoisonsView() {
   const onSort = (key) =>
     setSort(prev => (prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
 
+  const startNew = () => {
+    setEditingId(null);
+    setForm(emptyPoison());
+    setFormErr('');
+    setShowForm(true);
+  };
+
+  const startEdit = (row) => {
+    setEditingId(row.id);
+    setForm({
+      id: row.id ?? '',
+      name: row.name ?? '',
+      type: row.type ?? '',
+      level: Number(row.level ?? 0),
+      levelVariance: String(row?.['level-variance'] ?? ''),
+    });
+    setFormErr('');
+    setShowForm(true);
+  };
+
+  const cancelForm = () => {
+    setShowForm(false);
+    setFormErr('');
+  };
+
+  const validate = (p) => {
+    if (!p.id?.trim()) return 'id is required';
+    if (!p.name?.trim()) return 'name is required';
+    if (!p.type?.trim()) return 'type is required';
+    if (p.level === '' || p.level === null || isNaN(Number(p.level))) return 'level must be a number';
+    if (!p.levelVariance?.trim()) return 'level-variance is required';
+    return '';
+  };
+
+  const saveForm = async () => {
+    const payload = {
+      id: form.id.trim(),
+      name: form.name.trim(),
+      type: form.type.trim(),
+      level: Number(form.level),
+      ['level-variance']: form.levelVariance.trim(),
+    };
+    const msg = validate({ ...form, levelVariance: form.levelVariance });
+    if (msg) { setFormErr(msg); return; }
+
+    try {
+      // Default: POST to collection path '/rmce/objects/poison/'
+      // If your server requires PUT /rmce/objects/poison/{id}, change opts below:
+      const opts = editingId
+        ? { method: 'POST', useResourceIdPath: false } // or { method: 'PUT', useResourceIdPath: true }
+        : { method: 'POST', useResourceIdPath: false };
+
+      await upsertPoison(payload, opts);
+
+      // optimistic UI update
+      setRows(prev => {
+        const idx = prev.findIndex(p => p.id === payload.id);
+        if (idx >= 0) {
+          const copy = [...prev];
+          copy[idx] = { ...copy[idx], ...payload };
+          return copy;
+        }
+        return [payload, ...prev];
+      });
+
+      setShowForm(false);
+      setFormErr('');
+    } catch (err) {
+      setFormErr(err instanceof Error ? err.message : String(err));
+    }
+  };
+
   if (loading) return <div>Loading…</div>;
   if (error) return <div style={{ color: 'crimson' }}>Error: {error}</div>;
 
   return (
     <>
       <h2>Poisons</h2>
-      <div style={{ margin: '12px 0' }}>
+
+      {/* Create / Edit Bar */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+        <button onClick={startNew}>New Poison</button>
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
@@ -66,8 +153,31 @@ export default function PoisonsView() {
           aria-label="Search poisons"
         />
       </div>
+
+      {/* Form Panel */}
+      {showForm && (
+        <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16, background: '#fafafa' }}>
+          <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Poison' : 'New Poison'}</h3>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <LabeledInput label="ID" value={form.id} onChange={v => setForm(s => ({ ...s, id: v }))} disabled={!!editingId} />
+            <LabeledInput label="Name" value={form.name} onChange={v => setForm(s => ({ ...s, name: v }))} />
+            <LabeledInput label="Type" value={form.type} onChange={v => setForm(s => ({ ...s, type: v }))} />
+            <LabeledInput label="Level" value={form.level} onChange={v => setForm(s => ({ ...s, level: v }))} type="number" />
+            <LabeledInput label="Level-Variance" value={form.levelVariance} onChange={v => setForm(s => ({ ...s, levelVariance: v }))} />
+          </div>
+
+          {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <button onClick={saveForm}>Save</button>
+            <button onClick={cancelForm} type="button">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Table */}
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse', minWidth: 900, width: '100%' }}>
+        <table style={{ borderCollapse: 'collapse', minWidth: 950, width: '100%' }}>
           <thead>
             <tr>
               <SortableTh onClick={() => onSort('id')} label="id" sort={sort} colKey="id" />
@@ -75,11 +185,12 @@ export default function PoisonsView() {
               <SortableTh onClick={() => onSort('type')} label="type" sort={sort} colKey="type" />
               <SortableTh onClick={() => onSort('level')} label="level" sort={sort} colKey="level" />
               <SortableTh onClick={() => onSort('level-variance')} label="level-variance" sort={sort} colKey="level-variance" />
+              <th style={{ borderBottom: '1px solid #ddd', textAlign: 'left', padding: 8 }}>actions</th>
             </tr>
           </thead>
           <tbody>
             {sorted.length === 0 ? (
-              <tr><td colSpan={5} style={emptyCell}>No results.</td></tr>
+              <tr><td colSpan={6} style={emptyCell}>No results.</td></tr>
             ) : (
               sorted.map((p, idx) => (
                 <tr key={p.id ?? idx}>
@@ -88,6 +199,9 @@ export default function PoisonsView() {
                   <td style={tdStyle}>{p.type}</td>
                   <td style={tdStyle}>{p.level}</td>
                   <td style={tdStyle}>{p?.['level-variance']}</td>
+                  <td style={tdStyle}>
+                    <button onClick={() => startEdit(p)}>Edit</button>
+                  </td>
                 </tr>
               ))
             )}
@@ -95,6 +209,21 @@ export default function PoisonsView() {
         </table>
       </div>
     </>
+  );
+}
+
+function LabeledInput({ label, value, onChange, type = 'text', disabled = false }) {
+  return (
+    <label style={{ display: 'grid', gap: 6, fontSize: 14 }}>
+      <span>{label}</span>
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        type={type}
+        disabled={disabled}
+        style={{ padding: 8 }}
+      />
+    </label>
   );
 }
 
@@ -115,3 +244,7 @@ function SortableTh({ onClick, label, sort, colKey }) {
 
 const tdStyle = { borderBottom: '1px solid #f0f0f0', padding: '8px' };
 const emptyCell = { padding: 12, textAlign: 'center', color: '#666' };
+
+function emptyPoison() {
+  return { id: '', name: '', type: '', level: 0, levelVariance: '' };
+}

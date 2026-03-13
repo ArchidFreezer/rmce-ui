@@ -1,13 +1,21 @@
 // src/endpoints/books/BooksView.jsx
 import { useEffect, useMemo, useState } from 'react';
-import { fetchBooks } from './api';
+import { fetchBooks, upsertBook } from './api';
 
 export default function BooksView() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // search/sort
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState({ key: 'name', dir: 'asc' });
+
+  // form state
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState(emptyBook());
+  const [formErr, setFormErr] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -51,13 +59,88 @@ export default function BooksView() {
   const onSort = (key) =>
     setSort(prev => (prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
 
+  const startNew = () => {
+    setEditingId(null);
+    setForm(emptyBook());
+    setFormErr('');
+    setShowForm(true);
+  };
+
+  const startEdit = (row) => {
+    setEditingId(row.id);
+    setForm({
+      id: row.id ?? '',
+      code: row.code ?? '',
+      name: row.name ?? '',
+      abbreviation: row.abbreviation ?? '',
+      isbn: row.isbn ?? '',
+    });
+    setFormErr('');
+    setShowForm(true);
+  };
+
+  const cancelForm = () => {
+    setShowForm(false);
+    setFormErr('');
+  };
+
+  const validate = (b) => {
+    if (!b.id?.trim()) return 'id is required';
+    if (!b.name?.trim()) return 'name is required';
+    if (!b.code?.trim()) return 'code is required';
+    if (!b.abbreviation?.trim()) return 'abbreviation is required';
+    if (!b.isbn?.trim()) return 'isbn is required';
+    return '';
+  };
+
+  const saveForm = async () => {
+    const payload = {
+      id: form.id.trim(),
+      code: form.code.trim(),
+      name: form.name.trim(),
+      abbreviation: form.abbreviation.trim(),
+      isbn: form.isbn.trim(),
+    };
+    const msg = validate(payload);
+    if (msg) { setFormErr(msg); return; }
+
+    try {
+      // Default: POST to collection path '/rmce/objects/book/'
+      // If your server requires PUT /rmce/objects/book/{id}, change opts below:
+      const opts = editingId
+        ? { method: 'POST', useResourceIdPath: false } // or { method: 'PUT', useResourceIdPath: true }
+        : { method: 'POST', useResourceIdPath: false };
+
+      await upsertBook(payload, opts);
+
+      // optimistic UI update
+      setRows(prev => {
+        const idx = prev.findIndex(b => b.id === payload.id);
+        if (idx >= 0) {
+          const copy = [...prev];
+          copy[idx] = { ...copy[idx], ...payload };
+          return copy;
+        }
+        return [payload, ...prev];
+      });
+
+      setShowForm(false);
+      setFormErr('');
+    } catch (err) {
+      setFormErr(err instanceof Error ? err.message : String(err));
+    }
+  };
+
   if (loading) return <div>Loading…</div>;
   if (error) return <div style={{ color: 'crimson' }}>Error: {error}</div>;
 
   return (
     <>
       <h2>Books</h2>
-      <div style={{ margin: '12px 0' }}>
+
+      {/* Create / Edit Bar */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+        <button onClick={startNew}>New Book</button>
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
@@ -66,8 +149,29 @@ export default function BooksView() {
           aria-label="Search books"
         />
       </div>
+
+      {/* Form Panel */}
+      {showForm && (
+        <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16, background: '#fafafa' }}>
+          <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Book' : 'New Book'}</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <LabeledInput label="ID" value={form.id} onChange={v => setForm(s => ({ ...s, id: v }))} disabled={!!editingId} />
+            <LabeledInput label="Code" value={form.code} onChange={v => setForm(s => ({ ...s, code: v }))} />
+            <LabeledInput label="Name" value={form.name} onChange={v => setForm(s => ({ ...s, name: v }))} />
+            <LabeledInput label="Abbreviation" value={form.abbreviation} onChange={v => setForm(s => ({ ...s, abbreviation: v }))} />
+            <LabeledInput label="ISBN" value={form.isbn} onChange={v => setForm(s => ({ ...s, isbn: v }))} />
+          </div>
+          {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <button onClick={saveForm}>Save</button>
+            <button onClick={cancelForm} type="button">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Table */}
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse', minWidth: 800, width: '100%' }}>
+        <table style={{ borderCollapse: 'collapse', minWidth: 900, width: '100%' }}>
           <thead>
             <tr>
               <SortableTh onClick={() => onSort('id')} label="id" sort={sort} colKey="id" />
@@ -75,11 +179,12 @@ export default function BooksView() {
               <SortableTh onClick={() => onSort('name')} label="name" sort={sort} colKey="name" />
               <SortableTh onClick={() => onSort('abbreviation')} label="abbreviation" sort={sort} colKey="abbreviation" />
               <SortableTh onClick={() => onSort('isbn')} label="isbn" sort={sort} colKey="isbn" />
+              <th style={{ borderBottom: '1px solid #ddd', textAlign: 'left', padding: 8 }}>actions</th>
             </tr>
           </thead>
           <tbody>
             {sorted.length === 0 ? (
-              <tr><td colSpan={5} style={emptyCell}>No results.</td></tr>
+              <tr><td colSpan={6} style={emptyCell}>No results.</td></tr>
             ) : (
               sorted.map((b, idx) => (
                 <tr key={b.id ?? idx}>
@@ -88,6 +193,9 @@ export default function BooksView() {
                   <td style={tdStyle}>{b.name}</td>
                   <td style={tdStyle}>{b.abbreviation}</td>
                   <td style={tdStyle}>{b.isbn}</td>
+                  <td style={tdStyle}>
+                    <button onClick={() => startEdit(b)}>Edit</button>
+                  </td>
                 </tr>
               ))
             )}
@@ -95,6 +203,21 @@ export default function BooksView() {
         </table>
       </div>
     </>
+  );
+}
+
+function LabeledInput({ label, value, onChange, type = 'text', disabled = false }) {
+  return (
+    <label style={{ display: 'grid', gap: 6, fontSize: 14 }}>
+      <span>{label}</span>
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        type={type}
+        disabled={disabled}
+        style={{ padding: 8 }}
+      />
+    </label>
   );
 }
 
@@ -115,3 +238,7 @@ function SortableTh({ onClick, label, sort, colKey }) {
 
 const tdStyle = { borderBottom: '1px solid #f0f0f0', padding: '8px' };
 const emptyCell = { padding: 12, textAlign: 'center', color: '#666' };
+
+function emptyBook() {
+  return { id: '', code: '', name: '', abbreviation: '', isbn: '' };
+}
