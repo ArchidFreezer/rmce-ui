@@ -1,21 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchArmourtypes, upsertArmourtype, deleteArmourtype } from './api';
-import type { Armourtype, ArmourtypeFormState } from '../../types';
+import type { Armourtype } from '../../types';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 
 type ArmourNumberKey =
-  | 'min-manoeuvre-mod'
-  | 'max-manoeuvre-mod'
-  | 'missile-attack-penalty'
-  | 'quickness-penalty';
+  | 'minManoeuvreMod'
+  | 'maxManoeuvreMod'
+  | 'missileAttackPenalty'
+  | 'quicknessPenalty';
 
-type ArmourBooleanKey = 'animal-only' | 'includes-greaves';
+type ArmourBooleanKey = 'animalOnly' | 'includesGreaves';
+type ArmourStringKey = Exclude<keyof Armourtype, ArmourNumberKey | ArmourBooleanKey>;
 
-type ArmourStringKey = Exclude<
-  keyof Armourtype,
-  ArmourNumberKey | ArmourBooleanKey
->;
+const NUM_KEYS: ArmourNumberKey[] = [
+  'minManoeuvreMod',
+  'maxManoeuvreMod',
+  'missileAttackPenalty',
+  'quicknessPenalty',
+];
 
 export default function ArmourtypesView() {
   const [rows, setRows] = useState<Armourtype[]>([]);
@@ -23,17 +26,14 @@ export default function ArmourtypesView() {
   const [error, setError] = useState<string | null>(null);
 
   const [query, setQuery] = useState('');
-  const [sort, setSort] = useState<{
-    key: keyof Armourtype;
-    dir: 'asc' | 'desc';
-  }>({
+  const [sort, setSort] = useState<{ key: keyof Armourtype; dir: 'asc' | 'desc' }>({
     key: 'name',
     dir: 'asc',
   });
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<ArmourtypeFormState>(emptyArmourtypeForm());
+  const [form, setForm] = useState<Armourtype>(emptyArmourtype()); // single interface pattern
   const [formErr, setFormErr] = useState('');
 
   const confirm = useConfirm();
@@ -61,84 +61,59 @@ export default function ArmourtypesView() {
     if (!q) return rows;
     return rows.filter(a =>
       [
-        a.id,
-        a.name,
-        a.type,
-        a.description,
-        a['min-manoeuvre-mod'],
-        a['max-manoeuvre-mod'],
-        a['missile-attack-penalty'],
-        a['quickness-penalty'],
-        a['animal-only'],
-        a['includes-greaves'],
+        a.id, a.name, a.type, a.description,
+        a.minManoeuvreMod, a.maxManoeuvreMod,
+        a.missileAttackPenalty, a.quicknessPenalty,
+        a.animalOnly, a.includesGreaves,
       ]
-        .map(v => String(v ?? '').toLowerCase())
-        .some(s => s.includes(q))
+      .map(v => String(v ?? '').toLowerCase())
+      .some(s => s.includes(q))
     );
   }, [rows, query]);
 
-const sorted = useMemo(() => {
-  const arr = [...filtered];
-  const { key, dir } = sort;
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    const { key, dir } = sort;
 
-  const isNumberKey = (k: keyof Armourtype): k is ArmourNumberKey =>
-    k === 'min-manoeuvre-mod' ||
-    k === 'max-manoeuvre-mod' ||
-    k === 'missile-attack-penalty' ||
-    k === 'quickness-penalty';
+    const isNumberKey = (k: keyof Armourtype): k is ArmourNumberKey =>
+      NUM_KEYS.includes(k as ArmourNumberKey);
+    const isBooleanKey = (k: keyof Armourtype): k is ArmourBooleanKey =>
+      k === 'animalOnly' || k === 'includesGreaves';
 
-  const isBooleanKey = (k: keyof Armourtype): k is ArmourBooleanKey =>
-    k === 'animal-only' || k === 'includes-greaves';
+    arr.sort((a, b) => {
+      if (isNumberKey(key)) {
+        const av = a[key] as number;
+        const bv = b[key] as number;
+        return dir === 'asc' ? av - bv : bv - av;
+      }
+      if (isBooleanKey(key)) {
+        const av = a[key] as boolean;
+        const bv = b[key] as boolean;
+        return dir === 'asc' ? Number(av) - Number(bv) : Number(bv) - Number(av);
+      }
+      const av = String(a[key as ArmourStringKey] ?? '');
+      const bv = String(b[key as ArmourStringKey] ?? '');
+      if (av < bv) return dir === 'asc' ? -1 : 1;
+      if (av > bv) return dir === 'asc' ? 1 : -1;
+      return 0;
+    });
 
-  arr.sort((a, b) => {
-    if (isNumberKey(key)) {
-      const av = a[key] as number;
-      const bv = b[key] as number;
-      return dir === 'asc' ? av - bv : bv - av;
-    }
+    return arr;
+  }, [filtered, sort]);
 
-    if (isBooleanKey(key)) {
-      const av = a[key] as boolean;
-      const bv = b[key] as boolean;
-      // false < true
-      return dir === 'asc' ? Number(av) - Number(bv) : Number(bv) - Number(av);
-    }
-
-    // string-like keys
-    const av = String(a[key as ArmourStringKey] ?? '');
-    const bv = String(b[key as ArmourStringKey] ?? '');
-    if (av < bv) return dir === 'asc' ? -1 : 1;
-    if (av > bv) return dir === 'asc' ? 1 : -1;
-    return 0;
-  });
-
-  return arr;
-}, [filtered, sort]);
-
-  const onSort = (key: (typeof sort)['key']) =>
+  const onSort = (key: keyof Armourtype) =>
     setSort(prev => prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' });
 
   const startNew = () => {
     setEditingId(null);
-    setForm(emptyArmourtypeForm());
+    setForm(emptyArmourtype());
     setFormErr('');
     setShowForm(true);
   };
 
   const startEdit = (row: Armourtype) => {
     setEditingId(row.id);
-    setForm({
-      id: row.id,
-      name: row.name,
-      type: row.type,
-      description: row.description,
-      minManoeuvreMod: row['min-manoeuvre-mod'],
-      maxManoeuvreMod: row['max-manoeuvre-mod'],
-      missileAttackPenalty: row['missile-attack-penalty'],
-      quicknessPenalty: row['quickness-penalty'],
-      animalOnly: row['animal-only'],
-      includesGreaves: row['includes-greaves'],
-    });
+    setForm({ ...row });
     setFormErr('');
     setShowForm(true);
   };
@@ -148,46 +123,41 @@ const sorted = useMemo(() => {
     setFormErr('');
   };
 
-  const validate = (f: ArmourtypeFormState): string => {
+  const validate = (f: Armourtype): string => {
     if (!f.id?.trim()) return 'id is required';
     if (!f.name?.trim()) return 'name is required';
     if (!f.type?.trim()) return 'type is required';
-    // numeric checks
-    const nums: Array<[string, number]> = [
-      ['min-manoeuvre-mod', Number(f.minManoeuvreMod)],
-      ['max-manoeuvre-mod', Number(f.maxManoeuvreMod)],
-      ['missile-attack-penalty', Number(f.missileAttackPenalty)],
-      ['quickness-penalty', Number(f.quicknessPenalty)],
-    ];
-    for (const [label, val] of nums) {
-      if (Number.isNaN(val)) return `${label} must be a number`;
+    for (const k of NUM_KEYS) {
+      const raw = getNumInput(f, k);
+      if (raw === '' || Number.isNaN(Number(raw))) return `${k} must be a number`;
     }
     return '';
   };
 
   const saveForm = async () => {
-    const payload: Armourtype = {
-      id: String(form.id).trim(),
-      name: String(form.name).trim(),
-      type: String(form.type).trim(),
-      description: String(form.description ?? ''),
-      'min-manoeuvre-mod': Number(form.minManoeuvreMod),
-      'max-manoeuvre-mod': Number(form.maxManoeuvreMod),
-      'missile-attack-penalty': Number(form.missileAttackPenalty),
-      'quickness-penalty': Number(form.quicknessPenalty),
-      'animal-only': Boolean(form.animalOnly),
-      'includes-greaves': Boolean(form.includesGreaves),
-    };
     const msg = validate(form);
     if (msg) {
       setFormErr(msg);
       return;
     }
 
+    // Normalize payload (strings -> numbers for numeric fields)
+    const payload: Armourtype = {
+      id: String(form.id).trim(),
+      name: String(form.name).trim(),
+      type: String(form.type).trim(),
+      description: String(form.description ?? ''),
+      minManoeuvreMod: Number(getNumInput(form, 'minManoeuvreMod')),
+      maxManoeuvreMod: Number(getNumInput(form, 'maxManoeuvreMod')),
+      missileAttackPenalty: Number(getNumInput(form, 'missileAttackPenalty')),
+      quicknessPenalty: Number(getNumInput(form, 'quicknessPenalty')),
+      animalOnly: Boolean(form.animalOnly),
+      includesGreaves: Boolean(form.includesGreaves),
+    };
+
     try {
-      // Default: POST to /rmce/objects/armourtype/
       const opts = editingId
-        ? { method: 'POST' as const, useResourceIdPath: false }
+        ? { method: 'POST' as const, useResourceIdPath: false } // or PUT+id if your API prefers
         : { method: 'POST' as const, useResourceIdPath: false };
 
       await upsertArmourtype(payload, opts);
@@ -260,12 +230,42 @@ const sorted = useMemo(() => {
             <LabeledInput label="Name" value={form.name} onChange={(v) => setForm(s => ({ ...s, name: v }))} />
             <LabeledInput label="Type" value={form.type} onChange={(v) => setForm(s => ({ ...s, type: v }))} />
             <LabeledInput label="Description" value={form.description} onChange={(v) => setForm(s => ({ ...s, description: v }))} />
-            <LabeledInput label="Min Manoeuvre Mod" type="number" value={String(form.minManoeuvreMod)} onChange={(v) => setForm(s => ({ ...s, minManoeuvreMod: v }))} />
-            <LabeledInput label="Max Manoeuvre Mod" type="number" value={String(form.maxManoeuvreMod)} onChange={(v) => setForm(s => ({ ...s, maxManoeuvreMod: v }))} />
-            <LabeledInput label="Missile Attack Penalty" type="number" value={String(form.missileAttackPenalty)} onChange={(v) => setForm(s => ({ ...s, missileAttackPenalty: v }))} />
-            <LabeledInput label="Quickness Penalty" type="number" value={String(form.quicknessPenalty)} onChange={(v) => setForm(s => ({ ...s, quicknessPenalty: v }))} />
-            <CheckboxInput label="Animal Only" checked={form.animalOnly} onChange={(c) => setForm(s => ({ ...s, animalOnly: c }))} />
-            <CheckboxInput label="Includes Greaves" checked={form.includesGreaves} onChange={(c) => setForm(s => ({ ...s, includesGreaves: c }))} />
+
+            <LabeledInput
+              label="Min Manoeuvre Mod"
+              type="number"
+              value={getNumInput(form, 'minManoeuvreMod')}
+              onChange={(v) => setNumFromInput('minManoeuvreMod', v)}
+            />
+            <LabeledInput
+              label="Max Manoeuvre Mod"
+              type="number"
+              value={getNumInput(form, 'maxManoeuvreMod')}
+              onChange={(v) => setNumFromInput('maxManoeuvreMod', v)}
+            />
+            <LabeledInput
+              label="Missile Attack Penalty"
+              type="number"
+              value={getNumInput(form, 'missileAttackPenalty')}
+              onChange={(v) => setNumFromInput('missileAttackPenalty', v)}
+            />
+            <LabeledInput
+              label="Quickness Penalty"
+              type="number"
+              value={getNumInput(form, 'quicknessPenalty')}
+              onChange={(v) => setNumFromInput('quicknessPenalty', v)}
+            />
+
+            <CheckboxInput
+              label="Animal Only"
+              checked={form.animalOnly}
+              onChange={(c) => setForm(s => ({ ...s, animalOnly: c }))}
+            />
+            <CheckboxInput
+              label="Includes Greaves"
+              checked={form.includesGreaves}
+              onChange={(c) => setForm(s => ({ ...s, includesGreaves: c }))}
+            />
           </div>
 
           {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
@@ -284,12 +284,12 @@ const sorted = useMemo(() => {
               <SortableTh onClick={() => onSort('name')} label="name" sort={sort} colKey="name" />
               <SortableTh onClick={() => onSort('type')} label="type" sort={sort} colKey="type" />
               <SortableTh onClick={() => onSort('description')} label="description" sort={sort} colKey="description" />
-              <SortableTh onClick={() => onSort('min-manoeuvre-mod')} label="min-manoeuvre-mod" sort={sort} colKey="min-manoeuvre-mod" />
-              <SortableTh onClick={() => onSort('max-manoeuvre-mod')} label="max-manoeuvre-mod" sort={sort} colKey="max-manoeuvre-mod" />
-              <SortableTh onClick={() => onSort('missile-attack-penalty')} label="missile-attack-penalty" sort={sort} colKey="missile-attack-penalty" />
-              <SortableTh onClick={() => onSort('quickness-penalty')} label="quickness-penalty" sort={sort} colKey="quickness-penalty" />
-              <SortableTh onClick={() => onSort('animal-only')} label="animal-only" sort={sort} colKey="animal-only" />
-              <SortableTh onClick={() => onSort('includes-greaves')} label="includes-greaves" sort={sort} colKey="includes-greaves" />
+              <SortableTh onClick={() => onSort('minManoeuvreMod')} label="minManoeuvreMod" sort={sort} colKey="minManoeuvreMod" />
+              <SortableTh onClick={() => onSort('maxManoeuvreMod')} label="maxManoeuvreMod" sort={sort} colKey="maxManoeuvreMod" />
+              <SortableTh onClick={() => onSort('missileAttackPenalty')} label="missileAttackPenalty" sort={sort} colKey="missileAttackPenalty" />
+              <SortableTh onClick={() => onSort('quicknessPenalty')} label="quicknessPenalty" sort={sort} colKey="quicknessPenalty" />
+              <SortableTh onClick={() => onSort('animalOnly')} label="animalOnly" sort={sort} colKey="animalOnly" />
+              <SortableTh onClick={() => onSort('includesGreaves')} label="includesGreaves" sort={sort} colKey="includesGreaves" />
               <th style={{ borderBottom: '1px solid #ddd', textAlign: 'left', padding: 8 }}>actions</th>
             </tr>
           </thead>
@@ -303,12 +303,12 @@ const sorted = useMemo(() => {
                   <td style={tdStyle}>{a.name}</td>
                   <td style={tdStyle}>{a.type}</td>
                   <td style={tdStyle}>{a.description}</td>
-                  <td style={tdStyle}>{a['min-manoeuvre-mod']}</td>
-                  <td style={tdStyle}>{a['max-manoeuvre-mod']}</td>
-                  <td style={tdStyle}>{a['missile-attack-penalty']}</td>
-                  <td style={tdStyle}>{a['quickness-penalty']}</td>
-                  <td style={tdStyle}>{String(a['animal-only'])}</td>
-                  <td style={tdStyle}>{String(a['includes-greaves'])}</td>
+                  <td style={tdStyle}>{a.minManoeuvreMod}</td>
+                  <td style={tdStyle}>{a.maxManoeuvreMod}</td>
+                  <td style={tdStyle}>{a.missileAttackPenalty}</td>
+                  <td style={tdStyle}>{a.quicknessPenalty}</td>
+                  <td style={tdStyle}>{String(a.animalOnly)}</td>
+                  <td style={tdStyle}>{String(a.includesGreaves)}</td>
                   <td style={tdStyle}>
                     <button onClick={() => startEdit(a)} style={{ marginRight: 6 }}>Edit</button>
                     <button onClick={() => onDelete(a)} style={{ color: '#b00020' }}>Delete</button>
@@ -321,6 +321,27 @@ const sorted = useMemo(() => {
       </div>
     </>
   );
+
+  /** ----------------- Numeric input helpers (single-interface form) ----------------- */
+
+  function getNumInput(obj: Armourtype, key: ArmourNumberKey): string {
+    const anyObj = obj as Armourtype & { __raw?: Record<string, string> };
+    const raw = anyObj.__raw?.[key];
+    if (raw !== undefined) return raw;
+    return String(obj[key] ?? '');
+  }
+
+  function setNumFromInput(key: ArmourNumberKey, value: string) {
+    setForm((s) => {
+      const next = { ...s } as Armourtype & { __raw?: Record<string, string> };
+      next.__raw = { ...(next.__raw ?? {}), [key]: value };
+      const maybe = Number(value);
+      if (!Number.isNaN(maybe)) {
+        (next as Armourtype)[key] = maybe;
+      }
+      return next as Armourtype;
+    });
+  }
 }
 
 function LabeledInput({
@@ -361,11 +382,7 @@ function CheckboxInput({
 }) {
   return (
     <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-      />
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       <span>{label}</span>
     </label>
   );
@@ -399,7 +416,7 @@ function SortableTh<T extends string>({
 const tdStyle: React.CSSProperties = { borderBottom: '1px solid #f0f0f0', padding: '8px' };
 const emptyCell: React.CSSProperties = { padding: 12, textAlign: 'center', color: '#666' };
 
-function emptyArmourtypeForm(): ArmourtypeFormState {
+function emptyArmourtype(): Armourtype {
   return {
     id: '',
     name: '',

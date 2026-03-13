@@ -17,7 +17,7 @@ export default function BooksView() {
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<Book>(emptyBook());
+  const [form, setForm] = useState<Book>(emptyBook());   // <- form is typed as Book
   const [formErr, setFormErr] = useState('');
 
   const confirm = useConfirm();
@@ -37,18 +37,15 @@ export default function BooksView() {
         if (mounted) setLoading(false);
       }
     })();
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return rows;
     return rows.filter((b) =>
-      [b.id, b.code, b.name, b.abbreviation, b.isbn].some((v) =>
-        String(v ?? '').toLowerCase().includes(q)
-      )
+      [b.id, b.code, b.name, b.abbreviation, b.isbn]
+        .some((v) => String(v ?? '').toLowerCase().includes(q))
     );
   }, [rows, query]);
 
@@ -96,16 +93,17 @@ export default function BooksView() {
     if (!b.abbreviation?.trim()) return 'abbreviation is required';
     if (!b.isbn?.trim()) return 'isbn is required';
     return '';
-    };
+  };
 
   const saveForm = async () => {
     const payload: Book = {
-      id: form.id.trim(),
-      code: form.code.trim(),
-      name: form.name.trim(),
-      abbreviation: form.abbreviation.trim(),
-      isbn: form.isbn.trim(),
+      id: String(form.id).trim(),
+      code: String(form.code).trim(),
+      name: String(form.name).trim(),
+      abbreviation: String(form.abbreviation).trim(),
+      isbn: String(form.isbn).trim(),
     };
+
     const msg = validate(payload);
     if (msg) {
       setFormErr(msg);
@@ -113,7 +111,7 @@ export default function BooksView() {
     }
 
     try {
-      // default POST to /rmce/objects/book/
+      // default POST to /rmce/objects/book/ with a single JSON object
       const opts = editingId
         ? { method: 'POST' as const, useResourceIdPath: false }
         : { method: 'POST' as const, useResourceIdPath: false };
@@ -190,6 +188,7 @@ export default function BooksView() {
       {showForm && (
         <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16, background: '#fafafa' }}>
           <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Book' : 'New Book'}</h3>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <LabeledInput label="ID" value={form.id} onChange={(v) => setForm((s) => ({ ...s, id: v }))} disabled={!!editingId} />
             <LabeledInput label="Code" value={form.code} onChange={(v) => setForm((s) => ({ ...s, code: v }))} />
@@ -197,6 +196,7 @@ export default function BooksView() {
             <LabeledInput label="Abbreviation" value={form.abbreviation} onChange={(v) => setForm((s) => ({ ...s, abbreviation: v }))} />
             <LabeledInput label="ISBN" value={form.isbn} onChange={(v) => setForm((s) => ({ ...s, isbn: v }))} />
           </div>
+
           {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             <button onClick={saveForm}>Save</button>

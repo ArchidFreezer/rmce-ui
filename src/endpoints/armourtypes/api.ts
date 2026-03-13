@@ -11,7 +11,7 @@ export async function fetchArmourtypes(): Promise<Armourtype[]> {
   return data.armourtypes;
 }
 
-/** Create or update a single armourtype. Default: POST to collection with trailing slash. */
+/** Create or update a single armourtype (POST to collection by default). */
 export async function upsertArmourtype(
   armourtype: Armourtype,
   opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {}

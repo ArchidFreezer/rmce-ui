@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchPoisons, upsertPoison, deletePoison } from './api';
-import type { Poison, PoisonFormState } from '../../types';
+import type { Poison } from '../../types';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 
 type PoisonNumberKey = 'level';
-type PoisonStringKey = Exclude<keyof Poison, PoisonNumberKey>;
+type PoisonStringKey = Exclude<keyof Poison, PoisonNumberKey>; // 'id' | 'name' | 'type' | 'levelVariance'
 
 export default function PoisonsView() {
   const [rows, setRows] = useState<Poison[]>([]);
@@ -13,14 +13,17 @@ export default function PoisonsView() {
   const [error, setError] = useState<string | null>(null);
 
   const [query, setQuery] = useState('');
-  const [sort, setSort] = useState<{ key: keyof Poison | 'level-variance'; dir: 'asc' | 'desc' }>({
+  const [sort, setSort] = useState<{ key: keyof Poison; dir: 'asc' | 'desc' }>({
     key: 'name',
     dir: 'asc',
   });
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<PoisonFormState>(emptyPoisonForm());
+
+  // We’ll keep the form typed as Poison. While typing, "level" is edited as a string in the input,
+  // so we provide helpers to read/write it safely.
+  const [form, setForm] = useState<Poison>(emptyPoison());
   const [formErr, setFormErr] = useState('');
 
   const confirm = useConfirm();
@@ -47,57 +50,49 @@ export default function PoisonsView() {
     const q = query.trim().toLowerCase();
     if (!q) return rows;
     return rows.filter((p) =>
-      [p.id, p.name, p.type, p.level, p['level-variance']]
+      [p.id, p.name, p.type, p.level, p.levelVariance]
         .some((v) => String(v ?? '').toLowerCase().includes(q))
     );
   }, [rows, query]);
 
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    const { key, dir } = sort;
 
-const sorted = useMemo(() => {
-  const arr = [...filtered];
-  const { key, dir } = sort;
+    const isNumberKey = (k: keyof Poison): k is PoisonNumberKey => k === 'level';
 
-  const isNumberKey = (k: keyof Poison): k is PoisonNumberKey => k === 'level';
+    arr.sort((a, b) => {
+      if (isNumberKey(key)) {
+        const av = a[key] as number;
+        const bv = b[key] as number;
+        return dir === 'asc' ? av - bv : bv - av;
+      }
+      const av = String(a[key as PoisonStringKey] ?? '');
+      const bv = String(b[key as PoisonStringKey] ?? '');
+      if (av < bv) return dir === 'asc' ? -1 : 1;
+      if (av > bv) return dir === 'asc' ? 1 : -1;
+      return 0;
+    });
 
-  arr.sort((a, b) => {
-    if (isNumberKey(key)) {
-      const av = a[key] as number;
-      const bv = b[key] as number;
-      return dir === 'asc' ? av - bv : bv - av;
-    }
+    return arr;
+  }, [filtered, sort]);
 
-    const av = String(a[key as PoisonStringKey] ?? '');
-    const bv = String(b[key as PoisonStringKey] ?? '');
-    if (av < bv) return dir === 'asc' ? -1 : 1;
-    if (av > bv) return dir === 'asc' ? 1 : -1;
-    return 0;
-  });
-
-  return arr;
-}, [filtered, sort]);
-
-
-  const onSort = (key: keyof Poison | 'level-variance') =>
+  const onSort = (key: keyof Poison) =>
     setSort((prev) =>
       prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }
     );
 
   const startNew = () => {
     setEditingId(null);
-    setForm(emptyPoisonForm());
+    setForm(emptyPoison());
     setFormErr('');
     setShowForm(true);
   };
 
   const startEdit = (row: Poison) => {
     setEditingId(row.id);
-    setForm({
-      id: row.id ?? '',
-      name: row.name ?? '',
-      type: row.type ?? '',
-      level: Number(row.level ?? 0),
-      levelVariance: String(row['level-variance'] ?? ''),
-    });
+    // Copy row into form
+    setForm({ ...row });
     setFormErr('');
     setShowForm(true);
   };
@@ -107,33 +102,42 @@ const sorted = useMemo(() => {
     setFormErr('');
   };
 
-  const validate = (p: PoisonFormState): string => {
+  const validate = (p: Poison): string => {
     if (!p.id?.trim()) return 'id is required';
     if (!p.name?.trim()) return 'name is required';
     if (!p.type?.trim()) return 'type is required';
-    if (p.level === '' || p.level === null || Number.isNaN(Number(p.level))) return 'level must be a number';
-    if (!p.levelVariance?.trim()) return 'level-variance is required';
+    if (!Number.isFinite(p.level as number) || Number(p.level) === 0 && String(getLevelInputValue(p)) === '') {
+      // If user cleared the field, Number('') = 0; we check the raw input string below
+      /* noop – we’ll handle using getLevelInputValue() */
+    }
+    const levelStr = getLevelInputValue(p);
+    if (levelStr === '' || Number.isNaN(Number(levelStr))) return 'level must be a number';
+    if (!p.levelVariance?.trim()) return 'levelVariance is required';
     return '';
   };
 
   const saveForm = async () => {
-    const payload: Poison = {
-      id: String(form.id).trim(),
-      name: String(form.name).trim(),
-      type: String(form.type).trim(),
-      level: Number(form.level),
-      'level-variance': String(form.levelVariance).trim(),
-    };
+    // validate against current form values (with raw string view for level)
     const msg = validate(form);
     if (msg) {
       setFormErr(msg);
       return;
     }
 
+    // Normalize payload to Poison while ensuring number coercion for level
+    const payload: Poison = {
+      id: String(form.id).trim(),
+      name: String(form.name).trim(),
+      type: String(form.type).trim(),
+      level: Number(getLevelInputValue(form)),            // ensure number
+      levelVariance: String(form.levelVariance).trim(),
+    };
+
     try {
       const opts = editingId
         ? { method: 'POST' as const, useResourceIdPath: false }
         : { method: 'POST' as const, useResourceIdPath: false };
+
       await upsertPoison(payload, opts);
 
       setRows((prev) => {
@@ -203,8 +207,14 @@ const sorted = useMemo(() => {
             <LabeledInput label="ID" value={form.id} onChange={(v) => setForm((s) => ({ ...s, id: v }))} disabled={!!editingId} />
             <LabeledInput label="Name" value={form.name} onChange={(v) => setForm((s) => ({ ...s, name: v }))} />
             <LabeledInput label="Type" value={form.type} onChange={(v) => setForm((s) => ({ ...s, type: v }))} />
-            <LabeledInput label="Level" value={String(form.level)} onChange={(v) => setForm((s) => ({ ...s, level: v }))} type="number" />
-            <LabeledInput label="Level-Variance" value={form.levelVariance} onChange={(v) => setForm((s) => ({ ...s, levelVariance: v }))} />
+            {/* Level is edited as a string in the input; store its raw string via a helper */}
+            <LabeledInput
+              label="Level"
+              type="number"
+              value={getLevelInputValue(form)}
+              onChange={(v) => setLevelFromInput(v)}
+            />
+            <LabeledInput label="Level Variance" value={form.levelVariance} onChange={(v) => setForm((s) => ({ ...s, levelVariance: v }))} />
           </div>
 
           {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
@@ -216,14 +226,14 @@ const sorted = useMemo(() => {
       )}
 
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse', minWidth: 950, width: '100%' }}>
+        <table style={{ borderCollapse: 'collapse', minWidth: 900, width: '100%' }}>
           <thead>
             <tr>
               <SortableTh onClick={() => onSort('id')} label="id" sort={sort} colKey="id" />
               <SortableTh onClick={() => onSort('name')} label="name" sort={sort} colKey="name" />
               <SortableTh onClick={() => onSort('type')} label="type" sort={sort} colKey="type" />
               <SortableTh onClick={() => onSort('level')} label="level" sort={sort} colKey="level" />
-              <SortableTh onClick={() => onSort('level-variance')} label="level-variance" sort={sort} colKey="level-variance" />
+              <SortableTh onClick={() => onSort('levelVariance')} label="levelVariance" sort={sort} colKey="levelVariance" />
               <th style={{ borderBottom: '1px solid #ddd', textAlign: 'left', padding: 8 }}>actions</th>
             </tr>
           </thead>
@@ -237,7 +247,7 @@ const sorted = useMemo(() => {
                   <td style={tdStyle}>{p.name}</td>
                   <td style={tdStyle}>{p.type}</td>
                   <td style={tdStyle}>{p.level}</td>
-                  <td style={tdStyle}>{p['level-variance']}</td>
+                  <td style={tdStyle}>{p.levelVariance}</td>
                   <td style={tdStyle}>
                     <button onClick={() => startEdit(p)} style={{ marginRight: 6 }}>Edit</button>
                     <button onClick={() => onDelete(p)} style={{ color: '#b00020' }}>Delete</button>
@@ -250,6 +260,28 @@ const sorted = useMemo(() => {
       </div>
     </>
   );
+
+  /** -------- Local helpers to safely handle "level" as text input -------- */
+
+  function getLevelInputValue(p: Poison): string {
+    // During editing, we store the user's current string in a symbol on the object (non-enumerable),
+    // OR simply derive from the numeric value and let the input overwrite via setLevelFromInput.
+    // Simpler approach: attach a hidden property on the form state for the raw string.
+    const anyP = p as Poison & { __levelRaw?: string };
+    if (anyP.__levelRaw !== undefined) return anyP.__levelRaw;
+    return String(p.level ?? '');
+  }
+
+  function setLevelFromInput(v: string) {
+    setForm((s) => {
+      const next: Poison & { __levelRaw?: string } = { ...s };
+      next.__levelRaw = v;
+      // Only set numeric level when it parses; otherwise keep last numeric level so table stays valid
+      const maybe = Number(v);
+      if (!Number.isNaN(maybe)) next.level = maybe;
+      return next;
+    });
+  }
 }
 
 function LabeledInput({
@@ -307,6 +339,6 @@ function SortableTh<T extends string>({
 const tdStyle: React.CSSProperties = { borderBottom: '1px solid #f0f0f0', padding: '8px' };
 const emptyCell: React.CSSProperties = { padding: 12, textAlign: 'center', color: '#666' };
 
-function emptyPoisonForm(): PoisonFormState {
+function emptyPoison(): Poison {
   return { id: '', name: '', type: '', level: 0, levelVariance: '' };
 }
