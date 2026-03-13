@@ -1,0 +1,26 @@
+
+import { lazy } from 'react';
+
+const BooksView = lazy(() => import('./books/BooksView'));
+const PoisonsView = lazy(() => import('./poisons/PoisonsView'));
+
+export interface EndpointDef {
+  id: string;
+  label: string;
+  path: `/${string}`;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Component: React.LazyExoticComponent<() => JSX.Element>;
+}
+
+
+/**
+ * Each endpoint entry:
+ * - id: unique key
+ * - label: nav label
+ * - path: route path (e.g., '/books')
+ * - Component: lazy-loaded UI component for this endpoint
+ */
+export const endpoints: EndpointDef[] = [
+  { id: 'books', label: 'Books', path: '/books', Component: BooksView },
+  { id: 'poisons', label: 'Poisons', path: '/poisons', Component: PoisonsView },
+];

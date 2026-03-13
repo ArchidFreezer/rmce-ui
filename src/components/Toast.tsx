@@ -1,4 +1,4 @@
-import React, {
+import {
   createContext,
   useCallback,
   useContext,
@@ -6,59 +6,74 @@ import React, {
   useMemo,
   useRef,
   useState,
+  type ReactNode,
 } from 'react';
 
-const ToastContext = createContext(null);
+export type ToastVariant = 'info' | 'success' | 'warning' | 'danger';
 
-/**
- * Usage:
- * 1) Wrap your app with <ToastProvider>
- * 2) Call const toast = useToast();
- * 3) toast({ title: 'Saved', description: 'Book saved', variant: 'success' })
- */
+export interface ToastOptions {
+  title?: string;
+  description?: string;
+  variant?: ToastVariant;
+  duration?: number; // ms, <=0 disables auto-dismiss
+  dismissible?: boolean;
+  icon?: ReactNode;
+}
+
+interface ToastItemData extends Required<Omit<ToastOptions, 'icon'>> {
+  id: string;
+  icon?: ReactNode;
+}
+
+type ToastFn = (opts: ToastOptions) => string;
+const ToastContext = createContext<ToastFn | null>(null);
+
 export function ToastProvider({
   children,
-  maxVisible = 3,      // how many to show at once
-  duration = 3500,      // default auto-dismiss (ms)
-  position = 'bottom-right', // 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left'
+  maxVisible = 3,
+  duration = 3500,
+  position = 'bottom-right',
+}: {
+  children: ReactNode;
+  maxVisible?: number;
+  duration?: number;
+  position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
 }) {
-  const [queue, setQueue] = useState([]); // all toasts (pending + visible)
-  const [visible, setVisible] = useState([]); // subset actively shown
+  const [queue, setQueue] = useState<ToastItemData[]>([]);
+  const [visible, setVisible] = useState<ToastItemData[]>([]);
 
-  // Add a toast to the queue
-  const notify = useCallback((opts = {}) => {
-    const id = `t_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    const toast = {
-      id,
-      title: opts.title || '',
-      description: opts.description || '',
-      variant: opts.variant || 'info', // 'info' | 'success' | 'warning' | 'danger'
-      duration: Number.isFinite(opts.duration) ? opts.duration : duration,
-      dismissible: opts.dismissible !== false, // default true
-      icon: opts.icon,
-    };
-    setQueue(prev => [...prev, toast]);
-    return id;
-  }, [duration]);
+  const notify = useCallback<ToastFn>(
+    (opts) => {
+      const id = `t_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const item: ToastItemData = {
+        id,
+        title: opts.title ?? '',
+        description: opts.description ?? '',
+        variant: opts.variant ?? 'info',
+        duration: Number.isFinite(opts.duration) ? (opts.duration as number) : duration,
+        dismissible: opts.dismissible !== false,
+        icon: opts.icon,
+      };
+      setQueue((prev) => [...prev, item]);
+      return id;
+    },
+    [duration]
+  );
 
-  // Remove toast (from both arrays)
-  const remove = useCallback((id) => {
-    setVisible(prev => prev.filter(t => t.id !== id));
-    setQueue(prev => prev.filter(t => t.id !== id));
+  const remove = useCallback((id: string) => {
+    setVisible((prev) => prev.filter((t) => t.id !== id));
+    setQueue((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  // Promote from queue to visible up to maxVisible
   useEffect(() => {
     if (visible.length >= maxVisible) return;
-    const candidates = queue.filter(q => !visible.find(v => v.id === q.id));
+    const candidates = queue.filter((q) => !visible.find((v) => v.id === q.id));
     if (candidates.length === 0) return;
     const space = maxVisible - visible.length;
-    setVisible(prev => [...prev, ...candidates.slice(0, space)]);
+    setVisible((prev) => [...prev, ...candidates.slice(0, space)]);
   }, [queue, visible, maxVisible]);
 
-  // Announce to screen readers via aria-live region
   const liveText = useMemo(() => {
-    // Only announce the latest visible toast’s title + description
     const last = visible[visible.length - 1];
     if (!last) return '';
     return `${last.title || ''} ${last.description || ''}`.trim();
@@ -66,10 +81,7 @@ export function ToastProvider({
 
   return (
     <ToastContext.Provider value={notify}>
-      {/* Main app */}
       {children}
-
-      {/* SR-only live region */}
       <div
         aria-live="polite"
         aria-atomic="true"
@@ -88,47 +100,49 @@ export function ToastProvider({
         {liveText}
       </div>
 
-      {/* Visual toasts */}
-      <ToastViewport
-        toasts={visible}
-        onDismiss={remove}
-        position={position}
-      />
+      <ToastViewport toasts={visible} onDismiss={remove} position={position} />
     </ToastContext.Provider>
   );
 }
 
-export function useToast() {
+export function useToast(): ToastFn {
   const ctx = useContext(ToastContext);
   if (!ctx) throw new Error('useToast must be used inside a <ToastProvider>');
   return ctx;
 }
 
-/* ---------------------------- Viewport ---------------------------- */
-
-function ToastViewport({ toasts, onDismiss, position }) {
+/* Viewport */
+function ToastViewport({
+  toasts,
+  onDismiss,
+  position,
+}: {
+  toasts: ToastItemData[];
+  onDismiss: (id: string) => void;
+  position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+}) {
   const posStyle = getPositionStyle(position);
   return (
     <div style={{ ...viewportStyle, ...posStyle }}>
-      {toasts.map(t => (
+      {toasts.map((t) => (
         <ToastItem key={t.id} toast={t} onDismiss={() => onDismiss(t.id)} />
       ))}
     </div>
   );
 }
 
-const viewportStyle = {
+const viewportStyle: React.CSSProperties = {
   position: 'fixed',
   zIndex: 1100,
   display: 'flex',
   flexDirection: 'column',
   gap: 8,
   padding: 12,
-  pointerEvents: 'none', // allow clicks through gaps
+  pointerEvents: 'none',
 };
 
-function getPositionStyle(position) {
-  const base = {};
+function getPositionStyle(position: Parameters<typeof ToastViewport>[0]['position']) {
+  const base: React.CSSProperties = {};
   if (position.includes('bottom')) base.bottom = 12;
   if (position.includes('top')) base.top = 12;
   if (position.includes('right')) base.right = 12;
@@ -136,39 +150,41 @@ function getPositionStyle(position) {
   return base;
 }
 
-/* ----------------------------- Item ----------------------------- */
-
-function ToastItem({ toast, onDismiss }) {
-  const { id, title, description, variant, duration, dismissible, icon } = toast;
+/* Individual toast */
+function ToastItem({
+  toast,
+  onDismiss,
+}: {
+  toast: ToastItemData;
+  onDismiss: () => void;
+}) {
+  const { title, description, variant, duration, dismissible, icon } = toast;
   const [hover, setHover] = useState(false);
-  const timerRef = useRef(null);
-  const startTimeRef = useRef(Date.now());
-  const remainingRef = useRef(duration);
+  const timerRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number>(Date.now());
+  const remainingRef = useRef<number>(duration);
 
-  // Auto-dismiss with pause on hover
   useEffect(() => {
     if (!Number.isFinite(duration) || duration <= 0) return;
-    if (hover) return; // paused
-    timerRef.current = setTimeout(() => onDismiss(), remainingRef.current);
-    return () => clearTimeout(timerRef.current);
+    if (hover) return;
+    timerRef.current = window.setTimeout(onDismiss, remainingRef.current);
+    return () => {
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+    };
   }, [hover, duration, onDismiss]);
 
-  // When hover toggles, recompute remaining time
   useEffect(() => {
     if (!Number.isFinite(duration) || duration <= 0) return;
     if (hover) {
-      // Pause: compute remaining and clear timer
       const elapsed = Date.now() - startTimeRef.current;
       remainingRef.current = Math.max(0, duration - elapsed);
-      clearTimeout(timerRef.current);
+      if (timerRef.current) window.clearTimeout(timerRef.current);
     } else {
-      // Resume: reset start time
       startTimeRef.current = Date.now();
     }
   }, [hover, duration]);
 
-  // Styles per variant
-  const theme = variantStyles[variant] || variantStyles.info;
+  const theme = variantStyles[variant] ?? variantStyles.info;
 
   return (
     <div
@@ -176,10 +192,7 @@ function ToastItem({ toast, onDismiss }) {
       aria-live={variant === 'danger' ? 'assertive' : 'polite'}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
-      style={{
-        ...itemStyle,
-        ...theme.container,
-      }}
+      style={{ ...itemStyle, ...theme.container }}
     >
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
         <div style={{ ...iconWrap, ...theme.iconWrap }}>
@@ -187,9 +200,7 @@ function ToastItem({ toast, onDismiss }) {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           {title ? <div style={{ ...titleStyle, ...theme.title }}>{title}</div> : null}
-          {description ? (
-            <div style={{ ...descStyle, ...theme.desc }}>{description}</div>
-          ) : null}
+          {description ? <div style={{ ...descStyle, ...theme.desc }}>{description}</div> : null}
         </div>
         {dismissible && (
           <button
@@ -205,10 +216,9 @@ function ToastItem({ toast, onDismiss }) {
   );
 }
 
-/* ----------------------------- Styles ---------------------------- */
-
-const itemStyle = {
-  pointerEvents: 'auto', // interactive
+/* Styles */
+const itemStyle: React.CSSProperties = {
+  pointerEvents: 'auto',
   minWidth: 280,
   maxWidth: 420,
   borderRadius: 8,
@@ -218,10 +228,9 @@ const itemStyle = {
   background: '#fff',
   color: '#111',
 };
-
-const titleStyle = { fontWeight: 600, marginBottom: 2, lineHeight: 1.3 };
-const descStyle = { fontSize: 14, color: '#333' };
-const iconWrap = {
+const titleStyle: React.CSSProperties = { fontWeight: 600, marginBottom: 2, lineHeight: 1.3 };
+const descStyle: React.CSSProperties = { fontSize: 14, color: '#333' };
+const iconWrap: React.CSSProperties = {
   width: 22,
   height: 22,
   display: 'inline-flex',
@@ -231,7 +240,7 @@ const iconWrap = {
   borderRadius: 999,
   marginTop: 2,
 };
-const closeBtn = {
+const closeBtn: React.CSSProperties = {
   border: 'none',
   background: 'transparent',
   fontSize: 18,
@@ -239,8 +248,16 @@ const closeBtn = {
   cursor: 'pointer',
   color: '#555',
 };
-
-const variantStyles = {
+const variantStyles: Record<
+  ToastVariant,
+  {
+    container: React.CSSProperties;
+    iconWrap: React.CSSProperties;
+    title: React.CSSProperties;
+    desc: React.CSSProperties;
+    closeBtn: React.CSSProperties;
+  }
+> = {
   info: {
     container: { borderColor: '#cfe8ff', background: '#f3f9ff' },
     iconWrap: { background: '#e1f0ff', color: '#0b63c4' },
@@ -271,7 +288,7 @@ const variantStyles = {
   },
 };
 
-function defaultIconFor(variant) {
+function defaultIconFor(variant: ToastVariant) {
   switch (variant) {
     case 'success': return '✓';
     case 'warning': return '!';
@@ -279,3 +296,4 @@ function defaultIconFor(variant) {
     default:        return 'ℹ';
   }
 }
+``

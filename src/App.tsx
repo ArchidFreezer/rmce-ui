@@ -1,17 +1,16 @@
-// src/App.jsx
 import { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useLocation } from 'react-router-dom';
 import { endpoints } from './endpoints/registry';
 import { ConfirmProvider } from './components/ConfirmDialog';
 import { ToastProvider } from './components/Toast';
+
 function Shell() {
   const location = useLocation();
   return (
     <div style={{ padding: 16 }}>
       <h1>RMCE Objects</h1>
-
       <nav style={{ display: 'flex', gap: 8, margin: '12px 0 20px' }}>
-        {endpoints.map(ep => (
+        {endpoints.map((ep) => (
           <NavLink
             key={ep.id}
             to={ep.path}
@@ -31,18 +30,22 @@ function Shell() {
 
       <Suspense fallback={<div>Loading UI…</div>}>
         <Routes location={location}>
-          {endpoints.map(ep => (
+          {endpoints.map((ep) => (
             <Route key={ep.id} path={ep.path} element={<ep.Component />} />
           ))}
-          {/* Default redirect to first endpoint */}
-          <Route path="*" element={<Navigate to={endpoints[0].path} replace />} />
+          <Route
+            path="*"
+            element={
+              endpoints[0]
+                ? <Navigate to={endpoints[0].path} replace />
+                : <div>No endpoints configured</div>
+            }
+          />
         </Routes>
       </Suspense>
     </div>
   );
 }
-
-
 
 export default function App() {
   return (
@@ -55,4 +58,3 @@ export default function App() {
     </ToastProvider>
   );
 }
-
