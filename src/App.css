@@ -1,0 +1,21 @@
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Liberation Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
+  margin: 0;
+}
+
+h1 {
+  margin: 0 0 8px;
+}
+
+table {
+  width: 100%;
+  background: var(--tbl-bg, #fff);
+}
+
+thead th {
+  background: #fafafa;
+}
