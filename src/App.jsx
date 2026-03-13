@@ -2,8 +2,8 @@
 import { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, NavLink, useLocation } from 'react-router-dom';
 import { endpoints } from './endpoints/registry';
-import { ConfirmProvider } from './components/ConfirmDialog'; // <-- added import
-
+import { ConfirmProvider } from './components/ConfirmDialog';
+import { ToastProvider } from './components/Toast';
 function Shell() {
   const location = useLocation();
   return (
@@ -43,12 +43,16 @@ function Shell() {
 }
 
 
+
 export default function App() {
   return (
-    <ConfirmProvider>
-      <BrowserRouter>
-        <Shell />
-      </BrowserRouter>
-    </ConfirmProvider>
+    <ToastProvider position="bottom-right" duration={3500} maxVisible={3}>
+      <ConfirmProvider>
+        <BrowserRouter>
+          <Shell />
+        </BrowserRouter>
+      </ConfirmProvider>
+    </ToastProvider>
   );
 }
+

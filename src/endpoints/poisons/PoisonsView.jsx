@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchPoisons, upsertPoison, deletePoison } from './api';
 import { useConfirm } from '../../components/ConfirmDialog';
+import { useToast } from '../../components/Toast';
 
 export default function PoisonsView() {
   const [rows, setRows] = useState([]);
@@ -18,8 +19,8 @@ export default function PoisonsView() {
   const [form, setForm] = useState(emptyPoison());
   const [formErr, setFormErr] = useState('');
 
-  const [toast, setToast] = useState('');
   const confirm = useConfirm();
+  const toast = useToast()
 
   const notify = (msg) => {
     setToast(msg);
@@ -45,10 +46,10 @@ export default function PoisonsView() {
 
     try {
       await deletePoison(id); // DELETE /rmce/objects/poison/{id}
-      notify(`Deleted poison ${id}`);
+      toast({ variant: 'success', title: 'Deleted', description: `Poison "${id}" deleted.` });
     } catch (err) {
       setRows(prev);
-      notify(`Delete failed: ${err instanceof Error ? err.message : String(err)}`);
+      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err) });
     }
   };
 
@@ -164,9 +165,9 @@ export default function PoisonsView() {
       });
 
       setShowForm(false);
-      setFormErr('');
+      toast({ variant: 'success', title: 'Saved', description: `Poison "${payload.id}" saved.` });
     } catch (err) {
-      setFormErr(err instanceof Error ? err.message : String(err));
+      toast({ variant: 'danger', title: 'Save failed', description: String(err instanceof Error ? err.message : err) });
     }
   };
 

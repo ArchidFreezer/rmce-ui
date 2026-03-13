@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchBooks, upsertBook, deleteBook } from './api';
 import { useConfirm } from '../../components/ConfirmDialog';
+import { useToast } from '../../components/Toast';
 
 export default function BooksView() {
   const [rows, setRows] = useState([]);
@@ -19,12 +20,12 @@ export default function BooksView() {
   const [formErr, setFormErr] = useState('');
 
   // Optional: transient message area
-  const [toast, setToast] = useState('');
+  const toast = useToast();
   const confirm = useConfirm();
 
   // Add a helper to show transient messages (basic)
   const notify = (msg) => {
-    setToast(msg);
+    toast({ title: msg });
     setTimeout(() => setToast(''), 2500);
   };
 
@@ -48,11 +49,11 @@ export default function BooksView() {
 
     try {
       await deleteBook(id); // DELETE /rmce/objects/book/{id}
-      notify(`Deleted book ${id}`);
+      toast({ variant: 'success', title: 'Deleted', description: `Book "${id}" deleted.` });
     } catch (err) {
       // rollback on error
       setRows(prev);
-      notify(`Delete failed: ${err instanceof Error ? err.message : String(err)}`);
+      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err) });
     }
   };
 
@@ -164,9 +165,9 @@ export default function BooksView() {
       });
 
       setShowForm(false);
-      setFormErr('');
+      toast({ variant: 'success', title: 'Saved', description: `Book "${payload.id}" saved.` });
     } catch (err) {
-      setFormErr(err instanceof Error ? err.message : String(err));
+      toast({ variant: 'danger', title: 'Save failed', description: String(err instanceof Error ? err.message : err) });
     }
   };
 
