@@ -4,6 +4,19 @@ import type { Armourtype, ArmourtypeFormState } from '../../types';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 
+type ArmourNumberKey =
+  | 'min-manoeuvre-mod'
+  | 'max-manoeuvre-mod'
+  | 'missile-attack-penalty'
+  | 'quickness-penalty';
+
+type ArmourBooleanKey = 'animal-only' | 'includes-greaves';
+
+type ArmourStringKey = Exclude<
+  keyof Armourtype,
+  ArmourNumberKey | ArmourBooleanKey
+>;
+
 export default function ArmourtypesView() {
   const [rows, setRows] = useState<Armourtype[]>([]);
   const [loading, setLoading] = useState(true);
@@ -11,12 +24,7 @@ export default function ArmourtypesView() {
 
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState<{
-    key:
-      | keyof Armourtype
-      | 'min-manoeuvre-mod'
-      | 'max-manoeuvre-mod'
-      | 'missile-attack-penalty'
-      | 'quickness-penalty';
+    key: keyof Armourtype;
     dir: 'asc' | 'desc';
   }>({
     key: 'name',
@@ -69,36 +77,43 @@ export default function ArmourtypesView() {
     );
   }, [rows, query]);
 
-  const sorted = useMemo(() => {
-    const arr = [...filtered];
-    const { key, dir } = sort;
-    arr.sort((a, b) => {
-      // numeric fields
-      if (
-        key === 'min-manoeuvre-mod' ||
-        key === 'max-manoeuvre-mod' ||
-        key === 'missile-attack-penalty' ||
-        key === 'quickness-penalty'
-      ) {
-        const av = Number((a as Record<string, unknown>)[key] ?? 0);
-        const bv = Number((b as Record<string, unknown>)[key] ?? 0);
-        return dir === 'asc' ? av - bv : bv - av;
-      }
-      // booleans sort as false < true
-      if (key === 'animal-only' || key === 'includes-greaves') {
-        const av = Boolean((a as Record<string, unknown>)[key]);
-        const bv = Boolean((b as Record<string, unknown>)[key]);
-        return dir === 'asc' ? Number(av) - Number(bv) : Number(bv) - Number(av);
-      }
-      // strings
-      const av = String((a as Record<string, unknown>)[key] ?? '');
-      const bv = String((b as Record<string, unknown>)[key] ?? '');
-      if (av < bv) return dir === 'asc' ? -1 : 1;
-      if (av > bv) return dir === 'asc' ? 1 : -1;
-      return 0;
-    });
-    return arr;
-  }, [filtered, sort]);
+const sorted = useMemo(() => {
+  const arr = [...filtered];
+  const { key, dir } = sort;
+
+  const isNumberKey = (k: keyof Armourtype): k is ArmourNumberKey =>
+    k === 'min-manoeuvre-mod' ||
+    k === 'max-manoeuvre-mod' ||
+    k === 'missile-attack-penalty' ||
+    k === 'quickness-penalty';
+
+  const isBooleanKey = (k: keyof Armourtype): k is ArmourBooleanKey =>
+    k === 'animal-only' || k === 'includes-greaves';
+
+  arr.sort((a, b) => {
+    if (isNumberKey(key)) {
+      const av = a[key] as number;
+      const bv = b[key] as number;
+      return dir === 'asc' ? av - bv : bv - av;
+    }
+
+    if (isBooleanKey(key)) {
+      const av = a[key] as boolean;
+      const bv = b[key] as boolean;
+      // false < true
+      return dir === 'asc' ? Number(av) - Number(bv) : Number(bv) - Number(av);
+    }
+
+    // string-like keys
+    const av = String(a[key as ArmourStringKey] ?? '');
+    const bv = String(b[key as ArmourStringKey] ?? '');
+    if (av < bv) return dir === 'asc' ? -1 : 1;
+    if (av > bv) return dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  return arr;
+}, [filtered, sort]);
 
   const onSort = (key: (typeof sort)['key']) =>
     setSort(prev => prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' });

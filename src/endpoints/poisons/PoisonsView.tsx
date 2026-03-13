@@ -4,6 +4,9 @@ import type { Poison, PoisonFormState } from '../../types';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 
+type PoisonNumberKey = 'level';
+type PoisonStringKey = Exclude<keyof Poison, PoisonNumberKey>;
+
 export default function PoisonsView() {
   const [rows, setRows] = useState<Poison[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,18 +52,30 @@ export default function PoisonsView() {
     );
   }, [rows, query]);
 
-  const sorted = useMemo(() => {
-    const arr = [...filtered];
-    const { key, dir } = sort;
-    arr.sort((a, b) => {
-      const av = key === 'level' ? Number(a.level ?? 0) : String((a as Record<string, unknown>)[key] ?? '');
-      const bv = key === 'level' ? Number(b.level ?? 0) : String((b as Record<string, unknown>)[key] ?? '');
-      if (av < bv) return dir === 'asc' ? -1 : 1;
-      if (av > bv) return dir === 'asc' ? 1 : -1;
-      return 0;
-    });
-    return arr;
-  }, [filtered, sort]);
+
+const sorted = useMemo(() => {
+  const arr = [...filtered];
+  const { key, dir } = sort;
+
+  const isNumberKey = (k: keyof Poison): k is PoisonNumberKey => k === 'level';
+
+  arr.sort((a, b) => {
+    if (isNumberKey(key)) {
+      const av = a[key] as number;
+      const bv = b[key] as number;
+      return dir === 'asc' ? av - bv : bv - av;
+    }
+
+    const av = String(a[key as PoisonStringKey] ?? '');
+    const bv = String(b[key as PoisonStringKey] ?? '');
+    if (av < bv) return dir === 'asc' ? -1 : 1;
+    if (av > bv) return dir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  return arr;
+}, [filtered, sort]);
+
 
   const onSort = (key: keyof Poison | 'level-variance') =>
     setSort((prev) =>
