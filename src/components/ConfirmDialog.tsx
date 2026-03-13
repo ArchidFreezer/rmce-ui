@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 type ConfirmTone = 'default' | 'danger';
 export interface ConfirmOptions {
@@ -26,6 +27,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   const resolverRef = useRef<((ok: boolean) => void) | null>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
   const confirmBtnRef = useRef<HTMLButtonElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
 
   const confirm = useCallback<ConfirmFn>((opts = {}) => {
     return new Promise<boolean>((resolve) => {
@@ -59,55 +61,20 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     close();
   };
 
-  // ESC + simple focus trap
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (!open) return;
-
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onCancel();
-        return;
-      }
-
-      if (e.key === 'Tab') {
-        const scope = document.querySelector('[data-confirm-dialog]');
-        if (!scope) return;
-
-        const focusables: HTMLElement[] = Array.from(
-          scope.querySelectorAll<HTMLElement>(
-            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-          )
-        ).filter((el) => !el.hasAttribute('disabled'));
-
-        if (focusables.length === 0) return;
-
-        const current = document.activeElement as HTMLElement | null;
-        const idx = focusables.indexOf(current ?? (null as unknown as HTMLElement));
-
-        let nextIdx = idx;
-        if (e.shiftKey) {
-          nextIdx = idx <= 0 ? focusables.length - 1 : idx - 1;
-        } else {
-          nextIdx = idx === focusables.length - 1 ? 0 : idx + 1;
-        }
-
-        if (idx === -1 || nextIdx !== idx) {
-          e.preventDefault();
-          focusables[nextIdx].focus();
-        }
-      }
-    }
-
-    document.addEventListener('keydown', onKeyDown, true);
-    return () => document.removeEventListener('keydown', onKeyDown, true);
-  }, [open, onCancel]);
-
   useEffect(() => {
     if (open && confirmBtnRef.current) {
       confirmBtnRef.current.focus();
     }
   }, [open]);
+  
+  useFocusTrap({
+    containerRef: dialogRef,
+    active: open,
+    initialFocusRef: confirmBtnRef,      // focus the confirm button on open
+    onEscape: onCancel,                  // ESC closes
+    restoreFocusRef: previouslyFocusedRef, // return focus to the opener
+    loop: true,
+  });
 
   return (
     <ConfirmContext.Provider value={confirm}>
@@ -121,6 +88,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
           style={overlayStyle}
         >
           <div
+            ref={dialogRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="confirm-title"

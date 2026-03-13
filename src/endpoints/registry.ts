@@ -1,5 +1,5 @@
 
-import { lazy } from 'react';
+import { lazy, type LazyExoticComponent, type ComponentType } from 'react';
 
 const BooksView = lazy(() => import('./books/BooksView'));
 const PoisonsView = lazy(() => import('./poisons/PoisonsView'));
@@ -9,7 +9,7 @@ export interface EndpointDef {
   label: string;
   path: `/${string}`;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  Component: React.LazyExoticComponent<() => JSX.Element>;
+  Component: LazyExoticComponent<ComponentType>
 }
 
 
