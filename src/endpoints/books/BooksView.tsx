@@ -23,14 +23,14 @@ export default function BooksView() {
 
   // Columns
   const columns: ColumnDef<Book>[] = [
-    { id: 'id', header: 'id', accessor: r => r.id, sortable: true, width: 475 },
-    { id: 'code', header: 'code', accessor: r => r.code, sortable: true },
-    { id: 'name', header: 'name', accessor: r => r.name, sortable: true },
-    { id: 'abbreviation', header: 'abbreviation', accessor: r => r.abbreviation, sortable: true },
-    { id: 'isbn', header: 'isbn', accessor: r => r.isbn, sortable: true },
+    { id: 'id', header: 'Id', accessor: r => r.id, sortable: true, width: 475 },
+    { id: 'code', header: 'Code', accessor: r => r.code, sortable: true },
+    { id: 'name', header: 'Name', accessor: r => r.name, sortable: true },
+    { id: 'abbreviation', header: 'Abbreviation', accessor: r => r.abbreviation, sortable: true },
+    { id: 'isbn', header: 'ISBN', accessor: r => r.isbn, sortable: true },
     {
       id: 'actions',
-      header: 'actions',
+      header: 'Actions',
       sortable: false,
       render: (row) => (
         <>
@@ -115,11 +115,11 @@ export default function BooksView() {
   };
 
   const validate = (b: Book): string => {
-    if (!b.id?.trim()) return 'id is required';
-    if (!b.name?.trim()) return 'name is required';
-    if (!b.code?.trim()) return 'code is required';
-    if (!b.abbreviation?.trim()) return 'abbreviation is required';
-    if (!b.isbn?.trim()) return 'isbn is required';
+    if (!b.id?.trim()) return 'Id is required';
+    if (!b.name?.trim()) return 'Name is required';
+    if (!b.code?.trim()) return 'Code is required';
+    if (!b.abbreviation?.trim()) return 'Abbreviation is required';
+    if (!b.isbn?.trim()) return 'ISBN is required';
     return '';
   };
 

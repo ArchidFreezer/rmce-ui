@@ -25,14 +25,14 @@ export default function PoisonsView() {
   };
 
   const columns: ColumnDef<Poison>[] = [
-    { id: 'id', header: 'id', accessor: r => r.id, width: 350 },
-    { id: 'name', header: 'name', accessor: r => r.name },
-    { id: 'type', header: 'type', accessor: r => r.type },
-    { id: 'level', header: 'level', accessor: r => r.level, sortType: 'number', align: 'right' },
-    { id: 'levelVariance', header: 'levelVariance', accessor: r => r.levelVariance },
+    { id: 'id', header: 'Id', accessor: r => r.id, width: 350 },
+    { id: 'name', header: 'Name', accessor: r => r.name },
+    { id: 'type', header: 'Type', accessor: r => r.type },
+    { id: 'level', header: 'Level', accessor: r => r.level, sortType: 'number', align: 'right' },
+    { id: 'levelVariance', header: 'Level Variance', accessor: r => r.levelVariance },
     {
       id: 'actions',
-      header: 'actions',
+      header: 'Actions',
       sortable: false,
       render: (row) => (
         <>
