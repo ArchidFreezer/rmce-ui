@@ -1,4 +1,6 @@
-/* src/layout.css */
+/* ----------------------------------------------
+   THEME TOKENS (Light by default)
+   ---------------------------------------------- */
 :root {
   --bg: #ffffff;
   --panel: #f8f9fb;
@@ -7,19 +9,73 @@
   --muted: #6b7280;
   --primary: #4a90e2;
   --primary-weak: #e8f2ff;
+
   --sidebar-w: 240px;
   --topbar-h: 48px;
+
+  /* Transitions */
+  --ease: 160ms ease-in-out;
+}
+
+/* Dark theme overrides (activates when .theme-dark is on body) */
+body.theme-dark {
+  --bg: #0f141a;            /* app background */
+  --panel: #131a21;         /* sidebar/panels */
+  --border: #212a33;        /* subtle borders */
+  --text: #e5e7eb;          /* primary text */
+  --muted: #9aa4af;         /* secondary text */
+  --primary: #77b7ff;       /* accent */
+  --primary-weak: #122338;  /* subtle active bg in nav */
+}
+
+/* Optional: smooth transitions for theme changes */
+html, body, .app, .sidebar, .content, .topbar, table, th, td, input, button, select {
+  transition: background-color var(--ease), color var(--ease), border-color var(--ease);
 }
 
 /* reset margins to avoid unexpected push downs */
 html, body, #root {
   height: 100%;
 }
+
 body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
   font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans";
+}
+
+/* Table neutrals */
+table {
+  background: var(--bg);
+  color: var(--text);
+}
+th {
+  border-bottom: 1px solid var(--border);
+}
+td {
+  border-bottom: 1px solid color-mix(in oklch, var(--border), var(--bg) 30%);
+}
+
+/* Inputs/buttons */
+input, select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+button {
+  color: var(--text);
+  border: 1px solid var(--border);
+  background: var(--panel);
+}
+button:hover {
+  background: color-mix(in oklch, var(--panel), var(--bg) 12%);
+}
+
+/* Content area */
+.content {
+  background: var(--bg);
+  color: var(--text);
 }
 
 /* App grid: 
@@ -35,25 +91,18 @@ body {
 }
 
 /* Top bar (visible on mobile, hidden on desktop) */
+/* Topbar uses theme colors */
 .topbar {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 8px;
-  padding: 0 12px;
-  border-bottom: 1px solid var(--border);
   background: var(--bg);
+  border-bottom: 1px solid var(--border);
 }
 .topbar__menu {
-  border: 1px solid var(--border);
   background: var(--panel);
-  padding: 6px 10px;
-  border-radius: 6px;
-  cursor: pointer;
+  border: 1px solid var(--border);
+  color: var(--text);
 }
 .topbar__brand {
-  font-weight: 600;
-  padding-left: 6px;
+  color: var(--text);
 }
 
 /* Sidebar overlay (mobile default) */
@@ -84,6 +133,20 @@ body {
   grid-row: 2 / 3;
   grid-column: 1 / 2;
   padding: 16px;
+}
+
+/* Respect system preference if no manual selection yet.
+   We'll use this as an initial default until the user chooses. */
+@media (prefers-color-scheme: dark) {
+  body:not(.theme-light):not(.theme-dark) {
+    --bg: #0f141a;
+    --panel: #131a21;
+    --border: #212a33;
+    --text: #e5e7eb;
+    --muted: #9aa4af;
+    --primary: #77b7ff;
+    --primary-weak: #122338;
+  }
 }
 
 /* Desktop breakpoint: switch to 2-column grid and static sidebar */
@@ -133,20 +196,14 @@ body {
 .sidebar__item + .sidebar__item {
   margin-top: 4px;
 }
-.sidebar__link {
-  display: block;
-  padding: 8px 10px;
-  border-radius: 6px;
-  color: var(--text);
-  text-decoration: none;
-}
-.sidebar__link:hover {
-  background: #eef2f7;
-}
+.sidebar__link { color: var(--text); }
+.sidebar__link:hover { background: color-mix(in oklch, var(--panel), white 6%); }
+body.theme-dark .sidebar__link:hover { background: color-mix(in oklch, var(--panel), black 12%); }
 .sidebar__link.active {
   background: var(--primary-weak);
-  border: 1px solid #d8e8ff;
+  border: 1px solid color-mix(in oklch, var(--primary), var(--border) 40%);
 }
+
 .sidebar__footer {
   color: var(--muted);
 }
@@ -159,7 +216,10 @@ body {
   z-index: 10;
 }
 
-/* Optional: ensure tables don't add unexpected margins */
-table {
-  background: var(--bg);
+/* Zebra colour for tables if not set*/
+tr:nth-child(even) {
+  background: color-mix(in oklch, var(--bg), black 4%);
+}
+body.theme-dark tr:nth-child(even) {
+  background: color-mix(in oklch, var(--bg), white 3%);
 }
