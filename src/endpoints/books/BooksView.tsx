@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable'
+import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
 import { fetchBooks, upsertBook, deleteBook } from './api';
 import type { Book } from '../../types';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -12,12 +12,15 @@ export default function BooksView() {
 
 
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const globalFilter = (b: Book, q: string) => {
     const s = q.toLowerCase();
     return [b.id, b.code, b.name, b.abbreviation, b.isbn]
       .some(v => String(v ?? '').toLowerCase().includes(s));
   };
-  
+
   // Columns
   const columns: ColumnDef<Book>[] = [
     { id: 'id', header: 'id', accessor: r => r.id, sortable: true },
@@ -211,7 +214,6 @@ export default function BooksView() {
         />
       </div>
 
-
       {showForm && (
         <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16, background: '#fafafa' }}>
           <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Book' : 'New Book'}</h3>
@@ -267,16 +269,26 @@ export default function BooksView() {
       </div>
 
       {/* Shared DataTable */}
+
       <DataTable<Book>
         rows={rows}
         columns={columns}
         rowId={(r) => r.id}
         initialSort={{ colId: 'name', dir: 'asc' }}
+        // search
         searchQuery={query}
         globalFilter={globalFilter}
+        // pagination (client)
+        mode="client"
+        page={page}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        pageSizeOptions={[5, 10, 20, 50]}
         tableMinWidth={900}
         zebra
       />
+
     </>
   );
 }

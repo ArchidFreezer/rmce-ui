@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
+import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable'
 import { fetchPoisons, upsertPoison, deletePoison } from './api';
 import type { Poison } from '../../types';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -15,6 +15,9 @@ export default function PoisonsView() {
 
   
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const globalFilter = (p: Poison, q: string) => {
     const s = q.toLowerCase();
     return [p.id, p.name, p.type, p.level, p.levelVariance]
@@ -22,11 +25,11 @@ export default function PoisonsView() {
   };
 
   const columns: ColumnDef<Poison>[] = [
-    { id: 'id', header: 'id', accessor: r => r.id, sortable: true },
-    { id: 'name', header: 'name', accessor: r => r.name, sortable: true },
-    { id: 'type', header: 'type', accessor: r => r.type, sortable: true },
-    { id: 'level', header: 'level', accessor: r => r.level, sortable: true, sortType: 'number', align: 'right' },
-    { id: 'levelVariance', header: 'levelVariance', accessor: r => r.levelVariance, sortable: true },
+    { id: 'id', header: 'id', accessor: r => r.id },
+    { id: 'name', header: 'name', accessor: r => r.name },
+    { id: 'type', header: 'type', accessor: r => r.type },
+    { id: 'level', header: 'level', accessor: r => r.level, sortType: 'number', align: 'right' },
+    { id: 'levelVariance', header: 'levelVariance', accessor: r => r.levelVariance },
     {
       id: 'actions',
       header: 'actions',
@@ -285,6 +288,7 @@ export default function PoisonsView() {
         </table>
       </div>
 
+
       <DataTable<Poison>
         rows={rows}
         columns={columns}
@@ -292,6 +296,12 @@ export default function PoisonsView() {
         initialSort={{ colId: 'name', dir: 'asc' }}
         searchQuery={query}
         globalFilter={globalFilter}
+        mode="client"
+        page={page}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        pageSizeOptions={[5, 10, 20, 50]}
         tableMinWidth={900}
         zebra
       />

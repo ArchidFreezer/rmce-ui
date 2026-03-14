@@ -27,9 +27,11 @@ export default function ArmourtypesView() {
   const [error, setError] = useState<string | null>(null);
 
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const globalFilter = (a: Armourtype, q: string) => {
-  const s = q.toLowerCase();
+    const s = q.toLowerCase();
     return [
       a.id, a.name, a.type, a.description,
       a.minManoeuvreMod, a.maxManoeuvreMod,
@@ -355,6 +357,7 @@ export default function ArmourtypesView() {
         </table>
       </div>
 
+
       <DataTable<Armourtype>
         rows={rows}
         columns={columns}
@@ -362,6 +365,12 @@ export default function ArmourtypesView() {
         initialSort={{ colId: 'name', dir: 'asc' }}
         searchQuery={query}
         globalFilter={globalFilter}
+        mode="client"
+        page={page}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        pageSizeOptions={[5, 10, 20, 50]}
         tableMinWidth={1200}
         zebra
       />
