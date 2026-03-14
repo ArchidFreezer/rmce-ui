@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
 import { fetchPoisons, upsertPoison, deletePoison } from './api';
 import type { Poison } from '../../types';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -12,7 +13,33 @@ export default function PoisonsView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  
   const [query, setQuery] = useState('');
+  const globalFilter = (p: Poison, q: string) => {
+    const s = q.toLowerCase();
+    return [p.id, p.name, p.type, p.level, p.levelVariance]
+      .some(v => String(v ?? '').toLowerCase().includes(s));
+  };
+
+  const columns: ColumnDef<Poison>[] = [
+    { id: 'id', header: 'id', accessor: r => r.id, sortable: true },
+    { id: 'name', header: 'name', accessor: r => r.name, sortable: true },
+    { id: 'type', header: 'type', accessor: r => r.type, sortable: true },
+    { id: 'level', header: 'level', accessor: r => r.level, sortable: true, sortType: 'number', align: 'right' },
+    { id: 'levelVariance', header: 'levelVariance', accessor: r => r.levelVariance, sortable: true },
+    {
+      id: 'actions',
+      header: 'actions',
+      sortable: false,
+      render: (row) => (
+        <>
+          <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
+          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
+        </>
+      ),
+    },
+  ];
+
   const [sort, setSort] = useState<{ key: keyof Poison; dir: 'asc' | 'desc' }>({
     key: 'name',
     dir: 'asc',
@@ -190,11 +217,10 @@ export default function PoisonsView() {
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
         <button onClick={startNew}>New Poison</button>
-        <input
+        <DataTableSearchInput
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search poisons…"
-          style={{ padding: 8, width: 360, maxWidth: '100%' }}
           aria-label="Search poisons"
         />
       </div>
@@ -258,6 +284,17 @@ export default function PoisonsView() {
           </tbody>
         </table>
       </div>
+
+      <DataTable<Poison>
+        rows={rows}
+        columns={columns}
+        rowId={(r) => r.id}
+        initialSort={{ colId: 'name', dir: 'asc' }}
+        searchQuery={query}
+        globalFilter={globalFilter}
+        tableMinWidth={900}
+        zebra
+      />
     </>
   );
 

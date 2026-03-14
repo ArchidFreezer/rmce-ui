@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
 import { fetchArmourtypes, upsertArmourtype, deleteArmourtype } from './api';
 import type { Armourtype } from '../../types';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -26,6 +27,41 @@ export default function ArmourtypesView() {
   const [error, setError] = useState<string | null>(null);
 
   const [query, setQuery] = useState('');
+
+  const globalFilter = (a: Armourtype, q: string) => {
+  const s = q.toLowerCase();
+    return [
+      a.id, a.name, a.type, a.description,
+      a.minManoeuvreMod, a.maxManoeuvreMod,
+      a.missileAttackPenalty, a.quicknessPenalty,
+      a.animalOnly, a.includesGreaves,
+    ].some(v => String(v ?? '').toLowerCase().includes(s));
+  };
+
+  const columns: ColumnDef<Armourtype>[] = [
+    { id: 'id', header: 'id', accessor: r => r.id },
+    { id: 'name', header: 'name', accessor: r => r.name },
+    { id: 'type', header: 'type', accessor: r => r.type },
+    { id: 'description', header: 'description', accessor: r => r.description },
+    { id: 'minManoeuvreMod', header: 'minManoeuvreMod', accessor: r => r.minManoeuvreMod, sortType: 'number', align: 'right' },
+    { id: 'maxManoeuvreMod', header: 'maxManoeuvreMod', accessor: r => r.maxManoeuvreMod, sortType: 'number', align: 'right' },
+    { id: 'missileAttackPenalty', header: 'missileAttackPenalty', accessor: r => r.missileAttackPenalty, sortType: 'number', align: 'right' },
+    { id: 'quicknessPenalty', header: 'quicknessPenalty', accessor: r => r.quicknessPenalty, sortType: 'number', align: 'right' },
+    { id: 'animalOnly', header: 'animalOnly', accessor: r => r.animalOnly, sortType: 'boolean', align: 'center' },
+    { id: 'includesGreaves', header: 'includesGreaves', accessor: r => r.includesGreaves, sortType: 'boolean', align: 'center' },
+    {
+      id: 'actions',
+      header: 'actions',
+      sortable: false,
+      render: (row) => (
+        <>
+          <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
+          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
+        </>
+      ),
+    },
+  ];
+
   const [sort, setSort] = useState<{ key: keyof Armourtype; dir: 'asc' | 'desc' }>({
     key: 'name',
     dir: 'asc',
@@ -212,11 +248,10 @@ export default function ArmourtypesView() {
 
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
         <button onClick={startNew}>New Armourtype</button>
-        <input
+        <DataTableSearchInput
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search armourtypes…"
-          style={{ padding: 8, width: 360, maxWidth: '100%' }}
           aria-label="Search armourtypes"
         />
       </div>
@@ -319,8 +354,20 @@ export default function ArmourtypesView() {
           </tbody>
         </table>
       </div>
+
+      <DataTable<Armourtype>
+        rows={rows}
+        columns={columns}
+        rowId={(r) => r.id}
+        initialSort={{ colId: 'name', dir: 'asc' }}
+        searchQuery={query}
+        globalFilter={globalFilter}
+        tableMinWidth={1200}
+        zebra
+      />
     </>
   );
+
 
   /** ----------------- Numeric input helpers (single-interface form) ----------------- */
 

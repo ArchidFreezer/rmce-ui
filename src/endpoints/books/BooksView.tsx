@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable'
 import { fetchBooks, upsertBook, deleteBook } from './api';
 import type { Book } from '../../types';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -9,11 +10,35 @@ export default function BooksView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+
   const [query, setQuery] = useState('');
-  const [sort, setSort] = useState<{ key: keyof Book; dir: 'asc' | 'desc' }>({
-    key: 'name',
-    dir: 'asc',
-  });
+  const globalFilter = (b: Book, q: string) => {
+    const s = q.toLowerCase();
+    return [b.id, b.code, b.name, b.abbreviation, b.isbn]
+      .some(v => String(v ?? '').toLowerCase().includes(s));
+  };
+  
+  // Columns
+  const columns: ColumnDef<Book>[] = [
+    { id: 'id', header: 'id', accessor: r => r.id, sortable: true },
+    { id: 'code', header: 'code', accessor: r => r.code, sortable: true },
+    { id: 'name', header: 'name', accessor: r => r.name, sortable: true },
+    { id: 'abbreviation', header: 'abbreviation', accessor: r => r.abbreviation, sortable: true },
+    { id: 'isbn', header: 'isbn', accessor: r => r.isbn, sortable: true },
+    {
+      id: 'actions',
+      header: 'actions',
+      sortable: false,
+      render: (row) => (
+        <>
+          <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
+          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
+        </>
+      ),
+    },
+  ];
+
+  const [sort, setSort] = useState<{ key: keyof Book; dir: 'asc' | 'desc' }>({ key: 'id', dir: 'asc' });
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -174,16 +199,18 @@ export default function BooksView() {
     <>
       <h2>Books</h2>
 
+
+      {/* New + Search */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
         <button onClick={startNew}>New Book</button>
-        <input
+        <DataTableSearchInput
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search books…"
-          style={{ padding: 8, width: 360, maxWidth: '100%' }}
           aria-label="Search books"
         />
       </div>
+
 
       {showForm && (
         <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16, background: '#fafafa' }}>
@@ -238,9 +265,22 @@ export default function BooksView() {
           </tbody>
         </table>
       </div>
+
+      {/* Shared DataTable */}
+      <DataTable<Book>
+        rows={rows}
+        columns={columns}
+        rowId={(r) => r.id}
+        initialSort={{ colId: 'name', dir: 'asc' }}
+        searchQuery={query}
+        globalFilter={globalFilter}
+        tableMinWidth={900}
+        zebra
+      />
     </>
   );
 }
+
 
 function LabeledInput({
   label,
