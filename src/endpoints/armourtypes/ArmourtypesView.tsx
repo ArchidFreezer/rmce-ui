@@ -41,7 +41,7 @@ export default function ArmourtypesView() {
   };
 
   const columns: ColumnDef<Armourtype>[] = [
-    { id: 'id', header: 'id', accessor: r => r.id },
+    { id: 'id', header: 'id', accessor: r => r.id, width: 325 },
     { id: 'name', header: 'name', accessor: r => r.name },
     { id: 'type', header: 'type', accessor: r => r.type },
     { id: 'description', header: 'description', accessor: r => r.description },
@@ -339,6 +339,13 @@ return (
         // styles
         tableMinWidth={1200}
         zebra
+        // Resizable columns
+        resizable
+        persistKey="dt.armourtypes.v1"
+        onColumnResizeEnd={(widths) => {
+          // optional: log or sync widths
+          console.log('Armourtype widths(px):', widths);
+        }}
       />
     )}
   </>
