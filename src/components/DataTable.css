@@ -95,3 +95,41 @@ body.theme-dark .dt--zebra .dt__row--body:nth-child(even) .dt__cell--body {
   background: color-mix(in oklch, var(--primary-weak), var(--bg) 50%);
   border-bottom-color: color-mix(in oklch, var(--primary), var(--border) 40%);
 }
+
+/* Header cell layout wrapper */
+.dt__head-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+}
+
+/* The label text (kept separate so handle doesn't block clicks) */
+.dt__head-label {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Resize handle (right edge of header cell) */
+.dt__resize {
+  position: absolute;
+  top: 0;
+  right: -3px;            /* small overlap for easy grab */
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;     /* prevent touch scrolling while resizing */
+  /* subtle visual (only on hover/focus to avoid visual noise) */
+  background: transparent;
+}
+.dt__resize:hover {
+  background: color-mix(in oklch, var(--primary-weak), var(--bg) 65%);
+}
+
+/* When resizable globally, ensure header has relative positioning */
+.dt--resizable .dt__cell--head {
+  position: relative;
+}

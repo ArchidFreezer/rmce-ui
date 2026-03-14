@@ -23,7 +23,7 @@ export default function BooksView() {
 
   // Columns
   const columns: ColumnDef<Book>[] = [
-    { id: 'id', header: 'id', accessor: r => r.id, sortable: true },
+    { id: 'id', header: 'id', accessor: r => r.id, sortable: true, width: 475 },
     { id: 'code', header: 'code', accessor: r => r.code, sortable: true },
     { id: 'name', header: 'name', accessor: r => r.name, sortable: true },
     { id: 'abbreviation', header: 'abbreviation', accessor: r => r.abbreviation, sortable: true },
@@ -258,6 +258,13 @@ return (
         // styles
         tableMinWidth={900}
         zebra
+        // Resizable columns
+        resizable
+        persistKey="dt.books.v1"
+        onColumnResizeEnd={(widths) => {
+          // optional: log or sync widths
+          console.log('Book widths(px):', widths);
+        }}
       />
     )}
   </>

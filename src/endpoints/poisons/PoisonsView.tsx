@@ -25,7 +25,7 @@ export default function PoisonsView() {
   };
 
   const columns: ColumnDef<Poison>[] = [
-    { id: 'id', header: 'id', accessor: r => r.id },
+    { id: 'id', header: 'id', accessor: r => r.id, width: 350 },
     { id: 'name', header: 'name', accessor: r => r.name },
     { id: 'type', header: 'type', accessor: r => r.type },
     { id: 'level', header: 'level', accessor: r => r.level, sortType: 'number', align: 'right' },
@@ -274,7 +274,13 @@ return (
         // styles
         tableMinWidth={900}
         zebra
-      />
+        // Resizable columns
+        resizable
+        persistKey="dt.poisons.v1"
+        onColumnResizeEnd={(widths) => {
+          // optional: log or sync widths
+          console.log('Poison widths(px):', widths);
+        }}      />
     )}
   </>
 );

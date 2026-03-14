@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+// src/components/DataTable.tsx
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import './DataTable.css';
 
 export type SortDir = 'asc' | 'desc';
@@ -30,8 +31,14 @@ export interface ColumnDef<T> {
   sortType?: SortType<T>;
   /** Alignment of cell content */
   align?: 'left' | 'center' | 'right';
-  /** Optional width (px, %, etc.) */
+  /** Initial width for this column (px or CSS width string) */
   width?: number | string;
+  /** Minimum width (px) for resizing */
+  minWidth?: number;
+  /** Maximum width (px) for resizing */
+  maxWidth?: number;
+  /** Allow this column to be resizable (defaults to table-level `resizable`) */
+  resizable?: boolean;
   /** Optional title for <th> tooltip */
   headerTitle?: string;
 }
@@ -43,6 +50,7 @@ export interface DataTableProps<T> {
   columns: ColumnDef<T>[];
   /** Unique id extractor for each row */
   rowId: (row: T, index: number) => string;
+
   // ---- Sorting ----
   /** Initial sort (uncontrolled) */
   initialSort?: SortState | null;
@@ -50,6 +58,7 @@ export interface DataTableProps<T> {
   sort?: SortState | null;
   /** Controlled sort change callback */
   onSortChange?: (s: SortState | null) => void;
+
   // ---- Search (global) ----
   /** Optional global search query (you manage the input) */
   searchQuery?: string;
@@ -90,6 +99,14 @@ export interface DataTableProps<T> {
   zebra?: boolean;
   /** Optional table ARIA label */
   ariaLabel?: string;
+
+  // **** NEW: Column resizing ****
+  /** Enable resizers for header columns (default: true) */
+  resizable?: boolean;
+  /** Persist widths to localStorage under this key (optional) */
+  persistKey?: string;
+  /** Callback after a resize finishes (all current widths in px where available) */
+  onColumnResizeEnd?: (widthsPx: Record<string, number | undefined>) => void;
 }
 
 /** Simple input you can reuse with the table */
@@ -111,13 +128,16 @@ export function DataTable<T>({
   rows,
   columns,
   rowId,
+
   // sort
   initialSort = null,
   sort: sortProp,
   onSortChange,
+
   // search
   searchQuery,
   globalFilter,
+
   // pagination
   mode = 'client',
   page: pageProp,
@@ -129,26 +149,26 @@ export function DataTable<T>({
   onPageSizeChange,
   pageSizeOptions = [5, 10, 20, 50, 100],
   showPagination = true,
-  // misc
+
+  // theming/UX
+  className,
+  hover = true,
+  zebra = false,
+  dense = false,
   emptyMessage = 'No results.',
   tableMinWidth = 800,
-  className,
-  hover = true,        // default on
-  dense = false,
-  zebra = false,
   ariaLabel,
+
+  // resizing
+  resizable = true,
+  persistKey,
+  onColumnResizeEnd,
 }: DataTableProps<T>) {
-  // ---- Uncontrolled states ----
+  // ---------- Controlled/uncontrolled sort ----------
   const [innerSort, setInnerSort] = useState<SortState | null>(initialSort);
-  const [innerPage, setInnerPage] = useState<number>(initialPage);
-  const [innerPageSize, setInnerPageSize] = useState<number>(initialPageSize);
-
-  // Controlled or uncontrolled
   const sortState = sortProp !== undefined ? sortProp : innerSort;
-  const page = pageProp ?? innerPage;
-  const pageSize = pageSizeProp ?? innerPageSize;
 
-  // ---- Filter ----
+  // ---------- Filter ----------
   const filtered = useMemo(() => {
     if (!searchQuery || !globalFilter) return rows;
     const q = searchQuery.trim();
@@ -162,7 +182,7 @@ export function DataTable<T>({
     });
   }, [rows, searchQuery, globalFilter]);
 
-  // ---- Sort ----
+  // ---------- Sort ----------
   const sorted = useMemo(() => {
     if (!sortState) return filtered;
     const col = columns.find((c) => c.id === sortState.colId);
@@ -176,32 +196,17 @@ export function DataTable<T>({
     const getVal = (r: T) => (col.accessor ? col.accessor(r) : undefined);
 
     const cmp = (() => {
-      if (typeof sortType === 'function') {
-        return (a: T, b: T) => sortType(a, b);
-      }
-      if (sortType === 'number') {
-        return (a: T, b: T) => (Number(getVal(a)) || 0) - (Number(getVal(b)) || 0);
-      }
-      if (sortType === 'boolean') {
-        return (a: T, b: T) => Number(Boolean(getVal(a))) - Number(Boolean(getVal(b)));
-      }
+      if (typeof sortType === 'function') return (a: T, b: T) => sortType(a, b);
+      if (sortType === 'number') return (a: T, b: T) => (Number(getVal(a)) || 0) - (Number(getVal(b)) || 0);
+      if (sortType === 'boolean') return (a: T, b: T) => Number(Boolean(getVal(a))) - Number(Boolean(getVal(b)));
       if (sortType === 'string') {
-        return (a: T, b: T) => {
-          const av = String(getVal(a) ?? '');
-          const bv = String(getVal(b) ?? '');
-          return av.localeCompare(bv);
-        };
+        return (a: T, b: T) => String(getVal(a) ?? '').localeCompare(String(getVal(b) ?? ''));
       }
-      // auto: try number → boolean → string
       return (a: T, b: T) => {
-        const av = getVal(a);
-        const bv = getVal(b);
-        const an = Number(av);
-        const bn = Number(bv);
+        const av = getVal(a), bv = getVal(b);
+        const an = Number(av), bn = Number(bv);
         if (!Number.isNaN(an) && !Number.isNaN(bn)) return an - bn;
-        const as = String(av ?? '');
-        const bs = String(bv ?? '');
-        return as.localeCompare(bs);
+        return String(av ?? '').localeCompare(String(bv ?? ''));
       };
     })();
 
@@ -213,7 +218,12 @@ export function DataTable<T>({
     return arr;
   }, [filtered, sortState, columns]);
 
-  // ---- Total and paged rows ----
+  // ---------- Pagination ----------
+  const [innerPage, setInnerPage] = useState<number>(initialPage);
+  const [innerPageSize, setInnerPageSize] = useState<number>(initialPageSize);
+  const page = pageProp ?? innerPage;
+  const pageSize = pageSizeProp ?? innerPageSize;
+
   const totalRows = mode === 'server' ? (totalRowsProp ?? rows.length) : sorted.length;
   const totalPages = Math.max(1, Math.ceil(totalRows / Math.max(1, pageSize)));
 
@@ -221,8 +231,7 @@ export function DataTable<T>({
   useEffect(() => {
     const clamped = Math.min(Math.max(1, page), totalPages);
     if (clamped !== page) {
-      if (onPageChange) onPageChange(clamped);
-      else setInnerPage(clamped);
+      onPageChange ? onPageChange(clamped) : setInnerPage(clamped);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [totalPages, page, onPageChange]);
@@ -230,8 +239,7 @@ export function DataTable<T>({
   // Reset to page 1 when search query changes (common UX)
   useEffect(() => {
     if (!searchQuery) return;
-    if (onPageChange) onPageChange(1);
-    else setInnerPage(1);
+    onPageChange ? onPageChange(1) : setInnerPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
@@ -243,18 +251,148 @@ export function DataTable<T>({
     return sorted.slice(start, end);
   }, [sorted, mode, page, pageSize]);
 
-  const handleHeaderClick = (col: ColumnDef<T>) => {
+  const handleHeaderClick = (col: ColumnDef<T>, ev?: React.MouseEvent) => {
     const sortable = col.sortable ?? !!col.accessor;
     if (!sortable) return;
+
+    // If the click originated from the resize handle, ignore sorting.
+    if (ev && (ev.target as HTMLElement).closest?.('.dt__resize')) {
+      return;
+    }
+
     const next = (() => {
       if (!sortState || sortState.colId !== col.id) return { colId: col.id, dir: 'asc' as SortDir };
       return { colId: col.id, dir: sortState.dir === 'asc' ? 'desc' : 'asc' as SortDir };
     })();
 
-    if (onSortChange) onSortChange(next);
-    else setInnerSort(next);
+    onSortChange ? onSortChange(next) : setInnerSort(next);
   };
 
+  // ---------- Column resizing state ----------
+  type WidthMap = Record<string, number | string | undefined>;
+  const [colWidths, setColWidths] = useState<WidthMap>(() => {
+    // Load from localStorage -> else from column.width -> else undefined
+    if (persistKey && typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem(persistKey);
+        if (raw) return JSON.parse(raw) as WidthMap;
+      } catch {}
+    }
+    const init: WidthMap = {};
+    for (const c of columns) {
+      if (typeof c.width === 'number' || typeof c.width === 'string') {
+        init[c.id] = c.width;
+      }
+    }
+    return init;
+  });
+
+  // Refs to header cells to measure when needed
+  const headRefs = useRef<Record<string, HTMLTableCellElement | null>>({});
+  const setHeadRef = (id: string) => (el: HTMLTableCellElement | null) => {
+    headRefs.current[id] = el;
+  };
+
+  const resizingRef = useRef<{
+    id: string;
+    startX: number;
+    startWidth: number; // px
+    min: number;
+    max: number;
+  } | null>(null);
+
+  // Persist widths on change
+  useEffect(() => {
+    if (!persistKey || typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(persistKey, JSON.stringify(colWidths));
+    } catch {}
+  }, [persistKey, colWidths]);
+
+  // Pointer handlers
+  const onResizePointerDown = (col: ColumnDef<T>, e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!(col.resizable ?? resizable)) return;
+
+    const th = headRefs.current[col.id];
+    const rect = th?.getBoundingClientRect();
+    const startWidth = rect?.width ?? (typeof colWidths[col.id] === 'number' ? (colWidths[col.id] as number) : 0);
+
+    // Fallback: if width 0, set to 160 as a safe starting point
+    const sw = startWidth > 0 ? startWidth : 160;
+
+    const min = Math.max(60, col.minWidth ?? 80);
+    const max = Math.max(min, col.maxWidth ?? 800);
+
+    resizingRef.current = {
+      id: col.id,
+      startX: e.clientX,
+      startWidth: sw,
+      min,
+      max,
+    };
+
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+
+    // During drag, disable text selection & show col-resize cursor
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+
+    window.addEventListener('pointermove', onPointerMove, { passive: false });
+    window.addEventListener('pointerup', onPointerUp, { passive: false });
+  };
+
+  const onPointerMove = (e: PointerEvent) => {
+    const ctx = resizingRef.current;
+    if (!ctx) return;
+
+    const dx = e.clientX - ctx.startX;
+    let next = Math.round(ctx.startWidth + dx);
+    if (next < ctx.min) next = ctx.min;
+    if (next > ctx.max) next = ctx.max;
+
+    setColWidths((prev) => ({
+      ...prev,
+      [ctx.id]: next, // store px as number
+    }));
+  };
+
+  const onPointerUp = () => {
+    const ctx = resizingRef.current;
+    resizingRef.current = null;
+
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+
+    window.removeEventListener('pointermove', onPointerMove as any);
+    window.removeEventListener('pointerup', onPointerUp as any);
+
+    if (!ctx) return;
+
+    if (onColumnResizeEnd) {
+      // Convert only numeric widths (px) to report; strings stay undefined here
+      const out: Record<string, number | undefined> = {};
+      for (const c of columns) {
+        const w = colWidths[c.id];
+        out[c.id] = typeof w === 'number' ? w : undefined;
+      }
+      onColumnResizeEnd(out);
+    }
+  };
+
+  // Compute the width style for <col> element
+  const colWidthStyle = (w: number | string | undefined): string | undefined => {
+    if (w === undefined) return undefined;
+    if (typeof w === 'number') return `${w}px`;
+    return w; // allow '20%', '12rem', etc.
+  };
+
+  // For header alignment class
+  const alignClass = (a?: 'left' | 'center' | 'right') => `dt__cell--${a ?? 'left'}`;
+
+  // Pagination ranges
   const fromRow = totalRows === 0 ? 0 : (page - 1) * pageSize + 1;
   const toRow = totalRows === 0 ? 0 : Math.min(page * pageSize, totalRows);
 
@@ -267,42 +405,69 @@ export function DataTable<T>({
             dense ? 'dt--dense' : '',
             hover ? 'dt--hover' : '',
             zebra ? 'dt--zebra' : '',
+            resizable ? 'dt--resizable' : '',
           ].join(' ').trim()}
-          style={{ borderCollapse: 'collapse', minWidth: tableMinWidth, width: '100%' }}
+          style={{
+            borderCollapse: 'collapse',
+            minWidth: tableMinWidth,
+            width: '100%',
+            tableLayout: 'fixed', // helps keep widths stable during drag
+          }}
           aria-label={ariaLabel}
         >
+          {/* **** NEW: colgroup that applies widths per column **** */}
+          <colgroup>
+            {columns.map((c) => (
+              <col key={c.id} style={{ width: colWidthStyle(colWidths[c.id]) }} />
+            ))}
+          </colgroup>
+
           <thead className="dt__head">
             <tr className="dt__row dt__row--head">
               {columns.map((c) => {
                 const sortable = c.sortable ?? !!c.accessor;
                 const active = sortState?.colId === c.id;
                 const arrow = active ? (sortState?.dir === 'asc' ? ' ▲' : ' ▼') : '';
+                const colIsResizable = (c.resizable ?? resizable) && columns.length > 1; // don't resize if single col
                 return (
                   <th
                     key={c.id}
+                    ref={setHeadRef(c.id)}
                     className={[
                       'dt__cell',
                       'dt__cell--head',
                       sortable ? 'dt__cell--sortable' : '',
                       active ? 'dt__cell--sorted' : '',
-                      `dt__cell--${c.align ?? 'left'}`,
+                      alignClass(c.align),
                     ].join(' ').trim()}
                     title={c.headerTitle ?? (typeof c.header === 'string' ? c.header : undefined)}
-                    onClick={() => handleHeaderClick(c)}
-                    style={{
-                      userSelect: 'none',
-                      cursor: sortable ? 'pointer' : 'default',
-                      width: c.width,
-                      whiteSpace: 'nowrap',
-                    }}
+                    onClick={(ev) => handleHeaderClick(c, ev)}
                     scope="col"
                   >
-                    {c.header}{sortable ? arrow : null}
+                    <div className="dt__head-inner">
+                      <span className="dt__head-label">{c.header}{sortable ? arrow : null}</span>
+
+                      {/* **** NEW: Resize handle **** */}
+                      {colIsResizable && (
+                        <span
+                          className="dt__resize"
+                          onPointerDown={(e) => onResizePointerDown(c, e)}
+                          role="separator"
+                          aria-orientation="vertical"
+                          aria-label={
+                            typeof c.header === 'string'
+                              ? `Resize column ${c.header}`
+                              : `Resize column`
+                          }
+                        />
+                      )}
+                    </div>
                   </th>
                 );
               })}
             </tr>
           </thead>
+
           <tbody className="dt__body">
             {(mode === 'client' ? pagedRows : sorted).length === 0 ? (
               <tr className="dt__row dt__row--empty">
@@ -318,15 +483,7 @@ export function DataTable<T>({
                     {columns.map((c) => {
                       const content = c.render ? c.render(row, idx) : String(c.accessor ? c.accessor(row) ?? '' : '');
                       return (
-                        <td
-                          key={c.id}
-                          className={[
-                            'dt__cell',
-                            'dt__cell--body',
-                            `dt__cell--${c.align ?? 'left'}`,
-                          ].join(' ').trim()}
-                          style={{ verticalAlign: 'top' }}
-                        >
+                        <td className={['dt__cell', 'dt__cell--body', alignClass(c.align)].join(' ')} key={c.id} style={{ verticalAlign: 'top' }}>
                           {content}
                         </td>
                       );
@@ -347,16 +504,10 @@ export function DataTable<T>({
             totalRows={totalRows}
             totalPages={totalPages}
             pageSizeOptions={pageSizeOptions}
-            onPageChange={(p) => {
-              if (onPageChange) onPageChange(p);
-              else setInnerPage(p);
-            }}
+            onPageChange={(p) => (onPageChange ? onPageChange(p) : setInnerPage(p))}
             onPageSizeChange={(ps) => {
-              if (onPageSizeChange) onPageSizeChange(ps);
-              else setInnerPageSize(ps);
-              // When page size changes, go to first page
-              if (onPageChange) onPageChange(1);
-              else setInnerPage(1);
+              onPageSizeChange ? onPageSizeChange(ps) : setInnerPageSize(ps);
+              onPageChange ? onPageChange(1) : setInnerPage(1);
             }}
             fromRow={fromRow}
             toRow={toRow}
@@ -367,105 +518,38 @@ export function DataTable<T>({
   );
 }
 
-/** ---- Pagination Control ---- */
-
+/** Pagination control (unchanged) */
 export function DataTablePagination({
-  page,
-  pageSize,
-  totalRows,
-  totalPages,
-  onPageChange,
-  onPageSizeChange,
-  pageSizeOptions = [5, 10, 20, 50, 100],
-  fromRow,
-  toRow,
+  page, pageSize, totalRows, totalPages, onPageChange, onPageSizeChange, pageSizeOptions = [5, 10, 20, 50, 100], fromRow, toRow,
 }: {
-  page: number;
-  pageSize: number;
-  totalRows: number;
-  totalPages: number;
+  page: number; pageSize: number; totalRows: number; totalPages: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   pageSizeOptions?: number[];
-  fromRow: number;
-  toRow: number;
+  fromRow: number; toRow: number;
 }) {
   const canPrev = page > 1;
   const canNext = page < totalPages;
-
   return (
-    <div
-      role="navigation"
-      aria-label="Table pagination"
-      style={{
-        display: 'flex',
-        gap: 12,
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-      }}
-    >
-      {/* Left: page size */}
+    <div role="navigation" aria-label="Table pagination"
+      style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <label style={{ fontSize: 14 }}>
           Rows per page:{' '}
-          <select
-            value={pageSize}
-            onChange={(e) => onPageSizeChange(Number(e.target.value))}
-            style={{ padding: '4px 8px' }}
-            aria-label="Rows per page"
-          >
-            {pageSizeOptions.map((opt) => (
-              <option key={opt} value={opt}>{opt}</option>
-            ))}
+          <select value={pageSize} onChange={(e) => onPageSizeChange(Number(e.target.value))} style={{ padding: '4px 8px' }} aria-label="Rows per page">
+            {pageSizeOptions.map((opt) => (<option key={opt} value={opt}>{opt}</option>))}
           </select>
         </label>
       </div>
-
-      {/* Middle: range info */}
-      <div style={{ fontSize: 14, color: '#333' }}>
-        {totalRows === 0
-          ? '0–0 of 0'
-          : `${fromRow}–${toRow} of ${totalRows}`}
+      <div style={{ fontSize: 14, color: 'var(--text)' }}>
+        {totalRows === 0 ? '0–0 of 0' : `${fromRow}–${toRow} of ${totalRows}`}
       </div>
-
-      {/* Right: controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <button
-          onClick={() => onPageChange(1)}
-          disabled={!canPrev}
-          aria-label="First page"
-          style={{ padding: '4px 8px' }}
-        >
-          « First
-        </button>
-        <button
-          onClick={() => onPageChange(page - 1)}
-          disabled={!canPrev}
-          aria-label="Previous page"
-          style={{ padding: '4px 8px' }}
-        >
-          ‹ Prev
-        </button>
-        <span style={{ minWidth: 90, textAlign: 'center', fontSize: 14 }}>
-          Page {Math.min(page, totalPages)} of {totalPages}
-        </span>
-        <button
-          onClick={() => onPageChange(page + 1)}
-          disabled={!canNext}
-          aria-label="Next page"
-          style={{ padding: '4px 8px' }}
-        >
-          Next ›
-        </button>
-        <button
-          onClick={() => onPageChange(totalPages)}
-          disabled={!canNext}
-          aria-label="Last page"
-          style={{ padding: '4px 8px' }}
-        >
-          Last »
-        </button>
+        <button onClick={() => onPageChange(1)} disabled={!canPrev} aria-label="First page" style={{ padding: '4px 8px' }}>« First</button>
+        <button onClick={() => onPageChange(page - 1)} disabled={!canPrev} aria-label="Previous page" style={{ padding: '4px 8px' }}>‹ Prev</button>
+        <span style={{ minWidth: 90, textAlign: 'center', fontSize: 14 }}>Page {Math.min(page, totalPages)} of {totalPages}</span>
+        <button onClick={() => onPageChange(page + 1)} disabled={!canNext} aria-label="Next page" style={{ padding: '4px 8px' }}>Next ›</button>
+        <button onClick={() => onPageChange(totalPages)} disabled={!canNext} aria-label="Last page" style={{ padding: '4px 8px' }}>Last »</button>
       </div>
     </div>
   );
