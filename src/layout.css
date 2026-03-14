@@ -73,9 +73,52 @@ button:hover {
 }
 
 /* Content area */
+/* The content area should not have negative margins. Make sure it's edge-aligned. */
 .content {
   background: var(--bg);
   color: var(--text);
+  box-sizing: border-box;
+  margin: 0;
+  padding: 16px;
+}
+
+/* Mobile defaults (overlay) are fine.
+   Desktop: switch to 2-column grid and static sidebar. */
+@media (min-width: 900px) {
+  .app {
+    display: grid;
+    grid-template-columns: var(--sidebar-w, 240px) 1fr;
+    grid-template-rows: 1fr;
+    width: 100%;
+    min-height: 100vh;
+  }
+
+  .topbar {
+    display: none;
+  }
+
+  .sidebar {
+    position: static;    /* no overlay on desktop */
+    transform: none;     /* disable translate from mobile */
+    height: auto;
+    grid-row: 1 / 2;
+    grid-column: 1 / 2;
+    z-index: 1;          /* below content if content has positioned children */
+  }
+
+  .content {
+    grid-row: 1 / 2;
+    grid-column: 2 / 3;
+    padding: 20px;
+    min-width: 0;        /* allow shrinking; prevents subtle overlap/overflow */
+    position: relative;  /* establishes stacking context for internal children */
+    z-index: 0;
+  }
+
+  /* Backdrop only used on mobile overlay. Hide on desktop to avoid any chance of stacking. */
+  .backdrop {
+    display: none !important;
+  }
 }
 
 /* App grid: 
@@ -107,6 +150,7 @@ button:hover {
 
 /* Sidebar overlay (mobile default) */
 .sidebar {
+  box-sizing: border-box;                     /* avoid spillover */
   grid-row: 2 / 3;
   grid-column: 1 / 2;
   background: var(--panel);
