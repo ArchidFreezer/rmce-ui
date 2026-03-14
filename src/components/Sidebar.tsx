@@ -7,7 +7,7 @@ export function Sidebar({
   open,
   onClose,
   enableResize = true,
-  minWidth = 180,
+  minWidth = 140,
   maxWidth = 420,
   persistKey = 'ui.sidebar.w',
 }: {
