@@ -2,10 +2,12 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfirmProvider } from './components/ConfirmDialog';
 import { ToastProvider } from './components/Toast';
-import { Sidebar } from './components/Sidebar';
 import { ThemeProvider } from './components/ThemeProvider';
+import { Sidebar } from './components/Sidebar';
 import { fetchPrefixes } from './api/prefixes';
-import { buildResources, FALLBACK_RESOURCES, type ResourceDef } from './resources/registry';
+import { splitResources, FALLBACK_RESOURCES, type ResourceDef } from './resources/registry';
+import GenericResourceView from './endpoints/generic/GenericResourceView'; // <-- generic
+
 import './layout.css';
 
 function Shell() {
@@ -13,6 +15,7 @@ function Shell() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resources, setResources] = useState<ResourceDef[]>([]);
+  const [unknown, setUnknown] = useState<string[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -20,17 +23,18 @@ function Shell() {
       try {
         const px = await fetchPrefixes();
         if (!mounted) return;
-        const defs = buildResources(px);
-        if (defs.length === 0) {
-          // Optional: fallback if backend returns empty or unknowns only
+        const { known, unknown } = splitResources(px);
+        if (known.length === 0 && unknown.length === 0) {
           setResources(FALLBACK_RESOURCES);
+          setUnknown([]);
         } else {
-          setResources(defs);
+          setResources(known);
+          setUnknown(unknown);
         }
       } catch (e) {
         if (!mounted) return;
-        // Optional: fallback on error
         setResources(FALLBACK_RESOURCES);
+        setUnknown([]);
         setError(e instanceof Error ? e.message : String(e));
       } finally {
         if (mounted) setLoading(false);
@@ -39,14 +43,24 @@ function Shell() {
     return () => { mounted = false; };
   }, []);
 
-  const defaultPath = useMemo(
-    () => (resources[0]?.path ?? '/'),
-    [resources]
+  // Build sidebar items: known → their paths; unknown → generic /r/:prefix
+  const sidebarItems = useMemo(
+    () => [
+      ...resources.map(({ label, path }) => ({ label, path })),
+      ...unknown.map((p) => ({ label: toTitle(p), path: `/r/${p}` as `/${string}` })),
+    ],
+    [resources, unknown]
   );
+
+  // Default redirect path
+  const defaultPath = useMemo(() => {
+    if (resources[0]?.path) return resources[0].path;
+    if (unknown[0]) return `/r/${unknown[0]}` as `/${string}`;
+    return '/';
+  }, [resources, unknown]);
 
   return (
     <div className="app">
-      {/* Mobile top bar */}
       <header className="topbar">
         <button
           className="topbar__menu"
@@ -57,50 +71,45 @@ function Shell() {
         </button>
         <div className="topbar__brand" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>RMCE Objects</span>
-          {/* Optional: Theme switch if you added it */}
-          {/* <ThemeSwitch /> */}
+          {/* <ThemeSwitch /> if you added it */}
         </div>
       </header>
 
-      {/* Sidebar (fully dynamic) */}
       <Sidebar
-        items={resources.map(({ label, path }) => ({ label, path }))}
+        items={sidebarItems}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
 
-      {/* Main content */}
       <main className="content" role="main">
         {error && (
           <div style={{ marginBottom: 8, color: 'var(--muted)' }}>
-            {/* Non-blocking: we already fell back to static routes */}
             Unable to load resources from server. Using fallback. ({error})
           </div>
         )}
 
         {loading ? (
           <div>Loading UI…</div>
-        ) : resources.length === 0 ? (
+        ) : sidebarItems.length === 0 ? (
           <div>No resources available.</div>
         ) : (
           <Suspense fallback={<div>Loading view…</div>}>
             <Routes>
+              {/* Known resource screens */}
               {resources.map((r) => (
                 <Route key={r.path} path={r.path} element={<r.Component />} />
               ))}
+              {/* Generic catch-all for unknown prefixes */}
+              <Route path="/r/:prefix" element={<GenericResourceView />} />
+              {/* Default redirect */}
               <Route path="*" element={<Navigate to={defaultPath} replace />} />
             </Routes>
           </Suspense>
         )}
       </main>
 
-      {/* Backdrop on mobile when sidebar is open */}
       {sidebarOpen && (
-        <div
-          className="backdrop"
-          onClick={() => setSidebarOpen(false)}
-          aria-hidden="true"
-        />
+        <div className="backdrop" onClick={() => setSidebarOpen(false)} aria-hidden="true" />
       )}
     </div>
   );
@@ -118,5 +127,9 @@ export default function App() {
       </ConfirmProvider>
     </ToastProvider>
   );
+}
+
+function toTitle(s: string) {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
 ``

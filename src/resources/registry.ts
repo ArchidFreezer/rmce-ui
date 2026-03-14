@@ -1,23 +1,17 @@
 import { lazy, type LazyExoticComponent, type ComponentType } from 'react';
 
-// Lazy screens for known resources
 const BooksView = lazy(() => import('../endpoints/books/BooksView'));
 const PoisonsView = lazy(() => import('../endpoints/poisons/PoisonsView'));
 const ArmourtypesView = lazy(() => import('../endpoints/armourtypes/ArmourtypesView'));
 
-// A Resource definition the runtime can route/render
 export interface ResourceDef {
-  /** API prefix, e.g., "book" | "poison" | "armourtype" */
   prefix: string;
-  /** Sidebar label */
   label: string;
-  /** Route path to mount, e.g. "/books" */
   path: `/${string}`;
-  /** Lazy view component */
   Component: LazyExoticComponent<ComponentType>;
 }
 
-/** Known resources with their route metadata */
+/** Known resources with their routes/components */
 const known: Record<string, ResourceDef> = {
   book: {
     prefix: 'book',
@@ -39,19 +33,21 @@ const known: Record<string, ResourceDef> = {
   },
 };
 
-/**
- * Build ResourceDefs from API prefixes.
- * Unknown prefixes are ignored (or you could route them to a generic viewer).
- */
-export function buildResources(prefixes: string[]): ResourceDef[] {
-  return prefixes
-    .map((p) => known[p])
-    .filter((r): r is ResourceDef => Boolean(r));
+/** Split known vs unknown prefixes (for Generic Viewer, etc.) */
+export function splitResources(prefixes: string[]): { known: ResourceDef[]; unknown: string[] } {
+  const knownDefs: ResourceDef[] = [];
+  const unknown: string[] = [];
+  for (const p of prefixes) {
+    const def = known[p];
+    if (def) knownDefs.push(def);
+    else unknown.push(p);
+  }
+  return { known: knownDefs, unknown };
 }
 
-/** Optional: static fallback if API is unreachable */
+/** Optional: static fallback if /rmce/prefixes fails */
 export const FALLBACK_RESOURCES: ResourceDef[] = [
   known.book,
   known.poison,
   known.armourtype,
-].filter(Boolean) as ResourceDef[];
+].filter((r): r is ResourceDef => Boolean(r));

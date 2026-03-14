@@ -11,7 +11,7 @@ export function Sidebar({
   maxWidth = 420,
   persistKey = 'ui.sidebar.w',
 }: {
-  items: Pick<ResourceDef, 'label' | 'path'>[];
+  items: { label: string; path: `/${string}` }[];
   open: boolean;
   onClose?: () => void;
   enableResize?: boolean;
@@ -98,8 +98,6 @@ export function Sidebar({
       <div className="sidebar__footer">
         <small style={{ color: 'var(--muted)' }}>v1 · {new Date().getFullYear()}</small>
       </div>
-      {/* ⬇️ Desktop-only resizer grip */}
-      {enableResize && <span className="sidebar__grip" onPointerDown={onPointerDown} role="separator" aria-orientation="vertical" aria-label="Resize sidebar" />}
     </aside>
   );
 }
