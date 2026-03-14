@@ -1,47 +1,48 @@
-// src/App.tsx
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { endpoints, DEFAULT_PATH } from './endpoints/registry';
 import { ConfirmProvider } from './components/ConfirmDialog';
 import { ToastProvider } from './components/Toast';
 import { Sidebar } from './components/Sidebar';
-import { ThemeProvider, useTheme } from './components/ThemeProvider';
+import { ThemeProvider } from './components/ThemeProvider';
+import { fetchPrefixes } from './api/prefixes';
+import { buildResources, FALLBACK_RESOURCES, type ResourceDef } from './resources/registry';
 import './layout.css';
-
-function ThemeSwitch() {
-  const { theme, effective, setTheme, toggle } = useTheme();
-  const icon = effective === 'dark' ? '☀️' : '🌙';
-  const title = effective === 'dark' ? 'Switch to light' : 'Switch to dark';
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <button
-        aria-label={title}
-        title={title}
-        onClick={toggle}
-        className="topbar__menu"
-        style={{ minWidth: 40, textAlign: 'center' }}
-      >
-        {icon}
-      </button>
-      <select
-        aria-label="Theme"
-        value={theme}
-        onChange={(e) => setTheme(e.target.value as any)}
-        className="topbar__menu"
-        style={{ padding: '6px 8px' }}
-        title="Theme"
-      >
-        <option value="system">System</option>
-        <option value="light">Light</option>
-        <option value="dark">Dark</option>
-      </select>
-    </div>
-  );
-}
 
 function Shell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [resources, setResources] = useState<ResourceDef[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const px = await fetchPrefixes();
+        if (!mounted) return;
+        const defs = buildResources(px);
+        if (defs.length === 0) {
+          // Optional: fallback if backend returns empty or unknowns only
+          setResources(FALLBACK_RESOURCES);
+        } else {
+          setResources(defs);
+        }
+      } catch (e) {
+        if (!mounted) return;
+        // Optional: fallback on error
+        setResources(FALLBACK_RESOURCES);
+        setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const defaultPath = useMemo(
+    () => (resources[0]?.path ?? '/'),
+    [resources]
+  );
 
   return (
     <div className="app">
@@ -56,27 +57,41 @@ function Shell() {
         </button>
         <div className="topbar__brand" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>RMCE Objects</span>
-          <ThemeSwitch />
+          {/* Optional: Theme switch if you added it */}
+          {/* <ThemeSwitch /> */}
         </div>
       </header>
 
-      {/* Sidebar (persistent on desktop, overlay on mobile) */}
+      {/* Sidebar (fully dynamic) */}
       <Sidebar
-        endpoints={endpoints}
+        items={resources.map(({ label, path }) => ({ label, path }))}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
 
-      {/* Main content area */}
+      {/* Main content */}
       <main className="content" role="main">
-        <Suspense fallback={<div>Loading UI…</div>}>
-          <Routes>
-            {endpoints.map((ep) => (
-              <Route key={ep.id} path={ep.path} element={<ep.Component />} />
-            ))}
-            <Route path="*" element={<Navigate to={DEFAULT_PATH} replace />} />
-          </Routes>
-        </Suspense>
+        {error && (
+          <div style={{ marginBottom: 8, color: 'var(--muted)' }}>
+            {/* Non-blocking: we already fell back to static routes */}
+            Unable to load resources from server. Using fallback. ({error})
+          </div>
+        )}
+
+        {loading ? (
+          <div>Loading UI…</div>
+        ) : resources.length === 0 ? (
+          <div>No resources available.</div>
+        ) : (
+          <Suspense fallback={<div>Loading view…</div>}>
+            <Routes>
+              {resources.map((r) => (
+                <Route key={r.path} path={r.path} element={<r.Component />} />
+              ))}
+              <Route path="*" element={<Navigate to={defaultPath} replace />} />
+            </Routes>
+          </Suspense>
+        )}
       </main>
 
       {/* Backdrop on mobile when sidebar is open */}
@@ -94,13 +109,14 @@ function Shell() {
 export default function App() {
   return (
     <ToastProvider position="bottom-right" duration={3500} maxVisible={3}>
-      <ThemeProvider>
-        <ConfirmProvider>
+      <ConfirmProvider>
+        <ThemeProvider>
           <BrowserRouter>
             <Shell />
           </BrowserRouter>
-        </ConfirmProvider>
-      </ThemeProvider>
+        </ThemeProvider>
+      </ConfirmProvider>
     </ToastProvider>
   );
 }
+``

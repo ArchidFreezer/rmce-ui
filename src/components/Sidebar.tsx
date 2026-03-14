@@ -1,10 +1,9 @@
 import { NavLink } from 'react-router-dom';
-import type { EndpointDef } from '../endpoints/registry';
+import type { ResourceDef } from '../resources/registry';
 import { useEffect, useRef, useState } from 'react';
-import { fetchPrefixes } from '../api/prefixes';
 
 export function Sidebar({
-  endpoints,
+  items,
   open,
   onClose,
   enableResize = true,
@@ -12,7 +11,7 @@ export function Sidebar({
   maxWidth = 420,
   persistKey = 'ui.sidebar.w',
 }: {
-  endpoints: EndpointDef[];
+  items: Pick<ResourceDef, 'label' | 'path'>[];
   open: boolean;
   onClose?: () => void;
   enableResize?: boolean;
@@ -22,28 +21,15 @@ export function Sidebar({
 }) {
   const [dynamic, setDynamic] = useState<string[]>([]);
   const [err, setErr] = useState<string | null>(null);
-
+  
   useEffect(() => {
     const raw = localStorage.getItem(persistKey);
     const val = raw ? Number(raw) : NaN;
     if (!Number.isNaN(val) && val > 0) {
       document.documentElement.style.setProperty('--sidebar-w', `${val}px`);
     }
-
-    let mounted = true;
-    (async () => {
-      try {
-        const px = await fetchPrefixes();
-        if (!mounted) return;
-        setDynamic(px);
-      } catch (e) {
-        if (!mounted) return;
-        setErr(e instanceof Error ? e.message : String(e));
-      }
-    })();
-    return () => { mounted = false; };
+    return () => { };
   }, [persistKey]);
-
   const dragRef = useRef<{ startX: number; startW: number } | null>(null);
 
   const onPointerDown: React.PointerEventHandler<HTMLSpanElement> = (e) => {
@@ -95,50 +81,17 @@ export function Sidebar({
 
       <nav className="sidebar__nav" role="navigation" aria-label="Resources">
         <ul className="sidebar__list">
-          {/* Static from registry */}
-          {endpoints.map((ep) => (
-            <li key={ep.id} className="sidebar__item">
+          {items.map((it) => (
+            <li key={it.path} className="sidebar__item">
               <NavLink
-                to={ep.path}
+                to={it.path}
                 className={({ isActive }) => `sidebar__link ${isActive ? 'active' : ''}`}
                 onClick={onClose}
               >
-                {ep.label}
+                {it.label}
               </NavLink>
             </li>
           ))}
-
-          {/* Optional dynamic group */}
-          {dynamic.length > 0 && (
-            <>
-              <li className="sidebar__item" style={{ marginTop: 8, color: 'var(--muted)', fontSize: 12 }}>
-                Available types
-              </li>
-              {dynamic.map((p) => {
-                const route = routeFor(p);
-                return (
-                  <li key={`dyn-${p}`} className="sidebar__item">
-                    {route ? (
-                      <NavLink
-                        to={route}
-                        className={({ isActive }) => `sidebar__link ${isActive ? 'active' : ''}`}
-                        onClick={onClose}
-                      >
-                        {labelFor(p)}
-                      </NavLink>
-                    ) : (
-                      <span className="sidebar__link" style={{ opacity: 0.7 }}>{labelFor(p)} (no route)</span>
-                    )}
-                  </li>
-                );
-              })}
-            </>
-          )}
-          {err && (
-            <li className="sidebar__item" style={{ color: 'crimson', fontSize: 12 }}>
-              {err}
-            </li>
-          )}
         </ul>
       </nav>
 
@@ -149,23 +102,4 @@ export function Sidebar({
       {enableResize && <span className="sidebar__grip" onPointerDown={onPointerDown} role="separator" aria-orientation="vertical" aria-label="Resize sidebar" />}
     </aside>
   );
-}
-
-function routeFor(prefix: string): string | null {
-  switch (prefix) {
-    case 'book': return '/books';
-    case 'poison': return '/poisons';
-    case 'armourtype': return '/armourtypes';
-    case 'prefixes': return '/prefixes';
-    default: return null;
-  }
-}
-function labelFor(prefix: string): string {
-  switch (prefix) {
-    case 'book': return 'Books';
-    case 'poison': return 'Poisons';
-    case 'armourtype': return 'Armour Types';
-    case 'prefixes': return 'Types';
-    default: return prefix;
-  }
 }
