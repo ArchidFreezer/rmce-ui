@@ -117,17 +117,18 @@ body.theme-dark .dt--zebra .dt__row--body:nth-child(even) .dt__cell--body {
 .dt__resize {
   position: absolute;
   top: 0;
-  right: -3px;            /* small overlap for easy grab */
-  width: 8px;
+  right: -3px;
+  width: 8px;              /* makes grabbing & double-click easier */
   height: 100%;
   cursor: col-resize;
-  touch-action: none;     /* prevent touch scrolling while resizing */
-  /* subtle visual (only on hover/focus to avoid visual noise) */
+  touch-action: none;
   background: transparent;
 }
+
 .dt__resize:hover {
   background: color-mix(in oklch, var(--primary-weak), var(--bg) 65%);
 }
+
 
 /* When resizable globally, ensure header has relative positioning */
 .dt--resizable .dt__cell--head {

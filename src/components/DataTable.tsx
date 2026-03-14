@@ -293,6 +293,94 @@ export function DataTable<T>({
     headRefs.current[id] = el;
   };
 
+    // Utility: clamp a number
+  const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
+
+  // Get a css numeric property (e.g., padding) as number
+  const cssPx = (el: Element, prop: string) =>
+    parseFloat(getComputedStyle(el).getPropertyValue(prop)) || 0;
+
+  // Measure the natural width of a cell as rendered (scrollWidth already includes padding)
+  const measureCell = (cell: HTMLElement) => {
+    // Some cells may contain buttons / inline-blocks; scrollWidth captures full content width.
+    return Math.ceil(cell.scrollWidth);
+  };
+
+  // Find column index by id
+  const findColIndex = (id: string) => columns.findIndex(c => c.id === id);
+
+  // Measure max width among header + all rendered body cells in a given column
+  const getMaxNaturalWidthInColumn = (colId: string): number => {
+    const th = headRefs.current[colId];
+    if (!th) return 160;
+
+    // Header width
+    let max = measureCell(th);
+
+    // Include a small buffer for sort arrow/handle gutter
+    const resizeGutter = 12;
+    max += resizeGutter;
+
+    // Body cells
+    const table = th.closest('table');
+    if (!table) return max;
+
+    const colIdx = findColIndex(colId);
+    if (colIdx < 0) return max;
+
+    // Look through visible rows only (pagedRows or server-provided rows),
+    // which is what is actually rendered in the DOM and cheap to measure.
+    // We inspect the first TBODY.
+    const tb = table.tBodies?.[0];
+    if (!tb) return max;
+
+    // Iterate rows and measure the target column cell
+    for (const row of Array.from(tb.rows)) {
+      const cell = row.cells[colIdx] as HTMLTableCellElement | undefined;
+      if (!cell) continue;
+      const w = measureCell(cell);
+      if (w > max) max = w;
+    }
+
+    // Add a small safety buffer to reduce re-wrap flicker
+    const safety = 8;
+    return max + safety;
+  };
+
+  // Double-click handler: auto-fit column to content
+  const onResizeDoubleClick = (col: ColumnDef<T>, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Respect per-column/table resizable flags
+    if (!(col.resizable ?? resizable)) return;
+
+    // Determine constraints
+    const min = Math.max(60, col.minWidth ?? 80);
+    const max = Math.max(min, col.maxWidth ?? 800);
+
+    // Measure content width
+    const natural = getMaxNaturalWidthInColumn(col.id);
+    const fitted = clamp(natural, min, max);
+
+    // Apply width (store as px number)
+    setColWidths(prev => ({ ...prev, [col.id]: fitted }));
+
+    // Optional callback
+    if (onColumnResizeEnd) {
+      const out: Record<string, number | undefined> = {};
+      for (const c of columns) {
+        const w = c.id === col.id ? fitted : prevWidthNumber(colWidths[c.id]);
+        out[c.id] = w;
+      }
+      onColumnResizeEnd(out);
+    }
+  };
+
+  // Helper: normalize current column width to a px number if available
+  const prevWidthNumber = (w: number | string | undefined): number | undefined =>
+    typeof w === 'number' ? w : undefined;  
+  
   const resizingRef = useRef<{
     id: string;
     startX: number;
@@ -452,6 +540,7 @@ export function DataTable<T>({
                         <span
                           className="dt__resize"
                           onPointerDown={(e) => onResizePointerDown(c, e)}
+                          onDoubleClick={(e) => onResizeDoubleClick(c, e)}
                           role="separator"
                           aria-orientation="vertical"
                           aria-label={
