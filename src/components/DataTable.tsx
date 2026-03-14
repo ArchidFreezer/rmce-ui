@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import './DataTable.css';
 
 export type SortDir = 'asc' | 'desc';
 
@@ -79,6 +80,10 @@ export interface DataTableProps<T> {
   emptyMessage?: string;
   /** Min width for horizontal scroll */
   tableMinWidth?: number;
+  /** Additional class for the wrapper to set theme */
+  className?: string;
+  /** Enable row hover effect */
+  hover?: boolean;
   /** Dense row height */
   dense?: boolean;
   /** Zebra striping */
@@ -127,6 +132,8 @@ export function DataTable<T>({
   // misc
   emptyMessage = 'No results.',
   tableMinWidth = 800,
+  className,
+  hover = true,        // default on
   dense = false,
   zebra = false,
   ariaLabel,
@@ -253,13 +260,19 @@ export function DataTable<T>({
 
   return (
     <>
-      <div style={{ overflowX: 'auto' }}>
+      <div className={`dt__wrap ${className ?? ''}`.trim()}>
         <table
+          className={[
+            'dt',
+            dense ? 'dt--dense' : '',
+            hover ? 'dt--hover' : '',
+            zebra ? 'dt--zebra' : '',
+          ].join(' ').trim()}
           style={{ borderCollapse: 'collapse', minWidth: tableMinWidth, width: '100%' }}
           aria-label={ariaLabel}
         >
-          <thead>
-            <tr>
+          <thead className="dt__head">
+            <tr className="dt__row dt__row--head">
               {columns.map((c) => {
                 const sortable = c.sortable ?? !!c.accessor;
                 const active = sortState?.colId === c.id;
@@ -267,12 +280,16 @@ export function DataTable<T>({
                 return (
                   <th
                     key={c.id}
+                    className={[
+                      'dt__cell',
+                      'dt__cell--head',
+                      sortable ? 'dt__cell--sortable' : '',
+                      active ? 'dt__cell--sorted' : '',
+                      `dt__cell--${c.align ?? 'left'}`,
+                    ].join(' ').trim()}
                     title={c.headerTitle ?? (typeof c.header === 'string' ? c.header : undefined)}
                     onClick={() => handleHeaderClick(c)}
                     style={{
-                      borderBottom: '1px solid #ddd',
-                      textAlign: c.align ?? 'left',
-                      padding: dense ? '6px' : '8px',
                       userSelect: 'none',
                       cursor: sortable ? 'pointer' : 'default',
                       width: c.width,
@@ -286,10 +303,10 @@ export function DataTable<T>({
               })}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="dt__body">
             {(mode === 'client' ? pagedRows : sorted).length === 0 ? (
-              <tr>
-                <td colSpan={columns.length} style={{ padding: 12, textAlign: 'center', color: '#666' }}>
+              <tr className="dt__row dt__row--empty">
+                <td className="dt__cell dt__cell--empty" colSpan={columns.length}>
                   {emptyMessage}
                 </td>
               </tr>
@@ -297,26 +314,18 @@ export function DataTable<T>({
               (mode === 'client' ? pagedRows : sorted).map((row, idx) => {
                 const key = rowId(row, idx);
                 return (
-                  <tr
-                    key={key}
-                    style={{
-                      background: zebra && idx % 2 === 1 ? '#fafafa' : undefined,
-                    }}
-                  >
+                  <tr key={key} className="dt__row dt__row--body">
                     {columns.map((c) => {
-                      const content =
-                        c.render
-                          ? c.render(row, idx)
-                          : String(c.accessor ? c.accessor(row) ?? '' : '');
+                      const content = c.render ? c.render(row, idx) : String(c.accessor ? c.accessor(row) ?? '' : '');
                       return (
                         <td
                           key={c.id}
-                          style={{
-                            borderBottom: '1px solid #f0f0f0',
-                            padding: dense ? '6px' : '8px',
-                            textAlign: c.align ?? 'left',
-                            verticalAlign: 'top',
-                          }}
+                          className={[
+                            'dt__cell',
+                            'dt__cell--body',
+                            `dt__cell--${c.align ?? 'left'}`,
+                          ].join(' ').trim()}
+                          style={{ verticalAlign: 'top' }}
                         >
                           {content}
                         </td>
@@ -331,7 +340,7 @@ export function DataTable<T>({
       </div>
 
       {showPagination && (
-        <div style={{ marginTop: 8 }}>
+        <div className="dt__pagination">
           <DataTablePagination
             page={page}
             pageSize={pageSize}

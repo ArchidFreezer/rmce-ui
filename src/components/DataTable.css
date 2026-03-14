@@ -1,0 +1,97 @@
+/* Root table container */
+.dt__wrap {
+  overflow-x: auto;
+}
+
+/* Table */
+.dt {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Head cells */
+.dt__cell--head {
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in oklch, var(--panel), var(--bg) 30%);
+  color: var(--text);
+  font-weight: 600;
+  padding: 8px;
+}
+
+/* Dense mode reduces padding */
+.dt--dense .dt__cell--head,
+.dt--dense .dt__cell--body {
+  padding: 6px;
+}
+
+/* Sort affordance */
+.dt__cell--sortable {
+  position: relative;
+}
+.dt__cell--sortable:hover {
+  background: color-mix(in oklch, var(--panel), var(--bg) 15%);
+}
+.dt__cell--sorted {
+  background: color-mix(in oklch, var(--primary-weak), var(--panel) 50%);
+  border-bottom-color: color-mix(in oklch, var(--primary), var(--border) 40%);
+}
+
+/* Body cells */
+.dt__cell--body {
+  border-bottom: 1px solid color-mix(in oklch, var(--border), var(--bg) 30%);
+  padding: 8px;
+}
+
+/* Alignment helpers */
+.dt__cell--left { text-align: left; }
+.dt__cell--center { text-align: center; }
+.dt__cell--right { text-align: right; }
+
+/* Zebra rows (theme-aware via variables) */
+.dt--zebra .dt__row--body:nth-child(even) .dt__cell--body {
+  background: color-mix(in oklch, var(--bg), black 4%);
+}
+body.theme-dark .dt--zebra .dt__row--body:nth-child(even) .dt__cell--body {
+  background: color-mix(in oklch, var(--bg), white 3%);
+}
+
+/* Hover rows */
+.dt--hover .dt__row--body:hover .dt__cell--body {
+  background: color-mix(in oklch, var(--primary-weak), var(--bg) 70%);
+}
+
+/* Empty state */
+.dt__cell--empty {
+  padding: 12px;
+  text-align: center;
+  color: var(--muted);
+  background: var(--bg);
+}
+
+/* Focus ring for keyboard nav (if you later add row focusability) */
+.dt__row--body:focus-within .dt__cell--body {
+  outline: 2px solid color-mix(in oklch, var(--primary), var(--bg) 30%);
+  outline-offset: -2px;
+}
+
+/* Pagination wrapper adopts theme */
+.dt__pagination {
+  margin-top: 8px;
+  color: var(--text);
+}
+.dt__pagination select,
+.dt__pagination button {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.dt__pagination button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Selected row(s) */
+.dt__row--selected .dt__cell--body {
+  background: color-mix(in oklch, var(--primary-weak), var(--bg) 50%);
+  border-bottom-color: color-mix(in oklch, var(--primary), var(--border) 40%);
+}

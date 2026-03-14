@@ -26,3 +26,7 @@ export const endpoints: EndpointDef[] = [
   { id: 'poisons', label: 'Poisons', path: '/poisons', Component: PoisonsView },
   { id: 'armourtypes', label: 'Armour Types', path: '/armourtypes', Component: ArmourtypesView },
 ];
+
+
+// Export a default path with a safe fallback
+export const DEFAULT_PATH: `/${string}` = endpoints[0]?.path ?? '/books';
