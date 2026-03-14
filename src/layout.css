@@ -208,6 +208,34 @@ body.theme-dark .sidebar__link:hover { background: color-mix(in oklch, var(--pan
   color: var(--muted);
 }
 
+/* Make sidebar a positioning context on desktop */
+@media (min-width: 900px) {
+  .sidebar { position: relative; }
+}
+
+/* The vertical grip on the right edge */
+.sidebar__grip {
+  display: none; /* hidden on mobile */
+}
+
+@media (min-width: 900px) {
+  .sidebar__grip {
+    display: block;
+    position: absolute;
+    top: 0;
+    right: -3px;              /* slight overlap into content area for easy grab */
+    width: 8px;
+    height: 100%;
+    cursor: col-resize;
+    background: transparent;
+    z-index: 25;              /* above sidebar content */
+    touch-action: none;
+  }
+  .sidebar__grip:hover {
+    background: color-mix(in oklch, var(--primary-weak), var(--bg) 65%);
+  }
+}
+
 /* Mobile backdrop when sidebar open */
 .backdrop {
   position: fixed;
