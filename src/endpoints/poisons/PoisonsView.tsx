@@ -214,99 +214,70 @@ export default function PoisonsView() {
   if (loading) return <div>Loading…</div>;
   if (error) return <div style={{ color: 'crimson' }}>Error: {error}</div>;
 
-  return (
-    <>
-      <h2>Poisons</h2>
+return (
+  <>
+    <h2>Poisons</h2>
 
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-        <button onClick={startNew}>New Poison</button>
-        <DataTableSearchInput
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search poisons…"
-          aria-label="Search poisons"
-        />
-      </div>
+    {/* New + Search */}
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+      <button onClick={startNew}>New Poison</button>
+      <DataTableSearchInput
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search poisons…"
+        aria-label="Search poisons"
+      />
+    </div>
 
-      {showForm && (
-        <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16, background: '#fafafa' }}>
-          <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Poison' : 'New Poison'}</h3>
+    {/* Form panel (unchanged) */}
+    {showForm && (
+      <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16, background: '#fafafa' }}>
+        <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Poison' : 'New Poison'}</h3>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput label="ID" value={form.id} onChange={(v) => setForm((s) => ({ ...s, id: v }))} disabled={!!editingId} />
-            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm((s) => ({ ...s, name: v }))} />
-            <LabeledInput label="Type" value={form.type} onChange={(v) => setForm((s) => ({ ...s, type: v }))} />
-            {/* Level is edited as a string in the input; store its raw string via a helper */}
-            <LabeledInput
-              label="Level"
-              type="number"
-              value={getLevelInputValue(form)}
-              onChange={(v) => setLevelFromInput(v)}
-            />
-            <LabeledInput label="Level Variance" value={form.levelVariance} onChange={(v) => setForm((s) => ({ ...s, levelVariance: v }))} />
-          </div>
-
-          {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button onClick={saveForm}>Save</button>
-            <button onClick={cancelForm} type="button">Cancel</button>
-          </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <LabeledInput label="ID" value={form.id} onChange={(v) => setForm((s) => ({ ...s, id: v }))} disabled={!!editingId} />
+          <LabeledInput label="Name" value={form.name} onChange={(v) => setForm((s) => ({ ...s, name: v }))} />
+          <LabeledInput label="Type" value={form.type} onChange={(v) => setForm((s) => ({ ...s, type: v }))} />
+          <LabeledInput label="Level" type="number" value={getLevelInputValue(form)} onChange={(v) => setLevelFromInput(v)} />
+          <LabeledInput label="Level Variance" value={form.levelVariance} onChange={(v) => setForm((s) => ({ ...s, levelVariance: v }))} />
         </div>
-      )}
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse', minWidth: 900, width: '100%' }}>
-          <thead>
-            <tr>
-              <SortableTh onClick={() => onSort('id')} label="id" sort={sort} colKey="id" />
-              <SortableTh onClick={() => onSort('name')} label="name" sort={sort} colKey="name" />
-              <SortableTh onClick={() => onSort('type')} label="type" sort={sort} colKey="type" />
-              <SortableTh onClick={() => onSort('level')} label="level" sort={sort} colKey="level" />
-              <SortableTh onClick={() => onSort('levelVariance')} label="levelVariance" sort={sort} colKey="levelVariance" />
-              <th style={{ borderBottom: '1px solid #ddd', textAlign: 'left', padding: 8 }}>actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.length === 0 ? (
-              <tr><td colSpan={6} style={emptyCell}>No results.</td></tr>
-            ) : (
-              sorted.map((p) => (
-                <tr key={p.id}>
-                  <td style={tdStyle}>{p.id}</td>
-                  <td style={tdStyle}>{p.name}</td>
-                  <td style={tdStyle}>{p.type}</td>
-                  <td style={tdStyle}>{p.level}</td>
-                  <td style={tdStyle}>{p.levelVariance}</td>
-                  <td style={tdStyle}>
-                    <button onClick={() => startEdit(p)} style={{ marginRight: 6 }}>Edit</button>
-                    <button onClick={() => onDelete(p)} style={{ color: '#b00020' }}>Delete</button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
+        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+          <button onClick={saveForm}>Save</button>
+          <button onClick={cancelForm} type="button">Cancel</button>
+        </div>
       </div>
+    )}
 
-
+    {/* Shared DataTable */}
+    {loading ? (
+      <div>Loading…</div>
+    ) : error ? (
+      <div style={{ color: 'crimson' }}>Error: {error}</div>
+    ) : (
       <DataTable<Poison>
         rows={rows}
         columns={columns}
         rowId={(r) => r.id}
         initialSort={{ colId: 'name', dir: 'asc' }}
+        // search
         searchQuery={query}
         globalFilter={globalFilter}
+        // pagination (client)
         mode="client"
         page={page}
         pageSize={pageSize}
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
         pageSizeOptions={[5, 10, 20, 50]}
+        // styles
         tableMinWidth={900}
         zebra
       />
-    </>
-  );
+    )}
+  </>
+);
 
   /** -------- Local helpers to safely handle "level" as text input -------- */
 
