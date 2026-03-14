@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable'
+import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
 import { fetchBooks, upsertBook, deleteBook } from './api';
 import type { Book } from '../../types';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -12,12 +12,15 @@ export default function BooksView() {
 
 
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const globalFilter = (b: Book, q: string) => {
     const s = q.toLowerCase();
     return [b.id, b.code, b.name, b.abbreviation, b.isbn]
       .some(v => String(v ?? '').toLowerCase().includes(s));
   };
-  
+
   // Columns
   const columns: ColumnDef<Book>[] = [
     { id: 'id', header: 'id', accessor: r => r.id, sortable: true },
@@ -195,90 +198,70 @@ export default function BooksView() {
   if (loading) return <div>Loading…</div>;
   if (error) return <div style={{ color: 'crimson' }}>Error: {error}</div>;
 
-  return (
-    <>
-      <h2>Books</h2>
+return (
+  <>
+    <h2>Books</h2>
 
+    {/* New + Search */}
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+      <button onClick={startNew}>New Book</button>
+      <DataTableSearchInput
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search books…"
+        aria-label="Search books"
+      />
+    </div>
 
-      {/* New + Search */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-        <button onClick={startNew}>New Book</button>
-        <DataTableSearchInput
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search books…"
-          aria-label="Search books"
-        />
-      </div>
+    {/* Form panel (unchanged) */}
+    {showForm && (
+      <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16, background: '#fafafa' }}>
+        <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Book' : 'New Book'}</h3>
 
-
-      {showForm && (
-        <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16, background: '#fafafa' }}>
-          <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Book' : 'New Book'}</h3>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput label="ID" value={form.id} onChange={(v) => setForm((s) => ({ ...s, id: v }))} disabled={!!editingId} />
-            <LabeledInput label="Code" value={form.code} onChange={(v) => setForm((s) => ({ ...s, code: v }))} />
-            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm((s) => ({ ...s, name: v }))} />
-            <LabeledInput label="Abbreviation" value={form.abbreviation} onChange={(v) => setForm((s) => ({ ...s, abbreviation: v }))} />
-            <LabeledInput label="ISBN" value={form.isbn} onChange={(v) => setForm((s) => ({ ...s, isbn: v }))} />
-          </div>
-
-          {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button onClick={saveForm}>Save</button>
-            <button onClick={cancelForm} type="button">Cancel</button>
-          </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <LabeledInput label="ID" value={form.id} onChange={(v) => setForm((s) => ({ ...s, id: v }))} disabled={!!editingId} />
+          <LabeledInput label="Code" value={form.code} onChange={(v) => setForm((s) => ({ ...s, code: v }))} />
+          <LabeledInput label="Name" value={form.name} onChange={(v) => setForm((s) => ({ ...s, name: v }))} />
+          <LabeledInput label="Abbreviation" value={form.abbreviation} onChange={(v) => setForm((s) => ({ ...s, abbreviation: v }))} />
+          <LabeledInput label="ISBN" value={form.isbn} onChange={(v) => setForm((s) => ({ ...s, isbn: v }))} />
         </div>
-      )}
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse', minWidth: 900, width: '100%' }}>
-          <thead>
-            <tr>
-              <SortableTh onClick={() => onSort('id')} label="id" sort={sort} colKey="id" />
-              <SortableTh onClick={() => onSort('code')} label="code" sort={sort} colKey="code" />
-              <SortableTh onClick={() => onSort('name')} label="name" sort={sort} colKey="name" />
-              <SortableTh onClick={() => onSort('abbreviation')} label="abbreviation" sort={sort} colKey="abbreviation" />
-              <SortableTh onClick={() => onSort('isbn')} label="isbn" sort={sort} colKey="isbn" />
-              <th style={{ borderBottom: '1px solid #ddd', textAlign: 'left', padding: 8 }}>actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.length === 0 ? (
-              <tr><td colSpan={6} style={emptyCell}>No results.</td></tr>
-            ) : (
-              sorted.map((b) => (
-                <tr key={b.id}>
-                  <td style={tdStyle}>{b.id}</td>
-                  <td style={tdStyle}>{b.code}</td>
-                  <td style={tdStyle}>{b.name}</td>
-                  <td style={tdStyle}>{b.abbreviation}</td>
-                  <td style={tdStyle}>{b.isbn}</td>
-                  <td style={tdStyle}>
-                    <button onClick={() => startEdit(b)} style={{ marginRight: 6 }}>Edit</button>
-                    <button onClick={() => onDelete(b)} style={{ color: '#b00020' }}>Delete</button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
+        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+          <button onClick={saveForm}>Save</button>
+          <button onClick={cancelForm} type="button">Cancel</button>
+        </div>
       </div>
+    )}
 
-      {/* Shared DataTable */}
+    {/* Shared DataTable */}
+    {loading ? (
+      <div>Loading…</div>
+    ) : error ? (
+      <div style={{ color: 'crimson' }}>Error: {error}</div>
+    ) : (
       <DataTable<Book>
         rows={rows}
         columns={columns}
         rowId={(r) => r.id}
         initialSort={{ colId: 'name', dir: 'asc' }}
+        // search
         searchQuery={query}
         globalFilter={globalFilter}
+        // pagination (client)
+        mode="client"
+        page={page}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        pageSizeOptions={[5, 10, 20, 50]}
+        // styles
         tableMinWidth={900}
         zebra
       />
-    </>
-  );
+    )}
+  </>
+);
 }
 
 

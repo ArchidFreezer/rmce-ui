@@ -27,9 +27,11 @@ export default function ArmourtypesView() {
   const [error, setError] = useState<string | null>(null);
 
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const globalFilter = (a: Armourtype, q: string) => {
-  const s = q.toLowerCase();
+    const s = q.toLowerCase();
     return [
       a.id, a.name, a.type, a.description,
       a.minManoeuvreMod, a.maxManoeuvreMod,
@@ -242,131 +244,106 @@ export default function ArmourtypesView() {
   if (loading) return <div>Loading…</div>;
   if (error) return <div style={{ color: 'crimson' }}>Error: {error}</div>;
 
-  return (
-    <>
-      <h2>Armour Types</h2>
+return (
+  <>
+    <h2>Armour Types</h2>
 
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-        <button onClick={startNew}>New Armourtype</button>
-        <DataTableSearchInput
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search armourtypes…"
-          aria-label="Search armourtypes"
-        />
-      </div>
+    {/* New + Search */}
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+      <button onClick={startNew}>New Armourtype</button>
+      <DataTableSearchInput
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search armourtypes…"
+        aria-label="Search armourtypes"
+      />
+    </div>
 
-      {showForm && (
-        <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16, background: '#fafafa' }}>
-          <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Armourtype' : 'New Armourtype'}</h3>
+    {/* Form panel (unchanged) */}
+    {showForm && (
+      <div style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, marginBottom: 16, background: '#fafafa' }}>
+        <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Armourtype' : 'New Armourtype'}</h3>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput label="ID" value={form.id} onChange={(v) => setForm(s => ({ ...s, id: v }))} disabled={!!editingId} />
-            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm(s => ({ ...s, name: v }))} />
-            <LabeledInput label="Type" value={form.type} onChange={(v) => setForm(s => ({ ...s, type: v }))} />
-            <LabeledInput label="Description" value={form.description} onChange={(v) => setForm(s => ({ ...s, description: v }))} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <LabeledInput label="ID" value={form.id} onChange={(v) => setForm(s => ({ ...s, id: v }))} disabled={!!editingId} />
+          <LabeledInput label="Name" value={form.name} onChange={(v) => setForm(s => ({ ...s, name: v }))} />
+          <LabeledInput label="Type" value={form.type} onChange={(v) => setForm(s => ({ ...s, type: v }))} />
+          <LabeledInput label="Description" value={form.description} onChange={(v) => setForm(s => ({ ...s, description: v }))} />
 
-            <LabeledInput
-              label="Min Manoeuvre Mod"
-              type="number"
-              value={getNumInput(form, 'minManoeuvreMod')}
-              onChange={(v) => setNumFromInput('minManoeuvreMod', v)}
-            />
-            <LabeledInput
-              label="Max Manoeuvre Mod"
-              type="number"
-              value={getNumInput(form, 'maxManoeuvreMod')}
-              onChange={(v) => setNumFromInput('maxManoeuvreMod', v)}
-            />
-            <LabeledInput
-              label="Missile Attack Penalty"
-              type="number"
-              value={getNumInput(form, 'missileAttackPenalty')}
-              onChange={(v) => setNumFromInput('missileAttackPenalty', v)}
-            />
-            <LabeledInput
-              label="Quickness Penalty"
-              type="number"
-              value={getNumInput(form, 'quicknessPenalty')}
-              onChange={(v) => setNumFromInput('quicknessPenalty', v)}
-            />
+          <LabeledInput
+            label="Min Manoeuvre Mod"
+            type="number"
+            value={getNumInput(form, 'minManoeuvreMod')}
+            onChange={(v) => setNumFromInput('minManoeuvreMod', v)}
+          />
+          <LabeledInput
+            label="Max Manoeuvre Mod"
+            type="number"
+            value={getNumInput(form, 'maxManoeuvreMod')}
+            onChange={(v) => setNumFromInput('maxManoeuvreMod', v)}
+          />
+          <LabeledInput
+            label="Missile Attack Penalty"
+            type="number"
+            value={getNumInput(form, 'missileAttackPenalty')}
+            onChange={(v) => setNumFromInput('missileAttackPenalty', v)}
+          />
+          <LabeledInput
+            label="Quickness Penalty"
+            type="number"
+            value={getNumInput(form, 'quicknessPenalty')}
+            onChange={(v) => setNumFromInput('quicknessPenalty', v)}
+          />
 
-            <CheckboxInput
-              label="Animal Only"
-              checked={form.animalOnly}
-              onChange={(c) => setForm(s => ({ ...s, animalOnly: c }))}
-            />
-            <CheckboxInput
-              label="Includes Greaves"
-              checked={form.includesGreaves}
-              onChange={(c) => setForm(s => ({ ...s, includesGreaves: c }))}
-            />
-          </div>
-
-          {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button onClick={saveForm}>Save</button>
-            <button onClick={cancelForm} type="button">Cancel</button>
-          </div>
+          <CheckboxInput
+            label="Animal Only"
+            checked={form.animalOnly}
+            onChange={(c) => setForm(s => ({ ...s, animalOnly: c }))}
+          />
+          <CheckboxInput
+            label="Includes Greaves"
+            checked={form.includesGreaves}
+            onChange={(c) => setForm(s => ({ ...s, includesGreaves: c }))}
+          />
         </div>
-      )}
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse', minWidth: 1200, width: '100%' }}>
-          <thead>
-            <tr>
-              <SortableTh onClick={() => onSort('id')} label="id" sort={sort} colKey="id" />
-              <SortableTh onClick={() => onSort('name')} label="name" sort={sort} colKey="name" />
-              <SortableTh onClick={() => onSort('type')} label="type" sort={sort} colKey="type" />
-              <SortableTh onClick={() => onSort('description')} label="description" sort={sort} colKey="description" />
-              <SortableTh onClick={() => onSort('minManoeuvreMod')} label="minManoeuvreMod" sort={sort} colKey="minManoeuvreMod" />
-              <SortableTh onClick={() => onSort('maxManoeuvreMod')} label="maxManoeuvreMod" sort={sort} colKey="maxManoeuvreMod" />
-              <SortableTh onClick={() => onSort('missileAttackPenalty')} label="missileAttackPenalty" sort={sort} colKey="missileAttackPenalty" />
-              <SortableTh onClick={() => onSort('quicknessPenalty')} label="quicknessPenalty" sort={sort} colKey="quicknessPenalty" />
-              <SortableTh onClick={() => onSort('animalOnly')} label="animalOnly" sort={sort} colKey="animalOnly" />
-              <SortableTh onClick={() => onSort('includesGreaves')} label="includesGreaves" sort={sort} colKey="includesGreaves" />
-              <th style={{ borderBottom: '1px solid #ddd', textAlign: 'left', padding: 8 }}>actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.length === 0 ? (
-              <tr><td colSpan={11} style={emptyCell}>No results.</td></tr>
-            ) : (
-              sorted.map((a) => (
-                <tr key={a.id}>
-                  <td style={tdStyle}>{a.id}</td>
-                  <td style={tdStyle}>{a.name}</td>
-                  <td style={tdStyle}>{a.type}</td>
-                  <td style={tdStyle}>{a.description}</td>
-                  <td style={tdStyle}>{a.minManoeuvreMod}</td>
-                  <td style={tdStyle}>{a.maxManoeuvreMod}</td>
-                  <td style={tdStyle}>{a.missileAttackPenalty}</td>
-                  <td style={tdStyle}>{a.quicknessPenalty}</td>
-                  <td style={tdStyle}>{String(a.animalOnly)}</td>
-                  <td style={tdStyle}>{String(a.includesGreaves)}</td>
-                  <td style={tdStyle}>
-                    <button onClick={() => startEdit(a)} style={{ marginRight: 6 }}>Edit</button>
-                    <button onClick={() => onDelete(a)} style={{ color: '#b00020' }}>Delete</button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
+        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+          <button onClick={saveForm}>Save</button>
+          <button onClick={cancelForm} type="button">Cancel</button>
+        </div>
       </div>
+    )}
 
+    {/* Shared DataTable */}
+    {loading ? (
+      <div>Loading…</div>
+    ) : error ? (
+      <div style={{ color: 'crimson' }}>Error: {error}</div>
+    ) : (
       <DataTable<Armourtype>
         rows={rows}
         columns={columns}
         rowId={(r) => r.id}
         initialSort={{ colId: 'name', dir: 'asc' }}
+        // search
         searchQuery={query}
         globalFilter={globalFilter}
+        // pagination (client)
+        mode="client"
+        page={page}
+        pageSize={pageSize}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+        pageSizeOptions={[5, 10, 20, 50]}
+        // styles
         tableMinWidth={1200}
         zebra
       />
-    </>
-  );
+    )}
+  </>
+);
+
 
 
   /** ----------------- Numeric input helpers (single-interface form) ----------------- */
