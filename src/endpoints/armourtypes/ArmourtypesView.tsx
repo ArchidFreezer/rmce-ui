@@ -41,19 +41,19 @@ export default function ArmourtypesView() {
   };
 
   const columns: ColumnDef<Armourtype>[] = [
-    { id: 'id', header: 'id', accessor: r => r.id, width: 325 },
-    { id: 'name', header: 'name', accessor: r => r.name },
-    { id: 'type', header: 'type', accessor: r => r.type },
-    { id: 'description', header: 'description', accessor: r => r.description },
-    { id: 'minManoeuvreMod', header: 'minManoeuvreMod', accessor: r => r.minManoeuvreMod, sortType: 'number', align: 'right' },
-    { id: 'maxManoeuvreMod', header: 'maxManoeuvreMod', accessor: r => r.maxManoeuvreMod, sortType: 'number', align: 'right' },
-    { id: 'missileAttackPenalty', header: 'missileAttackPenalty', accessor: r => r.missileAttackPenalty, sortType: 'number', align: 'right' },
-    { id: 'quicknessPenalty', header: 'quicknessPenalty', accessor: r => r.quicknessPenalty, sortType: 'number', align: 'right' },
-    { id: 'animalOnly', header: 'animalOnly', accessor: r => r.animalOnly, sortType: 'boolean', align: 'center' },
-    { id: 'includesGreaves', header: 'includesGreaves', accessor: r => r.includesGreaves, sortType: 'boolean', align: 'center' },
+    { id: 'id', header: 'Id', accessor: r => r.id, width: 325 },
+    { id: 'name', header: 'Name', accessor: r => r.name },
+    { id: 'type', header: 'Type', accessor: r => r.type },
+    { id: 'description', header: 'Description', accessor: r => r.description },
+    { id: 'minManoeuvreMod', header: 'Min Manoeuvre Mod', accessor: r => r.minManoeuvreMod, sortType: 'number', align: 'right' },
+    { id: 'maxManoeuvreMod', header: 'Max Manoeuvre Mod', accessor: r => r.maxManoeuvreMod, sortType: 'number', align: 'right' },
+    { id: 'missileAttackPenalty', header: 'Missile Attack Penalty', accessor: r => r.missileAttackPenalty, sortType: 'number', align: 'right' },
+    { id: 'quicknessPenalty', header: 'Quickness Penalty', accessor: r => r.quicknessPenalty, sortType: 'number', align: 'right' },
+    { id: 'animalOnly', header: 'Animal Only', accessor: r => r.animalOnly, sortType: 'boolean', align: 'center' },
+    { id: 'includesGreaves', header: 'Includes Greaves', accessor: r => r.includesGreaves, sortType: 'boolean', align: 'center' },
     {
       id: 'actions',
-      header: 'actions',
+      header: 'Actions',
       sortable: false,
       render: (row) => (
         <>
