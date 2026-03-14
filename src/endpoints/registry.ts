@@ -4,6 +4,7 @@ import { lazy, type LazyExoticComponent, type ComponentType } from 'react';
 const BooksView = lazy(() => import('./books/BooksView'));
 const PoisonsView = lazy(() => import('./poisons/PoisonsView'));
 const ArmourtypesView = lazy(() => import('./armourtypes/ArmourtypesView'));
+const PrefixesView = lazy(() => import('./prefixes/PrefixesView'));
 
 export interface EndpointDef {
   id: string;
@@ -25,6 +26,7 @@ export const endpoints: EndpointDef[] = [
   { id: 'books', label: 'Books', path: '/books', Component: BooksView },
   { id: 'poisons', label: 'Poisons', path: '/poisons', Component: PoisonsView },
   { id: 'armourtypes', label: 'Armour Types', path: '/armourtypes', Component: ArmourtypesView },
+  { id: 'prefixes', label: 'Prefixes', path: '/prefixes', Component: PrefixesView },
 ];
 
 

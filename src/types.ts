@@ -37,3 +37,7 @@ export interface Armourtype {
 export interface ArmourtypesPayload {
   armourtypes: Armourtype[];
 }
+
+export interface PrefixesPayload {
+  prefixes: string[];
+}
