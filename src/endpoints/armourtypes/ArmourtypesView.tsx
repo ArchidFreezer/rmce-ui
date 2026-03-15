@@ -4,7 +4,7 @@ import { fetchArmourtypes, upsertArmourtype, deleteArmourtype } from '../../api/
 import type { Armourtype } from '../../types';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
-import { LabeledInput } from '../../components/inputs';
+import { CheckboxInput, LabeledInput } from '../../components/inputs';
 import { isSignedIntegerString } from '../../components/inputs/validators';
 
 type ArmourNumberKey =
@@ -349,12 +349,12 @@ export default function ArmourtypesView() {
             <CheckboxInput
               label="Animal Only"
               checked={form.animalOnly}
-              onChange={(c) => setForm(s => ({ ...s, animalOnly: c }))}
+              onChange={(v) => setForm(s => ({ ...s, animalOnly: v }))}
             />
             <CheckboxInput
               label="Includes Greaves"
               checked={form.includesGreaves}
-              onChange={(c) => setForm(s => ({ ...s, includesGreaves: c }))}
+              onChange={(v) => setForm(s => ({ ...s, includesGreaves: v }))}
             />
           </div>
 
@@ -399,24 +399,6 @@ export default function ArmourtypesView() {
     </>
   );
 }
-
-function CheckboxInput({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (val: boolean) => void;
-}) {
-  return (
-    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      <span>{label}</span>
-    </label>
-  );
-}
-
 
 function emptyArmourtype(): Armourtype {
   return {
