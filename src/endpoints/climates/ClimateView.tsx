@@ -1,4 +1,3 @@
-// src/endpoints/climate/ClimateView.tsx
 import { useEffect, useMemo, useState } from 'react';
 import { fetchClimates, upsertClimate } from '../../api/climate';
 import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
@@ -16,12 +15,14 @@ export default function ClimateView() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // form state (Create only)
+  // form state (Create & Edit)
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null); // ← NEW
   const [form, setForm] = useState<Climate>(emptyClimate());
   const [formErr, setFormErr] = useState('');
   const toast = useToast();
 
+  // ----- Load -----
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -39,7 +40,103 @@ export default function ClimateView() {
     return () => { mounted = false; };
   }, []);
 
-  // Columns: id, name, temperature, precipitations[]
+  // ----- Handlers (Create / Edit) -----
+  const startNew = () => {
+    setEditingId(null);
+    setForm(emptyClimate());
+    setFormErr('');
+    setShowForm(true);
+  };
+
+  const startEdit = (row: Climate) => {
+    setEditingId(row.id);
+    setForm({ ...row }); // copy row into form
+    setFormErr('');
+    setShowForm(true);
+  };
+
+  const cancelForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setFormErr('');
+  };
+
+  const togglePrecip = (p: Precipitation) => {
+    setForm((s) => {
+      const has = s.precipitations.includes(p);
+      return {
+        ...s,
+        precipitations: has ? s.precipitations.filter((x) => x !== p) : [...s.precipitations, p],
+      };
+    });
+  };
+
+  const validate = (c: Climate): string => {
+    if (!c.id?.trim()) return 'id is required';
+    if (!c.name?.trim()) return 'name is required';
+    if (!c.temperature?.trim()) return 'temperature is required';
+    if (!TEMPERATURES.includes(c.temperature)) return `temperature must be one of: ${TEMPERATURES.join(', ')}`;
+
+    // For create: prevent duplicate IDs. For edit: ID is disabled and unchanged.
+    if (!editingId && rows.some((r) => r.id === c.id.trim())) {
+      return `id "${c.id.trim()}" already exists`;
+    }
+    return '';
+  };
+
+  const saveForm = async () => {
+    const payload: Climate = {
+      id: String(form.id).trim(),
+      name: String(form.name).trim(),
+      temperature: form.temperature as Temperature,
+      precipitations: [...form.precipitations],
+    };
+    const msg = validate(payload);
+    if (msg) { setFormErr(msg); return; }
+
+    const isEditing = Boolean(editingId);
+    try {
+      // Default edit → PUT /rmce/climate/{id}; create → POST /rmce/climate/
+      const opts = isEditing
+        ? { method: 'POST' as const, useResourceIdPath: false } // ← use POST with body ID for upsert (simpler, and PUT with ID path can cause issues if ID is changed in future)
+        : { method: 'POST' as const, useResourceIdPath: false };
+
+      await upsertClimate(payload, opts);
+
+      setRows((prev) => {
+        if (isEditing) {
+          // replace existing row
+          const idx = prev.findIndex((r) => r.id === payload.id);
+          if (idx >= 0) {
+            const copy = [...prev];
+            copy[idx] = { ...copy[idx], ...payload };
+            return copy;
+          }
+          // fallback: if not found (rare), prepend
+          return [payload, ...prev];
+        }
+        // create → prepend
+        return [payload, ...prev];
+      });
+
+      setShowForm(false);
+      setEditingId(null);
+      setFormErr('');
+      toast({
+        variant: 'success',
+        title: isEditing ? 'Updated' : 'Saved',
+        description: `Climate "${payload.id}" ${isEditing ? 'updated' : 'created'}.`,
+      });
+    } catch (err) {
+      toast({
+        variant: 'danger',
+        title: 'Save failed',
+        description: String(err instanceof Error ? err.message : err),
+      });
+    }
+  };
+
+  // ----- Columns (with Actions → Edit) -----
   const columns: ColumnDef<Climate>[] = useMemo(() => {
     const chip = (p: string) => (
       <span
@@ -88,8 +185,17 @@ export default function ClimateView() {
           </div>
         ),
       },
+      {
+        id: 'actions',
+        header: 'actions',
+        sortable: false,
+        width: 120,
+        render: (row) => (
+          <button onClick={() => startEdit(row)}>Edit</button>
+        ),
+      },
     ];
-  }, []);
+  }, [startEdit]); // eslint-disable-line
 
   // Global filter across all fields (including precipitation items)
   const globalFilter = (r: Climate, q: string) => {
@@ -100,64 +206,6 @@ export default function ClimateView() {
       r.temperature.toLowerCase().includes(s) ||
       r.precipitations.some((p) => p.toLowerCase().includes(s))
     );
-  };
-
-  // ----- Form handlers -----
-  const startNew = () => {
-    setForm(emptyClimate());
-    setFormErr('');
-    setShowForm(true);
-  };
-
-  const cancelForm = () => {
-    setShowForm(false);
-    setFormErr('');
-  };
-
-  const togglePrecip = (p: Precipitation) => {
-    setForm((s) => {
-      const has = s.precipitations.includes(p);
-      return {
-        ...s,
-        precipitations: has
-          ? s.precipitations.filter((x) => x !== p)
-          : [...s.precipitations, p],
-      };
-    });
-  };
-
-  const validate = (c: Climate): string => {
-    if (!c.id?.trim()) return 'id is required';
-    if (!c.name?.trim()) return 'name is required';
-    if (!c.temperature?.trim()) return 'temperature is required';
-    if (!TEMPERATURES.includes(c.temperature)) return `temperature must be one of: ${TEMPERATURES.join(', ')}`;
-    if (rows.some((r) => r.id === c.id.trim())) return `id "${c.id.trim()}" already exists`;
-    return '';
-  };
-
-  const saveForm = async () => {
-    const payload: Climate = {
-      id: String(form.id).trim(),
-      name: String(form.name).trim(),
-      temperature: form.temperature,
-      precipitations: [...form.precipitations],
-    };
-    const msg = validate(payload);
-    if (msg) { setFormErr(msg); return; }
-
-    try {
-      // Default create: POST /rmce/climate/ with one climate JSON object
-      await upsertClimate(payload, { method: 'POST', useResourceIdPath: false });
-
-      // Optimistic UI update
-      setRows((prev) => [payload, ...prev]);
-
-      setShowForm(false);
-      setFormErr('');
-      toast({ variant: 'success', title: 'Saved', description: `Climate "${payload.id}" created.` });
-    } catch (err) {
-      toast({ variant: 'danger', title: 'Save failed', description: String(err instanceof Error ? err.message : err) });
-    }
   };
 
   // ----- Render -----
@@ -179,26 +227,33 @@ export default function ClimateView() {
         />
       </div>
 
-      {/* Form panel */}
+      {/* Form panel (Create & Edit) */}
       {showForm && (
         <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}>
-          <h3 style={{ marginTop: 0 }}>New Climate</h3>
+          <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Climate' : 'New Climate'}</h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput label="ID" value={form.id} onChange={(v) => setForm(s => ({ ...s, id: v }))} />
-            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm(s => ({ ...s, name: v }))} />
-            
-            <LabeledSelect
-            label="Temperature"
-            value={form.temperature}
-            onChange={(v) => setForm(s => ({ ...s, temperature: v as Temperature }))}
-            options={TEMPERATURES}
+            <LabeledInput
+              label="ID"
+              value={form.id}
+              onChange={(v) => setForm(s => ({ ...s, id: v }))}
+              disabled={!!editingId} // ← ID locked in edit mode
+            />
+            <LabeledInput
+              label="Name"
+              value={form.name}
+              onChange={(v) => setForm(s => ({ ...s, name: v }))}
             />
 
-            <small style={{ color: 'var(--muted)' }}>
-            Allowed: {TEMPERATURES.join(', ')}
-            </small>
-
+            <LabeledSelect
+              label="Temperature"
+              value={form.temperature}
+              onChange={(v) => setForm(s => ({ ...s, temperature: v as Temperature }))}
+              options={TEMPERATURES}
+            />
+            <div style={{ alignSelf: 'end', color: 'var(--muted)', fontSize: 12 }}>
+              Allowed: {TEMPERATURES.join(', ')}
+            </div>
 
             <div style={{ gridColumn: '1 / -1' }}>
               <div style={{ fontSize: 14, marginBottom: 6 }}>Precipitations</div>
@@ -264,11 +319,13 @@ function LabeledInput({
   value,
   onChange,
   type = 'text',
+  disabled = false,
 }: {
   label: string;
   value: string;
   onChange: (val: string) => void;
   type?: 'text';
+  disabled?: boolean;
 }) {
   return (
     <label style={{ display: 'grid', gap: 6, fontSize: 14 }}>
@@ -277,6 +334,7 @@ function LabeledInput({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         type={type}
+        disabled={disabled}
         style={{ padding: 8 }}
       />
     </label>
@@ -311,7 +369,8 @@ function LabeledSelect({
   );
 }
 
-
 function emptyClimate(): Climate {
+  // You can default to 'Temperate' if preferred:
+  // return { id: '', name: '', temperature: 'Temperate', precipitations: [] };
   return { id: '', name: '', temperature: 'Temperate', precipitations: [] };
 }

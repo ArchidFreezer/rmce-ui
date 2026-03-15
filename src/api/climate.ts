@@ -21,7 +21,9 @@ function sanitizeTemperature(v: unknown): Temperature {
   return TEMP_ENUM.has(s) ? s : 'Temperate';
 }
 
-/** GET /rmce/climate → { climates: Climate[] } */
+/**
+ * GET /rmce/objects/climate  ->  { climates: Climate[] }
+ */
 export async function fetchClimates(): Promise<Climate[]> {
   const data = await fetchJson<ClimatesPayload>('/rmce/objects/climate');
   if (!data || !Array.isArray(data.climates)) {
@@ -35,7 +37,11 @@ export async function fetchClimates(): Promise<Climate[]> {
   }));
 }
 
-/** POST/PUT single climate */
+/**
+ * Create or update a single climate.
+ * - Create: POST /rmce/objects/climate/   (body = Climate)
+ * - Edit:   PUT  /rmce/objects/climate/{id}
+ */
 export async function upsertClimate(
   climate: Climate,
   opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {}
