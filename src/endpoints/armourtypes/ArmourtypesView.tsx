@@ -31,53 +31,16 @@ export default function ArmourtypesView() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const globalFilter = (a: Armourtype, q: string) => {
-    const s = q.toLowerCase();
-    return [
-      a.id, a.name, a.type, a.description,
-      a.minManoeuvreMod, a.maxManoeuvreMod,
-      a.missileAttackPenalty, a.quicknessPenalty,
-      a.animalOnly, a.includesGreaves,
-    ].some(v => String(v ?? '').toLowerCase().includes(s));
-  };
-
-  const columns: ColumnDef<Armourtype>[] = [
-    { id: 'id', header: 'Id', accessor: r => r.id, width: 325 },
-    { id: 'name', header: 'Name', accessor: r => r.name },
-    { id: 'type', header: 'Type', accessor: r => r.type },
-    { id: 'description', header: 'Description', accessor: r => r.description },
-    { id: 'minManoeuvreMod', header: 'Min Manoeuvre Mod', accessor: r => r.minManoeuvreMod, sortType: 'number', align: 'right' },
-    { id: 'maxManoeuvreMod', header: 'Max Manoeuvre Mod', accessor: r => r.maxManoeuvreMod, sortType: 'number', align: 'right' },
-    { id: 'missileAttackPenalty', header: 'Missile Attack Penalty', accessor: r => r.missileAttackPenalty, sortType: 'number', align: 'right' },
-    { id: 'quicknessPenalty', header: 'Quickness Penalty', accessor: r => r.quicknessPenalty, sortType: 'number', align: 'right' },
-    { id: 'animalOnly', header: 'Animal Only', accessor: r => r.animalOnly, sortType: 'boolean', align: 'center' },
-    { id: 'includesGreaves', header: 'Includes Greaves', accessor: r => r.includesGreaves, sortType: 'boolean', align: 'center' },
-    {
-      id: 'actions',
-      header: 'Actions',
-      sortable: false,
-      render: (row) => (
-        <>
-          <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
-          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
-        </>
-      ),
-    },
-  ];
-
-  const [sort, setSort] = useState<{ key: keyof Armourtype; dir: 'asc' | 'desc' }>({
-    key: 'name',
-    dir: 'asc',
-  });
-
+  // form state (Create & Edit)
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<Armourtype>(emptyArmourtype()); // single interface pattern
-  const [formErr, setFormErr] = useState('');
-
-  const confirm = useConfirm();
+  const [form, setForm] = useState<Armourtype>(emptyArmourtype());
+  const [formErr, setFormErr] = useState('');// legacy single message (kept for top-level)
+  const [errors, setErrors] = useState<{ id?: string; name?: string; type?: string; numeric?: string }>({});
   const toast = useToast();
+  const confirm = useConfirm();
 
+  // ----- Load -----
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -95,57 +58,40 @@ export default function ArmourtypesView() {
     return () => { mounted = false; };
   }, []);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter(a =>
-      [
-        a.id, a.name, a.type, a.description,
-        a.minManoeuvreMod, a.maxManoeuvreMod,
-        a.missileAttackPenalty, a.quicknessPenalty,
-        a.animalOnly, a.includesGreaves,
-      ]
-      .map(v => String(v ?? '').toLowerCase())
-      .some(s => s.includes(q))
-    );
-  }, [rows, query]);
+  // ----- Inline validation helpers -----
+  const computeErrors = (draft: Armourtype, isEditing: boolean) => {
+    const next: { id?: string; name?: string; type?: string; numeric?: string } = {};
+    // ID (only on create, must be unique and start with prefix in ucase and contain additional characters)
+    if (!draft.id.trim()) next.id = 'ID is required';
+    else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
+    if (!draft.id.trim().toUpperCase().startsWith('ARMOURTYPE_')) next.id = 'ID must start with "ARMOURTYPE_"';
+    if (draft.id.trim().length <= 11) next.id = 'ID must contain additional characters after "ARMOURTYPE_"';
+    // Name
+    if (!draft.name.trim()) next.name = 'Name is required';
+    // Type
+    if (!draft.type.trim()) next.type = 'Type is required';
 
-  const sorted = useMemo(() => {
-    const arr = [...filtered];
-    const { key, dir } = sort;
+    // Numeric values
+    for (const k of NUM_KEYS) {
+      const raw = getNumInput(draft, k);
+      if (raw === '' || Number.isNaN(Number(raw))) next.numeric = `${k} must be a number`;
+    }
+    return next;
+  };
 
-    const isNumberKey = (k: keyof Armourtype): k is ArmourNumberKey =>
-      NUM_KEYS.includes(k as ArmourNumberKey);
-    const isBooleanKey = (k: keyof Armourtype): k is ArmourBooleanKey =>
-      k === 'animalOnly' || k === 'includesGreaves';
+  useEffect(() => {
+    if (!showForm) return;
+    const isEditing = Boolean(editingId);
+    setErrors(computeErrors(form, isEditing));
+  }, [form, editingId, showForm]); // keep current
 
-    arr.sort((a, b) => {
-      if (isNumberKey(key)) {
-        const av = a[key] as number;
-        const bv = b[key] as number;
-        return dir === 'asc' ? av - bv : bv - av;
-      }
-      if (isBooleanKey(key)) {
-        const av = a[key] as boolean;
-        const bv = b[key] as boolean;
-        return dir === 'asc' ? Number(av) - Number(bv) : Number(bv) - Number(av);
-      }
-      const av = String(a[key as ArmourStringKey] ?? '');
-      const bv = String(b[key as ArmourStringKey] ?? '');
-      if (av < bv) return dir === 'asc' ? -1 : 1;
-      if (av > bv) return dir === 'asc' ? 1 : -1;
-      return 0;
-    });
+  const hasErrors = Boolean(errors.id || errors.name || errors.type || errors.numeric);
 
-    return arr;
-  }, [filtered, sort]);
-
-  const onSort = (key: keyof Armourtype) =>
-    setSort(prev => prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' });
-
+  // ----- Handlers (Create / Edit / Delete) -----
   const startNew = () => {
     setEditingId(null);
     setForm(emptyArmourtype());
+    setErrors({});
     setFormErr('');
     setShowForm(true);
   };
@@ -154,32 +100,18 @@ export default function ArmourtypesView() {
     setEditingId(row.id);
     setForm({ ...row });
     setFormErr('');
+    setErrors({});
     setShowForm(true);
   };
 
   const cancelForm = () => {
     setShowForm(false);
+    setEditingId(null);
+    setErrors({});
     setFormErr('');
   };
 
-  const validate = (f: Armourtype): string => {
-    if (!f.id?.trim()) return 'id is required';
-    if (!f.name?.trim()) return 'name is required';
-    if (!f.type?.trim()) return 'type is required';
-    for (const k of NUM_KEYS) {
-      const raw = getNumInput(f, k);
-      if (raw === '' || Number.isNaN(Number(raw))) return `${k} must be a number`;
-    }
-    return '';
-  };
-
   const saveForm = async () => {
-    const msg = validate(form);
-    if (msg) {
-      setFormErr(msg);
-      return;
-    }
-
     // Normalize payload (strings -> numbers for numeric fields)
     const payload: Armourtype = {
       id: String(form.id).trim(),
@@ -194,6 +126,12 @@ export default function ArmourtypesView() {
       includesGreaves: Boolean(form.includesGreaves),
     };
 
+    const nextErrors = computeErrors(payload, Boolean(editingId));
+    setErrors(nextErrors);
+    const topError = nextErrors.id || nextErrors.name || nextErrors.type || '';
+    if (topError) { setFormErr(topError); return; }
+
+    const isEditing = Boolean(editingId);
     try {
       const opts = editingId
         ? { method: 'POST' as const, useResourceIdPath: false } // or PUT+id if your API prefers
@@ -201,21 +139,36 @@ export default function ArmourtypesView() {
 
       await upsertArmourtype(payload, opts);
 
-      setRows(prev => {
-        const idx = prev.findIndex(a => a.id === payload.id);
-        if (idx >= 0) {
-          const copy = [...prev];
-          copy[idx] = { ...copy[idx], ...payload };
-          return copy;
+      setRows((prev) => {
+        if (isEditing) {
+          // replace existing row
+          const idx = prev.findIndex((r) => r.id === payload.id);
+          if (idx >= 0) {
+            const copy = [...prev];
+            copy[idx] = { ...copy[idx], ...payload };
+            return copy;
+          }
+          // fallback: if not found (rare), prepend
+          return [payload, ...prev];
         }
+        // create → prepend
         return [payload, ...prev];
       });
 
       setShowForm(false);
+      setEditingId(null);
       setFormErr('');
-      toast({ variant: 'success', title: 'Saved', description: `Armourtype "${payload.id}" saved.` });
+      toast({
+        variant: 'success',
+        title: isEditing ? 'Updated' : 'Saved',
+        description: `Armourtype "${payload.id}" ${isEditing ? 'updated' : 'created'}.`,
+      });
     } catch (err) {
-      toast({ variant: 'danger', title: 'Save failed', description: String(err instanceof Error ? err.message : err) });
+      toast({
+        variant: 'danger',
+        title: 'Save failed',
+        description: String(err instanceof Error ? err.message : err),
+      });
     }
   };
 
@@ -235,6 +188,8 @@ export default function ArmourtypesView() {
     setRows(prev.filter(a => a.id !== id));
     try {
       await deleteArmourtype(id);
+      // if currently editing this item, close the form
+      if (editingId === row.id) cancelForm();
       toast({ variant: 'success', title: 'Deleted', description: `Armourtype "${id}" deleted.` });
     } catch (err) {
       setRows(prev);
@@ -242,86 +197,145 @@ export default function ArmourtypesView() {
     }
   };
 
+  // ----- Columns (Edit + Delete) -----
+  const columns: ColumnDef<Armourtype>[] = useMemo(() => {
+    const chip = (p: string) => (
+      <span
+        key={p}
+        style={{
+          display: 'inline-block',
+          padding: '2px 8px',
+          marginRight: 6,
+          marginBottom: 4,
+          borderRadius: 999,
+          fontSize: 12,
+          border: '1px solid var(--border)',
+          background: 'var(--panel)',
+        }}
+        title={p}
+      >
+        {p}
+      </span>
+    );
+
+    return [
+      { id: 'id', header: 'id', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
+      { id: 'name', header: 'name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
+      { id: 'type', header: 'Type', accessor: r => r.type },
+      { id: 'description', header: 'Description', accessor: r => r.description },
+      { id: 'minManoeuvreMod', header: 'Min Manoeuvre Mod', accessor: r => r.minManoeuvreMod, sortType: 'number', align: 'right' },
+      { id: 'maxManoeuvreMod', header: 'Max Manoeuvre Mod', accessor: r => r.maxManoeuvreMod, sortType: 'number', align: 'right' },
+      { id: 'missileAttackPenalty', header: 'Missile Attack Penalty', accessor: r => r.missileAttackPenalty, sortType: 'number', align: 'right' },
+      { id: 'quicknessPenalty', header: 'Quickness Penalty', accessor: r => r.quicknessPenalty, sortType: 'number', align: 'right' },
+      { id: 'animalOnly', header: 'Animal Only', accessor: r => r.animalOnly, sortType: 'boolean', align: 'center' },
+      { id: 'includesGreaves', header: 'Includes Greaves', accessor: r => r.includesGreaves, sortType: 'boolean', align: 'center' },
+      {
+        id: 'actions',
+        header: 'actions',
+        sortable: false,
+        width: 160,
+        render: (row) => (
+          <>
+            <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
+            <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
+          </>
+        ),
+      },
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, editingId]); // allows closing form on self-delete
+
+  // ----- Search -----
+  const globalFilter = (a: Armourtype, q: string) => {
+    const s = q.toLowerCase();
+    return [
+      a.id, a.name, a.type, a.description,
+      a.minManoeuvreMod, a.maxManoeuvreMod,
+      a.missileAttackPenalty, a.quicknessPenalty,
+      a.animalOnly, a.includesGreaves,
+    ].some(v => String(v ?? '').toLowerCase().includes(s));
+  };
+
+  // ----- Render -----
   if (loading) return <div>Loading…</div>;
   if (error) return <div style={{ color: 'crimson' }}>Error: {error}</div>;
 
-return (
-  <>
-    <h2>Armour Types</h2>
+  return (
+    <>
+      <h2>Armour Types</h2>
 
-    {/* New + Search */}
-    <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-      <button onClick={startNew}>New Armourtype</button>
-      <DataTableSearchInput
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search armourtypes…"
-        aria-label="Search armourtypes"
-      />
-    </div>
-
-    {/* Form panel (unchanged) */}
-    {showForm && (
-      <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}>
-        <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Armourtype' : 'New Armourtype'}</h3>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <LabeledInput label="ID" value={form.id} onChange={(v) => setForm(s => ({ ...s, id: v }))} disabled={!!editingId} />
-          <LabeledInput label="Name" value={form.name} onChange={(v) => setForm(s => ({ ...s, name: v }))} />
-          <LabeledInput label="Type" value={form.type} onChange={(v) => setForm(s => ({ ...s, type: v }))} />
-          <LabeledInput label="Description" value={form.description} onChange={(v) => setForm(s => ({ ...s, description: v }))} />
-
-          <LabeledInput
-            label="Min Manoeuvre Mod"
-            type="number"
-            value={getNumInput(form, 'minManoeuvreMod')}
-            onChange={(v) => setNumFromInput('minManoeuvreMod', v)}
-          />
-          <LabeledInput
-            label="Max Manoeuvre Mod"
-            type="number"
-            value={getNumInput(form, 'maxManoeuvreMod')}
-            onChange={(v) => setNumFromInput('maxManoeuvreMod', v)}
-          />
-          <LabeledInput
-            label="Missile Attack Penalty"
-            type="number"
-            value={getNumInput(form, 'missileAttackPenalty')}
-            onChange={(v) => setNumFromInput('missileAttackPenalty', v)}
-          />
-          <LabeledInput
-            label="Quickness Penalty"
-            type="number"
-            value={getNumInput(form, 'quicknessPenalty')}
-            onChange={(v) => setNumFromInput('quicknessPenalty', v)}
-          />
-
-          <CheckboxInput
-            label="Animal Only"
-            checked={form.animalOnly}
-            onChange={(c) => setForm(s => ({ ...s, animalOnly: c }))}
-          />
-          <CheckboxInput
-            label="Includes Greaves"
-            checked={form.includesGreaves}
-            onChange={(c) => setForm(s => ({ ...s, includesGreaves: c }))}
-          />
-        </div>
-
-        {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
-        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-          <button onClick={saveForm}>Save</button>
-          <button onClick={cancelForm} type="button">Cancel</button>
-        </div>
+      {/* New + Search */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+        <button onClick={startNew}>New Armourtype</button>
+        <DataTableSearchInput
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search armourtypes…"
+          aria-label="Search armourtypes"
+        />
       </div>
-    )}
 
-    {/* Shared DataTable */}
-    {loading ? (
-      <div>Loading…</div>
-    ) : error ? (
-      <div style={{ color: 'crimson' }}>Error: {error}</div>
-    ) : (
+      {/* Form panel (Create & Edit) */}
+      {showForm && (
+        <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}>
+          <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Armourtype' : 'New Armourtype'}</h3>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <LabeledInput label="ID" value={form.id} onChange={(v) => setForm(s => ({ ...s, id: v }))} disabled={!!editingId} error={errors.id}/>
+            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm(s => ({ ...s, name: v }))} error={errors.name}/>
+            <LabeledInput label="Type" value={form.type} onChange={(v) => setForm(s => ({ ...s, type: v }))} error={errors.type}/>
+            <LabeledInput label="Description" value={form.description} onChange={(v) => setForm(s => ({ ...s, description: v }))}/>
+
+            <LabeledInput
+              label="Min Manoeuvre Mod"
+              type="number"
+              value={getNumInput(form, 'minManoeuvreMod')}
+              onChange={(v) => setNumFromInput('minManoeuvreMod', v)}
+              error={errors.numeric && errors.numeric.includes('minManoeuvreMod') ? errors.numeric : undefined}
+            />
+            <LabeledInput
+              label="Max Manoeuvre Mod"
+              type="number"
+              value={getNumInput(form, 'maxManoeuvreMod')}
+              onChange={(v) => setNumFromInput('maxManoeuvreMod', v)}
+              error={errors.numeric && errors.numeric.includes('maxManoeuvreMod') ? errors.numeric : undefined}
+            />
+            <LabeledInput
+              label="Missile Attack Penalty"
+              type="number"
+              value={getNumInput(form, 'missileAttackPenalty')}
+              onChange={(v) => setNumFromInput('missileAttackPenalty', v)}
+              error={errors.numeric && errors.numeric.includes('missileAttackPenalty') ? errors.numeric : undefined}
+            />
+            <LabeledInput
+              label="Quickness Penalty"
+              type="number"
+              value={getNumInput(form, 'quicknessPenalty')}
+              onChange={(v) => setNumFromInput('quicknessPenalty', v)}
+              error={errors.numeric && errors.numeric.includes('quicknessPenalty') ? errors.numeric : undefined}
+            />
+
+            <CheckboxInput
+              label="Animal Only"
+              checked={form.animalOnly}
+              onChange={(c) => setForm(s => ({ ...s, animalOnly: c }))}
+            />
+            <CheckboxInput
+              label="Includes Greaves"
+              checked={form.includesGreaves}
+              onChange={(c) => setForm(s => ({ ...s, includesGreaves: c }))}
+            />
+          </div>
+
+          {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <button onClick={saveForm} disabled={hasErrors}>Save</button>
+            <button onClick={cancelForm} type="button">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Shared DataTable */}
       <DataTable<Armourtype>
         rows={rows}
         columns={columns}
@@ -338,21 +352,21 @@ return (
         onPageSizeChange={setPageSize}
         pageSizeOptions={[5, 10, 20, 50]}
         // styles
-        tableMinWidth={1200}
+        tableMinWidth={0} // Allow table to shrink below container width (enables horizontal scroll when needed)
         zebra
         // Resizable columns
         resizable
         persistKey="dt.armourtypes.v1"
-        onColumnResizeEnd={(widths) => {
-          // optional: log or sync widths
-          console.log('Armourtype widths(px):', widths);
-        }}
+        ariaLabel='ArmourTypes data'
       />
-    )}
-  </>
-);
+      {!rows.length && (
+        <div style={{ marginTop: 8, color: 'var(--muted)' }}>
+          No armourtypes found.
+        </div>
+      )}
 
-
+    </>
+  );
 
   /** ----------------- Numeric input helpers (single-interface form) ----------------- */
 
@@ -393,12 +407,10 @@ function CheckboxInput({
   );
 }
 
-const tdStyle: React.CSSProperties = { borderBottom: '1px solid #f0f0f0', padding: '8px' };
-const emptyCell: React.CSSProperties = { padding: 12, textAlign: 'center', color: '#666' };
 
 function emptyArmourtype(): Armourtype {
   return {
-    id: '',
+    id: 'ARMOURTYPE_',
     name: '',
     type: '',
     description: '',
