@@ -5,7 +5,7 @@ import type { Climate, Precipitation, Temperature } from '../../types';
 import { PRECIPITATIONS, TEMPERATURES } from '../../types';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
-import { LabeledInput, LabeledSelect } from '../../components/inputs'
+import { CheckboxGroup, LabeledInput, LabeledSelect } from '../../components/inputs'
 
 export default function ClimateView() {
   const [rows, setRows] = useState<Climate[]>([]);
@@ -305,21 +305,17 @@ export default function ClimateView() {
               Allowed: {TEMPERATURES.join(', ')}
             </div>
 
-            <div style={{ gridColumn: '1 / -1' }}>
-              <div style={{ fontSize: 14, marginBottom: 6 }}>Precipitations</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                {PRECIPITATIONS.map((p) => (
-                  <label key={p} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}>
-                    <input
-                      type="checkbox"
-                      checked={form.precipitations.includes(p)}
-                      onChange={() => togglePrecip(p)}
-                    />
-                    <span>{p}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
+            <CheckboxGroup<Precipitation>
+              label="Precipitations"
+              value={form.precipitations}
+              options={PRECIPITATIONS}    // can be a simple string array
+              onChange={(vals) => setForm(s => ({ ...s, precipitations: vals }))}
+              helperText="Choose all that apply"
+              // error={errors.precipitations} // add if you later enforce at least one selected
+              direction="row"
+              columns={3}
+              showSelectAll
+            />
           </div>
 
           {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
