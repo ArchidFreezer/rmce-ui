@@ -4,6 +4,7 @@ import { fetchArmourtypes, upsertArmourtype, deleteArmourtype } from './api';
 import type { Armourtype } from '../../types';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
+import { LabeledInput } from '../../components/inputs';
 
 type ArmourNumberKey =
   | 'minManoeuvreMod'
@@ -375,33 +376,6 @@ return (
   }
 }
 
-function LabeledInput({
-  label,
-  value,
-  onChange,
-  type = 'text',
-  disabled = false,
-}: {
-  label: string;
-  value: string;
-  onChange: (val: string) => void;
-  type?: 'text' | 'number';
-  disabled?: boolean;
-}) {
-  return (
-    <label style={{ display: 'grid', gap: 6, fontSize: 14 }}>
-      <span>{label}</span>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        type={type}
-        disabled={disabled}
-        style={{ padding: 8 }}
-      />
-    </label>
-  );
-}
-
 function CheckboxInput({
   label,
   checked,
@@ -416,31 +390,6 @@ function CheckboxInput({
       <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       <span>{label}</span>
     </label>
-  );
-}
-
-function SortableTh<T extends string>({
-  onClick,
-  label,
-  sort,
-  colKey,
-}: {
-  onClick: () => void;
-  label: string;
-  sort: { key: T; dir: 'asc' | 'desc' };
-  colKey: T;
-}) {
-  const active = sort.key === colKey;
-  const arrow = active ? (sort.dir === 'asc' ? ' ▲' : ' ▼') : '';
-  return (
-    <th
-      onClick={onClick}
-      style={{ borderBottom: '1px solid #ddd', textAlign: 'left', padding: '8px', cursor: 'pointer', userSelect: 'none' }}
-      title={`Sort by ${label}`}
-      scope="col"
-    >
-      {label}{arrow}
-    </th>
   );
 }
 
