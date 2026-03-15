@@ -1,5 +1,4 @@
 import { NavLink } from 'react-router-dom';
-import type { ResourceDef } from '../resources/registry';
 import { useEffect, useRef, useState } from 'react';
 
 
@@ -26,8 +25,6 @@ export function Sidebar({
   maxWidth?: number;
   persistKey?: string;
 }) {
-  const [dynamic, setDynamic] = useState<string[]>([]);
-  const [err, setErr] = useState<string | null>(null);
   
   useEffect(() => {
     const raw = localStorage.getItem(persistKey);
