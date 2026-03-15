@@ -42,3 +42,37 @@ export interface ArmourtypesPayload {
   armourtypes: Armourtype[];
 }
 
+/** Enum plus reusable list for form checkboxes */
+export type Precipitation = 'Rainy' | 'Humid' | 'Temperate' | 'Dry' | 'Arid';
+export const PRECIPITATIONS: ReadonlyArray<Precipitation> = [
+  'Rainy',
+  'Humid',
+  'Temperate',
+  'Dry',
+  'Arid',
+] as const;
+
+/** Enum plus reusable list for form checkboxes */
+export type Temperature = 'Hot' | 'Warm' | 'Temperate' | 'Cool' | 'Cold';
+export const TEMPERATURES: ReadonlyArray<Temperature> = [
+  'Hot',
+  'Warm',
+  'Temperate',
+  'Cool',
+  'Cold',
+] as const;
+
+export interface Climate {
+  id: string;
+  name: string;
+  temperature: Temperature; // e.g., "Cold"
+  precipitations: Precipitation[];
+}
+
+export interface ClimatesPayload {
+  climates: Climate[];
+}
+
+
+
+
