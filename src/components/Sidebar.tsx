@@ -12,6 +12,7 @@ export function Sidebar({
   items,
   open,
   onClose,
+  sortInside = false,
   enableResize = true,
   minWidth = 140,
   maxWidth = 420,
@@ -20,12 +21,18 @@ export function Sidebar({
   items: SidebarItem[];
   open: boolean;
   onClose?: () => void;
+  sortInside?: boolean; // whether to sort items inside the sidebar (default: false, i.e. rely on pre-sorted input)
   enableResize?: boolean;
   minWidth?: number;
   maxWidth?: number;
   persistKey?: string;
 }) {
   
+  
+  const list = sortInside
+    ? [...items].sort((a, b) => a.label.localeCompare(b.label))
+    : items;
+
   useEffect(() => {
     const raw = localStorage.getItem(persistKey);
     const val = raw ? Number(raw) : NaN;
@@ -86,7 +93,7 @@ export function Sidebar({
 
       <nav className="sidebar__nav" role="navigation" aria-label="Resources">
         <ul className="sidebar__list">
-          {items.map((it) => (
+          {list.map((it) => (
             <li key={it.path} className="sidebar__item">
               <NavLink
                 to={it.path}
