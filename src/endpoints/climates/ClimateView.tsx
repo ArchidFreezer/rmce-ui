@@ -5,7 +5,8 @@ import type { Climate, Precipitation, Temperature } from '../../types';
 import { PRECIPITATIONS, TEMPERATURES } from '../../types';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
-import { LabeledInput, LabeledSelect } from '../../components/inputs'
+import { CheckboxGroup, LabeledInput, LabeledSelect } from '../../components/inputs'
+import { requireAtLeastOne } from '../../components/inputs/validators';
 
 export default function ClimateView() {
   const [rows, setRows] = useState<Climate[]>([]);
@@ -22,7 +23,7 @@ export default function ClimateView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Climate>(emptyClimate());
   const [formErr, setFormErr] = useState(''); // legacy single message (kept for top-level)
-  const [errors, setErrors] = useState<{ id?: string; name?: string; temperature?: string }>({});
+  const [errors, setErrors] = useState<{ id?: string; name?: string; temperature?: string; precipitations?: string }>({});
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -46,7 +47,7 @@ export default function ClimateView() {
 
   // ----- Inline validation helpers -----
   const computeErrors = (draft: Climate, isEditing: boolean) => {
-    const next: { id?: string; name?: string; temperature?: string } = {};
+    const next: { id?: string; name?: string; temperature?: string; precipitations?: string } = {};
     // ID
     if (!draft.id.trim()) next.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
@@ -55,6 +56,9 @@ export default function ClimateView() {
     // Temperature
     if (!draft.temperature) next.temperature = 'Temperature is required';
     else if (!TEMPERATURES.includes(draft.temperature)) next.temperature = `Must be one of: ${TEMPERATURES.join(', ')}`;
+    // Precipitations
+    const precipError = requireAtLeastOne(draft.precipitations, 'precipitation');
+    if (precipError) next.precipitations = precipError;
     return next;
   };
 
@@ -64,7 +68,7 @@ export default function ClimateView() {
     setErrors(computeErrors(form, isEditing));
   }, [form, editingId, showForm]); // keep current
 
-  const hasErrors = Boolean(errors.id || errors.name || errors.temperature);
+  const hasErrors = Boolean(errors.id || errors.name || errors.temperature || errors.precipitations);
 
   // ----- Handlers (Create / Edit / Delete) -----
   const startNew = () => {
@@ -110,7 +114,7 @@ export default function ClimateView() {
 
     const nextErrors = computeErrors(payload, Boolean(editingId));
     setErrors(nextErrors);
-    const topError = nextErrors.id || nextErrors.name || nextErrors.temperature || '';
+    const topError = nextErrors.id || nextErrors.name || nextErrors.temperature || nextErrors.precipitations || '';
     if (topError) { setFormErr(topError); return; }
 
     const isEditing = Boolean(editingId);
@@ -305,21 +309,17 @@ export default function ClimateView() {
               Allowed: {TEMPERATURES.join(', ')}
             </div>
 
-            <div style={{ gridColumn: '1 / -1' }}>
-              <div style={{ fontSize: 14, marginBottom: 6 }}>Precipitations</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                {PRECIPITATIONS.map((p) => (
-                  <label key={p} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14 }}>
-                    <input
-                      type="checkbox"
-                      checked={form.precipitations.includes(p)}
-                      onChange={() => togglePrecip(p)}
-                    />
-                    <span>{p}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
+            <CheckboxGroup<Precipitation>
+              label="Precipitations"
+              value={form.precipitations}
+              options={PRECIPITATIONS}    // can be a simple string array
+              onChange={(vals) => setForm(s => ({ ...s, precipitations: vals }))}
+              helperText="Choose all that apply"
+              error={errors.precipitations}
+              direction="row"
+              columns={3}
+              showSelectAll
+            />
           </div>
 
           {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
