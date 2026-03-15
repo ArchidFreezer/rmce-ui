@@ -52,3 +52,12 @@ export async function upsertClimate(
     : `/rmce/objects/climate/`;
   return sendJson(url, method, climate);
 }
+
+/**
+ * DELETE /rmce/objects/climate/{id}
+ */
+export async function deleteClimate(id: string): Promise<void> {
+  if (!id) throw new Error('deleteClimate: id is required');
+  const url = `/rmce/objects/climate/${encodeURIComponent(id)}`;
+  await fetchJson<void>(url, { method: 'DELETE' });
+}
