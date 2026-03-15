@@ -94,16 +94,6 @@ export default function ClimateView() {
     setFormErr('');
   };
 
-  const togglePrecip = (p: Precipitation) => {
-    setForm((s) => {
-      const has = s.precipitations.includes(p);
-      return {
-        ...s,
-        precipitations: has ? s.precipitations.filter((x) => x !== p) : [...s.precipitations, p],
-      };
-    });
-  };
-
   const saveForm = async () => {
     const payload: Climate = {
       id: String(form.id).trim(),
