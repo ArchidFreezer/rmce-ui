@@ -1,5 +1,5 @@
-import { fetchJson, sendJson } from '../../api/client';
-import type { Armourtype, ArmourtypesPayload } from '../../types';
+import { fetchJson, sendJson } from './client';
+import type { Armourtype, ArmourtypesPayload } from '../types';
 
 const BASE = '/rmce/objects/armourtype';
 

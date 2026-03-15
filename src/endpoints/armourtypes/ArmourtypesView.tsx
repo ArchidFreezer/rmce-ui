@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { fetchArmourtypes, upsertArmourtype, deleteArmourtype } from './api';
+import { fetchArmourtypes, upsertArmourtype, deleteArmourtype } from '../../api/armourtypes';
 import type { Armourtype } from '../../types';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
