@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { fetchBooks, upsertBook, deleteBook } from './api';
+import { fetchBooks, upsertBook, deleteBook } from '../../api/books';
 import type { Book } from '../../types';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
