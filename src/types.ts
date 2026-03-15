@@ -4,7 +4,7 @@ export interface PrefixesPayload {
 
 export interface Book {
   id: string;
-  code: string;
+  code: number;
   name: string;
   abbreviation: string;
   isbn: string;

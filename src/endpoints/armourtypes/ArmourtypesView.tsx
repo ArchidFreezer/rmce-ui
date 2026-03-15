@@ -199,25 +199,6 @@ export default function ArmourtypesView() {
 
   // ----- Columns (Edit + Delete) -----
   const columns: ColumnDef<Armourtype>[] = useMemo(() => {
-    const chip = (p: string) => (
-      <span
-        key={p}
-        style={{
-          display: 'inline-block',
-          padding: '2px 8px',
-          marginRight: 6,
-          marginBottom: 4,
-          borderRadius: 999,
-          fontSize: 12,
-          border: '1px solid var(--border)',
-          background: 'var(--panel)',
-        }}
-        title={p}
-      >
-        {p}
-      </span>
-    );
-
     return [
       { id: 'id', header: 'id', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
       { id: 'name', header: 'name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
@@ -301,7 +282,6 @@ export default function ArmourtypesView() {
                 // 3) Allow raw === '-' temporarily so users can type the sign first;
                 //    validation will show an error until at least one digit is added.
                 return { ...s, minManoeuvreMod: Number(raw) };
-
               })}
               inputProps={{
                 inputMode: 'numeric', // mobile numeric keypad

@@ -31,3 +31,13 @@ export function whenInvalid(
 export function isSignedIntegerString(s: string): boolean {
   return /^-?\d+$/.test(s);
 }
+
+/** Returns true when s is one or more ASCII digits (no negatives, no decimals). */
+export function isIntegerString(s: string): boolean {
+  return /^\d+$/.test(s);
+}
+
+/** Returns true when s is a valid ISBN-10 or ISBN-13 (digits, optional dashes/spaces, optional X for ISBN-10). */
+export function isISBN(s: string): boolean {
+  return /^(?:\d{9}[\dXx]|\d{13})$/.test(s.replace(/[-\s]/g, ''));
+}
