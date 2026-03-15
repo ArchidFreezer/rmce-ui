@@ -5,6 +5,7 @@ import type { Armourtype } from '../../types';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { LabeledInput } from '../../components/inputs';
+import { isSignedIntegerString } from '../../components/inputs/validators';
 
 type ArmourNumberKey =
   | 'minManoeuvreMod'
@@ -36,7 +37,6 @@ export default function ArmourtypesView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Armourtype>(emptyArmourtype());
   const [formErr, setFormErr] = useState('');// legacy single message (kept for top-level)
-  const [errors, setErrors] = useState<{ id?: string; name?: string; type?: string; numeric?: string }>({});
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -59,6 +59,8 @@ export default function ArmourtypesView() {
   }, []);
 
   // ----- Inline validation helpers -----
+  const [errors, setErrors] = useState<{ id?: string; name?: string; type?: string; numeric?: string }>({});
+  const hasErrors = Boolean(errors.id || errors.name || errors.type || errors.numeric);
   const computeErrors = (draft: Armourtype, isEditing: boolean) => {
     const next: { id?: string; name?: string; type?: string; numeric?: string } = {};
     // ID (only on create, must be unique and start with prefix in ucase and contain additional characters)
@@ -73,8 +75,8 @@ export default function ArmourtypesView() {
 
     // Numeric values
     for (const k of NUM_KEYS) {
-      const raw = getNumInput(draft, k);
-      if (raw === '' || Number.isNaN(Number(raw))) next.numeric = `${k} must be a number`;
+      const raw = (draft[k] ?? '').toString().trim();
+      if (!isSignedIntegerString(raw)) next.numeric = `${k} must be an integer`;
     }
     return next;
   };
@@ -84,8 +86,6 @@ export default function ArmourtypesView() {
     const isEditing = Boolean(editingId);
     setErrors(computeErrors(form, isEditing));
   }, [form, editingId, showForm]); // keep current
-
-  const hasErrors = Boolean(errors.id || errors.name || errors.type || errors.numeric);
 
   // ----- Handlers (Create / Edit / Delete) -----
   const startNew = () => {
@@ -118,10 +118,10 @@ export default function ArmourtypesView() {
       name: String(form.name).trim(),
       type: String(form.type).trim(),
       description: String(form.description ?? ''),
-      minManoeuvreMod: Number(getNumInput(form, 'minManoeuvreMod')),
-      maxManoeuvreMod: Number(getNumInput(form, 'maxManoeuvreMod')),
-      missileAttackPenalty: Number(getNumInput(form, 'missileAttackPenalty')),
-      quicknessPenalty: Number(getNumInput(form, 'quicknessPenalty')),
+      minManoeuvreMod: Number(form.minManoeuvreMod ?? '').toString().trim(),
+      maxManoeuvreMod: Number(form.maxManoeuvreMod ?? '').toString().trim(),
+      missileAttackPenalty: Number(form.missileAttackPenalty ?? '').toString().trim(),
+      quicknessPenalty: Number(form.quicknessPenalty ?? '').toString().trim(),
       animalOnly: Boolean(form.animalOnly),
       includesGreaves: Boolean(form.includesGreaves),
     };
@@ -223,10 +223,10 @@ export default function ArmourtypesView() {
       { id: 'name', header: 'name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
       { id: 'type', header: 'Type', accessor: r => r.type },
       { id: 'description', header: 'Description', accessor: r => r.description },
-      { id: 'minManoeuvreMod', header: 'Min Manoeuvre Mod', accessor: r => r.minManoeuvreMod, sortType: 'number', align: 'right' },
-      { id: 'maxManoeuvreMod', header: 'Max Manoeuvre Mod', accessor: r => r.maxManoeuvreMod, sortType: 'number', align: 'right' },
-      { id: 'missileAttackPenalty', header: 'Missile Attack Penalty', accessor: r => r.missileAttackPenalty, sortType: 'number', align: 'right' },
-      { id: 'quicknessPenalty', header: 'Quickness Penalty', accessor: r => r.quicknessPenalty, sortType: 'number', align: 'right' },
+      { id: 'minManoeuvreMod', header: 'Min Manoeuvre Mod', accessor: (r) => r.minManoeuvreMod, sortType: 'number', align: 'right' },
+      { id: 'maxManoeuvreMod', header: 'Max Manoeuvre Mod', accessor: (r) => r.maxManoeuvreMod, sortType: 'number', align: 'right' },
+      { id: 'missileAttackPenalty', header: 'Missile Attack Penalty', accessor: (r) => r.missileAttackPenalty, sortType: 'number', align: 'right' },
+      { id: 'quicknessPenalty', header: 'Quickness Penalty', accessor: (r) => r.quicknessPenalty, sortType: 'number', align: 'right' },
       { id: 'animalOnly', header: 'Animal Only', accessor: r => r.animalOnly, sortType: 'boolean', align: 'center' },
       { id: 'includesGreaves', header: 'Includes Greaves', accessor: r => r.includesGreaves, sortType: 'boolean', align: 'center' },
       {
@@ -281,37 +281,88 @@ export default function ArmourtypesView() {
           <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Armourtype' : 'New Armourtype'}</h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput label="ID" value={form.id} onChange={(v) => setForm(s => ({ ...s, id: v }))} disabled={!!editingId} error={errors.id}/>
-            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm(s => ({ ...s, name: v }))} error={errors.name}/>
-            <LabeledInput label="Type" value={form.type} onChange={(v) => setForm(s => ({ ...s, type: v }))} error={errors.type}/>
-            <LabeledInput label="Description" value={form.description} onChange={(v) => setForm(s => ({ ...s, description: v }))}/>
+            <LabeledInput label="ID" value={form.id} onChange={(v) => setForm(s => ({ ...s, id: v }))} disabled={!!editingId} error={errors.id} />
+            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm(s => ({ ...s, name: v }))} error={errors.name} />
+            <LabeledInput label="Type" value={form.type} onChange={(v) => setForm(s => ({ ...s, type: v }))} error={errors.type} />
+            <LabeledInput label="Description" value={form.description} onChange={(v) => setForm(s => ({ ...s, description: v }))} />
 
             <LabeledInput
               label="Min Manoeuvre Mod"
-              type="number"
-              value={getNumInput(form, 'minManoeuvreMod')}
-              onChange={(v) => setNumFromInput('minManoeuvreMod', v)}
-              error={errors.numeric && errors.numeric.includes('minManoeuvreMod') ? errors.numeric : undefined}
-            />
+              value={form.minManoeuvreMod}
+              onChange={(v) => setForm((s) => {
+                // Sanitize: keep at most one leading '-', strip all other non-digits
+                // 1) Remove everything except digits and '-'
+                let raw = v.replace(/[^-\d]+/g, '');
+                // 2) If there are multiple '-', keep only the first
+                const firstDash = raw.indexOf('-');
+                if (firstDash !== -1) {
+                  raw = '-' + raw.slice(firstDash + 1).replace(/-/g, '');
+                }
+                // 3) Allow raw === '-' temporarily so users can type the sign first;
+                //    validation will show an error until at least one digit is added.
+                return { ...s, minManoeuvreMod: raw };
+
+              })}
+              inputProps={{
+                inputMode: 'numeric', // mobile numeric keypad
+                pattern: '\\d*',
+              }}
+              error={errors.numeric} />
             <LabeledInput
               label="Max Manoeuvre Mod"
-              type="number"
-              value={getNumInput(form, 'maxManoeuvreMod')}
-              onChange={(v) => setNumFromInput('maxManoeuvreMod', v)}
+              value={form.maxManoeuvreMod}
+              onChange={(v) => setForm((s) => {
+                // Sanitize: keep at most one leading '-', strip all other non-digits
+                // 1) Remove everything except digits and '-'
+                let raw = v.replace(/[^-\d]+/g, '');
+                // 2) If there are multiple '-', keep only the first
+                const firstDash = raw.indexOf('-');
+                if (firstDash !== -1) {
+                  raw = '-' + raw.slice(firstDash + 1).replace(/-/g, '');
+                }
+                // 3) Allow raw === '-' temporarily so users can type the sign first;
+                //    validation will show an error until at least one digit is added.
+                return { ...s, maxManoeuvreMod: raw };
+
+              })}
               error={errors.numeric && errors.numeric.includes('maxManoeuvreMod') ? errors.numeric : undefined}
             />
             <LabeledInput
               label="Missile Attack Penalty"
-              type="number"
-              value={getNumInput(form, 'missileAttackPenalty')}
-              onChange={(v) => setNumFromInput('missileAttackPenalty', v)}
+              value={form.missileAttackPenalty}
+              onChange={(v) => setForm((s) => {
+                // Sanitize: keep at most one leading '-', strip all other non-digits
+                // 1) Remove everything except digits and '-'
+                let raw = v.replace(/[^-\d]+/g, '');
+                // 2) If there are multiple '-', keep only the first
+                const firstDash = raw.indexOf('-');
+                if (firstDash !== -1) {
+                  raw = '-' + raw.slice(firstDash + 1).replace(/-/g, '');
+                }
+                // 3) Allow raw === '-' temporarily so users can type the sign first;
+                //    validation will show an error until at least one digit is added.
+                return { ...s, missileAttackPenalty: raw };
+
+              })}
               error={errors.numeric && errors.numeric.includes('missileAttackPenalty') ? errors.numeric : undefined}
             />
             <LabeledInput
               label="Quickness Penalty"
-              type="number"
-              value={getNumInput(form, 'quicknessPenalty')}
-              onChange={(v) => setNumFromInput('quicknessPenalty', v)}
+              value={form.quicknessPenalty}
+              onChange={(v) => setForm((s) => {
+                // Sanitize: keep at most one leading '-', strip all other non-digits
+                // 1) Remove everything except digits and '-'
+                let raw = v.replace(/[^-\d]+/g, '');
+                // 2) If there are multiple '-', keep only the first
+                const firstDash = raw.indexOf('-');
+                if (firstDash !== -1) {
+                  raw = '-' + raw.slice(firstDash + 1).replace(/-/g, '');
+                }
+                // 3) Allow raw === '-' temporarily so users can type the sign first;
+                //    validation will show an error until at least one digit is added.
+                return { ...s, quicknessPenalty: raw };
+
+              })}
               error={errors.numeric && errors.numeric.includes('quicknessPenalty') ? errors.numeric : undefined}
             />
 
@@ -367,27 +418,6 @@ export default function ArmourtypesView() {
 
     </>
   );
-
-  /** ----------------- Numeric input helpers (single-interface form) ----------------- */
-
-  function getNumInput(obj: Armourtype, key: ArmourNumberKey): string {
-    const anyObj = obj as Armourtype & { __raw?: Record<string, string> };
-    const raw = anyObj.__raw?.[key];
-    if (raw !== undefined) return raw;
-    return String(obj[key] ?? '');
-  }
-
-  function setNumFromInput(key: ArmourNumberKey, value: string) {
-    setForm((s) => {
-      const next = { ...s } as Armourtype & { __raw?: Record<string, string> };
-      next.__raw = { ...(next.__raw ?? {}), [key]: value };
-      const maybe = Number(value);
-      if (!Number.isNaN(maybe)) {
-        (next as Armourtype)[key] = maybe;
-      }
-      return next as Armourtype;
-    });
-  }
 }
 
 function CheckboxInput({
@@ -414,10 +444,10 @@ function emptyArmourtype(): Armourtype {
     name: '',
     type: '',
     description: '',
-    minManoeuvreMod: 0,
-    maxManoeuvreMod: 0,
-    missileAttackPenalty: 0,
-    quicknessPenalty: 0,
+    minManoeuvreMod: '0',
+    maxManoeuvreMod: '0',
+    missileAttackPenalty: '0',
+    quicknessPenalty: '0',
     animalOnly: false,
     includesGreaves: false,
   };

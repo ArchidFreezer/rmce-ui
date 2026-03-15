@@ -30,10 +30,10 @@ export interface Armourtype {
   name: string;
   type: string;
   description: string;
-  minManoeuvreMod: number | string;
-  maxManoeuvreMod: number | string;
-  missileAttackPenalty: number | string;
-  quicknessPenalty: number | string;
+  minManoeuvreMod: string;
+  maxManoeuvreMod: string;
+  missileAttackPenalty: string;
+  quicknessPenalty: string;
   animalOnly: boolean;
   includesGreaves: boolean;
 }

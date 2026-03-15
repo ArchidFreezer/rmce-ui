@@ -25,3 +25,9 @@ export function whenInvalid(
 ): string | undefined {
   return condition ? message : undefined;
 }
+
+
+/** Returns true when s is one or more ASCII digits (optional leading minus sign, no decimals). */
+export function isSignedIntegerString(s: string): boolean {
+  return /^-?\d+$/.test(s);
+}
