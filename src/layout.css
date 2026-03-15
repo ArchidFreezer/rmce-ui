@@ -248,6 +248,30 @@ body.theme-dark .sidebar__link:hover { background: color-mix(in oklch, var(--pan
   border: 1px solid color-mix(in oklch, var(--primary), var(--border) 40%);
 }
 
+/* Distinguish known vs unknown resources in the sidebar */
+.sidebar__link--known {
+  /* A friendly accent for known, with good contrast in both themes */
+  border-left: 3px solid var(--primary);
+  padding-left: 7px; /* compensate for border-left, default was 8px padding */
+}
+
+.sidebar__link--unknown {
+  opacity: 0.95;
+  border-left: 3px solid color-mix(in oklch, var(--muted), var(--text) 30%);
+  padding-left: 7px;
+}
+
+/* Active state blends with existing .active rule */
+.sidebar__link.active.sidebar__link--known {
+  /* Slightly stronger accent */
+  background: color-mix(in oklch, var(--primary-weak), var(--bg) 30%);
+  border-color: var(--primary);
+}
+
+.sidebar__link.active.sidebar__link--unknown {
+  background: color-mix(in oklch, var(--panel), var(--bg) 10%);
+}
+
 .sidebar__footer {
   color: var(--muted);
 }

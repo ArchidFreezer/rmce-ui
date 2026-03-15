@@ -2,6 +2,13 @@ import { NavLink } from 'react-router-dom';
 import type { ResourceDef } from '../resources/registry';
 import { useEffect, useRef, useState } from 'react';
 
+
+export type SidebarItem = {
+  label: string;
+  path: `/${string}`;
+  isKnown?: boolean;
+};
+
 export function Sidebar({
   items,
   open,
@@ -11,7 +18,7 @@ export function Sidebar({
   maxWidth = 420,
   persistKey = 'ui.sidebar.w',
 }: {
-  items: { label: string; path: `/${string}` }[];
+  items: SidebarItem[];
   open: boolean;
   onClose?: () => void;
   enableResize?: boolean;
@@ -74,6 +81,7 @@ export function Sidebar({
   };
 
   return (
+
     <aside className={`sidebar ${open ? 'open' : ''}`} aria-label="Resource navigation">
       <div className="sidebar__header">
         <div className="sidebar__title">RMCE Objects</div>
@@ -85,8 +93,15 @@ export function Sidebar({
             <li key={it.path} className="sidebar__item">
               <NavLink
                 to={it.path}
-                className={({ isActive }) => `sidebar__link ${isActive ? 'active' : ''}`}
+                className={({ isActive }) =>
+                  [
+                    'sidebar__link',
+                    isActive ? 'active' : '',
+                    it.isKnown ? 'sidebar__link--known' : 'sidebar__link--unknown', // color by kind
+                  ].join(' ').trim()
+                }
                 onClick={onClose}
+                title={it.isKnown ? 'Known resource' : 'Discovered resource'}
               >
                 {it.label}
               </NavLink>

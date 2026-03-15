@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfirmProvider } from './components/ConfirmDialog';
 import { ToastProvider } from './components/Toast';
 import { ThemeProvider } from './components/ThemeProvider';
-import { Sidebar } from './components/Sidebar';
+import { Sidebar, SidebarItem } from './components/Sidebar';
 import { fetchPrefixes } from './api/prefixes';
 import { splitResources, FALLBACK_RESOURCES, type ResourceDef } from './resources/registry';
 import GenericResourceView from './endpoints/generic/GenericResourceView'; // <-- generic
@@ -44,13 +44,23 @@ function Shell() {
   }, []);
 
   // Build sidebar items: known → their paths; unknown → generic /r/:prefix
-  const sidebarItems = useMemo(
-    () => [
-      ...resources.map(({ label, path }) => ({ label, path })),
-      ...unknown.map((p) => ({ label: toTitle(p), path: `/r/${p}` as `/${string}` })),
-    ],
-    [resources, unknown]
-  );
+  // Build sidebar items with isKnown flag
+  const sidebarItems: SidebarItem[] = useMemo(() => {
+    const knownItems: SidebarItem[] = resources.map(({ label, path }) => ({
+      label,
+      path,
+      isKnown: true, // known
+    }));
+
+    const unknownItems: SidebarItem[] = unknown.map((p) => ({
+      label: toTitle(p),
+      path: `/r/${p}` as `/${string}`,
+      isKnown: false, // unknown
+    }));
+
+    // Sort alphabetically (label) across both sets
+    return [...knownItems, ...unknownItems].sort((a, b) => a.label.localeCompare(b.label));
+  }, [resources, unknown]);
 
   // Default redirect path
   const defaultPath = useMemo(() => {
