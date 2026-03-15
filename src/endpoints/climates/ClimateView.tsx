@@ -22,7 +22,7 @@ export default function ClimateView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Climate>(emptyClimate());
   const [formErr, setFormErr] = useState(''); // legacy single message (kept for top-level)
-  const [errors, setErrors] = useState<{ id?: string; name?: string; temperature?: string }>({});
+  const [errors, setErrors] = useState<{ id?: string; name?: string; temperature?: string; precipitations?: string }>({});
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -46,7 +46,7 @@ export default function ClimateView() {
 
   // ----- Inline validation helpers -----
   const computeErrors = (draft: Climate, isEditing: boolean) => {
-    const next: { id?: string; name?: string; temperature?: string } = {};
+    const next: { id?: string; name?: string; temperature?: string; precipitations?: string } = {};
     // ID
     if (!draft.id.trim()) next.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
@@ -55,6 +55,8 @@ export default function ClimateView() {
     // Temperature
     if (!draft.temperature) next.temperature = 'Temperature is required';
     else if (!TEMPERATURES.includes(draft.temperature)) next.temperature = `Must be one of: ${TEMPERATURES.join(', ')}`;
+    // Precipitations
+    if (!draft.precipitations || draft.precipitations.length === 0) next.precipitations = 'Select at least one precipitation';
     return next;
   };
 
@@ -64,7 +66,7 @@ export default function ClimateView() {
     setErrors(computeErrors(form, isEditing));
   }, [form, editingId, showForm]); // keep current
 
-  const hasErrors = Boolean(errors.id || errors.name || errors.temperature);
+  const hasErrors = Boolean(errors.id || errors.name || errors.temperature || errors.precipitations);
 
   // ----- Handlers (Create / Edit / Delete) -----
   const startNew = () => {
@@ -110,7 +112,7 @@ export default function ClimateView() {
 
     const nextErrors = computeErrors(payload, Boolean(editingId));
     setErrors(nextErrors);
-    const topError = nextErrors.id || nextErrors.name || nextErrors.temperature || '';
+    const topError = nextErrors.id || nextErrors.name || nextErrors.temperature || nextErrors.precipitations || '';
     if (topError) { setFormErr(topError); return; }
 
     const isEditing = Boolean(editingId);
@@ -311,7 +313,7 @@ export default function ClimateView() {
               options={PRECIPITATIONS}    // can be a simple string array
               onChange={(vals) => setForm(s => ({ ...s, precipitations: vals }))}
               helperText="Choose all that apply"
-              // error={errors.precipitations} // add if you later enforce at least one selected
+              error={errors.precipitations}
               direction="row"
               columns={3}
               showSelectAll
