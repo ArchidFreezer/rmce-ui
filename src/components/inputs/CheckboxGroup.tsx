@@ -115,22 +115,19 @@ export function CheckboxGroup<T extends string = string>({
         };
 
   return (
+
     <fieldset
       id={groupId}
-      aria-describedby={describedBy}
-      aria-invalid={!!error}
+      {...(describedBy ? { 'aria-describedby': describedBy } : {})}
+      {...(error ? { 'aria-invalid': true } : {})}
+      {...(required ? { 'aria-required': true } : {})}
       disabled={disabled}
-      style={{
-        margin: 0,
-        padding: 0,
-        border: 'none',
-        minInlineSize: 0,
-      }}
+      style={{ margin: 0, padding: 0, border: 'none', minInlineSize: 0 }}
     >
       <legend style={{ fontSize: 14, marginBottom: 6 }}>
-        {label}
-        {required ? ' *' : ''}
+        {label}{required ? ' *' : ''}
       </legend>
+
 
       {showSelectAll && !disabled && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>

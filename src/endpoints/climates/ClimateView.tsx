@@ -6,6 +6,7 @@ import { PRECIPITATIONS, TEMPERATURES } from '../../types';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { CheckboxGroup, LabeledInput, LabeledSelect } from '../../components/inputs'
+import { requireAtLeastOne } from '../../components/inputs/validators';
 
 export default function ClimateView() {
   const [rows, setRows] = useState<Climate[]>([]);
@@ -56,7 +57,8 @@ export default function ClimateView() {
     if (!draft.temperature) next.temperature = 'Temperature is required';
     else if (!TEMPERATURES.includes(draft.temperature)) next.temperature = `Must be one of: ${TEMPERATURES.join(', ')}`;
     // Precipitations
-    if (!draft.precipitations || draft.precipitations.length === 0) next.precipitations = 'Select at least one precipitation';
+    const precipError = requireAtLeastOne(draft.precipitations, 'precipitation');
+    if (precipError) next.precipitations = precipError;
     return next;
   };
 
