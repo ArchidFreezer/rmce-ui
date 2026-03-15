@@ -110,6 +110,10 @@ export function Sidebar({
       <div className="sidebar__footer">
         <small style={{ color: 'var(--muted)' }}>v1 · {new Date().getFullYear()}</small>
       </div>
+
+      {/* Desktop-only resizer grip */}
+      {enableResize && <span className="sidebar__grip" onPointerDown={onPointerDown} role="separator" aria-orientation="vertical" aria-label="Resize sidebar" />}
+
     </aside>
   );
 }
