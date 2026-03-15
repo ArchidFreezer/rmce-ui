@@ -1,33 +1,46 @@
 import { NavLink } from 'react-router-dom';
-import type { EndpointDef } from '../endpoints/registry';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+
+export type SidebarItem = {
+  label: string;
+  path: `/${string}`;
+  isKnown?: boolean;
+};
 
 export function Sidebar({
-  endpoints,
+  items,
   open,
   onClose,
+  sortInside = false,
   enableResize = true,
   minWidth = 140,
   maxWidth = 420,
   persistKey = 'ui.sidebar.w',
 }: {
-  endpoints: EndpointDef[];
+  items: SidebarItem[];
   open: boolean;
   onClose?: () => void;
+  sortInside?: boolean; // whether to sort items inside the sidebar (default: false, i.e. rely on pre-sorted input)
   enableResize?: boolean;
   minWidth?: number;
   maxWidth?: number;
   persistKey?: string;
 }) {
-  // Load saved width (once)
+  
+  
+  const list = sortInside
+    ? [...items].sort((a, b) => a.label.localeCompare(b.label))
+    : items;
+
   useEffect(() => {
     const raw = localStorage.getItem(persistKey);
     const val = raw ? Number(raw) : NaN;
     if (!Number.isNaN(val) && val > 0) {
       document.documentElement.style.setProperty('--sidebar-w', `${val}px`);
     }
+    return () => { };
   }, [persistKey]);
-
   const dragRef = useRef<{ startX: number; startW: number } | null>(null);
 
   const onPointerDown: React.PointerEventHandler<HTMLSpanElement> = (e) => {
@@ -72,6 +85,7 @@ export function Sidebar({
   };
 
   return (
+
     <aside className={`sidebar ${open ? 'open' : ''}`} aria-label="Resource navigation">
       <div className="sidebar__header">
         <div className="sidebar__title">RMCE Objects</div>
@@ -79,14 +93,21 @@ export function Sidebar({
 
       <nav className="sidebar__nav" role="navigation" aria-label="Resources">
         <ul className="sidebar__list">
-          {endpoints.map((ep) => (
-            <li key={ep.id} className="sidebar__item">
+          {list.map((it) => (
+            <li key={it.path} className="sidebar__item">
               <NavLink
-                to={ep.path}
-                className={({ isActive }) => `sidebar__link ${isActive ? 'active' : ''}`}
+                to={it.path}
+                className={({ isActive }) =>
+                  [
+                    'sidebar__link',
+                    isActive ? 'active' : '',
+                    it.isKnown ? 'sidebar__link--known' : 'sidebar__link--unknown', // color by kind
+                  ].join(' ').trim()
+                }
                 onClick={onClose}
+                title={it.isKnown ? 'Known resource' : 'Discovered resource'}
               >
-                {ep.label}
+                {it.label}
               </NavLink>
             </li>
           ))}
@@ -97,8 +118,9 @@ export function Sidebar({
         <small style={{ color: 'var(--muted)' }}>v1 · {new Date().getFullYear()}</small>
       </div>
 
-      {/* ⬇️ Desktop-only resizer grip */}
+      {/* Desktop-only resizer grip */}
       {enableResize && <span className="sidebar__grip" onPointerDown={onPointerDown} role="separator" aria-orientation="vertical" aria-label="Resize sidebar" />}
+
     </aside>
   );
 }

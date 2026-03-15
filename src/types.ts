@@ -1,3 +1,7 @@
+export interface PrefixesPayload {
+  prefixes: string[];
+}
+
 export interface Book {
   id: string;
   code: string;
@@ -37,3 +41,4 @@ export interface Armourtype {
 export interface ArmourtypesPayload {
   armourtypes: Armourtype[];
 }
+

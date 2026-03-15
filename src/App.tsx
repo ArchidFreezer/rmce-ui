@@ -1,51 +1,76 @@
-// src/App.tsx
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { endpoints, DEFAULT_PATH } from './endpoints/registry';
 import { ConfirmProvider } from './components/ConfirmDialog';
 import { ToastProvider } from './components/Toast';
-import { Sidebar } from './components/Sidebar';
-import { ThemeProvider, useTheme } from './components/ThemeProvider';
+import { ThemeProvider } from './components/ThemeProvider';
+import { Sidebar, SidebarItem } from './components/Sidebar';
+import { fetchPrefixes } from './api/prefixes';
+import { splitResources, FALLBACK_RESOURCES, type ResourceDef } from './resources/registry';
+import GenericResourceView from './endpoints/generic/GenericResourceView'; // <-- generic
+
 import './layout.css';
-
-function ThemeSwitch() {
-  const { theme, effective, setTheme, toggle } = useTheme();
-  const icon = effective === 'dark' ? '☀️' : '🌙';
-  const title = effective === 'dark' ? 'Switch to light' : 'Switch to dark';
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <button
-        aria-label={title}
-        title={title}
-        onClick={toggle}
-        className="topbar__menu"
-        style={{ minWidth: 40, textAlign: 'center' }}
-      >
-        {icon}
-      </button>
-      <select
-        aria-label="Theme"
-        value={theme}
-        onChange={(e) => setTheme(e.target.value as any)}
-        className="topbar__menu"
-        style={{ padding: '6px 8px' }}
-        title="Theme"
-      >
-        <option value="system">System</option>
-        <option value="light">Light</option>
-        <option value="dark">Dark</option>
-      </select>
-    </div>
-  );
-}
 
 function Shell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [resources, setResources] = useState<ResourceDef[]>([]);
+  const [unknown, setUnknown] = useState<string[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const px = await fetchPrefixes();
+        if (!mounted) return;
+        const { known, unknown } = splitResources(px);
+        if (known.length === 0 && unknown.length === 0) {
+          setResources(FALLBACK_RESOURCES);
+          setUnknown([]);
+        } else {
+          setResources(known);
+          setUnknown(unknown);
+        }
+      } catch (e) {
+        if (!mounted) return;
+        setResources(FALLBACK_RESOURCES);
+        setUnknown([]);
+        setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Build sidebar items: known → their paths; unknown → generic /r/:prefix
+  // Build sidebar items with isKnown flag
+  const sidebarItems: SidebarItem[] = useMemo(() => {
+    const knownItems: SidebarItem[] = resources.map(({ label, path }) => ({
+      label,
+      path,
+      isKnown: true, // known
+    }));
+
+    const unknownItems: SidebarItem[] = unknown.map((p) => ({
+      label: toTitle(p),
+      path: `/r/${p}` as `/${string}`,
+      isKnown: false, // unknown
+    }));
+
+    // Sort alphabetically (label) across both sets
+    return [...knownItems, ...unknownItems].sort((a, b) => a.label.localeCompare(b.label));
+  }, [resources, unknown]);
+
+  // Default redirect path
+  const defaultPath = useMemo(() => {
+    if (resources[0]?.path) return resources[0].path;
+    if (unknown[0]) return `/r/${unknown[0]}` as `/${string}`;
+    return '/';
+  }, [resources, unknown]);
 
   return (
     <div className="app">
-      {/* Mobile top bar */}
       <header className="topbar">
         <button
           className="topbar__menu"
@@ -56,36 +81,45 @@ function Shell() {
         </button>
         <div className="topbar__brand" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>RMCE Objects</span>
-          <ThemeSwitch />
+          {/* <ThemeSwitch /> if you added it */}
         </div>
       </header>
 
-      {/* Sidebar (persistent on desktop, overlay on mobile) */}
       <Sidebar
-        endpoints={endpoints}
+        items={sidebarItems}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
 
-      {/* Main content area */}
       <main className="content" role="main">
-        <Suspense fallback={<div>Loading UI…</div>}>
-          <Routes>
-            {endpoints.map((ep) => (
-              <Route key={ep.id} path={ep.path} element={<ep.Component />} />
-            ))}
-            <Route path="*" element={<Navigate to={DEFAULT_PATH} replace />} />
-          </Routes>
-        </Suspense>
+        {error && (
+          <div style={{ marginBottom: 8, color: 'var(--muted)' }}>
+            Unable to load resources from server. Using fallback. ({error})
+          </div>
+        )}
+
+        {loading ? (
+          <div>Loading UI…</div>
+        ) : sidebarItems.length === 0 ? (
+          <div>No resources available.</div>
+        ) : (
+          <Suspense fallback={<div>Loading view…</div>}>
+            <Routes>
+              {/* Known resource screens */}
+              {resources.map((r) => (
+                <Route key={r.path} path={r.path} element={<r.Component />} />
+              ))}
+              {/* Generic catch-all for unknown prefixes */}
+              <Route path="/r/:prefix" element={<GenericResourceView />} />
+              {/* Default redirect */}
+              <Route path="*" element={<Navigate to={defaultPath} replace />} />
+            </Routes>
+          </Suspense>
+        )}
       </main>
 
-      {/* Backdrop on mobile when sidebar is open */}
       {sidebarOpen && (
-        <div
-          className="backdrop"
-          onClick={() => setSidebarOpen(false)}
-          aria-hidden="true"
-        />
+        <div className="backdrop" onClick={() => setSidebarOpen(false)} aria-hidden="true" />
       )}
     </div>
   );
@@ -94,13 +128,18 @@ function Shell() {
 export default function App() {
   return (
     <ToastProvider position="bottom-right" duration={3500} maxVisible={3}>
-      <ThemeProvider>
-        <ConfirmProvider>
+      <ConfirmProvider>
+        <ThemeProvider>
           <BrowserRouter>
             <Shell />
           </BrowserRouter>
-        </ConfirmProvider>
-      </ThemeProvider>
+        </ThemeProvider>
+      </ConfirmProvider>
     </ToastProvider>
   );
 }
+
+function toTitle(s: string) {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+``
