@@ -1,8 +1,10 @@
 import { lazy, type LazyExoticComponent, type ComponentType } from 'react';
 
-const BooksView = lazy(() => import('../endpoints/books/BooksView'));
-const PoisonsView = lazy(() => import('../endpoints/poisons/PoisonsView'));
 const ArmourtypesView = lazy(() => import('../endpoints/armourtypes/ArmourtypesView'));
+const BooksView = lazy(() => import('../endpoints/books/BooksView'));
+const ClimateView = lazy(() => import('../endpoints/climates/ClimateView'));
+const PoisonsView = lazy(() => import('../endpoints/poisons/PoisonsView'));
+
 
 export interface ResourceDef {
   prefix: string;
@@ -12,26 +14,14 @@ export interface ResourceDef {
 }
 
 /** Known resources with their routes/components */
+
 const known: Record<string, ResourceDef> = {
-  book: {
-    prefix: 'book',
-    label: 'Books',
-    path: '/books',
-    Component: BooksView,
-  },
-  poison: {
-    prefix: 'poison',
-    label: 'Poisons',
-    path: '/poisons',
-    Component: PoisonsView,
-  },
-  armourtype: {
-    prefix: 'armourtype',
-    label: 'Armour Types',
-    path: '/armourtypes',
-    Component: ArmourtypesView,
-  },
+  armourtype:  { prefix: 'armourtype',  label: 'Armour Types', path: '/armourtypes', Component: ArmourtypesView },
+  book:        { prefix: 'book',        label: 'Books',        path: '/books',       Component: BooksView },
+  climate:     { prefix: 'climate',     label: 'Climates',     path: '/climates',    Component: ClimateView },
+  poison:      { prefix: 'poison',      label: 'Poisons',      path: '/poisons',     Component: PoisonsView },
 };
+
 
 /** Split known vs unknown prefixes (for Generic Viewer, etc.) */
 export function splitResources(prefixes: string[]): { known: ResourceDef[]; unknown: string[] } {
@@ -47,7 +37,8 @@ export function splitResources(prefixes: string[]): { known: ResourceDef[]; unkn
 
 /** Optional: static fallback if /rmce/prefixes fails */
 export const FALLBACK_RESOURCES: ResourceDef[] = [
-  known.book,
-  known.poison,
   known.armourtype,
+  known.book,
+  known.climate,
+  known.poison,
 ].filter((r): r is ResourceDef => Boolean(r));

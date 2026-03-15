@@ -42,3 +42,27 @@ export interface ArmourtypesPayload {
   armourtypes: Armourtype[];
 }
 
+export type Precipitation =
+  | 'Rainy'
+  | 'Humid'
+  | 'Temperate'
+  | 'Dry'
+  | 'Arid';
+
+export type Temperature =
+  | 'Hot'
+  | 'Warm'
+  | 'Temperate'
+  | 'Cool'
+  | 'Cold';
+
+export interface Climate {
+  id: string;
+  name: string;
+  temperature: Temperature; // e.g., "Cold"
+  precipitations: Precipitation[];
+}
+
+export interface ClimatesPayload {
+  climates: Climate[];
+}
