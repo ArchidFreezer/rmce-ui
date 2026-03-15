@@ -118,10 +118,10 @@ export default function ArmourtypesView() {
       name: String(form.name).trim(),
       type: String(form.type).trim(),
       description: String(form.description ?? ''),
-      minManoeuvreMod: Number(form.minManoeuvreMod ?? '').toString().trim(),
-      maxManoeuvreMod: Number(form.maxManoeuvreMod ?? '').toString().trim(),
-      missileAttackPenalty: Number(form.missileAttackPenalty ?? '').toString().trim(),
-      quicknessPenalty: Number(form.quicknessPenalty ?? '').toString().trim(),
+      minManoeuvreMod: Number(form.minManoeuvreMod),
+      maxManoeuvreMod: Number(form.maxManoeuvreMod),
+      missileAttackPenalty: Number(form.missileAttackPenalty),
+      quicknessPenalty: Number(form.quicknessPenalty),
       animalOnly: Boolean(form.animalOnly),
       includesGreaves: Boolean(form.includesGreaves),
     };
@@ -288,7 +288,7 @@ export default function ArmourtypesView() {
 
             <LabeledInput
               label="Min Manoeuvre Mod"
-              value={form.minManoeuvreMod}
+              value={String(form.minManoeuvreMod).trim()}
               onChange={(v) => setForm((s) => {
                 // Sanitize: keep at most one leading '-', strip all other non-digits
                 // 1) Remove everything except digits and '-'
@@ -300,7 +300,7 @@ export default function ArmourtypesView() {
                 }
                 // 3) Allow raw === '-' temporarily so users can type the sign first;
                 //    validation will show an error until at least one digit is added.
-                return { ...s, minManoeuvreMod: raw };
+                return { ...s, minManoeuvreMod: Number(raw) };
 
               })}
               inputProps={{
@@ -310,7 +310,7 @@ export default function ArmourtypesView() {
               error={errors.numeric} />
             <LabeledInput
               label="Max Manoeuvre Mod"
-              value={form.maxManoeuvreMod}
+              value={String(form.maxManoeuvreMod)}
               onChange={(v) => setForm((s) => {
                 // Sanitize: keep at most one leading '-', strip all other non-digits
                 // 1) Remove everything except digits and '-'
@@ -322,14 +322,14 @@ export default function ArmourtypesView() {
                 }
                 // 3) Allow raw === '-' temporarily so users can type the sign first;
                 //    validation will show an error until at least one digit is added.
-                return { ...s, maxManoeuvreMod: raw };
+                return { ...s, maxManoeuvreMod: Number(raw) };
 
               })}
               error={errors.numeric && errors.numeric.includes('maxManoeuvreMod') ? errors.numeric : undefined}
             />
             <LabeledInput
               label="Missile Attack Penalty"
-              value={form.missileAttackPenalty}
+              value={String(form.missileAttackPenalty)}
               onChange={(v) => setForm((s) => {
                 // Sanitize: keep at most one leading '-', strip all other non-digits
                 // 1) Remove everything except digits and '-'
@@ -341,14 +341,14 @@ export default function ArmourtypesView() {
                 }
                 // 3) Allow raw === '-' temporarily so users can type the sign first;
                 //    validation will show an error until at least one digit is added.
-                return { ...s, missileAttackPenalty: raw };
+                return { ...s, missileAttackPenalty: Number(raw) };
 
               })}
               error={errors.numeric && errors.numeric.includes('missileAttackPenalty') ? errors.numeric : undefined}
             />
             <LabeledInput
               label="Quickness Penalty"
-              value={form.quicknessPenalty}
+              value={String(form.quicknessPenalty)}
               onChange={(v) => setForm((s) => {
                 // Sanitize: keep at most one leading '-', strip all other non-digits
                 // 1) Remove everything except digits and '-'
@@ -360,7 +360,7 @@ export default function ArmourtypesView() {
                 }
                 // 3) Allow raw === '-' temporarily so users can type the sign first;
                 //    validation will show an error until at least one digit is added.
-                return { ...s, quicknessPenalty: raw };
+                return { ...s, quicknessPenalty: Number(raw) };
 
               })}
               error={errors.numeric && errors.numeric.includes('quicknessPenalty') ? errors.numeric : undefined}
@@ -444,10 +444,10 @@ function emptyArmourtype(): Armourtype {
     name: '',
     type: '',
     description: '',
-    minManoeuvreMod: '0',
-    maxManoeuvreMod: '0',
-    missileAttackPenalty: '0',
-    quicknessPenalty: '0',
+    minManoeuvreMod: 0,
+    maxManoeuvreMod: 0,
+    missileAttackPenalty: 0,
+    quicknessPenalty: 0,
     animalOnly: false,
     includesGreaves: false,
   };
