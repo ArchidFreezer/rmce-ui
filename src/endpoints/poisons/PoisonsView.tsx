@@ -4,6 +4,7 @@ import { fetchPoisons, upsertPoison, deletePoison } from './api';
 import type { Poison } from '../../types';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
+import { LabeledInput } from '../../components/inputs';
 
 type PoisonNumberKey = 'level';
 type PoisonStringKey = Exclude<keyof Poison, PoisonNumberKey>; // 'id' | 'name' | 'type' | 'levelVariance'
@@ -306,58 +307,6 @@ return (
       return next;
     });
   }
-}
-
-function LabeledInput({
-  label,
-  value,
-  onChange,
-  type = 'text',
-  disabled = false,
-}: {
-  label: string;
-  value: string;
-  onChange: (val: string) => void;
-  type?: 'text' | 'number';
-  disabled?: boolean;
-}) {
-  return (
-    <label style={{ display: 'grid', gap: 6, fontSize: 14 }}>
-      <span>{label}</span>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        type={type}
-        disabled={disabled}
-        style={{ padding: 8 }}
-      />
-    </label>
-  );
-}
-
-function SortableTh<T extends string>({
-  onClick,
-  label,
-  sort,
-  colKey,
-}: {
-  onClick: () => void;
-  label: string;
-  sort: { key: T; dir: 'asc' | 'desc' };
-  colKey: T;
-}) {
-  const active = sort.key === colKey;
-  const arrow = active ? (sort.dir === 'asc' ? ' ▲' : ' ▼') : '';
-  return (
-    <th
-      onClick={onClick}
-      style={{ borderBottom: '1px solid #ddd', textAlign: 'left', padding: '8px', cursor: 'pointer', userSelect: 'none' }}
-      title={`Sort by ${label}`}
-      scope="col"
-    >
-      {label}{arrow}
-    </th>
-  );
 }
 
 const tdStyle: React.CSSProperties = { borderBottom: '1px solid #f0f0f0', padding: '8px' };

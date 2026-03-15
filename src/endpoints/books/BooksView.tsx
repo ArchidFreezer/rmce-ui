@@ -4,6 +4,7 @@ import { fetchBooks, upsertBook, deleteBook } from './api';
 import type { Book } from '../../types';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
+import { LabeledInput } from '../../components/inputs';
 
 export default function BooksView() {
   const [rows, setRows] = useState<Book[]>([]);
@@ -89,11 +90,6 @@ export default function BooksView() {
     });
     return arr;
   }, [filtered, sort]);
-
-  const onSort = (key: keyof Book) =>
-    setSort((prev) =>
-      prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }
-    );
 
   const startNew = () => {
     setEditingId(null);
@@ -271,58 +267,6 @@ return (
 );
 }
 
-
-function LabeledInput({
-  label,
-  value,
-  onChange,
-  type = 'text',
-  disabled = false,
-}: {
-  label: string;
-  value: string;
-  onChange: (val: string) => void;
-  type?: 'text' | 'number';
-  disabled?: boolean;
-}) {
-  return (
-    <label style={{ display: 'grid', gap: 6, fontSize: 14 }}>
-      <span>{label}</span>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        type={type}
-        disabled={disabled}
-        style={{ padding: 8 }}
-      />
-    </label>
-  );
-}
-
-function SortableTh<T extends string>({
-  onClick,
-  label,
-  sort,
-  colKey,
-}: {
-  onClick: () => void;
-  label: string;
-  sort: { key: T; dir: 'asc' | 'desc' };
-  colKey: T;
-}) {
-  const active = sort.key === colKey;
-  const arrow = active ? (sort.dir === 'asc' ? ' ▲' : ' ▼') : '';
-  return (
-    <th
-      onClick={onClick}
-      style={{ borderBottom: '1px solid #ddd', textAlign: 'left', padding: '8px', cursor: 'pointer', userSelect: 'none' }}
-      title={`Sort by ${label}`}
-      scope="col"
-    >
-      {label}{arrow}
-    </th>
-  );
-}
 
 const tdStyle: React.CSSProperties = { borderBottom: '1px solid #f0f0f0', padding: '8px' };
 const emptyCell: React.CSSProperties = { padding: 12, textAlign: 'center', color: '#666' };

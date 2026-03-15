@@ -5,6 +5,7 @@ import type { Climate, Precipitation, Temperature } from '../../types';
 import { PRECIPITATIONS, TEMPERATURES } from '../../types';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
+import { LabeledInput, LabeledSelect } from '../../components/inputs'
 
 export default function ClimateView() {
   const [rows, setRows] = useState<Climate[]>([]);
@@ -361,87 +362,6 @@ export default function ClimateView() {
         </div>
       )}
     </>
-  );
-}
-
-function LabeledInput({
-  label,
-  value,
-  onChange,
-  type = 'text',
-  disabled = false,
-  error,
-}: {
-  label: string;
-  value: string;
-  onChange: (val: string) => void;
-  type?: 'text';
-  disabled?: boolean;
-  error?: string | undefined;
-}) {
-  return (
-    <label style={{ display: 'grid', gap: 6, fontSize: 14 }}>
-      <span>{label}</span>
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        type={type}
-        disabled={disabled}
-        aria-invalid={!!error}
-        aria-describedby={error ? `${label}-error` : undefined}
-        style={{
-          padding: 8,
-          border: error ? '1px solid #b00020' : '1px solid var(--border)',
-          outline: 'none',
-        }}
-      />
-      {error && (
-        <span id={`${label}-error`} style={{ color: '#b00020', fontSize: 12 }}>
-          {error}
-        </span>
-      )}
-    </label>
-  );
-}
-
-function LabeledSelect({
-  label,
-  value,
-  onChange,
-  options,
-  error,
-}: {
-  label: string;
-  value: string;
-  onChange: (val: string) => void;
-  options: readonly string[];
-  error?: string | undefined;
-}) {
-  return (
-    <label style={{ display: 'grid', gap: 6, fontSize: 14 }}>
-      <span>{label}</span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        aria-invalid={!!error}
-        aria-describedby={error ? `${label}-error` : undefined}
-        style={{
-          padding: 8,
-          border: error ? '1px solid #b00020' : '1px solid var(--border)',
-          outline: 'none',
-        }}
-      >
-        <option value="">— Select —</option>
-        {options.map((opt) => (
-          <option key={opt} value={opt}>{opt}</option>
-        ))}
-      </select>
-      {error && (
-        <span id={`${label}-error`} style={{ color: '#b00020', fontSize: 12 }}>
-          {error}
-        </span>
-      )}
-    </label>
   );
 }
 
