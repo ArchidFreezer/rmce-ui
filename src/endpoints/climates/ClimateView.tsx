@@ -313,5 +313,5 @@ function LabeledSelect({
 
 
 function emptyClimate(): Climate {
-  return { id: '', name: '', temperature: '' as unknown as Temperature, precipitations: [] };
+  return { id: '', name: '', temperature: 'Temperate', precipitations: [] };
 }
