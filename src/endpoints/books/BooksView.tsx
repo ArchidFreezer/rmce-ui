@@ -5,6 +5,7 @@ import type { Book } from '../../types';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { LabeledInput } from '../../components/inputs';
+import { isIntegerString, isISBN } from '../../components/inputs/validators';
 
 export default function BooksView() {
   const [rows, setRows] = useState<Book[]>([]);
@@ -16,42 +17,16 @@ export default function BooksView() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const globalFilter = (b: Book, q: string) => {
-    const s = q.toLowerCase();
-    return [b.id, b.code, b.name, b.abbreviation, b.isbn]
-      .some(v => String(v ?? '').toLowerCase().includes(s));
-  };
-
-  // Columns
-  const columns: ColumnDef<Book>[] = [
-    { id: 'id', header: 'Id', accessor: r => r.id, sortable: true, width: 475 },
-    { id: 'code', header: 'Code', accessor: r => r.code, sortable: true },
-    { id: 'name', header: 'Name', accessor: r => r.name, sortable: true },
-    { id: 'abbreviation', header: 'Abbreviation', accessor: r => r.abbreviation, sortable: true },
-    { id: 'isbn', header: 'ISBN', accessor: r => r.isbn, sortable: true },
-    {
-      id: 'actions',
-      header: 'Actions',
-      sortable: false,
-      render: (row) => (
-        <>
-          <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
-          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
-        </>
-      ),
-    },
-  ];
-
-  const [sort, setSort] = useState<{ key: keyof Book; dir: 'asc' | 'desc' }>({ key: 'id', dir: 'asc' });
-
+  // Form state
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [viewing, setViewing] = useState(false);
   const [form, setForm] = useState<Book>(emptyBook());   // <- form is typed as Book
   const [formErr, setFormErr] = useState('');
-
-  const confirm = useConfirm();
   const toast = useToast();
+  const confirm = useConfirm();
 
+  // ----- Load -----
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -69,71 +44,89 @@ export default function BooksView() {
     return () => { mounted = false; };
   }, []);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((b) =>
-      [b.id, b.code, b.name, b.abbreviation, b.isbn]
-        .some((v) => String(v ?? '').toLowerCase().includes(q))
-    );
-  }, [rows, query]);
+  // ----- Inline validation helpers -----
+  const [errors, setErrors] = useState<{ id?: string; name?: string; type?: string; code?: string; abbreviation?: string; isbn?: string; }>({});
+  const hasErrors = Boolean(errors.id || errors.name || errors.code || errors.abbreviation || errors.isbn);
+  const computeErrors = (draft: Book, isEditing: boolean) => {
+    const next: { id?: string; name?: string; type?: string; code?: string; abbreviation?: string; isbn?: string; } = {};
+    // ID (only on create, must be unique and start with prefix in ucase and contain additional characters)
+    if (!draft.id.trim()) next.id = 'ID is required';
+    else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
+    if (!draft.id.trim().toUpperCase().startsWith('BOOK_')) next.id = 'ID must start with "BOOK_"';
+    if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
+    if (draft.id.trim().length <= 5) next.id = 'ID must contain additional characters after "BOOK_"';
+    // Name
+    if (!draft.name.trim()) next.name = 'Name is required';
+    // Code
+    const code = (draft.code);
+    if (!code) next.code = 'Code is required';
+    else if (!isIntegerString(String(code))) next.code = 'Code must be an integer (digits only)';
+    // Abbreviation
+    if (!draft.abbreviation.trim()) next.abbreviation = 'Abbreviation is required';
+    // ISBN
+    if (!draft.isbn.trim()) next.isbn = 'ISBN is required';
+    else if (!isISBN(draft.isbn.trim())) next.isbn = 'ISBN must be a valid ISBN-10 or ISBN-13';
 
-  const sorted = useMemo(() => {
-    const arr = [...filtered];
-    const { key, dir } = sort;
-    arr.sort((a, b) => {
-      const av = String(a?.[key] ?? '');
-      const bv = String(b?.[key] ?? '');
-      if (av < bv) return dir === 'asc' ? -1 : 1;
-      if (av > bv) return dir === 'asc' ? 1 : -1;
-      return 0;
-    });
-    return arr;
-  }, [filtered, sort]);
+    return next;
+  };
 
+  useEffect(() => {
+    if (!showForm) return;
+    const isEditing = Boolean(editingId);
+    setErrors(computeErrors(form, isEditing));
+  }, [form, editingId, showForm]); // keep current to avoid stale closure
+
+  // ----- Handlers (Create / Edit / Delete) -----
   const startNew = () => {
+    setViewing(false);
     setEditingId(null);
     setForm(emptyBook());
+    setErrors({});
     setFormErr('');
     setShowForm(true);
   };
 
   const startEdit = (row: Book) => {
+    setViewing(false);
     setEditingId(row.id);
     setForm({ ...row });
     setFormErr('');
+    setErrors({});
     setShowForm(true);
   };
 
-  const cancelForm = () => {
-    setShowForm(false);
+  const startView = (row: Book) => {
+    setViewing(true);
+    setEditingId(row.id);       // we can reuse editingId to preload the item, but we won't allow saving
+    setForm({ ...row });
+    setErrors({});              // no need to compute field errors for read-only view, but we can keep formErr for any potential top-level messages
     setFormErr('');
-  };
+    setShowForm(true);
+  }
 
-  const validate = (b: Book): string => {
-    if (!b.id?.trim()) return 'Id is required';
-    if (!b.name?.trim()) return 'Name is required';
-    if (!b.code?.trim()) return 'Code is required';
-    if (!b.abbreviation?.trim()) return 'Abbreviation is required';
-    if (!b.isbn?.trim()) return 'ISBN is required';
-    return '';
+  const cancelForm = () => {
+    setViewing(false);
+    setShowForm(false);
+    setEditingId(null);
+    setErrors({});
+    setFormErr('');
   };
 
   const saveForm = async () => {
     const payload: Book = {
       id: String(form.id).trim(),
-      code: String(form.code).trim(),
+      code: Number(form.code),
       name: String(form.name).trim(),
       abbreviation: String(form.abbreviation).trim(),
       isbn: String(form.isbn).trim(),
     };
 
-    const msg = validate(payload);
-    if (msg) {
-      setFormErr(msg);
-      return;
-    }
+    const nextErrors = computeErrors(payload, Boolean(editingId));
+    setErrors(nextErrors);
+    const topError = nextErrors.id || nextErrors.name || nextErrors.code || nextErrors.abbreviation || nextErrors.isbn || '';
+    if (topError) { setFormErr(topError); return; }
 
+    const isEditing = Boolean(editingId);
     try {
       // default POST to /rmce/objects/book/ with a single JSON object
       const opts = editingId
@@ -143,18 +136,30 @@ export default function BooksView() {
       await upsertBook(payload, opts);
 
       setRows((prev) => {
-        const idx = prev.findIndex((b) => b.id === payload.id);
-        if (idx >= 0) {
-          const copy = [...prev];
-          copy[idx] = { ...copy[idx], ...payload };
-          return copy;
+        if (isEditing) {
+          // replace existing row
+          const idx = prev.findIndex((r) => r.id === payload.id);
+          if (idx >= 0) {
+            const copy = [...prev];
+            copy[idx] = { ...copy[idx], ...payload };
+            return copy;
+          }
+          // fallback: if not found (rare), prepend
+          return [payload, ...prev];
         }
+        // create → prepend
         return [payload, ...prev];
       });
 
+
       setShowForm(false);
+      setEditingId(null);
       setFormErr('');
-      toast({ variant: 'success', title: 'Saved', description: `Book "${payload.id}" saved.` });
+      toast({
+        variant: 'success',
+        title: isEditing ? 'Updated' : 'Saved',
+        description: `Book "${payload.id}" ${isEditing ? 'updated' : 'created'}.`,
+      });
     } catch (err) {
       toast({
         variant: 'danger',
@@ -177,100 +182,151 @@ export default function BooksView() {
     if (!ok) return;
 
     const prev = rows;
-    setRows(prev.filter((b) => b.id !== id));
+    setRows(prev.filter(a => a.id !== id));
     try {
       await deleteBook(id);
+      // if currently editing this item, close the form
+      if (editingId === row.id) cancelForm();
       toast({ variant: 'success', title: 'Deleted', description: `Book "${id}" deleted.` });
     } catch (err) {
       setRows(prev);
-      toast({
-        variant: 'danger',
-        title: 'Delete failed',
-        description: String(err instanceof Error ? err.message : err),
-      });
+      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err) });
     }
   };
 
+  // Columns
+  const columns: ColumnDef<Book>[] = useMemo(() => {
+    return [
+      { id: 'id', header: 'id', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
+      { id: 'code', header: 'Code', accessor: (r) => r.code, sortType: 'number', align: 'right' },
+      { id: 'name', header: 'name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
+      { id: 'abbreviation', header: 'Abbreviation', accessor: (r) => r.abbreviation, sortType: 'string' },
+      { id: 'isbn', header: 'ISBN', accessor: (r) => r.isbn, sortType: 'string' },
+
+
+      {
+        id: 'actions',
+        header: 'actions',
+        sortable: false,
+        width: 160,
+        render: (row) => (
+          <>
+            <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
+            <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
+            <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
+          </>
+        ),
+      },
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, editingId]); // allows closing form on self-delete
+
+  // ----- Search -----
+  const globalFilter = (b: Book, q: string) => {
+    const s = q.toLowerCase();
+    return [b.id, b.code, b.name, b.abbreviation, b.isbn]
+      .some(v => String(v ?? '').toLowerCase().includes(s));
+  };
+
+
+  // ----- Render -----
   if (loading) return <div>Loading…</div>;
   if (error) return <div style={{ color: 'crimson' }}>Error: {error}</div>;
 
-return (
-  <>
-    <h2>Books</h2>
+  return (
+    <>
+      <h2>Books</h2>
 
-    {/* New + Search */}
-    <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-      <button onClick={startNew}>New Book</button>
-      <DataTableSearchInput
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search books…"
-        aria-label="Search books"
-      />
-    </div>
-
-    {/* Form panel (unchanged) */}
-    {showForm && (
-      <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}>
-        <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Book' : 'New Book'}</h3>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <LabeledInput label="ID" value={form.id} onChange={(v) => setForm((s) => ({ ...s, id: v }))} disabled={!!editingId} />
-          <LabeledInput label="Code" value={form.code} onChange={(v) => setForm((s) => ({ ...s, code: v }))} />
-          <LabeledInput label="Name" value={form.name} onChange={(v) => setForm((s) => ({ ...s, name: v }))} />
-          <LabeledInput label="Abbreviation" value={form.abbreviation} onChange={(v) => setForm((s) => ({ ...s, abbreviation: v }))} />
-          <LabeledInput label="ISBN" value={form.isbn} onChange={(v) => setForm((s) => ({ ...s, isbn: v }))} />
-        </div>
-
-        {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
-        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-          <button onClick={saveForm}>Save</button>
-          <button onClick={cancelForm} type="button">Cancel</button>
-        </div>
+      {/* New + Search */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+        <button onClick={startNew}>New Book</button>
+        <DataTableSearchInput
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search books…"
+          aria-label="Search books"
+        />
       </div>
-    )}
 
-    {/* Shared DataTable */}
-    {loading ? (
-      <div>Loading…</div>
-    ) : error ? (
-      <div style={{ color: 'crimson' }}>Error: {error}</div>
-    ) : (
-      <DataTable<Book>
-        rows={rows}
-        columns={columns}
-        rowId={(r) => r.id}
-        initialSort={{ colId: 'name', dir: 'asc' }}
-        // search
-        searchQuery={query}
-        globalFilter={globalFilter}
-        // pagination (client)
-        mode="client"
-        page={page}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-        pageSizeOptions={[5, 10, 20, 50]}
-        // styles
-        tableMinWidth={900}
-        zebra
-        // Resizable columns
-        resizable
-        persistKey="dt.books.v1"
-        onColumnResizeEnd={(widths) => {
-          // optional: log or sync widths
-          console.log('Book widths(px):', widths);
-        }}
-      />
-    )}
-  </>
-);
+      {/* Form panel (Create & Edit) */}
+      {showForm && (
+        <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}>
+          <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Book' : 'New Book'}</h3>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <LabeledInput label="ID" value={form.id} onChange={(v) => setForm((s) => ({ ...s, id: v }))} disabled={!!editingId || viewing} error={errors.id} />
+
+            <LabeledInput label="Code" value={String(form.code).trim()} disabled={viewing}
+              onChange={(v) => setForm((s) => {
+                // Sanitize: keep at most one leading '-', strip all other non-digits
+                // 1) Remove everything except digits and '-'
+                let raw = v.replace(/[^\d]+/g, '');
+                // 2) If there are multiple '-', keep only the first
+                const firstDash = raw.indexOf('-');
+                if (firstDash !== -1) {
+                  raw = '-' + raw.slice(firstDash + 1).replace(/-/g, '');
+                }
+                // 3) Allow raw === '-' temporarily so users can type the sign first;
+                //    validation will show an error until at least one digit is added.
+                return { ...s, code: Number(raw) };
+              })}
+              inputProps={{
+                inputMode: 'numeric', // mobile numeric keypad
+                pattern: '\\d*',
+              }}
+              error={errors.code} />
+            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm((s) => ({ ...s, name: v }))} error={errors.name} disabled={viewing} />
+            <LabeledInput label="Abbreviation" value={form.abbreviation} onChange={(v) => setForm((s) => ({ ...s, abbreviation: v }))} error={errors.abbreviation} disabled={viewing} />
+            <LabeledInput label="ISBN" value={form.isbn} onChange={(v) => setForm((s) => ({ ...s, isbn: v }))} error={errors.isbn} disabled={viewing} />
+          </div>
+
+          {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
+            <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
+          </div>
+        </div>
+      )}
+
+      {/* Shared DataTable */}
+      {loading ? (
+        <div>Loading…</div>
+      ) : error ? (
+        <div style={{ color: 'crimson' }}>Error: {error}</div>
+      ) : (
+        <DataTable<Book>
+          rows={rows}
+          columns={columns}
+          rowId={(r) => r.id}
+          initialSort={{ colId: 'name', dir: 'asc' }}
+          // search
+          searchQuery={query}
+          globalFilter={globalFilter}
+          // pagination (client)
+          mode="client"
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[5, 10, 20, 50]}
+          // styles
+          tableMinWidth={0} // allow table to shrink below container width (for better mobile support)
+          zebra
+          // Resizable columns
+          resizable
+          persistKey="dt.books.v1"
+          ariaLabel='Book data'
+        />
+      )}
+      {!rows.length && (
+        <div style={{ marginTop: 8, color: 'var(--muted)' }}>
+          No books found.
+        </div>
+      )}
+    </>
+  );
 }
 
-
-const tdStyle: React.CSSProperties = { borderBottom: '1px solid #f0f0f0', padding: '8px' };
-const emptyCell: React.CSSProperties = { padding: 12, textAlign: 'center', color: '#666' };
-
 function emptyBook(): Book {
-  return { id: '', code: '', name: '', abbreviation: '', isbn: '' };
+  return { id: 'BOOK_', code: 1234, name: '', abbreviation: '', isbn: '' };
 }

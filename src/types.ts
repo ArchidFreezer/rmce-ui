@@ -4,7 +4,7 @@ export interface PrefixesPayload {
 
 export interface Book {
   id: string;
-  code: string;
+  code: number;
   name: string;
   abbreviation: string;
   isbn: string;
@@ -30,10 +30,10 @@ export interface Armourtype {
   name: string;
   type: string;
   description: string;
-  minManoeuvreMod: number | string;
-  maxManoeuvreMod: number | string;
-  missileAttackPenalty: number | string;
-  quicknessPenalty: number | string;
+  minManoeuvreMod: number;
+  maxManoeuvreMod: number;
+  missileAttackPenalty: number;
+  quicknessPenalty: number;
   animalOnly: boolean;
   includesGreaves: boolean;
 }

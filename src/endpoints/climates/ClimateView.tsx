@@ -21,9 +21,9 @@ export default function ClimateView() {
   // form state (Create & Edit)
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [viewing, setViewing] = useState(false);
   const [form, setForm] = useState<Climate>(emptyClimate());
   const [formErr, setFormErr] = useState(''); // legacy single message (kept for top-level)
-  const [errors, setErrors] = useState<{ id?: string; name?: string; temperature?: string; precipitations?: string }>({});
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -46,11 +46,16 @@ export default function ClimateView() {
   }, []);
 
   // ----- Inline validation helpers -----
+  const [errors, setErrors] = useState<{ id?: string; name?: string; temperature?: string; precipitations?: string }>({});
+  const hasErrors = Boolean(errors.id || errors.name || errors.temperature || errors.precipitations);
   const computeErrors = (draft: Climate, isEditing: boolean) => {
     const next: { id?: string; name?: string; temperature?: string; precipitations?: string } = {};
     // ID
     if (!draft.id.trim()) next.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
+    if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
+    if (!draft.id.trim().toUpperCase().startsWith('CLIMATE_')) next.id = 'ID must start with "CLIMATE_"';
+    if (draft.id.trim().length <= 9) next.id = 'ID must contain additional characters after "CLIMATE_"';
     // Name
     if (!draft.name.trim()) next.name = 'Name is required';
     // Temperature
@@ -68,10 +73,9 @@ export default function ClimateView() {
     setErrors(computeErrors(form, isEditing));
   }, [form, editingId, showForm]); // keep current
 
-  const hasErrors = Boolean(errors.id || errors.name || errors.temperature || errors.precipitations);
-
   // ----- Handlers (Create / Edit / Delete) -----
   const startNew = () => {
+    setViewing(false);
     setEditingId(null);
     setForm(emptyClimate());
     setErrors({});
@@ -80,6 +84,7 @@ export default function ClimateView() {
   };
 
   const startEdit = (row: Climate) => {
+    setViewing(false);
     setEditingId(row.id);
     setForm({ ...row });
     setErrors({});
@@ -87,7 +92,17 @@ export default function ClimateView() {
     setShowForm(true);
   };
 
+  const startView = (row: Climate) => {
+    setViewing(true);
+    setEditingId(row.id);       // we can reuse editingId to preload the item, but we won't allow saving
+    setForm({ ...row });
+    setErrors({});              // no need to compute field errors for read-only view, but we can keep formErr for any potential top-level messages
+    setFormErr('');
+    setShowForm(true);
+  }
+
   const cancelForm = () => {
+    setViewing(false);
     setShowForm(false);
     setEditingId(null);
     setErrors({});
@@ -150,9 +165,11 @@ export default function ClimateView() {
   };
 
   const onDelete = async (row: Climate) => {
+    const id = row?.id;
+    if (!id) return;
     const ok = await confirm({
       title: 'Delete Climate',
-      body: `Delete climate "${row.id}"? This cannot be undone.`,
+      body: `Delete climate "${id}"? This cannot be undone.`,
       confirmText: 'Delete',
       cancelText: 'Cancel',
       tone: 'danger',
@@ -161,12 +178,12 @@ export default function ClimateView() {
 
     // optimistic remove + rollback
     const prev = rows;
-    setRows(prev.filter((r) => r.id !== row.id));
+    setRows(prev.filter((r) => r.id !== id));
     try {
-      await deleteClimate(row.id);
+      await deleteClimate(id);
       // if currently editing this item, close the form
-      if (editingId === row.id) cancelForm();
-      toast({ variant: 'success', title: 'Deleted', description: `Climate "${row.id}" deleted.` });
+      if (editingId === id) cancelForm();
+      toast({ variant: 'success', title: 'Deleted', description: `Climate "${id}" deleted.` });
     } catch (err) {
       setRows(prev);
       toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err) });
@@ -229,13 +246,14 @@ export default function ClimateView() {
         width: 160,
         render: (row) => (
           <>
+            <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
             <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
             <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
           </>
         ),
       },
     ];
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, editingId]); // allows closing form on self-delete
 
   // ----- Search -----
@@ -278,13 +296,14 @@ export default function ClimateView() {
               label="ID"
               value={form.id}
               onChange={(v) => setForm(s => ({ ...s, id: v }))}
-              disabled={!!editingId}
+              disabled={!!editingId || viewing}
               error={errors.id}
             />
             <LabeledInput
               label="Name"
               value={form.name}
               onChange={(v) => setForm(s => ({ ...s, name: v }))}
+              disabled={viewing}
               error={errors.name}
             />
 
@@ -293,6 +312,7 @@ export default function ClimateView() {
               value={form.temperature}
               onChange={(v) => setForm(s => ({ ...s, temperature: v as Temperature }))}
               options={TEMPERATURES}
+              disabled={viewing}
               error={errors.temperature}
             />
             <div style={{ alignSelf: 'end', color: 'var(--muted)', fontSize: 12 }}>
@@ -308,44 +328,51 @@ export default function ClimateView() {
               error={errors.precipitations}
               direction="row"
               columns={3}
-              showSelectAll
+              showSelectAll={!viewing}  // Hide select/clear all when viewing, as checkboxes are disabled and it's not relevant
+              disabled={viewing}
             />
           </div>
 
           {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
 
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button onClick={saveForm} disabled={hasErrors}>Save</button>
-            <button onClick={cancelForm} type="button">Cancel</button>
+            {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
+            <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
           </div>
         </div>
       )}
 
-      {/* Table */}
-      <DataTable<Climate>
-        rows={rows}
-        columns={columns}
-        rowId={(r) => r.id}
-        initialSort={{ colId: 'name', dir: 'asc' }}
-        // search
-        searchQuery={query}
-        globalFilter={globalFilter}
-        // pagination
-        mode="client"
-        page={page}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-        pageSizeOptions={[5, 10, 20, 50, 100]}
-        // fit + UX
-        tableMinWidth={0}
-        zebra
-        hover
-        resizable
-        persistKey="dt.climate.v1"
-        ariaLabel="Climates data"
-      />
-
+      {/* Shared DataTable */}
+      {loading ? (
+        <div>Loading…</div>
+      ) : error ? (
+        <div style={{ color: 'crimson' }}>Error: {error}</div>
+      ) : (
+        <DataTable<Climate>
+          rows={rows}
+          columns={columns}
+          rowId={(r) => r.id}
+          initialSort={{ colId: 'name', dir: 'asc' }}
+          // search
+          searchQuery={query}
+          globalFilter={globalFilter}
+          // pagination
+          mode="client"
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[5, 10, 20, 50, 100]}
+          // styles
+          tableMinWidth={0} // Allow table to shrink below container width (enables horizontal scroll when needed)
+          zebra
+          hover
+          // Resizable columns
+          resizable
+          persistKey="dt.climate.v1"
+          ariaLabel="Climates data"
+        />
+      )}
       {!rows.length && (
         <div style={{ marginTop: 8, color: 'var(--muted)' }}>
           No climates found.
@@ -356,5 +383,5 @@ export default function ClimateView() {
 }
 
 function emptyClimate(): Climate {
-  return { id: '', name: '', temperature: 'Temperate', precipitations: [] };
+  return { id: 'CLIMATE_', name: '', temperature: 'Temperate', precipitations: [] };
 }
