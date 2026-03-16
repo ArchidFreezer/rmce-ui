@@ -319,3 +319,54 @@ tr:nth-child(even) {
 body.theme-dark tr:nth-child(even) {
   background: color-mix(in oklch, var(--bg), white 3%);
 }
+
+/* ===========================
+   Read-only / View Mode
+   =========================== */
+
+.form-panel--view {
+  background: color-mix(in oklch, var(--panel), var(--bg) 30%);
+}
+
+/* Shared visual style for disabled inputs in view mode */
+.form-panel--view input:disabled,
+.form-panel--view select:disabled,
+.form-panel--view textarea:disabled {
+  background: color-mix(in oklch, var(--bg), var(--panel) 70%);
+  color: var(--muted);
+  border-color: color-mix(in oklch, var(--border), var(--bg) 40%);
+  cursor: not-allowed;
+}
+
+/* Remove focus styles in view mode */
+.form-panel--view input:disabled:focus,
+.form-panel--view select:disabled:focus,
+.form-panel--view textarea:disabled:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Checkbox & radio tweaks */
+.form-panel--view input[type="checkbox"]:disabled,
+.form-panel--view input[type="radio"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Labels slightly muted */
+.form-panel--view label {
+  color: var(--muted);
+}
+
+/* Section headers still readable */
+.form-panel--view h3,
+.form-panel--view h4 {
+  color: var(--text);
+}
+
+/* Buttons: only Close should look active */
+.form-panel--view button:not(:enabled),
+.form-panel--view button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

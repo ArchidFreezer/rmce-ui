@@ -122,7 +122,7 @@ export function CheckboxGroup<T extends string = string>({
       {...(error ? { 'aria-invalid': true } : {})}
       {...(required ? { 'aria-required': true } : {})}
       disabled={disabled}
-      style={{ margin: 0, padding: 0, border: 'none', minInlineSize: 0 }}
+      style={{ margin: 0, padding: 0, border: 'none', minInlineSize: 0, opacity: disabled ? 0.75 : 1, }}
     >
       <legend style={{ fontSize: 14, marginBottom: 6 }}>
         {label}{required ? ' *' : ''}

@@ -121,15 +121,15 @@ export default function BooksView() {
       isbn: String(form.isbn).trim(),
     };
 
-    const nextErrors = computeErrors(payload, Boolean(editingId));
+    const isEditing = Boolean(editingId);
+    const nextErrors = computeErrors(payload, isEditing);
     setErrors(nextErrors);
     const topError = nextErrors.id || nextErrors.name || nextErrors.code || nextErrors.abbreviation || nextErrors.isbn || '';
     if (topError) { setFormErr(topError); return; }
 
-    const isEditing = Boolean(editingId);
     try {
       // default POST to /rmce/objects/book/ with a single JSON object
-      const opts = editingId
+      const opts = isEditing
         ? { method: 'PUT' as const, useResourceIdPath: true }
         : { method: 'POST' as const, useResourceIdPath: false };
 
@@ -250,7 +250,7 @@ export default function BooksView() {
 
       {/* Form panel (Create & Edit) */}
       {showForm && (
-        <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}>
+        <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}>
           <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Book' : 'New Book'}</h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
