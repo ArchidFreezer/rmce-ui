@@ -123,10 +123,17 @@ export default function PoisontypesView() {
     (errors.effectOnsets && SEVERITIES.some((s) => errors.effectOnsets?.[s])) ||
     (errors.symptoms && SEVERITIES.some((s) => errors.symptoms?.[s]))
   );
-  const computeErrors = (draft = form) => {
+  const computeErrors = (draft = form, isEditing: boolean) => {
     const e: typeof errors = {};
+    // ID
     if (!draft.id.trim()) e.id = 'ID is required';
+    else if (!isEditing && rows.some(r => r.id === draft.id.trim())) e.id = `ID "${draft.id.trim()}" already exists`;
+    if (!draft.id.trim().toUpperCase().startsWith('POISONTYPE_')) e.id = 'ID must start with "POISONTYPE_"';
+    if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) e.id = 'ID can only contain uppercase letters, numbers and underscores';
+    if (draft.id.trim().length <= 12) e.id = 'ID must contain additional characters after "POISONTYPE_"';
+    // Type
     if (!draft.type.trim()) e.type = 'Type is required';
+    // Areas affected
     if (!draft.areasAffected.trim()) e.areasAffected = 'Areas affected is required';
 
     // Check we have exactly one row per known severity (we always build that, but double-check)
@@ -169,12 +176,12 @@ export default function PoisontypesView() {
     return e;
   };
 
-
   useEffect(() => {
     if (!showForm) return;
     if (viewing) return;               // suppress live errors while viewing
-    setErrors(computeErrors());
-  }, [form, showForm, viewing]);
+    const isEditing = Boolean(editingId);
+    setErrors(computeErrors(form, isEditing));
+  }, [form, showForm, editingId]); // keep current to avoid stale closure
 
   // ----- Actions -----
   const startNew = () => {
@@ -185,16 +192,16 @@ export default function PoisontypesView() {
     setShowForm(true);
   };
 
-  const startView = (row: PoisonType) => {
-    setViewing(true);
+  const startEdit = (row: PoisonType) => {
+    setViewing(false);
     setEditingId(row.id);
     setForm(toVM(row));
     setErrors({});
     setShowForm(true);
   };
 
-  const startEdit = (row: PoisonType) => {
-    setViewing(false);
+  const startView = (row: PoisonType) => {
+    setViewing(true);
     setEditingId(row.id);
     setForm(toVM(row));
     setErrors({});
@@ -209,16 +216,17 @@ export default function PoisontypesView() {
   };
 
   const saveForm = async () => {
-    const e = computeErrors(form);
+    const payload = fromVM(form);
+
+    const isEditing = Boolean(editingId);
+
+    const e = computeErrors(form, isEditing);
     setErrors(e);
     const firstTop =
       e.id || e.type || e.areasAffected ||
       (e.effectOnsets && SEVERITIES.map((s) => e.effectOnsets?.[s]).find(Boolean)) ||
       (e.symptoms && SEVERITIES.map((s) => e.symptoms?.[s]).find(Boolean)) || '';
     if (firstTop) return;
-
-    const payload = fromVM(form);
-    const isEditing = Boolean(editingId);
 
     try {
       const opts = isEditing
@@ -381,6 +389,7 @@ export default function PoisontypesView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows]);
 
+  // ----- Search -----
   const globalFilter = (r: PoisonType, q: string) => {
     const s = q.toLowerCase();
     const hay = [
@@ -391,6 +400,7 @@ export default function PoisontypesView() {
     return hay.includes(s);
   };
 
+  // ----- Render -----
   if (loading) return <div>Loading…</div>;
   if (error) return <div style={{ color: 'crimson' }}>Error: {error}</div>;
 
@@ -411,7 +421,7 @@ export default function PoisontypesView() {
 
       {/* Form panel */}
       {showForm && (
-        <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}>
+        <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}>
           <h3 style={{ marginTop: 0 }}>
             {viewing ? 'View Poison Type' : (editingId ? 'Edit Poison Type' : 'New Poison Type')}
           </h3>
