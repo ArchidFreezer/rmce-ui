@@ -4,6 +4,7 @@ const ArmourtypesView = lazy(() => import('../endpoints/armourtypes/ArmourtypesV
 const BooksView = lazy(() => import('../endpoints/books/BooksView'));
 const ClimateView = lazy(() => import('../endpoints/climates/ClimateView'));
 const PoisonsView = lazy(() => import('../endpoints/poisons/PoisonsView'));
+const PoisontypesView = lazy(() => import('../endpoints/poisontypes/PoisontypesView'));
 
 
 export interface ResourceDef {
@@ -16,10 +17,11 @@ export interface ResourceDef {
 /** Known resources with their routes/components */
 
 const known: Record<string, ResourceDef> = {
-  armourtype:  { prefix: 'armourtype',  label: 'Armour Types', path: '/armourtypes', Component: ArmourtypesView },
-  book:        { prefix: 'book',        label: 'Books',        path: '/books',       Component: BooksView },
-  climate:     { prefix: 'climate',     label: 'Climates',     path: '/climates',    Component: ClimateView },
-  poison:      { prefix: 'poison',      label: 'Poisons',      path: '/poisons',     Component: PoisonsView },
+  armourtype: { prefix: 'armourtype', label: 'Armour Types', path: '/armourtypes', Component: ArmourtypesView },
+  book: { prefix: 'book', label: 'Books', path: '/books', Component: BooksView },
+  climate: { prefix: 'climate', label: 'Climates', path: '/climates', Component: ClimateView },
+  poison: { prefix: 'poison', label: 'Poisons', path: '/poisons', Component: PoisonsView },
+  poisontype: { prefix: 'poisontype', label: 'Poison Types', path: '/poisontypes', Component: PoisontypesView },
 };
 
 
@@ -41,4 +43,5 @@ export const FALLBACK_RESOURCES: ResourceDef[] = [
   known.book,
   known.climate,
   known.poison,
+  known.poisontype,
 ].filter((r): r is ResourceDef => Boolean(r));

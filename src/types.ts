@@ -24,6 +24,33 @@ export interface PoisonsPayload {
   poisons: Poison[];
 }
 
+// src/types.ts
+
+export type Severity = 'Mild' | 'Moderate' | 'Severe' | 'Extreme';
+export const SEVERITIES: ReadonlyArray<Severity> = ['Mild', 'Moderate', 'Severe', 'Extreme'] as const;
+
+export interface PoisonTypeEffectOnset {
+  severity: Severity;
+  min: number;
+  max: number;
+}
+
+export interface PoisonTypeSymptom {
+  severity: Severity;
+  symptoms: string;
+}
+
+export interface PoisonType {
+  id: string;
+  type: string;                // e.g., "Circulatory"
+  areasAffected: string;       // comma-separated list in a single string
+  severityEffectOnsets: PoisonTypeEffectOnset[];
+  severitySymptoms: PoisonTypeSymptom[];
+}
+
+export interface PoisonTypesPayload {
+  poisontypes: PoisonType[];
+}
 
 export interface Armourtype {
   id: string;
