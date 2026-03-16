@@ -5,7 +5,7 @@ export interface LabeledInputProps {
   value: string;
   onChange: (val: string) => void;
   type?: InputHTMLAttributes<HTMLInputElement>['type']; // 'text' | 'number' | ...
-  disabled?: boolean;
+  disabled?: boolean | undefined;
   id?: string;
   placeholder?: string;
   required?: boolean;

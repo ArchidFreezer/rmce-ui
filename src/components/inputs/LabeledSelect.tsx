@@ -5,7 +5,7 @@ export interface LabeledSelectProps {
   value: string;
   onChange: (val: string) => void;
   options: readonly string[];
-  disabled?: boolean;
+  disabled?: boolean | undefined;
   id?: string;
   required?: boolean;
   selectProps?: Omit<SelectHTMLAttributes<HTMLSelectElement>, 'value' | 'onChange' | 'disabled' | 'id' | 'required'>;
