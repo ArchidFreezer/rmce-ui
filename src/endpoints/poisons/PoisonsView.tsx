@@ -248,10 +248,7 @@ export default function PoisonsView() {
         header: 'Type',
         accessor: (r) => r.type,
         sortType: 'string',
-        render: (r) => {
-          const label = poisonTypeLabelById.get(r.type);
-          return label ? `${label}` : r.type;
-        },
+        render: (r) => poisonTypeLabelById.get(r.type) ?? r.type,
       },
       { id: 'level', header: 'Level', accessor: r => r.level, sortType: 'number', align: 'center' },
       { id: 'levelVariance', header: 'Level Variance', accessor: r => r.levelVariance, sortType: 'string', align: 'center' },
@@ -271,7 +268,7 @@ export default function PoisonsView() {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, editingId]); // allows closing form on self-delete
+  }, [rows, poisonTypeLabelById, editingId]); // allows closing form on self-delete
 
   // ----- Search -----
   const globalFilter = (p: Poison, q: string) => {

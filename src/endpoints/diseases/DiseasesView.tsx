@@ -246,10 +246,7 @@ export default function DiseaseView() {
         header: 'Type',
         accessor: (r) => r.type,
         sortType: 'string',
-        render: (r) => {
-          const label = diseaseTypeLabelById.get(r.type);
-          return label ? `${label}` : r.type;
-        },
+        render: (r) =>  diseaseTypeLabelById.get(r.type) ?? r.type, // use label if available, otherwise fallback to raw id
       },
       { id: 'level', header: 'Level', accessor: r => r.level, sortType: 'number', align: 'center' },
       { id: 'levelVariance', header: 'Level Variance', accessor: r => r.levelVariance, sortType: 'string', align: 'center' },
@@ -269,7 +266,7 @@ export default function DiseaseView() {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, editingId]); // allows closing form on self-delete
+  }, [rows, diseaseTypeLabelById, editingId]); // allows closing form on self-delete
   
   // ----- Search -----
   const globalFilter = (p: Disease, q: string) => {
