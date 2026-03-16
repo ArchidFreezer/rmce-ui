@@ -26,7 +26,7 @@ function emptyVM(): FormState {
   const mkEffect = (s: Severity): EffectRowVM => ({ severity: s, min: '', max: '' });
   const mkSymptom = (s: Severity): SymptomRowVM => ({ severity: s, symptoms: '' });
   return {
-    id: '',
+    id: 'POISONTYPE_',
     type: '',
     areasAffected: '',
     effectOnsets: SEVERITIES.map(mkEffect),

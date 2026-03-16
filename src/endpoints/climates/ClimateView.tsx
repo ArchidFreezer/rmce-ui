@@ -229,18 +229,18 @@ export default function ClimateView() {
     const idx = (t: string) => Math.max(0, TEMP_ORDER.indexOf(t as Temperature));
 
     return [
-      { id: 'id', header: 'id', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
-      { id: 'name', header: 'name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
+      { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
+      { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
       {
         id: 'temperature',
-        header: 'temperature',
+        header: 'Temperature',
         accessor: (r) => r.temperature,
         sortType: (a, b) => idx(a.temperature as string) - idx(b.temperature as string),
         minWidth: 140,
       },
       {
         id: 'precipitations',
-        header: 'precipitations',
+        header: 'Precipitations',
         accessor: (r) => r.precipitations.join(', '),
         sortType: 'string',
         minWidth: 220,
@@ -254,7 +254,7 @@ export default function ClimateView() {
       },
       {
         id: 'actions',
-        header: 'actions',
+        header: 'Actions',
         sortable: false,
         width: 160,
         render: (row) => (

@@ -211,16 +211,16 @@ export default function BooksView() {
   // Columns
   const columns: ColumnDef<Book>[] = useMemo(() => {
     return [
-      { id: 'id', header: 'id', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
+      { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
       { id: 'code', header: 'Code', accessor: (r) => r.code, sortType: 'number', align: 'right' },
-      { id: 'name', header: 'name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
+      { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
       { id: 'abbreviation', header: 'Abbreviation', accessor: (r) => r.abbreviation, sortType: 'string' },
       { id: 'isbn', header: 'ISBN', accessor: (r) => r.isbn, sortType: 'string' },
 
 
       {
         id: 'actions',
-        header: 'actions',
+        header: 'Actions',
         sortable: false,
         width: 160,
         render: (row) => (
