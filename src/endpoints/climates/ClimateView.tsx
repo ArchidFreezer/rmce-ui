@@ -23,7 +23,6 @@ export default function ClimateView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<Climate>(emptyClimate());
   const [formErr, setFormErr] = useState(''); // legacy single message (kept for top-level)
-  const [errors, setErrors] = useState<{ id?: string; name?: string; temperature?: string; precipitations?: string }>({});
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -46,11 +45,16 @@ export default function ClimateView() {
   }, []);
 
   // ----- Inline validation helpers -----
+  const [errors, setErrors] = useState<{ id?: string; name?: string; temperature?: string; precipitations?: string }>({});
+  const hasErrors = Boolean(errors.id || errors.name || errors.temperature || errors.precipitations);
   const computeErrors = (draft: Climate, isEditing: boolean) => {
     const next: { id?: string; name?: string; temperature?: string; precipitations?: string } = {};
     // ID
     if (!draft.id.trim()) next.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
+    if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
+    if (!draft.id.trim().toUpperCase().startsWith('CLIMATE_')) next.id = 'ID must start with "CLIMATE_"';
+    if (draft.id.trim().length <= 9) next.id = 'ID must contain additional characters after "CLIMATE_"';
     // Name
     if (!draft.name.trim()) next.name = 'Name is required';
     // Temperature
@@ -67,8 +71,6 @@ export default function ClimateView() {
     const isEditing = Boolean(editingId);
     setErrors(computeErrors(form, isEditing));
   }, [form, editingId, showForm]); // keep current
-
-  const hasErrors = Boolean(errors.id || errors.name || errors.temperature || errors.precipitations);
 
   // ----- Handlers (Create / Edit / Delete) -----
   const startNew = () => {
@@ -150,9 +152,11 @@ export default function ClimateView() {
   };
 
   const onDelete = async (row: Climate) => {
+    const id = row?.id;
+    if (!id) return;
     const ok = await confirm({
       title: 'Delete Climate',
-      body: `Delete climate "${row.id}"? This cannot be undone.`,
+      body: `Delete climate "${id}"? This cannot be undone.`,
       confirmText: 'Delete',
       cancelText: 'Cancel',
       tone: 'danger',
@@ -161,12 +165,12 @@ export default function ClimateView() {
 
     // optimistic remove + rollback
     const prev = rows;
-    setRows(prev.filter((r) => r.id !== row.id));
+    setRows(prev.filter((r) => r.id !== id));
     try {
-      await deleteClimate(row.id);
+      await deleteClimate(id);
       // if currently editing this item, close the form
-      if (editingId === row.id) cancelForm();
-      toast({ variant: 'success', title: 'Deleted', description: `Climate "${row.id}" deleted.` });
+      if (editingId === id) cancelForm();
+      toast({ variant: 'success', title: 'Deleted', description: `Climate "${id}" deleted.` });
     } catch (err) {
       setRows(prev);
       toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err) });
@@ -356,5 +360,5 @@ export default function ClimateView() {
 }
 
 function emptyClimate(): Climate {
-  return { id: '', name: '', temperature: 'Temperate', precipitations: [] };
+  return { id: 'CLIMATE_', name: '', temperature: 'Temperate', precipitations: [] };
 }

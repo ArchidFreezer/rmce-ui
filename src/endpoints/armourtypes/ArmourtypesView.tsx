@@ -67,6 +67,7 @@ export default function ArmourtypesView() {
     if (!draft.id.trim()) next.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
     if (!draft.id.trim().toUpperCase().startsWith('ARMOURTYPE_')) next.id = 'ID must start with "ARMOURTYPE_"';
+    if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
     if (draft.id.trim().length <= 11) next.id = 'ID must contain additional characters after "ARMOURTYPE_"';
     // Name
     if (!draft.name.trim()) next.name = 'Name is required';
@@ -392,7 +393,7 @@ export default function ArmourtypesView() {
       />
       {!rows.length && (
         <div style={{ marginTop: 8, color: 'var(--muted)' }}>
-          No armourtypes found.
+          No armour types found.
         </div>
       )}
 
