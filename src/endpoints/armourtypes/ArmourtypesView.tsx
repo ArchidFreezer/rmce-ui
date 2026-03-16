@@ -225,8 +225,8 @@ export default function ArmourtypesView() {
   // ----- Columns (Edit + Delete) -----
   const columns: ColumnDef<Armourtype>[] = useMemo(() => {
     return [
-      { id: 'id', header: 'id', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
-      { id: 'name', header: 'name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
+      { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
+      { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
       { id: 'type', header: 'Type', accessor: r => r.type },
       // { id: 'description', header: 'Description', accessor: r => r.description },
       { id: 'minManoeuvreMod', header: 'Min Manoeuvre Mod', accessor: (r) => r.minManoeuvreMod, sortType: 'number', align: 'right' },
@@ -237,7 +237,7 @@ export default function ArmourtypesView() {
       { id: 'includesGreaves', header: 'Includes Greaves', accessor: r => r.includesGreaves, sortType: 'boolean', align: 'center' },
       {
         id: 'actions',
-        header: 'actions',
+        header: 'Actions',
         sortable: false,
         width: 160,
         render: (row) => (

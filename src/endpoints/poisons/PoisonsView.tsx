@@ -241,11 +241,11 @@ export default function PoisonsView() {
   // ----- Columns (Edit + Delete) -----
   const columns: ColumnDef<Poison>[] = useMemo(() => {
     return [
-      { id: 'id', header: 'id', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
-      { id: 'name', header: 'name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
+      { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
+      { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
       {
         id: 'type',
-        header: 'type',
+        header: 'Type',
         accessor: (r) => r.type,
         sortType: 'string',
         render: (r) => {
@@ -280,7 +280,7 @@ export default function PoisonsView() {
       .some(v => String(v ?? '').toLowerCase().includes(s));
   };
 
-  // Prepare select options for Poison Types (for the form)
+  // Prepare select options for Poison Types (for the LabeledSelect in the form), memoized for performance
   const poisonTypeOptions = useMemo(
     () =>
       poisonTypes.map((pt) => ({
