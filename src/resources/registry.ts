@@ -3,6 +3,8 @@ import { lazy, type LazyExoticComponent, type ComponentType } from 'react';
 const ArmourtypesView = lazy(() => import('../endpoints/armourtypes/ArmourtypesView'));
 const BooksView = lazy(() => import('../endpoints/books/BooksView'));
 const ClimateView = lazy(() => import('../endpoints/climates/ClimateView'));
+const DiseasesView = lazy(() => import('../endpoints/diseases/DiseasesView'));
+const DiseasetypesView = lazy(() => import('../endpoints/diseasetypes/DiseasetypesView'));
 const PoisonsView = lazy(() => import('../endpoints/poisons/PoisonsView'));
 const PoisontypesView = lazy(() => import('../endpoints/poisontypes/PoisontypesView'));
 
@@ -20,9 +22,11 @@ const known: Record<string, ResourceDef> = {
   armourtype: { prefix: 'armourtype', label: 'Armour Types', path: '/armourtypes', Component: ArmourtypesView },
   book: { prefix: 'book', label: 'Books', path: '/books', Component: BooksView },
   climate: { prefix: 'climate', label: 'Climates', path: '/climates', Component: ClimateView },
+  disease: { prefix: 'disease', label: 'Diseases', path: '/diseases', Component: DiseasesView },
+  diseasetype: { prefix: 'diseasetype', label: 'Disease Types', path: '/diseasetypes', Component: DiseasetypesView },
   poison: { prefix: 'poison', label: 'Poisons', path: '/poisons', Component: PoisonsView },
   poisontype: { prefix: 'poisontype', label: 'Poison Types', path: '/poisontypes', Component: PoisontypesView },
-};
+}
 
 
 /** Split known vs unknown prefixes (for Generic Viewer, etc.) */
@@ -42,6 +46,8 @@ export const FALLBACK_RESOURCES: ResourceDef[] = [
   known.armourtype,
   known.book,
   known.climate,
+  known.disease,
+  known.diseasetype,
   known.poison,
   known.poisontype,
 ].filter((r): r is ResourceDef => Boolean(r));
