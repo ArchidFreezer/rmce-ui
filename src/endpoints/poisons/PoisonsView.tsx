@@ -94,6 +94,19 @@ export default function PoisonsView() {
     setShowForm(true);
   };
 
+  const startDuplicate = (row: Poison) => {
+    setViewing(false);
+    setEditingId(null);
+
+    const next = { ...row };
+    next.id = 'POISON_';
+    next.name += ' (Copy)';
+
+    setForm(next); // if your form state = Poison
+    setErrors?.({});      // if you have an errors object
+    setShowForm(true);
+  };
+
   const startView = (row: Poison) => {
     setViewing(true);
     setEditingId(row.id);       // we can reuse editingId to preload the item, but we won't allow saving
@@ -101,7 +114,7 @@ export default function PoisonsView() {
     setErrors({});              // no need to compute field errors for read-only view, but we can keep formErr for any potential top-level messages
     setFormErr('');
     setShowForm(true);
-  }
+  };
 
   const cancelForm = () => {
     setViewing(false);
@@ -209,6 +222,7 @@ export default function PoisonsView() {
           <>
             <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
             <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
+            <button onClick={() => startDuplicate(row)} style={{ marginRight: 6 }}>Duplicate</button>
             <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
           </>
         ),

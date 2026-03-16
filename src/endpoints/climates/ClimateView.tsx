@@ -92,6 +92,19 @@ export default function ClimateView() {
     setShowForm(true);
   };
 
+  const startDuplicate = (row: Climate) => {
+    setViewing(false);
+    setEditingId(null);
+
+    const vm = { ...row }; // your Climate form already uses domain type as form state
+    vm.id = 'CLIMATE_';
+    vm.name += ' (Copy)';
+
+    setForm(vm);
+    setErrors({});
+    setShowForm(true);
+  };
+
   const startView = (row: Climate) => {
     setViewing(true);
     setEditingId(row.id);       // we can reuse editingId to preload the item, but we won't allow saving
@@ -99,7 +112,7 @@ export default function ClimateView() {
     setErrors({});              // no need to compute field errors for read-only view, but we can keep formErr for any potential top-level messages
     setFormErr('');
     setShowForm(true);
-  }
+  };
 
   const cancelForm = () => {
     setViewing(false);
@@ -248,6 +261,7 @@ export default function ClimateView() {
           <>
             <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
             <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
+            <button onClick={() => startDuplicate(row)} style={{ marginRight: 6 }}>Duplicate</button>
             <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
           </>
         ),

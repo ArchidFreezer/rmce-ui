@@ -95,6 +95,20 @@ export default function BooksView() {
     setShowForm(true);
   };
 
+  const startDuplicate = (row: Book) => {
+    setViewing(false);
+    setEditingId(null);
+
+    const next = { ...row };
+    next.id = 'BOOK_';
+    next.name += ' (Copy)';
+    next.isbn = ''; // Clear ISBN to force user to enter a new one, since it must be unique
+
+    setForm(next);
+    setErrors({});
+    setShowForm(true);
+  };
+
   const startView = (row: Book) => {
     setViewing(true);
     setEditingId(row.id);       // we can reuse editingId to preload the item, but we won't allow saving
@@ -213,6 +227,7 @@ export default function BooksView() {
           <>
             <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
             <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
+            <button onClick={() => startDuplicate(row)} style={{ marginRight: 6 }}>Duplicate</button>
             <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
           </>
         ),

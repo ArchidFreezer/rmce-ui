@@ -200,6 +200,18 @@ export default function PoisontypesView() {
     setShowForm(true);
   };
 
+  const startDuplicate = (row: PoisonType) => {
+    setViewing(false);
+    setEditingId(null);
+    // Create a copy of the row 
+    const vm = toVM(row);
+    vm.id = 'POISONTYPE_'; // Set the ID to a default value that the user must change
+    vm.type += ' (Copy)'; // Append " (Copy)" to the type for clarity
+    setForm(vm);
+    setErrors({});
+    setShowForm(true);
+  };
+
   const startView = (row: PoisonType) => {
     setViewing(true);
     setEditingId(row.id);
@@ -381,6 +393,7 @@ export default function PoisontypesView() {
           <>
             <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
             <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
+            <button onClick={() => startDuplicate(row)} style={{ marginRight: 6 }}>Duplicate</button>
             <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
           </>
         ),

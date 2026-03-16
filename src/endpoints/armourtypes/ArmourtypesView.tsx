@@ -106,6 +106,19 @@ export default function ArmourtypesView() {
     setShowForm(true);
   };
 
+  const startDuplicate = (row: Armourtype) => {
+    setViewing?.(false);           // if you have viewing state; otherwise omit
+    setEditingId(null);
+
+    const next = { ...row };
+    next.id = 'ARMOURTYPE_';
+    next.name += ' (Copy)';
+
+    setForm(next as any); // if your form state = Armourtype
+    setErrors?.({});      // if you have an errors object
+    setShowForm(true);
+  };
+
   const startView = (row: Armourtype) => {
     setViewing(true);
     setEditingId(row.id);       // we can reuse editingId to preload the item, but we won't allow saving
@@ -113,7 +126,8 @@ export default function ArmourtypesView() {
     setErrors({});              // no need to compute field errors for read-only view, but we can keep formErr for any potential top-level messages
     setFormErr('');
     setShowForm(true);
-  }
+  };
+
   const cancelForm = () => {
     setViewing(false);
     setShowForm(false);
@@ -230,6 +244,7 @@ export default function ArmourtypesView() {
           <>
             <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
             <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
+            <button onClick={() => startDuplicate(row)} style={{ marginRight: 6 }}>Duplicate</button>
             <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
           </>
         ),
