@@ -139,13 +139,13 @@ export default function ArmourtypesView() {
 
     const nextErrors = computeErrors(payload, Boolean(editingId));
     setErrors(nextErrors);
-    const topError = nextErrors.id || nextErrors.name || nextErrors.type || '';
+    const topError = nextErrors.id || nextErrors.name || nextErrors.type || nextErrors.numeric || '';
     if (topError) { setFormErr(topError); return; }
 
     const isEditing = Boolean(editingId);
     try {
       const opts = editingId
-        ? { method: 'POST' as const, useResourceIdPath: false } // or PUT+id if your API prefers
+        ? { method: 'PUT' as const, useResourceIdPath: true }
         : { method: 'POST' as const, useResourceIdPath: false };
 
       await upsertArmourtype(payload, opts);
