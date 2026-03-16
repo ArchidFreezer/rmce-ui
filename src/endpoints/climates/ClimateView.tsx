@@ -239,7 +239,7 @@ export default function ClimateView() {
         ),
       },
     ];
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, editingId]); // allows closing form on self-delete
 
   // ----- Search -----
@@ -325,31 +325,37 @@ export default function ClimateView() {
         </div>
       )}
 
-      {/* Table */}
-      <DataTable<Climate>
-        rows={rows}
-        columns={columns}
-        rowId={(r) => r.id}
-        initialSort={{ colId: 'name', dir: 'asc' }}
-        // search
-        searchQuery={query}
-        globalFilter={globalFilter}
-        // pagination
-        mode="client"
-        page={page}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-        pageSizeOptions={[5, 10, 20, 50, 100]}
-        // fit + UX
-        tableMinWidth={0}
-        zebra
-        hover
-        resizable
-        persistKey="dt.climate.v1"
-        ariaLabel="Climates data"
-      />
-
+      {/* Shared DataTable */}
+      {loading ? (
+        <div>Loading…</div>
+      ) : error ? (
+        <div style={{ color: 'crimson' }}>Error: {error}</div>
+      ) : (
+        <DataTable<Climate>
+          rows={rows}
+          columns={columns}
+          rowId={(r) => r.id}
+          initialSort={{ colId: 'name', dir: 'asc' }}
+          // search
+          searchQuery={query}
+          globalFilter={globalFilter}
+          // pagination
+          mode="client"
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[5, 10, 20, 50, 100]}
+          // styles
+          tableMinWidth={0} // Allow table to shrink below container width (enables horizontal scroll when needed)
+          zebra
+          hover
+          // Resizable columns
+          resizable
+          persistKey="dt.climate.v1"
+          ariaLabel="Climates data"
+        />
+      )}
       {!rows.length && (
         <div style={{ marginTop: 8, color: 'var(--muted)' }}>
           No climates found.

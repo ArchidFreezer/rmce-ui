@@ -181,7 +181,7 @@ export default function BooksView() {
     }
   };
 
-    // Columns
+  // Columns
   const columns: ColumnDef<Book>[] = useMemo(() => {
     return [
       { id: 'id', header: 'id', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
@@ -207,7 +207,7 @@ export default function BooksView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, editingId]); // allows closing form on self-delete
 
-    // ----- Search -----
+  // ----- Search -----
   const globalFilter = (b: Book, q: string) => {
     const s = q.toLowerCase();
     return [b.id, b.code, b.name, b.abbreviation, b.isbn]
@@ -242,9 +242,9 @@ export default function BooksView() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <LabeledInput label="ID" value={form.id} onChange={(v) => setForm((s) => ({ ...s, id: v }))} disabled={!!editingId} error={errors.id} />
 
-            <LabeledInput 
+            <LabeledInput
               label="Code"
-              value={String(form.code).trim()} 
+              value={String(form.code).trim()}
               onChange={(v) => setForm((s) => {
                 // Sanitize: keep at most one leading '-', strip all other non-digits
                 // 1) Remove everything except digits and '-'
@@ -263,7 +263,7 @@ export default function BooksView() {
                 pattern: '\\d*',
               }}
               error={errors.code} />
-            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm((s) => ({ ...s, name: v }))} error={errors.name}/>
+            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm((s) => ({ ...s, name: v }))} error={errors.name} />
             <LabeledInput label="Abbreviation" value={form.abbreviation} onChange={(v) => setForm((s) => ({ ...s, abbreviation: v }))} error={errors.abbreviation} />
             <LabeledInput label="ISBN" value={form.isbn} onChange={(v) => setForm((s) => ({ ...s, isbn: v }))} error={errors.isbn} />
           </div>
@@ -305,6 +305,11 @@ export default function BooksView() {
           persistKey="dt.books.v1"
           ariaLabel='Book data'
         />
+      )}
+      {!rows.length && (
+        <div style={{ marginTop: 8, color: 'var(--muted)' }}>
+          No books found.
+        </div>
       )}
     </>
   );

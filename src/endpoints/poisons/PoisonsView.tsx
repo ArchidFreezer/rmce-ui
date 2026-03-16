@@ -5,61 +5,27 @@ import type { Poison } from '../../types';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { LabeledInput } from '../../components/inputs';
-
-type PoisonNumberKey = 'level';
-type PoisonStringKey = Exclude<keyof Poison, PoisonNumberKey>; // 'id' | 'name' | 'type' | 'levelVariance'
+import { isIntegerString } from '../../components/inputs/validators';
 
 export default function PoisonsView() {
   const [rows, setRows] = useState<Poison[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  
+
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const globalFilter = (p: Poison, q: string) => {
-    const s = q.toLowerCase();
-    return [p.id, p.name, p.type, p.level, p.levelVariance]
-      .some(v => String(v ?? '').toLowerCase().includes(s));
-  };
-
-  const columns: ColumnDef<Poison>[] = [
-    { id: 'id', header: 'Id', accessor: r => r.id, width: 350 },
-    { id: 'name', header: 'Name', accessor: r => r.name },
-    { id: 'type', header: 'Type', accessor: r => r.type },
-    { id: 'level', header: 'Level', accessor: r => r.level, sortType: 'number', align: 'right' },
-    { id: 'levelVariance', header: 'Level Variance', accessor: r => r.levelVariance },
-    {
-      id: 'actions',
-      header: 'Actions',
-      sortable: false,
-      render: (row) => (
-        <>
-          <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
-          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
-        </>
-      ),
-    },
-  ];
-
-  const [sort, setSort] = useState<{ key: keyof Poison; dir: 'asc' | 'desc' }>({
-    key: 'name',
-    dir: 'asc',
-  });
-
+  // form state (Create & Edit)
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-
-  // We’ll keep the form typed as Poison. While typing, "level" is edited as a string in the input,
-  // so we provide helpers to read/write it safely.
   const [form, setForm] = useState<Poison>(emptyPoison());
-  const [formErr, setFormErr] = useState('');
-
-  const confirm = useConfirm();
+  const [formErr, setFormErr] = useState(''); // legacy single message (kept for top-level)
   const toast = useToast();
+  const confirm = useConfirm();
 
+  // ----- Load -----
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -77,93 +43,77 @@ export default function PoisonsView() {
     return () => { mounted = false; };
   }, []);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((p) =>
-      [p.id, p.name, p.type, p.level, p.levelVariance]
-        .some((v) => String(v ?? '').toLowerCase().includes(q))
-    );
-  }, [rows, query]);
+  // ----- Inline validation helpers -----
+  const [errors, setErrors] = useState<{ id?: string; name?: string; type?: string; level?: string; variance?: string }>({});
+  const hasErrors = Boolean(errors.id || errors.name || errors.type || errors.level || errors.variance);
+  const computeErrors = (draft: Poison, isEditing: boolean) => {
+    const next: { id?: string; name?: string; type?: string; level?: string; variance?: string } = {};
+    // ID (only on create, must be unique and start with prefix in ucase and contain additional characters)
+    if (!draft.id.trim()) next.id = 'ID is required';
+    else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
+    if (!draft.id.trim().toUpperCase().startsWith('POISON_')) next.id = 'ID must start with "POISON_"';
+    if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
+    if (draft.id.trim().length <= 11) next.id = 'ID must contain additional characters after "POISON_"';
+    // Name
+    if (!draft.name.trim()) next.name = 'Name is required';
+    // Type
+    if (!draft.type.trim()) next.type = 'Type is required';
+    // Level (must be a number, but allow empty string for controlled input)
+    const raw = (draft.level ?? '').toString().trim();
+    if (!isIntegerString(raw)) next.level = `Level must be an integer`;
+    // Variance must be a single uppercase character
+    if (!draft.levelVariance.trim()) next.variance = `Level Variance is required`;
+    if (!/^[A-Z]$/.test(draft.id.trim())) next.id = 'Level Variance must be a single uppercase character';
 
-  const sorted = useMemo(() => {
-    const arr = [...filtered];
-    const { key, dir } = sort;
+    return next;
+  };
 
-    const isNumberKey = (k: keyof Poison): k is PoisonNumberKey => k === 'level';
+  useEffect(() => {
+    if (!showForm) return;
+    const isEditing = Boolean(editingId);
+    setErrors(computeErrors(form, isEditing));
+  }, [form, editingId, showForm]); // keep current for live validation
 
-    arr.sort((a, b) => {
-      if (isNumberKey(key)) {
-        const av = a[key] as number;
-        const bv = b[key] as number;
-        return dir === 'asc' ? av - bv : bv - av;
-      }
-      const av = String(a[key as PoisonStringKey] ?? '');
-      const bv = String(b[key as PoisonStringKey] ?? '');
-      if (av < bv) return dir === 'asc' ? -1 : 1;
-      if (av > bv) return dir === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-    return arr;
-  }, [filtered, sort]);
-
-  const onSort = (key: keyof Poison) =>
-    setSort((prev) =>
-      prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }
-    );
-
+  // ----- Handlers (Create / Edit / Delete) -----
   const startNew = () => {
     setEditingId(null);
     setForm(emptyPoison());
+    setErrors({});
     setFormErr('');
     setShowForm(true);
   };
 
   const startEdit = (row: Poison) => {
     setEditingId(row.id);
-    // Copy row into form
     setForm({ ...row });
+    setErrors({});
     setFormErr('');
     setShowForm(true);
   };
 
   const cancelForm = () => {
     setShowForm(false);
+    setEditingId(null);
+    setErrors({});
     setFormErr('');
   };
 
-  const validate = (p: Poison): string => {
-    if (!p.id?.trim()) return 'id is required';
-    if (!p.name?.trim()) return 'name is required';
-    if (!p.type?.trim()) return 'type is required';
-    if (!Number.isFinite(p.level as number) || Number(p.level) === 0 && String(getLevelInputValue(p)) === '') {
-      // If user cleared the field, Number('') = 0; we check the raw input string below
-      /* noop – we’ll handle using getLevelInputValue() */
-    }
-    const levelStr = getLevelInputValue(p);
-    if (levelStr === '' || Number.isNaN(Number(levelStr))) return 'level must be a number';
-    if (!p.levelVariance?.trim()) return 'levelVariance is required';
-    return '';
-  };
-
   const saveForm = async () => {
-    // validate against current form values (with raw string view for level)
-    const msg = validate(form);
-    if (msg) {
-      setFormErr(msg);
-      return;
-    }
-
     // Normalize payload to Poison while ensuring number coercion for level
     const payload: Poison = {
       id: String(form.id).trim(),
       name: String(form.name).trim(),
       type: String(form.type).trim(),
-      level: Number(getLevelInputValue(form)),            // ensure number
+      level: Number(form.level),            // ensure number
       levelVariance: String(form.levelVariance).trim(),
     };
 
+    const nextErrors = computeErrors(payload, Boolean(editingId));
+    setErrors(nextErrors);
+    const topError = nextErrors.id || nextErrors.name || nextErrors.type || '';
+    if (topError) { setFormErr(topError); return; }
+
+    const isEditing = Boolean(editingId);
     try {
       const opts = editingId
         ? { method: 'POST' as const, useResourceIdPath: false }
@@ -172,20 +122,35 @@ export default function PoisonsView() {
       await upsertPoison(payload, opts);
 
       setRows((prev) => {
-        const idx = prev.findIndex((p) => p.id === payload.id);
-        if (idx >= 0) {
-          const copy = [...prev];
-          copy[idx] = { ...copy[idx], ...payload };
-          return copy;
+        if (isEditing) {
+          // replace existing row
+          const idx = prev.findIndex((r) => r.id === payload.id);
+          if (idx >= 0) {
+            const copy = [...prev];
+            copy[idx] = { ...copy[idx], ...payload };
+            return copy;
+          }
+          // fallback: if not found (rare), prepend
+          return [payload, ...prev];
         }
+        // create → prepend
         return [payload, ...prev];
       });
 
       setShowForm(false);
+      setEditingId(null);
       setFormErr('');
-      toast({ variant: 'success', title: 'Saved', description: `Poison "${payload.id}" saved.` });
+      toast({
+        variant: 'success',
+        title: isEditing ? 'Updated' : 'Saved',
+        description: `Poison "${payload.id}" ${isEditing ? 'updated' : 'created'}.`,
+      });
     } catch (err) {
-      toast({ variant: 'danger', title: 'Save failed', description: String(err instanceof Error ? err.message : err) });
+      toast({
+        variant: 'danger',
+        title: 'Save failed',
+        description: String(err instanceof Error ? err.message : err),
+      });
     }
   };
 
@@ -205,6 +170,8 @@ export default function PoisonsView() {
     setRows(prev.filter((p) => p.id !== id));
     try {
       await deletePoison(id);
+      // if currently editing this item, close the form
+      if (editingId === row.id) cancelForm();
       toast({ variant: 'success', title: 'Deleted', description: `Poison "${id}" deleted.` });
     } catch (err) {
       setRows(prev);
@@ -212,106 +179,126 @@ export default function PoisonsView() {
     }
   };
 
+  // ----- Columns (Edit + Delete) -----
+  const columns: ColumnDef<Poison>[] = useMemo(() => {
+    return [
+      { id: 'id', header: 'id', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
+      { id: 'name', header: 'name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
+      { id: 'type', header: 'Type', accessor: r => r.type, sortType: 'string' },
+      { id: 'level', header: 'Level', accessor: r => r.level, sortType: 'number', align: 'center' },
+      { id: 'levelVariance', header: 'Level Variance', accessor: r => r.levelVariance, sortType: 'string', align: 'center' },
+      {
+        id: 'actions',
+        header: 'Actions',
+        sortable: false,
+        width: 160,
+        render: (row) => (
+          <>
+            <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
+            <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
+          </>
+        ),
+      },
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, editingId]); // allows closing form on self-delete
+
+  // ----- Search -----
+  const globalFilter = (p: Poison, q: string) => {
+    const s = q.toLowerCase();
+    return [p.id, p.name, p.type, p.level, p.levelVariance]
+      .some(v => String(v ?? '').toLowerCase().includes(s));
+  };
+
+  // ----- Render -----
   if (loading) return <div>Loading…</div>;
   if (error) return <div style={{ color: 'crimson' }}>Error: {error}</div>;
 
-return (
-  <>
-    <h2>Poisons</h2>
+  return (
+    <>
+      <h2>Poisons</h2>
 
-    {/* New + Search */}
-    <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-      <button onClick={startNew}>New Poison</button>
-      <DataTableSearchInput
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search poisons…"
-        aria-label="Search poisons"
-      />
-    </div>
-
-    {/* Form panel (unchanged) */}
-    {showForm && (
-      <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}>
-        <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Poison' : 'New Poison'}</h3>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <LabeledInput label="ID" value={form.id} onChange={(v) => setForm((s) => ({ ...s, id: v }))} disabled={!!editingId} />
-          <LabeledInput label="Name" value={form.name} onChange={(v) => setForm((s) => ({ ...s, name: v }))} />
-          <LabeledInput label="Type" value={form.type} onChange={(v) => setForm((s) => ({ ...s, type: v }))} />
-          <LabeledInput label="Level" type="number" value={getLevelInputValue(form)} onChange={(v) => setLevelFromInput(v)} />
-          <LabeledInput label="Level Variance" value={form.levelVariance} onChange={(v) => setForm((s) => ({ ...s, levelVariance: v }))} />
-        </div>
-
-        {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
-        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-          <button onClick={saveForm}>Save</button>
-          <button onClick={cancelForm} type="button">Cancel</button>
-        </div>
+      {/* New + Search */}
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+        <button onClick={startNew}>New Poison</button>
+        <DataTableSearchInput
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search poisons…"
+          aria-label="Search poisons"
+        />
       </div>
-    )}
 
-    {/* Shared DataTable */}
-    {loading ? (
-      <div>Loading…</div>
-    ) : error ? (
-      <div style={{ color: 'crimson' }}>Error: {error}</div>
-    ) : (
-      <DataTable<Poison>
-        rows={rows}
-        columns={columns}
-        rowId={(r) => r.id}
-        initialSort={{ colId: 'name', dir: 'asc' }}
-        // search
-        searchQuery={query}
-        globalFilter={globalFilter}
-        // pagination (client)
-        mode="client"
-        page={page}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-        pageSizeOptions={[5, 10, 20, 50]}
-        // styles
-        tableMinWidth={900}
-        zebra
-        // Resizable columns
-        resizable
-        persistKey="dt.poisons.v1"
-        onColumnResizeEnd={(widths) => {
-          // optional: log or sync widths
-          console.log('Poison widths(px):', widths);
-        }}      />
-    )}
-  </>
-);
+      {/* Form panel (Create & Edit) */}
+      {showForm && (
+        <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}>
+          <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Poison' : 'New Poison'}</h3>
 
-  /** -------- Local helpers to safely handle "level" as text input -------- */
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <LabeledInput label="ID" value={form.id} onChange={(v) => setForm((s) => ({ ...s, id: v }))} disabled={!!editingId} error={errors.id} />
+            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm((s) => ({ ...s, name: v }))} error={errors.name} />
+            <LabeledInput label="Type" value={form.type} onChange={(v) => setForm((s) => ({ ...s, type: v }))} error={errors.type} />
 
-  function getLevelInputValue(p: Poison): string {
-    // During editing, we store the user's current string in a symbol on the object (non-enumerable),
-    // OR simply derive from the numeric value and let the input overwrite via setLevelFromInput.
-    // Simpler approach: attach a hidden property on the form state for the raw string.
-    const anyP = p as Poison & { __levelRaw?: string };
-    if (anyP.__levelRaw !== undefined) return anyP.__levelRaw;
-    return String(p.level ?? '');
-  }
+            <LabeledInput label="Level" type="number" value={String(form.level).trim()}
+              onChange={(v) => setForm((s) => {
+                // 1) Remove everything except digits
+                let raw = v.replace(/[^\d]+/g, '');
+                return { ...s, level: Number(raw) };
+              })}
+              inputProps={{ inputMode: 'numeric', pattern: '\\d*', }} // mobile numeric keypad
+              error={errors.level}
+            />
 
-  function setLevelFromInput(v: string) {
-    setForm((s) => {
-      const next: Poison & { __levelRaw?: string } = { ...s };
-      next.__levelRaw = v;
-      // Only set numeric level when it parses; otherwise keep last numeric level so table stays valid
-      const maybe = Number(v);
-      if (!Number.isNaN(maybe)) next.level = maybe;
-      return next;
-    });
-  }
+            <LabeledInput label="Level Variance" value={form.levelVariance} onChange={(v) => setForm((s) => ({ ...s, levelVariance: v }))} error={errors.variance} />
+          </div>
+
+          {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <button onClick={saveForm} disabled={hasErrors}>Save</button>
+            <button onClick={cancelForm} type="button">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Shared DataTable */}
+      {loading ? (
+        <div>Loading…</div>
+      ) : error ? (
+        <div style={{ color: 'crimson' }}>Error: {error}</div>
+      ) : (
+        <DataTable<Poison>
+          rows={rows}
+          columns={columns}
+          rowId={(r) => r.id}
+          initialSort={{ colId: 'name', dir: 'asc' }}
+          // search
+          searchQuery={query}
+          globalFilter={globalFilter}
+          // pagination (client)
+          mode="client"
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[5, 10, 20, 50]}
+          // styles
+          tableMinWidth={0} // Allow table to shrink below container width (enables horizontal scroll when needed)
+          zebra
+          // Resizable columns
+          resizable
+          persistKey="dt.poisons.v1"
+          ariaLabel='Poisons data'
+        />
+      )}
+      {!rows.length && (
+        <div style={{ marginTop: 8, color: 'var(--muted)' }}>
+          No posons found.
+        </div>
+      )}
+    </>
+  );
 }
 
-const tdStyle: React.CSSProperties = { borderBottom: '1px solid #f0f0f0', padding: '8px' };
-const emptyCell: React.CSSProperties = { padding: 12, textAlign: 'center', color: '#666' };
-
 function emptyPoison(): Poison {
-  return { id: '', name: '', type: '', level: 0, levelVariance: '' };
+  return { id: 'POISON_', name: '', type: '', level: 0, levelVariance: '' };
 }

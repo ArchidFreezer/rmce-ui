@@ -13,9 +13,6 @@ type ArmourNumberKey =
   | 'missileAttackPenalty'
   | 'quicknessPenalty';
 
-type ArmourBooleanKey = 'animalOnly' | 'includesGreaves';
-type ArmourStringKey = Exclude<keyof Armourtype, ArmourNumberKey | ArmourBooleanKey>;
-
 const NUM_KEYS: ArmourNumberKey[] = [
   'minManoeuvreMod',
   'maxManoeuvreMod',
@@ -204,7 +201,7 @@ export default function ArmourtypesView() {
       { id: 'id', header: 'id', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
       { id: 'name', header: 'name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
       { id: 'type', header: 'Type', accessor: r => r.type },
-      { id: 'description', header: 'Description', accessor: r => r.description },
+      // { id: 'description', header: 'Description', accessor: r => r.description },
       { id: 'minManoeuvreMod', header: 'Min Manoeuvre Mod', accessor: (r) => r.minManoeuvreMod, sortType: 'number', align: 'right' },
       { id: 'maxManoeuvreMod', header: 'Max Manoeuvre Mod', accessor: (r) => r.maxManoeuvreMod, sortType: 'number', align: 'right' },
       { id: 'missileAttackPenalty', header: 'Missile Attack Penalty', accessor: (r) => r.missileAttackPenalty, sortType: 'number', align: 'right' },
@@ -268,9 +265,7 @@ export default function ArmourtypesView() {
             <LabeledInput label="Type" value={form.type} onChange={(v) => setForm(s => ({ ...s, type: v }))} error={errors.type} />
             <LabeledInput label="Description" value={form.description} onChange={(v) => setForm(s => ({ ...s, description: v }))} />
 
-            <LabeledInput
-              label="Min Manoeuvre Mod"
-              value={String(form.minManoeuvreMod).trim()}
+            <LabeledInput label="Min Manoeuvre Mod" value={String(form.minManoeuvreMod).trim()}
               onChange={(v) => setForm((s) => {
                 // Sanitize: keep at most one leading '-', strip all other non-digits
                 // 1) Remove everything except digits and '-'
@@ -284,10 +279,7 @@ export default function ArmourtypesView() {
                 //    validation will show an error until at least one digit is added.
                 return { ...s, minManoeuvreMod: Number(raw) };
               })}
-              inputProps={{
-                inputMode: 'numeric', // mobile numeric keypad
-                pattern: '\\d*',
-              }}
+              inputProps={{ inputMode: 'numeric', pattern: '\\d*', }} // mobile numeric keypad
               error={errors.numeric} />
             <LabeledInput
               label="Max Manoeuvre Mod"
@@ -368,29 +360,35 @@ export default function ArmourtypesView() {
       )}
 
       {/* Shared DataTable */}
-      <DataTable<Armourtype>
-        rows={rows}
-        columns={columns}
-        rowId={(r) => r.id}
-        initialSort={{ colId: 'name', dir: 'asc' }}
-        // search
-        searchQuery={query}
-        globalFilter={globalFilter}
-        // pagination (client)
-        mode="client"
-        page={page}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-        pageSizeOptions={[5, 10, 20, 50]}
-        // styles
-        tableMinWidth={0} // Allow table to shrink below container width (enables horizontal scroll when needed)
-        zebra
-        // Resizable columns
-        resizable
-        persistKey="dt.armourtypes.v1"
-        ariaLabel='ArmourTypes data'
-      />
+      {loading ? (
+        <div>Loading…</div>
+      ) : error ? (
+        <div style={{ color: 'crimson' }}>Error: {error}</div>
+      ) : (
+        <DataTable<Armourtype>
+          rows={rows}
+          columns={columns}
+          rowId={(r) => r.id}
+          initialSort={{ colId: 'name', dir: 'asc' }}
+          // search
+          searchQuery={query}
+          globalFilter={globalFilter}
+          // pagination (client)
+          mode="client"
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[5, 10, 20, 50]}
+          // styles
+          tableMinWidth={0} // Allow table to shrink below container width (enables horizontal scroll when needed)
+          zebra
+          // Resizable columns
+          resizable
+          persistKey="dt.armourtypes.v1"
+          ariaLabel='ArmourTypes data'
+        />
+      )}
       {!rows.length && (
         <div style={{ marginTop: 8, color: 'var(--muted)' }}>
           No armour types found.
