@@ -338,21 +338,22 @@ export default function PoisontypesView() {
       );
     };
 
-    const renderSymptoms = (r: PoisonType) => {
-      const map = new Map(r.severitySymptoms.map(o => [o.severity, o]));
-      return (
-        <div style={{ display: 'grid', gap: 4 }}>
-          {SEVERITIES.map((s) => {
-            const o = map.get(s);
-            return (
-              <div key={s}>
-                <strong>{s}</strong>: {o ? o.symptoms : '—'}
-              </div>
-            );
-          })}
-        </div>
-      );
-    };
+    // THis would be used if we were showing the symptoms in the table.
+    // const renderSymptoms = (r: PoisonType) => {
+    //   const map = new Map(r.severitySymptoms.map(o => [o.severity, o]));
+    //   return (
+    //     <div style={{ display: 'grid', gap: 4 }}>
+    //       {SEVERITIES.map((s) => {
+    //         const o = map.get(s);
+    //         return (
+    //           <div key={s}>
+    //             <strong>{s}</strong>: {o ? o.symptoms : '—'}
+    //           </div>
+    //         );
+    //       })}
+    //     </div>
+    //   );
+    // };
 
     return [
       { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 240 },
@@ -376,6 +377,7 @@ export default function PoisontypesView() {
         minWidth: 360,
         render: renderOnsets,
       },
+      // Symptoms can be very long, so we do not show them in the table and the full text in the form
       //   {
       //     id: 'symptoms',
       //     header: 'Symptoms',
