@@ -87,14 +87,6 @@ export default function PoisontypesView() {
   const [viewing, setViewing] = useState(false);                         // read-only toggle
 
   const [form, setForm] = useState<FormState>(emptyVM());
-  const [errors, setErrors] = useState<{
-    id?: string;
-    type?: string;
-    areasAffected?: string;
-    effectOnsets?: Record<Severity, string | undefined>;
-    symptoms?: Record<Severity, string | undefined>;
-  }>({});
-
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -117,6 +109,20 @@ export default function PoisontypesView() {
   }, []);
 
   // ----- Validation -----
+  const [errors, setErrors] = useState<{
+    id?: string;
+    type?: string;
+    areasAffected?: string;
+    effectOnsets?: Record<Severity, string | undefined>;
+    symptoms?: Record<Severity, string | undefined>;
+  }>({});
+  const hasErrors = Boolean(
+    errors.id ||
+    errors.type ||
+    errors.areasAffected ||
+    (errors.effectOnsets && SEVERITIES.some((s) => errors.effectOnsets?.[s])) ||
+    (errors.symptoms && SEVERITIES.some((s) => errors.symptoms?.[s]))
+  );
   const computeErrors = (draft = form) => {
     const e: typeof errors = {};
     if (!draft.id.trim()) e.id = 'ID is required';
@@ -163,13 +169,6 @@ export default function PoisontypesView() {
     return e;
   };
 
-  const hasErrors = Boolean(
-    errors.id ||
-    errors.type ||
-    errors.areasAffected ||
-    (errors.effectOnsets && SEVERITIES.some((s) => errors.effectOnsets?.[s])) ||
-    (errors.symptoms && SEVERITIES.some((s) => errors.symptoms?.[s]))
-  );
 
   useEffect(() => {
     if (!showForm) return;
@@ -336,11 +335,11 @@ export default function PoisontypesView() {
     };
 
     return [
-      { id: 'id', header: 'id', accessor: (r) => r.id, sortType: 'string', minWidth: 240 },
-      { id: 'type', header: 'type', accessor: (r) => r.type, sortType: 'string', minWidth: 160 },
+      { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 240 },
+      { id: 'type', header: 'Type', accessor: (r) => r.type, sortType: 'string', minWidth: 160 },
       {
         id: 'areasAffected',
-        header: 'areasAffected',
+        header: 'Areas Affected',
         accessor: (r) => r.areasAffected,
         sortType: 'string',
         minWidth: 280,
@@ -351,23 +350,23 @@ export default function PoisontypesView() {
       },
       {
         id: 'effectOnsets',
-        header: 'effectOnsets',
+        header: 'Effect Onsets',
         accessor: (r) => r.severityEffectOnsets.length,
         sortType: 'number',
         minWidth: 360,
         render: renderOnsets,
       },
-    //   {
-    //     id: 'symptoms',
-    //     header: 'symptoms',
-    //     accessor: (r) => r.severitySymptoms.length,
-    //     sortType: 'number',
-    //     minWidth: 420,
-    //     render: renderSymptoms,
-    //   },
+      //   {
+      //     id: 'symptoms',
+      //     header: 'Symptoms',
+      //     accessor: (r) => r.severitySymptoms.length,
+      //     sortType: 'number',
+      //     minWidth: 420,
+      //     render: renderSymptoms,
+      //   },
       {
         id: 'actions',
-        header: 'actions',
+        header: 'Actions',
         sortable: false,
         width: 220,
         render: (row) => (
@@ -379,7 +378,7 @@ export default function PoisontypesView() {
         ),
       },
     ];
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows]);
 
   const globalFilter = (r: PoisonType, q: string) => {
