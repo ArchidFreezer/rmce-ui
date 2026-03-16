@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable'
 import { fetchPoisons, upsertPoison, deletePoison } from '../../api/poisons';
-import { fetchPoisontypes } from '../../api/poisontype';
+import { fetchPoisontypes } from '../../api/poisontypes';
 import type { Poison, PoisonType } from '../../types';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';

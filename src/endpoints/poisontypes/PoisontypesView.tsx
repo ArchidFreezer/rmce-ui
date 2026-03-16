@@ -5,7 +5,7 @@ import { LabeledInput } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 
-import { fetchPoisontypes, upsertPoisontype, deletePoisontype } from '../../api/poisontype';
+import { fetchPoisontypes, upsertPoisontype, deletePoisontype } from '../../api/poisontypes';
 import type { PoisonType, Severity } from '../../types';
 import { SEVERITIES } from '../../types';
 
