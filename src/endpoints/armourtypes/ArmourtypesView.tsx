@@ -70,7 +70,8 @@ export default function ArmourtypesView() {
     if (!draft.name.trim()) next.name = 'Name is required';
     // Type
     if (!draft.type.trim()) next.type = 'Type is required';
-
+    else if (!isEditing && rows.some(r => r.type === draft.type.trim())) next.type = `Type "${draft.type.trim()}" already exists`;
+    if (!/^AT [1-2]?[0-9]$/.test(draft.type.trim())) next.type = 'Type must follow the pattern "AT [1-2]?[0-9]"';
     // Numeric values
     for (const k of NUM_KEYS) {
       const raw = (draft[k] ?? '').toString().trim();
@@ -115,7 +116,7 @@ export default function ArmourtypesView() {
       id: String(form.id).trim(),
       name: String(form.name).trim(),
       type: String(form.type).trim(),
-      description: String(form.description ?? ''),
+      description: String(form.description).trim(),
       minManoeuvreMod: Number(form.minManoeuvreMod),
       maxManoeuvreMod: Number(form.maxManoeuvreMod),
       missileAttackPenalty: Number(form.missileAttackPenalty),
@@ -245,19 +246,19 @@ export default function ArmourtypesView() {
 
       {/* New + Search */}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-        <button onClick={startNew}>New Armourtype</button>
+        <button onClick={startNew}>New Armour type</button>
         <DataTableSearchInput
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search armourtypes…"
-          aria-label="Search armourtypes"
+          placeholder="Search armour types…"
+          aria-label="Search armour types"
         />
       </div>
 
       {/* Form panel (Create & Edit) */}
       {showForm && (
         <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}>
-          <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Armourtype' : 'New Armourtype'}</h3>
+          <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Armour Type' : 'New Armour Type'}</h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <LabeledInput label="ID" value={form.id} onChange={(v) => setForm(s => ({ ...s, id: v }))} disabled={!!editingId} error={errors.id} />
