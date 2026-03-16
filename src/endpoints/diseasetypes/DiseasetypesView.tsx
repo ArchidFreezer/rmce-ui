@@ -4,7 +4,7 @@ import { LabeledInput } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 
-import { fetchDiseasetypes, upsertDiseasetype, deleteDiseasetype } from '../../api/diseasetype';
+import { fetchDiseasetypes, upsertDiseasetype, deleteDiseasetype } from '../../api/diseasetypes';
 import type { DiseaseType, Severity } from '../../types';
 import { SEVERITIES } from '../../types';
 

@@ -132,6 +132,16 @@ export interface ClimatesPayload {
  * severity levels and their associated symptoms, which is a key part of the disease data structure.
  */
 
+export interface Disease {
+  id: string;
+  name: string;
+  type: string;
+  level: number;
+  levelVariance: string;
+}
+export interface DiseasesPayload {
+  diseases: Disease[];
+}
 // --- Disease Types ---
 export interface DiseaseTypeSymptom {
   severity: Severity;
