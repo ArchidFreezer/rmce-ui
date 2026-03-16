@@ -54,7 +54,7 @@ export default function PoisonsView() {
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
     if (!draft.id.trim().toUpperCase().startsWith('POISON_')) next.id = 'ID must start with "POISON_"';
     if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
-    if (draft.id.trim().length <= 11) next.id = 'ID must contain additional characters after "POISON_"';
+    if (draft.id.trim().length <= 7) next.id = 'ID must contain additional characters after "POISON_"';
     // Name
     if (!draft.name.trim()) next.name = 'Name is required';
     // Type
@@ -123,13 +123,13 @@ export default function PoisonsView() {
 
     const nextErrors = computeErrors(payload, Boolean(editingId));
     setErrors(nextErrors);
-    const topError = nextErrors.id || nextErrors.name || nextErrors.type || '';
+    const topError = nextErrors.id || nextErrors.name || nextErrors.type || nextErrors.level || nextErrors.variance || '';
     if (topError) { setFormErr(topError); return; }
 
     const isEditing = Boolean(editingId);
     try {
       const opts = editingId
-        ? { method: 'POST' as const, useResourceIdPath: false }
+        ? { method: 'PUT' as const, useResourceIdPath: true }
         : { method: 'POST' as const, useResourceIdPath: false };
 
       await upsertPoison(payload, opts);

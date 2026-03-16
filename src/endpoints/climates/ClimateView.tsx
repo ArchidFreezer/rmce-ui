@@ -126,7 +126,7 @@ export default function ClimateView() {
     try {
       // Default edit → PUT /rmce/objects/climate/{id}; create → POST /rmce/objects/climate/
       const opts = isEditing
-        ? { method: 'POST' as const, useResourceIdPath: false } // ← use POST with body ID for upsert (simpler, and PUT with ID path can cause issues if ID is changed in future)
+        ? { method: 'PUT' as const, useResourceIdPath: true }
         : { method: 'POST' as const, useResourceIdPath: false };
 
       await upsertClimate(payload, opts);

@@ -130,7 +130,7 @@ export default function BooksView() {
     try {
       // default POST to /rmce/objects/book/ with a single JSON object
       const opts = editingId
-        ? { method: 'POST' as const, useResourceIdPath: false }
+        ? { method: 'PUT' as const, useResourceIdPath: true }
         : { method: 'POST' as const, useResourceIdPath: false };
 
       await upsertBook(payload, opts);
