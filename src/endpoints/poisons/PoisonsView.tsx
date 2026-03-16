@@ -20,6 +20,7 @@ export default function PoisonsView() {
   // form state (Create & Edit)
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [viewing, setViewing] = useState(false);
   const [form, setForm] = useState<Poison>(emptyPoison());
   const [formErr, setFormErr] = useState(''); // legacy single message (kept for top-level)
   const toast = useToast();
@@ -63,7 +64,7 @@ export default function PoisonsView() {
     if (!isIntegerString(raw)) next.level = `Level must be an integer`;
     // Variance must be a single uppercase character
     if (!draft.levelVariance.trim()) next.variance = `Level Variance is required`;
-    if (!/^[A-Z]$/.test(draft.id.trim())) next.id = 'Level Variance must be a single uppercase character';
+    if (!/^[A-Z]$/.test(draft.levelVariance.trim())) next.variance = 'Level Variance must be a single uppercase character';
 
     return next;
   };
@@ -76,6 +77,7 @@ export default function PoisonsView() {
 
   // ----- Handlers (Create / Edit / Delete) -----
   const startNew = () => {
+    setViewing(false);
     setEditingId(null);
     setForm(emptyPoison());
     setErrors({});
@@ -84,6 +86,7 @@ export default function PoisonsView() {
   };
 
   const startEdit = (row: Poison) => {
+    setViewing(false);
     setEditingId(row.id);
     setForm({ ...row });
     setErrors({});
@@ -91,7 +94,17 @@ export default function PoisonsView() {
     setShowForm(true);
   };
 
+  const startView = (row: Poison) => {
+    setViewing(true);
+    setEditingId(row.id);       // we can reuse editingId to preload the item, but we won't allow saving
+    setForm({ ...row });
+    setErrors({});              // no need to compute field errors for read-only view, but we can keep formErr for any potential top-level messages
+    setFormErr('');
+    setShowForm(true);
+  }
+
   const cancelForm = () => {
+    setViewing(false);
     setShowForm(false);
     setEditingId(null);
     setErrors({});
@@ -194,6 +207,7 @@ export default function PoisonsView() {
         width: 160,
         render: (row) => (
           <>
+            <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
             <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
             <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
           </>
@@ -235,11 +249,11 @@ export default function PoisonsView() {
           <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Poison' : 'New Poison'}</h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput label="ID" value={form.id} onChange={(v) => setForm((s) => ({ ...s, id: v }))} disabled={!!editingId} error={errors.id} />
-            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm((s) => ({ ...s, name: v }))} error={errors.name} />
-            <LabeledInput label="Type" value={form.type} onChange={(v) => setForm((s) => ({ ...s, type: v }))} error={errors.type} />
+            <LabeledInput label="ID" value={form.id} onChange={(v) => setForm((s) => ({ ...s, id: v }))} disabled={!!editingId || viewing} error={errors.id} />
+            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm((s) => ({ ...s, name: v }))} error={errors.name} disabled={viewing} />
+            <LabeledInput label="Type" value={form.type} onChange={(v) => setForm((s) => ({ ...s, type: v }))} error={errors.type} disabled={viewing} />
 
-            <LabeledInput label="Level" type="number" value={String(form.level).trim()}
+            <LabeledInput label="Level" type="number" value={String(form.level).trim()} disabled={viewing}
               onChange={(v) => setForm((s) => {
                 // 1) Remove everything except digits
                 let raw = v.replace(/[^\d]+/g, '');
@@ -249,13 +263,13 @@ export default function PoisonsView() {
               error={errors.level}
             />
 
-            <LabeledInput label="Level Variance" value={form.levelVariance} onChange={(v) => setForm((s) => ({ ...s, levelVariance: v }))} error={errors.variance} />
+            <LabeledInput label="Level Variance" value={form.levelVariance} onChange={(v) => setForm((s) => ({ ...s, levelVariance: v }))} error={errors.variance} disabled={viewing} />
           </div>
 
           {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button onClick={saveForm} disabled={hasErrors}>Save</button>
-            <button onClick={cancelForm} type="button">Cancel</button>
+            {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
+            <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
           </div>
         </div>
       )}

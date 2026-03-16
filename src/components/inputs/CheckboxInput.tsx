@@ -4,6 +4,7 @@ export interface CheckboxInputProps {
   label: string;
   checked: boolean;
   onChange: (val: boolean) => void;
+  disabled?: boolean;
   id?: string;
   /**
    * EXACT OPTIONAL PROP (Fix A):
@@ -19,6 +20,7 @@ export function CheckboxInput({
   label,
   checked,
   onChange,
+  disabled,
   id,
   error,
   helperText,
@@ -34,6 +36,7 @@ export function CheckboxInput({
     <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
       <input type="checkbox"
         id={inputId}
+        disabled={disabled}
         aria-describedby={describedBy}
         aria-invalid={!!error}
         checked={checked} onChange={(e) => onChange(e.target.checked)}

@@ -21,6 +21,7 @@ export default function ClimateView() {
   // form state (Create & Edit)
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [viewing, setViewing] = useState(false);
   const [form, setForm] = useState<Climate>(emptyClimate());
   const [formErr, setFormErr] = useState(''); // legacy single message (kept for top-level)
   const toast = useToast();
@@ -74,6 +75,7 @@ export default function ClimateView() {
 
   // ----- Handlers (Create / Edit / Delete) -----
   const startNew = () => {
+    setViewing(false);
     setEditingId(null);
     setForm(emptyClimate());
     setErrors({});
@@ -82,6 +84,7 @@ export default function ClimateView() {
   };
 
   const startEdit = (row: Climate) => {
+    setViewing(false);
     setEditingId(row.id);
     setForm({ ...row });
     setErrors({});
@@ -89,7 +92,17 @@ export default function ClimateView() {
     setShowForm(true);
   };
 
+  const startView = (row: Climate) => {
+    setViewing(true);
+    setEditingId(row.id);       // we can reuse editingId to preload the item, but we won't allow saving
+    setForm({ ...row });
+    setErrors({});              // no need to compute field errors for read-only view, but we can keep formErr for any potential top-level messages
+    setFormErr('');
+    setShowForm(true);
+  }
+
   const cancelForm = () => {
+    setViewing(false);
     setShowForm(false);
     setEditingId(null);
     setErrors({});
@@ -233,6 +246,7 @@ export default function ClimateView() {
         width: 160,
         render: (row) => (
           <>
+            <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
             <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
             <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
           </>
@@ -282,13 +296,14 @@ export default function ClimateView() {
               label="ID"
               value={form.id}
               onChange={(v) => setForm(s => ({ ...s, id: v }))}
-              disabled={!!editingId}
+              disabled={!!editingId || viewing}
               error={errors.id}
             />
             <LabeledInput
               label="Name"
               value={form.name}
               onChange={(v) => setForm(s => ({ ...s, name: v }))}
+              disabled={viewing}
               error={errors.name}
             />
 
@@ -297,6 +312,7 @@ export default function ClimateView() {
               value={form.temperature}
               onChange={(v) => setForm(s => ({ ...s, temperature: v as Temperature }))}
               options={TEMPERATURES}
+              disabled={viewing}
               error={errors.temperature}
             />
             <div style={{ alignSelf: 'end', color: 'var(--muted)', fontSize: 12 }}>
@@ -312,15 +328,16 @@ export default function ClimateView() {
               error={errors.precipitations}
               direction="row"
               columns={3}
-              showSelectAll
+              showSelectAll={!viewing}  // Hide select/clear all when viewing, as checkboxes are disabled and it's not relevant
+              disabled={viewing}
             />
           </div>
 
           {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
 
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button onClick={saveForm} disabled={hasErrors}>Save</button>
-            <button onClick={cancelForm} type="button">Cancel</button>
+            {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
+            <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
           </div>
         </div>
       )}

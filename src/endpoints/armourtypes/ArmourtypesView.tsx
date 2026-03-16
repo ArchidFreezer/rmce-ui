@@ -32,6 +32,7 @@ export default function ArmourtypesView() {
   // form state (Create & Edit)
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [viewing, setViewing] = useState(false);
   const [form, setForm] = useState<Armourtype>(emptyArmourtype());
   const [formErr, setFormErr] = useState('');// legacy single message (kept for top-level)
   const toast = useToast();
@@ -88,6 +89,7 @@ export default function ArmourtypesView() {
 
   // ----- Handlers (Create / Edit / Delete) -----
   const startNew = () => {
+    setViewing(false);
     setEditingId(null);
     setForm(emptyArmourtype());
     setErrors({});
@@ -96,6 +98,7 @@ export default function ArmourtypesView() {
   };
 
   const startEdit = (row: Armourtype) => {
+    setViewing(false);
     setEditingId(row.id);
     setForm({ ...row });
     setFormErr('');
@@ -103,7 +106,16 @@ export default function ArmourtypesView() {
     setShowForm(true);
   };
 
+  const startView = (row: Armourtype) => {
+    setViewing(true);
+    setEditingId(row.id);       // we can reuse editingId to preload the item, but we won't allow saving
+    setForm({ ...row });
+    setErrors({});              // no need to compute field errors for read-only view, but we can keep formErr for any potential top-level messages
+    setFormErr('');
+    setShowForm(true);
+  }
   const cancelForm = () => {
+    setViewing(false);
     setShowForm(false);
     setEditingId(null);
     setErrors({});
@@ -216,6 +228,7 @@ export default function ArmourtypesView() {
         width: 160,
         render: (row) => (
           <>
+            <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
             <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
             <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
           </>
@@ -261,12 +274,12 @@ export default function ArmourtypesView() {
           <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Armour Type' : 'New Armour Type'}</h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput label="ID" value={form.id} onChange={(v) => setForm(s => ({ ...s, id: v }))} disabled={!!editingId} error={errors.id} />
-            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm(s => ({ ...s, name: v }))} error={errors.name} />
-            <LabeledInput label="Type" value={form.type} onChange={(v) => setForm(s => ({ ...s, type: v }))} error={errors.type} />
-            <LabeledInput label="Description" value={form.description} onChange={(v) => setForm(s => ({ ...s, description: v }))} />
+            <LabeledInput label="ID" value={form.id} onChange={(v) => setForm(s => ({ ...s, id: v }))} disabled={!!editingId || viewing} error={errors.id} />
+            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm(s => ({ ...s, name: v }))} disabled={viewing} error={errors.name} />
+            <LabeledInput label="Type" value={form.type} onChange={(v) => setForm(s => ({ ...s, type: v }))} disabled={viewing} error={errors.type} />
+            <LabeledInput label="Description" value={form.description} onChange={(v) => setForm(s => ({ ...s, description: v }))} disabled={viewing} />
 
-            <LabeledInput label="Min Manoeuvre Mod" value={String(form.minManoeuvreMod).trim()}
+            <LabeledInput label="Min Manoeuvre Mod" value={String(form.minManoeuvreMod).trim()} disabled={viewing}
               onChange={(v) => setForm((s) => {
                 // Sanitize: keep at most one leading '-', strip all other non-digits
                 // 1) Remove everything except digits and '-'
@@ -282,9 +295,7 @@ export default function ArmourtypesView() {
               })}
               inputProps={{ inputMode: 'numeric', pattern: '\\d*', }} // mobile numeric keypad
               error={errors.numeric} />
-            <LabeledInput
-              label="Max Manoeuvre Mod"
-              value={String(form.maxManoeuvreMod)}
+            <LabeledInput label="Max Manoeuvre Mod" value={String(form.maxManoeuvreMod)} disabled={viewing}
               onChange={(v) => setForm((s) => {
                 // Sanitize: keep at most one leading '-', strip all other non-digits
                 // 1) Remove everything except digits and '-'
@@ -301,9 +312,7 @@ export default function ArmourtypesView() {
               })}
               error={errors.numeric && errors.numeric.includes('maxManoeuvreMod') ? errors.numeric : undefined}
             />
-            <LabeledInput
-              label="Missile Attack Penalty"
-              value={String(form.missileAttackPenalty)}
+            <LabeledInput label="Missile Attack Penalty" value={String(form.missileAttackPenalty)} disabled={viewing}
               onChange={(v) => setForm((s) => {
                 // Sanitize: keep at most one leading '-', strip all other non-digits
                 // 1) Remove everything except digits and '-'
@@ -320,9 +329,7 @@ export default function ArmourtypesView() {
               })}
               error={errors.numeric && errors.numeric.includes('missileAttackPenalty') ? errors.numeric : undefined}
             />
-            <LabeledInput
-              label="Quickness Penalty"
-              value={String(form.quicknessPenalty)}
+            <LabeledInput label="Quickness Penalty" value={String(form.quicknessPenalty)} disabled={viewing}
               onChange={(v) => setForm((s) => {
                 // Sanitize: keep at most one leading '-', strip all other non-digits
                 // 1) Remove everything except digits and '-'
@@ -340,22 +347,14 @@ export default function ArmourtypesView() {
               error={errors.numeric && errors.numeric.includes('quicknessPenalty') ? errors.numeric : undefined}
             />
 
-            <CheckboxInput
-              label="Animal Only"
-              checked={form.animalOnly}
-              onChange={(v) => setForm(s => ({ ...s, animalOnly: v }))}
-            />
-            <CheckboxInput
-              label="Includes Greaves"
-              checked={form.includesGreaves}
-              onChange={(v) => setForm(s => ({ ...s, includesGreaves: v }))}
-            />
+            <CheckboxInput label="Animal Only" checked={form.animalOnly} onChange={(v) => setForm(s => ({ ...s, animalOnly: v }))} disabled={viewing} />
+            <CheckboxInput label="Includes Greaves" checked={form.includesGreaves} onChange={(v) => setForm(s => ({ ...s, includesGreaves: v }))} disabled={viewing} />
           </div>
 
           {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button onClick={saveForm} disabled={hasErrors}>Save</button>
-            <button onClick={cancelForm} type="button">Cancel</button>
+            {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
+            <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
           </div>
         </div>
       )}
