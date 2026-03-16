@@ -1,21 +1,26 @@
 import { useId, type SelectHTMLAttributes } from 'react';
 
+export interface LabeledSelectOption {
+  label: string;
+  value: string;
+  disabled?: boolean | undefined;   // Fix A-compatible
+}
+
 export interface LabeledSelectProps {
   label: string;
   value: string;
   onChange: (val: string) => void;
-  options: readonly string[];
-  disabled?: boolean | undefined;
+
+  /** Accept either simple string[] or structured options with labels */
+  options: readonly string[] | readonly LabeledSelectOption[];
+
+  disabled?: boolean | undefined;   // Fix A
   id?: string;
   required?: boolean;
   selectProps?: Omit<SelectHTMLAttributes<HTMLSelectElement>, 'value' | 'onChange' | 'disabled' | 'id' | 'required'>;
-  /**
-   * EXACT OPTIONAL PROP (Fix A)
-   */
-  error?: string | undefined;
-  /** A placeholder-like first option with empty value */
-  placeholderOption?: string | undefined;
-  helperText?: string | undefined;
+  error?: string | undefined;       // Fix A
+  placeholderOption?: string;
+  helperText?: string;
 }
 
 export function LabeledSelect({
@@ -35,8 +40,15 @@ export function LabeledSelect({
   const selectId = id ?? `ls-${autoId}`;
   const errorId = error ? `${selectId}-error` : undefined;
   const helperId = helperText ? `${selectId}-help` : undefined;
-
   const describedBy = [errorId, helperId].filter(Boolean).join(' ') || undefined;
+
+  // Normalize options → array of { label, value, disabled? }
+  const norm =
+    (options as readonly string[]).map
+      ? (options as readonly any[]).map((opt) =>
+          typeof opt === 'string' ? { label: opt, value: opt } : opt
+        )
+      : [];
 
   return (
     <label htmlFor={selectId} style={{ display: 'grid', gap: 6, fontSize: 14 }}>
@@ -59,9 +71,9 @@ export function LabeledSelect({
         {...selectProps}
       >
         <option value="">{placeholderOption}</option>
-        {options.map((opt) => (
-          <option key={opt} value={opt}>
-            {opt}
+        {norm.map((opt) => (
+          <option key={opt.value} value={opt.value} disabled={!!opt.disabled}>
+            {opt.label}
           </option>
         ))}
       </select>

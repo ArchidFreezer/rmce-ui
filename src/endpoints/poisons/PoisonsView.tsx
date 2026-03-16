@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable'
 import { fetchPoisons, upsertPoison, deletePoison } from '../../api/poisons';
-import type { Poison } from '../../types';
+import { fetchPoisontypes } from '../../api/poisontype';
+import type { Poison, PoisonType } from '../../types';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
-import { LabeledInput } from '../../components/inputs';
+import { LabeledInput, LabeledSelect } from '../../components/inputs';
 import { isIntegerString } from '../../components/inputs/validators';
 
 export default function PoisonsView() {
@@ -23,10 +24,15 @@ export default function PoisonsView() {
   const [viewing, setViewing] = useState(false);
   const [form, setForm] = useState<Poison>(emptyPoison());
   const [formErr, setFormErr] = useState(''); // legacy single message (kept for top-level)
+
+  // Form state for loading the select options for poison types (if needed in the future)
+  const [poisonTypes, setPoisonTypes] = useState<PoisonType[]>([]);
+  const [typesLoading, setTypesLoading] = useState(true);
+
   const toast = useToast();
   const confirm = useConfirm();
 
-  // ----- Load -----
+  // ----- Load Poisons -----
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -44,6 +50,25 @@ export default function PoisonsView() {
     return () => { mounted = false; };
   }, []);
 
+  // ----- Load Poison Types -----
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const pts = await fetchPoisontypes();
+        if (!mounted) return;
+        setPoisonTypes(pts);
+      } catch (e) {
+        // If this fails, we’ll still render the form, but save-time validation will catch invalid types.
+        console.error('Failed to load PoisonTypes', e);
+      } finally {
+        if (mounted) setTypesLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+  const poisonTypeIds = useMemo(() => new Set(poisonTypes.map(pt => pt.id)), [poisonTypes]);
+
   // ----- Inline validation helpers -----
   const [errors, setErrors] = useState<{ id?: string; name?: string; type?: string; level?: string; variance?: string }>({});
   const hasErrors = Boolean(errors.id || errors.name || errors.type || errors.level || errors.variance);
@@ -59,6 +84,7 @@ export default function PoisonsView() {
     if (!draft.name.trim()) next.name = 'Name is required';
     // Type
     if (!draft.type.trim()) next.type = 'Type is required';
+    else if (!poisonTypeIds.has(draft.type.trim())) next.type = `Type "${draft.type.trim()}" is not a valid PoisonType id`;
     // Level (must be a number, but allow empty string for controlled input)
     const raw = (draft.level ?? '').toString().trim();
     if (!isIntegerString(raw)) next.level = `Level must be an integer`;
@@ -205,12 +231,28 @@ export default function PoisonsView() {
     }
   };
 
+  // Display the human-friendly PoisonType.type instead of the raw Poison.type id in the table, using a memoized map for efficient lookup
+  const poisonTypeLabelById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const pt of poisonTypes) m.set(pt.id, pt.type);
+    return m;
+  }, [poisonTypes]);
+
   // ----- Columns (Edit + Delete) -----
   const columns: ColumnDef<Poison>[] = useMemo(() => {
     return [
       { id: 'id', header: 'id', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
       { id: 'name', header: 'name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
-      { id: 'type', header: 'Type', accessor: r => r.type, sortType: 'string' },
+      {
+        id: 'type',
+        header: 'type',
+        accessor: (r) => r.type,
+        sortType: 'string',
+        render: (r) => {
+          const label = poisonTypeLabelById.get(r.type);
+          return label ? `${label}` : r.type;
+        },
+      },
       { id: 'level', header: 'Level', accessor: r => r.level, sortType: 'number', align: 'center' },
       { id: 'levelVariance', header: 'Level Variance', accessor: r => r.levelVariance, sortType: 'string', align: 'center' },
       {
@@ -234,9 +276,19 @@ export default function PoisonsView() {
   // ----- Search -----
   const globalFilter = (p: Poison, q: string) => {
     const s = q.toLowerCase();
-    return [p.id, p.name, p.type, p.level, p.levelVariance]
+    return [p.id, p.name, poisonTypeLabelById.get(p.type) ?? p.type, p.level, p.levelVariance]
       .some(v => String(v ?? '').toLowerCase().includes(s));
   };
+
+  // Prepare select options for Poison Types (for the form)
+  const poisonTypeOptions = useMemo(
+    () =>
+      poisonTypes.map((pt) => ({
+        value: pt.id,                         // what we store in Poison.type
+        label: `${pt.type}`,                  // what users see
+      })),
+    [poisonTypes]
+  );
 
   // ----- Render -----
   if (loading) return <div>Loading…</div>;
@@ -265,7 +317,16 @@ export default function PoisonsView() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <LabeledInput label="ID" value={form.id} onChange={(v) => setForm((s) => ({ ...s, id: v }))} disabled={!!editingId || viewing} error={errors.id} />
             <LabeledInput label="Name" value={form.name} onChange={(v) => setForm((s) => ({ ...s, name: v }))} error={errors.name} disabled={viewing} />
-            <LabeledInput label="Type" value={form.type} onChange={(v) => setForm((s) => ({ ...s, type: v }))} error={errors.type} disabled={viewing} />
+
+            <LabeledSelect
+              label="Type"
+              value={form.type}
+              onChange={(v) => setForm(s => ({ ...s, type: v }))}
+              options={poisonTypeOptions}
+              disabled={typesLoading || viewing}
+              error={viewing ? undefined : errors.type}
+              helperText={typesLoading ? 'Loading Poison Types…' : 'Select a PoisonType id'}
+            />
 
             <LabeledInput label="Level" type="number" value={String(form.level).trim()} disabled={viewing}
               onChange={(v) => setForm((s) => {
