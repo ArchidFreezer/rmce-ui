@@ -5,13 +5,13 @@ import { LabeledInput } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 
-import { fetchPoisontypes, upsertPoisontype, deletePoisontype } from '../../api/poisontypes';
-import type { PoisonType, Severity } from '../../types';
-import { SEVERITIES } from '../../types';
+import { fetchPoisontypes, upsertPoisontype, deletePoisontype } from '../../api/poisontype';
+import type { PoisonType } from '../../types/poisontype';
+import { MALADY_SEVERITIES, MaladySeverity } from '../../types/enum';
 
 // ----- Local form VM types (strings for numeric editors to allow partial typing) -----
-type EffectRowVM = { severity: Severity; min: string; max: string };
-type SymptomRowVM = { severity: Severity; symptoms: string };
+type EffectRowVM = { severity: MaladySeverity; min: string; max: string };
+type SymptomRowVM = { severity: MaladySeverity; symptoms: string };
 
 type FormState = {
   id: string;
@@ -23,22 +23,22 @@ type FormState = {
 
 // Build an empty VM with all severities present
 function emptyVM(): FormState {
-  const mkEffect = (s: Severity): EffectRowVM => ({ severity: s, min: '', max: '' });
-  const mkSymptom = (s: Severity): SymptomRowVM => ({ severity: s, symptoms: '' });
+  const mkEffect = (s: MaladySeverity): EffectRowVM => ({ severity: s, min: '', max: '' });
+  const mkSymptom = (s: MaladySeverity): SymptomRowVM => ({ severity: s, symptoms: '' });
   return {
     id: 'POISONTYPE_',
     type: '',
     areasAffected: '',
-    effectOnsets: SEVERITIES.map(mkEffect),
-    symptoms: SEVERITIES.map(mkSymptom),
+    effectOnsets: MALADY_SEVERITIES.map(mkEffect),
+    symptoms: MALADY_SEVERITIES.map(mkSymptom),
   };
 }
 
 // Map API model -> VM
 function toVM(p: PoisonType): FormState {
-  const ensureOrder = <T extends { severity: Severity }>(arr: T[], builder: (s: Severity) => T): T[] => {
+  const ensureOrder = <T extends { severity: MaladySeverity }>(arr: T[], builder: (s: MaladySeverity) => T): T[] => {
     const by = new Map(arr.map((r) => [r.severity, r]));
-    return SEVERITIES.map((s) => by.get(s) ?? builder(s));
+    return MALADY_SEVERITIES.map((s) => by.get(s) ?? builder(s));
   };
   return {
     id: p.id,
@@ -73,7 +73,7 @@ function fromVM(vm: FormState): PoisonType {
   };
 }
 
-export default function PoisontypesView() {
+export default function PoisonTypeView() {
   const [rows, setRows] = useState<PoisonType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -113,64 +113,58 @@ export default function PoisontypesView() {
     id?: string;
     type?: string;
     areasAffected?: string;
-    effectOnsets?: Record<Severity, string | undefined>;
-    symptoms?: Record<Severity, string | undefined>;
+    effectOnsets?: Record<MaladySeverity, string | undefined>;
+    symptoms?: Record<MaladySeverity, string | undefined>;
   }>({});
   const hasErrors = Boolean(
     errors.id ||
     errors.type ||
     errors.areasAffected ||
-    (errors.effectOnsets && SEVERITIES.some((s) => errors.effectOnsets?.[s])) ||
-    (errors.symptoms && SEVERITIES.some((s) => errors.symptoms?.[s]))
+    (errors.effectOnsets && MALADY_SEVERITIES.some((s) => errors.effectOnsets?.[s])) ||
+    (errors.symptoms && MALADY_SEVERITIES.some((s) => errors.symptoms?.[s]))
   );
   const computeErrors = (draft = form, isEditing: boolean) => {
+    if (viewing) return {};             // suppress inline errors in view mode
+
     const e: typeof errors = {};
     // ID
     if (!draft.id.trim()) e.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) e.id = `ID "${draft.id.trim()}" already exists`;
-    if (!draft.id.trim().toUpperCase().startsWith('POISONTYPE_')) e.id = 'ID must start with "POISONTYPE_"';
-    if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) e.id = 'ID can only contain uppercase letters, numbers and underscores';
-    if (draft.id.trim().length <= 12) e.id = 'ID must contain additional characters after "POISONTYPE_"';
+    else if (!draft.id.trim().toUpperCase().startsWith('POISONTYPE_')) e.id = 'ID must start with "POISONTYPE_"';
+    else if (draft.id.trim().length <= 12) e.id = 'ID must contain additional characters after "POISONTYPE_"';
+    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) e.id = 'ID can only contain uppercase letters, numbers and underscores';
     // Type
     if (!draft.type.trim()) e.type = 'Type is required';
     // Areas affected
     if (!draft.areasAffected.trim()) e.areasAffected = 'Areas affected is required';
 
     // Check we have exactly one row per known severity (we always build that, but double-check)
-    const seenOnsets = new Set<Severity>();
-    const eo: Record<Severity, string | undefined> = {} as any;
+    const seenOnsets = new Set<MaladySeverity>();
+    const eo: Record<MaladySeverity, string | undefined> = {} as any;
     for (const r of draft.effectOnsets) {
       if (seenOnsets.has(r.severity)) eo[r.severity] = 'Duplicate severity';
       else seenOnsets.add(r.severity);
 
-      if (r.min.trim() === '' || r.max.trim() === '') {
-        eo[r.severity] = 'Min and max are required';
-      } else if (!/^-?\d+$/.test(r.min) || !/^-?\d+$/.test(r.max)) {
-        eo[r.severity] = 'Min and max must be integers';
-      } else if (Number(r.min) > Number(r.max)) {
-        eo[r.severity] = 'Min must be ≤ max';
-      }
+      if (r.min.trim() === '' || r.max.trim() === '') eo[r.severity] = 'Min and max are required';
+      else if (!/^-?\d+$/.test(r.min) || !/^-?\d+$/.test(r.max)) eo[r.severity] = 'Min and max must be integers';
+      else if (Number(r.min) > Number(r.max)) eo[r.severity] = 'Min must be ≤ max';
     }
-    if (Object.keys(eo).some((k) => eo[k as Severity])) e.effectOnsets = eo;
+    if (Object.keys(eo).some((k) => eo[k as MaladySeverity])) e.effectOnsets = eo;
 
-    const seenSymptoms = new Set<Severity>();
-    const sy: Record<Severity, string | undefined> = {} as any;
+    const seenSymptoms = new Set<MaladySeverity>();
+    const sy: Record<MaladySeverity, string | undefined> = {} as any;
     for (const r of draft.symptoms) {
       if (seenSymptoms.has(r.severity)) sy[r.severity] = 'Duplicate severity';
       else seenSymptoms.add(r.severity);
 
       if (!r.symptoms.trim()) sy[r.severity] = 'Symptoms are required';
     }
-    if (Object.keys(sy).some((k) => sy[k as Severity])) e.symptoms = sy;
+    if (Object.keys(sy).some((k) => sy[k as MaladySeverity])) e.symptoms = sy;
 
     // Ensure all 4 severities present
-    for (const s of SEVERITIES) {
-      if (!draft.effectOnsets.some((r) => r.severity === s)) {
-        (e.effectOnsets ??= {} as any)[s] = 'Missing severity';
-      }
-      if (!draft.symptoms.some((r) => r.severity === s)) {
-        (e.symptoms ??= {} as any)[s] = 'Missing severity';
-      }
+    for (const s of MALADY_SEVERITIES) {
+      if (!draft.effectOnsets.some((r) => r.severity === s)) (e.effectOnsets ??= {} as any)[s] = 'Missing severity';
+      if (!draft.symptoms.some((r) => r.severity === s)) (e.symptoms ??= {} as any)[s] = 'Missing severity';
     }
 
     return e;
@@ -236,8 +230,8 @@ export default function PoisontypesView() {
     setErrors(e);
     const firstTop =
       e.id || e.type || e.areasAffected ||
-      (e.effectOnsets && SEVERITIES.map((s) => e.effectOnsets?.[s]).find(Boolean)) ||
-      (e.symptoms && SEVERITIES.map((s) => e.symptoms?.[s]).find(Boolean)) || '';
+      (e.effectOnsets && MALADY_SEVERITIES.map((s) => e.effectOnsets?.[s]).find(Boolean)) ||
+      (e.symptoms && MALADY_SEVERITIES.map((s) => e.symptoms?.[s]).find(Boolean)) || '';
     if (firstTop) return;
 
     try {
@@ -326,7 +320,7 @@ export default function PoisontypesView() {
       const map = new Map(r.severityEffectOnsets.map(o => [o.severity, o]));
       return (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {SEVERITIES.map((s) => {
+          {MALADY_SEVERITIES.map((s) => {
             const o = map.get(s);
             return (
               <span key={s} title={`${s}: ${o ? `${o.min}–${o.max}` : '—'}`}>
@@ -343,7 +337,7 @@ export default function PoisontypesView() {
     //   const map = new Map(r.severitySymptoms.map(o => [o.severity, o]));
     //   return (
     //     <div style={{ display: 'grid', gap: 4 }}>
-    //       {SEVERITIES.map((s) => {
+    //       {MALADY_SEVERITIES.map((s) => {
     //         const o = map.get(s);
     //         return (
     //           <div key={s}>
@@ -422,17 +416,6 @@ export default function PoisontypesView() {
   return (
     <>
       <h2>Poison Types</h2>
-
-      {/* New + Search */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-        <button onClick={startNew}>New Poison Type</button>
-        <DataTableSearchInput
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search poison types…"
-          aria-label="Search poison types"
-        />
-      </div>
 
       {/* Form panel */}
       {showForm && (
@@ -522,27 +505,48 @@ export default function PoisontypesView() {
         </div>
       )}
 
-      {/* Table */}
-      <DataTable<PoisonType>
-        rows={rows}
-        columns={columns}
-        rowId={(r) => r.id}
-        initialSort={{ colId: 'type', dir: 'asc' }}
-        searchQuery={query}
-        globalFilter={globalFilter}
-        mode="client"
-        page={page}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-        pageSizeOptions={[5, 10, 20, 50, 100]}
-        tableMinWidth={900}
-        zebra
-        hover
-        resizable
-        persistKey="dt.poisontype.v1"
-        ariaLabel="Poison types"
-      />
+      {/* Shared DataTable */}
+      {!showForm && (
+        <>
+          {/* New + Search */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+            <button onClick={startNew}>New Poison Type</button>
+            <DataTableSearchInput
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search poison types…"
+              aria-label="Search poison types"
+            />
+          </div>
+
+          <DataTable<PoisonType>
+            rows={rows}
+            columns={columns}
+            rowId={(r) => r.id}
+            initialSort={{ colId: 'type', dir: 'asc' }}
+            searchQuery={query}
+            globalFilter={globalFilter}
+            mode="client"
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[5, 10, 20, 50, 100]}
+            tableMinWidth={900}
+            zebra
+            hover
+            resizable
+            persistKey="dt.poisontype.v1"
+            ariaLabel="Poison types"
+          />
+        </>
+      )}
+
+      {!rows.length && !showForm && (
+        <div style={{ marginTop: 8, color: 'var(--muted)' }}>
+          No poison types found.
+        </div>
+      )}
     </>
   );
 }

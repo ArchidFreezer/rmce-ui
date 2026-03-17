@@ -4,7 +4,7 @@ import { ConfirmProvider } from './components/ConfirmDialog';
 import { ToastProvider } from './components/Toast';
 import { ThemeProvider } from './components/ThemeProvider';
 import { Sidebar, SidebarItem } from './components/Sidebar';
-import { fetchPrefixes } from './api/prefixes';
+import { fetchPrefixes } from './api/prefix';
 import { splitResources, FALLBACK_RESOURCES, type ResourceDef } from './resources/registry';
 import GenericResourceView from './endpoints/generic/GenericResourceView'; // <-- generic
 

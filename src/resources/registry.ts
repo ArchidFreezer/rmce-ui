@@ -1,13 +1,13 @@
 import { lazy, type LazyExoticComponent, type ComponentType } from 'react';
 
-const ArmourtypesView = lazy(() => import('../endpoints/armourtypes/ArmourtypesView'));
-const BooksView = lazy(() => import('../endpoints/books/BooksView'));
-const ClimateView = lazy(() => import('../endpoints/climates/ClimateView'));
-const CreaturePacesView = lazy(() => import('../endpoints/creaturepace/CreaturePacesView'));
-const DiseasesView = lazy(() => import('../endpoints/diseases/DiseasesView'));
-const DiseasetypesView = lazy(() => import('../endpoints/diseasetypes/DiseasetypesView'));
-const PoisonsView = lazy(() => import('../endpoints/poisons/PoisonsView'));
-const PoisontypesView = lazy(() => import('../endpoints/poisontypes/PoisontypesView'));
+const ArmourTypesView = lazy(() => import('../endpoints/armourtype/ArmourTypesView'));
+const BooksView = lazy(() => import('../endpoints/book/BooksView'));
+const ClimateView = lazy(() => import('../endpoints/climate/ClimateView'));
+const CreaturePaceView = lazy(() => import('../endpoints/creaturepace/CreaturePaceView'));
+const DiseaseView = lazy(() => import('../endpoints/disease/DiseaseView'));
+const DiseaseTypeView = lazy(() => import('../endpoints/diseasetype/DiseaseTypeView'));
+const PoisonView = lazy(() => import('../endpoints/poison/PoisonView'));
+const PoisonTypeView = lazy(() => import('../endpoints/poisontype/PoisonTypeView'));
 
 
 export interface ResourceDef {
@@ -20,14 +20,14 @@ export interface ResourceDef {
 /** Known resources with their routes/components */
 
 const known: Record<string, ResourceDef> = {
-  armourtype: { prefix: 'armourtype', label: 'Armour Types', path: '/armourtypes', Component: ArmourtypesView },
+  armourtype: { prefix: 'armourtype', label: 'Armour Types', path: '/armourtypes', Component: ArmourTypesView },
   book: { prefix: 'book', label: 'Books', path: '/books', Component: BooksView },
   climate: { prefix: 'climate', label: 'Climates', path: '/climates', Component: ClimateView },
-  creaturepace: { prefix: 'creaturepace', label: 'Creature Paces', path: '/creaturepace', Component: CreaturePacesView },
-  disease: { prefix: 'disease', label: 'Diseases', path: '/diseases', Component: DiseasesView },
-  diseasetype: { prefix: 'diseasetype', label: 'Disease Types', path: '/diseasetypes', Component: DiseasetypesView },
-  poison: { prefix: 'poison', label: 'Poisons', path: '/poisons', Component: PoisonsView },
-  poisontype: { prefix: 'poisontype', label: 'Poison Types', path: '/poisontypes', Component: PoisontypesView },
+  creaturepace: { prefix: 'creaturepace', label: 'Creature Paces', path: '/creaturepaces', Component: CreaturePaceView },
+  disease: { prefix: 'disease', label: 'Diseases', path: '/diseases', Component: DiseaseView },
+  diseasetype: { prefix: 'diseasetype', label: 'Disease Types', path: '/diseasetypes', Component: DiseaseTypeView },
+  poison: { prefix: 'poison', label: 'Poisons', path: '/poisons', Component: PoisonView },
+  poisontype: { prefix: 'poisontype', label: 'Poison Types', path: '/poisontypes', Component: PoisonTypeView },
 }
 
 

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { fetchPrefixes } from '../../api/prefixes';
+import { fetchPrefixes } from '../../api/prefix';
 import { Link } from 'react-router-dom';
 
-export default function PrefixesView() {
+export default function PrefixView() {
   const [prefixes, setPrefixes] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

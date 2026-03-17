@@ -3,16 +3,15 @@ import { fetchJson, sendJson } from './client';
 import type {
   PoisonType,
   PoisonTypesPayload,
-  Severity,
   PoisonTypeEffectOnset,
   PoisonTypeSymptom,
-} from '../types';
-import { SEVERITIES } from '../types';
+} from '../types/poisontype';
+import { MALADY_SEVERITIES, MaladySeverity } from '../types/enum';
 
 const BASE = '/rmce/objects/poisontype';
 
-function isSeverity(s: unknown): s is Severity {
-  return typeof s === 'string' && (SEVERITIES as readonly string[]).includes(s);
+function isSeverity(s: unknown): s is MaladySeverity {
+  return typeof s === 'string' && (MALADY_SEVERITIES as readonly string[]).includes(s);
 }
 
 function sanitizeOnsets(arr: unknown): PoisonTypeEffectOnset[] {

@@ -1,27 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { fetchArmourtypes, upsertArmourtype, deleteArmourtype } from '../../api/armourtypes';
-import type { Armourtype } from '../../types';
+import { fetchArmourTypes, upsertArmourType, deleteArmourType } from '../../api/armourtype';
+import type { ArmourType } from '../../types/armourtype';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { CheckboxInput, LabeledInput } from '../../components/inputs';
 import { isSignedIntegerString } from '../../components/inputs/validators';
 
-type ArmourNumberKey =
-  | 'minManoeuvreMod'
-  | 'maxManoeuvreMod'
-  | 'missileAttackPenalty'
-  | 'quicknessPenalty';
-
-const NUM_KEYS: ArmourNumberKey[] = [
-  'minManoeuvreMod',
-  'maxManoeuvreMod',
-  'missileAttackPenalty',
-  'quicknessPenalty',
-];
-
-export default function ArmourtypesView() {
-  const [rows, setRows] = useState<Armourtype[]>([]);
+export default function ArmourTypesView() {
+  const [rows, setRows] = useState<ArmourType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,8 +20,7 @@ export default function ArmourtypesView() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
-  const [form, setForm] = useState<Armourtype>(emptyArmourtype());
-  const [formErr, setFormErr] = useState('');// legacy single message (kept for top-level)
+  const [form, setForm] = useState<ArmourType>(emptyArmourType());
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -43,7 +29,7 @@ export default function ArmourtypesView() {
     let mounted = true;
     (async () => {
       try {
-        const data = await fetchArmourtypes();
+        const data = await fetchArmourTypes();
         if (!mounted) return;
         setRows(data);
       } catch (err) {
@@ -57,27 +43,33 @@ export default function ArmourtypesView() {
   }, []);
 
   // ----- Inline validation helpers -----
-  const [errors, setErrors] = useState<{ id?: string; name?: string; type?: string; numeric?: string }>({});
+  const [errors, setErrors] = useState<{ id?: string; name?: string; type?: string; numeric?: string; }>({});
   const hasErrors = Boolean(errors.id || errors.name || errors.type || errors.numeric);
-  const computeErrors = (draft: Armourtype, isEditing: boolean) => {
+  const computeErrors = (draft: ArmourType, isEditing: boolean) => {
+    if (viewing) return {}; // no errors in view mode
+
     const next: { id?: string; name?: string; type?: string; numeric?: string } = {};
     // ID (only on create, must be unique and start with prefix in ucase and contain additional characters)
     if (!draft.id.trim()) next.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
-    if (!draft.id.trim().toUpperCase().startsWith('ARMOURTYPE_')) next.id = 'ID must start with "ARMOURTYPE_"';
-    if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
-    if (draft.id.trim().length <= 11) next.id = 'ID must contain additional characters after "ARMOURTYPE_"';
+    else if (!draft.id.trim().toUpperCase().startsWith('ARMOURTYPE_')) next.id = 'ID must start with "ARMOURTYPE_"';
+    else if (draft.id.trim().length <= 11) next.id = 'ID must contain additional characters after "ARMOURTYPE_"';
+    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
     // Name
     if (!draft.name.trim()) next.name = 'Name is required';
     // Type
     if (!draft.type.trim()) next.type = 'Type is required';
     else if (!isEditing && rows.some(r => r.type === draft.type.trim())) next.type = `Type "${draft.type.trim()}" already exists`;
-    if (!/^AT [1-2]?[0-9]$/.test(draft.type.trim())) next.type = 'Type must follow the pattern "AT [1-2]?[0-9]"';
+    else if (!/^AT [1-2]?[0-9]$/.test(draft.type.trim())) next.type = 'Type must follow the pattern "AT [1-2]?[0-9]"';
     // Numeric values
-    for (const k of NUM_KEYS) {
-      const raw = (draft[k] ?? '').toString().trim();
-      if (!isSignedIntegerString(raw)) next.numeric = `${k} must be an integer`;
-    }
+    if (!draft.minManoeuvreMod && draft.minManoeuvreMod !== 0) next.numeric = 'Min Manoeuvre Mod is required';
+    else if (!isSignedIntegerString(String(draft.minManoeuvreMod))) next.numeric = 'Min Manoeuvre Mod must be an integer';
+    if (!draft.maxManoeuvreMod && draft.maxManoeuvreMod !== 0) next.numeric = 'Max Manoeuvre Mod is required';
+    else if (!isSignedIntegerString(String(draft.maxManoeuvreMod))) next.numeric = 'Max Manoeuvre Mod must be an integer';
+    if (!draft.missileAttackPenalty && draft.missileAttackPenalty !== 0) next.numeric = 'Missile Attack Penalty is required';
+    else if (!isSignedIntegerString(String(draft.missileAttackPenalty))) next.numeric = 'Missile Attack Penalty must be an integer';
+    if (!draft.quicknessPenalty && draft.quicknessPenalty !== 0) next.numeric = 'Quickness Penalty is required';
+    else if (!isSignedIntegerString(String(draft.quicknessPenalty))) next.numeric = 'Quickness Penalty must be an integer';
     return next;
   };
 
@@ -91,40 +83,37 @@ export default function ArmourtypesView() {
   const startNew = () => {
     setViewing(false);
     setEditingId(null);
-    setForm(emptyArmourtype());
+    setForm(emptyArmourType());
     setErrors({});
-    setFormErr('');
     setShowForm(true);
   };
 
-  const startEdit = (row: Armourtype) => {
+  const startEdit = (row: ArmourType) => {
     setViewing(false);
     setEditingId(row.id);
     setForm({ ...row });
-    setFormErr('');
     setErrors({});
     setShowForm(true);
   };
 
-  const startDuplicate = (row: Armourtype) => {
-    setViewing?.(false);           // if you have viewing state; otherwise omit
+  const startDuplicate = (row: ArmourType) => {
+    setViewing(false);           // if you have viewing state; otherwise omit
     setEditingId(null);
 
     const next = { ...row };
     next.id = 'ARMOURTYPE_';
     next.name += ' (Copy)';
 
-    setForm(next as any); // if your form state = Armourtype
+    setForm(next as any); // if your form state = ArmourType
     setErrors?.({});      // if you have an errors object
     setShowForm(true);
   };
 
-  const startView = (row: Armourtype) => {
+  const startView = (row: ArmourType) => {
     setViewing(true);
     setEditingId(row.id);       // we can reuse editingId to preload the item, but we won't allow saving
     setForm({ ...row });
     setErrors({});              // no need to compute field errors for read-only view, but we can keep formErr for any potential top-level messages
-    setFormErr('');
     setShowForm(true);
   };
 
@@ -133,12 +122,11 @@ export default function ArmourtypesView() {
     setShowForm(false);
     setEditingId(null);
     setErrors({});
-    setFormErr('');
   };
 
   const saveForm = async () => {
     // Normalize payload (strings -> numbers for numeric fields)
-    const payload: Armourtype = {
+    const payload: ArmourType = {
       id: String(form.id).trim(),
       name: String(form.name).trim(),
       type: String(form.type).trim(),
@@ -154,7 +142,7 @@ export default function ArmourtypesView() {
     const nextErrors = computeErrors(payload, Boolean(editingId));
     setErrors(nextErrors);
     const topError = nextErrors.id || nextErrors.name || nextErrors.type || nextErrors.numeric || '';
-    if (topError) { setFormErr(topError); return; }
+    if (topError) return;
 
     const isEditing = Boolean(editingId);
     try {
@@ -162,7 +150,7 @@ export default function ArmourtypesView() {
         ? { method: 'PUT' as const, useResourceIdPath: true }
         : { method: 'POST' as const, useResourceIdPath: false };
 
-      await upsertArmourtype(payload, opts);
+      await upsertArmourType(payload, opts);
 
       setRows((prev) => {
         if (isEditing) {
@@ -182,7 +170,6 @@ export default function ArmourtypesView() {
 
       setShowForm(false);
       setEditingId(null);
-      setFormErr('');
       toast({
         variant: 'success',
         title: isEditing ? 'Updated' : 'Saved',
@@ -197,12 +184,12 @@ export default function ArmourtypesView() {
     }
   };
 
-  const onDelete = async (row: Armourtype) => {
+  const onDelete = async (row: ArmourType) => {
     const id = row?.id;
     if (!id) return;
     const ok = await confirm({
-      title: 'Delete Armourtype',
-      body: `Delete armourtype "${id}"? This cannot be undone.`,
+      title: 'Delete ArmourType',
+      body: `Delete ArmourType "${id}"? This cannot be undone.`,
       confirmText: 'Delete',
       cancelText: 'Cancel',
       tone: 'danger',
@@ -212,10 +199,10 @@ export default function ArmourtypesView() {
     const prev = rows;
     setRows(prev.filter(a => a.id !== id));
     try {
-      await deleteArmourtype(id);
+      await deleteArmourType(id);
       // if currently editing this item, close the form
       if (editingId === row.id) cancelForm();
-      toast({ variant: 'success', title: 'Deleted', description: `Armourtype "${id}" deleted.` });
+      toast({ variant: 'success', title: 'Deleted', description: `ArmourType "${id}" deleted.` });
     } catch (err) {
       setRows(prev);
       toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err) });
@@ -223,18 +210,18 @@ export default function ArmourtypesView() {
   };
 
   // ----- Columns (Edit + Delete) -----
-  const columns: ColumnDef<Armourtype>[] = useMemo(() => {
+  const columns: ColumnDef<ArmourType>[] = useMemo(() => {
     return [
       { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
       { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
-      { id: 'type', header: 'Type', accessor: r => r.type },
+      { id: 'type', header: 'Type', accessor: r => r.type, minWidth: 80 },
       // { id: 'description', header: 'Description', accessor: r => r.description },
-      { id: 'minManoeuvreMod', header: 'Min Manoeuvre Mod', accessor: (r) => r.minManoeuvreMod, sortType: 'number', align: 'right' },
-      { id: 'maxManoeuvreMod', header: 'Max Manoeuvre Mod', accessor: (r) => r.maxManoeuvreMod, sortType: 'number', align: 'right' },
-      { id: 'missileAttackPenalty', header: 'Missile Attack Penalty', accessor: (r) => r.missileAttackPenalty, sortType: 'number', align: 'right' },
-      { id: 'quicknessPenalty', header: 'Quickness Penalty', accessor: (r) => r.quicknessPenalty, sortType: 'number', align: 'right' },
-      { id: 'animalOnly', header: 'Animal Only', accessor: r => r.animalOnly, sortType: 'boolean', align: 'center' },
-      { id: 'includesGreaves', header: 'Includes Greaves', accessor: r => r.includesGreaves, sortType: 'boolean', align: 'center' },
+      { id: 'minManoeuvreMod', header: 'Min Manoeuvre Mod', accessor: (r) => r.minManoeuvreMod, sortType: 'number', align: 'center', width: 80 },
+      { id: 'maxManoeuvreMod', header: 'Max Manoeuvre Mod', accessor: (r) => r.maxManoeuvreMod, sortType: 'number', align: 'center', width: 80 },
+      { id: 'missileAttackPenalty', header: 'Missile Attack Penalty', accessor: (r) => r.missileAttackPenalty, sortType: 'number', align: 'center', width: 80 },
+      { id: 'quicknessPenalty', header: 'Quickness Penalty', accessor: (r) => r.quicknessPenalty, sortType: 'number', align: 'center', width: 80 },
+      { id: 'animalOnly', header: 'Animal Only', accessor: r => r.animalOnly, sortType: 'boolean', align: 'center', width: 80 },
+      { id: 'includesGreaves', header: 'Includes Greaves', accessor: r => r.includesGreaves, sortType: 'boolean', align: 'center', width: 80 },
       {
         id: 'actions',
         header: 'Actions',
@@ -254,7 +241,7 @@ export default function ArmourtypesView() {
   }, [rows, editingId]); // allows closing form on self-delete
 
   // ----- Search -----
-  const globalFilter = (a: Armourtype, q: string) => {
+  const globalFilter = (a: ArmourType, q: string) => {
     const s = q.toLowerCase();
     return [
       a.id, a.name, a.type, a.description,
@@ -271,17 +258,6 @@ export default function ArmourtypesView() {
   return (
     <>
       <h2>Armour Types</h2>
-
-      {/* New + Search */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-        <button onClick={startNew}>New Armour type</button>
-        <DataTableSearchInput
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search armour types…"
-          aria-label="Search armour types"
-        />
-      </div>
 
       {/* Form panel (Create & Edit) */}
       {showForm && (
@@ -366,7 +342,6 @@ export default function ArmourtypesView() {
             <CheckboxInput label="Includes Greaves" checked={form.includesGreaves} onChange={(v) => setForm(s => ({ ...s, includesGreaves: v }))} disabled={viewing} />
           </div>
 
-          {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
             <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
@@ -375,46 +350,56 @@ export default function ArmourtypesView() {
       )}
 
       {/* Shared DataTable */}
-      {loading ? (
-        <div>Loading…</div>
-      ) : error ? (
-        <div style={{ color: 'crimson' }}>Error: {error}</div>
-      ) : (
-        <DataTable<Armourtype>
-          rows={rows}
-          columns={columns}
-          rowId={(r) => r.id}
-          initialSort={{ colId: 'name', dir: 'asc' }}
-          // search
-          searchQuery={query}
-          globalFilter={globalFilter}
-          // pagination (client)
-          mode="client"
-          page={page}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={setPageSize}
-          pageSizeOptions={[5, 10, 20, 50]}
-          // styles
-          tableMinWidth={0} // Allow table to shrink below container width (enables horizontal scroll when needed)
-          zebra
-          // Resizable columns
-          resizable
-          persistKey="dt.armourtypes.v1"
-          ariaLabel='ArmourTypes data'
-        />
+      {!showForm && (
+        <>
+          {/* New + Search */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+            <button onClick={startNew}>New Armour type</button>
+            <DataTableSearchInput
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search armour types…"
+              aria-label="Search armour types"
+            />
+          </div>
+
+          <DataTable<ArmourType>
+            rows={rows}
+            columns={columns}
+            rowId={(r) => r.id}
+            initialSort={{ colId: 'name', dir: 'asc' }}
+            // search
+            searchQuery={query}
+            globalFilter={globalFilter}
+            // pagination (client)
+            mode="client"
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[5, 10, 20, 50]}
+            // styles
+            tableMinWidth={0} // Allow table to shrink below container width (enables horizontal scroll when needed)
+            zebra
+            // Resizable columns
+            resizable
+            persistKey="dt.armourtypes.v1"
+            ariaLabel='ArmourTypes data'
+          />
+        </>
       )}
-      {!rows.length && (
+
+      {/* Empty dataset */}
+      {!rows.length && !showForm && (
         <div style={{ marginTop: 8, color: 'var(--muted)' }}>
           No armour types found.
         </div>
       )}
-
     </>
   );
 }
 
-function emptyArmourtype(): Armourtype {
+function emptyArmourType(): ArmourType {
   return {
     id: 'ARMOURTYPE_',
     name: '',

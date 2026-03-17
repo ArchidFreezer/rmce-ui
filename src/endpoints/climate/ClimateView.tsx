@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchClimates, upsertClimate, deleteClimate } from '../../api/climate';
 import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import type { Climate, Precipitation, Temperature } from '../../types';
-import { PRECIPITATIONS, TEMPERATURES } from '../../types';
+import type { Climate } from '../../types/climate';
+import { PRECIPITATIONS, Precipitation, TEMPERATURES, Temperature } from '../../types/enum';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { CheckboxGroup, LabeledInput, LabeledSelect } from '../../components/inputs'
@@ -23,7 +23,6 @@ export default function ClimateView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
   const [form, setForm] = useState<Climate>(emptyClimate());
-  const [formErr, setFormErr] = useState(''); // legacy single message (kept for top-level)
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -49,13 +48,15 @@ export default function ClimateView() {
   const [errors, setErrors] = useState<{ id?: string; name?: string; temperature?: string; precipitations?: string }>({});
   const hasErrors = Boolean(errors.id || errors.name || errors.temperature || errors.precipitations);
   const computeErrors = (draft: Climate, isEditing: boolean) => {
+    if (viewing) return {};             // suppress inline errors in view mode
+
     const next: { id?: string; name?: string; temperature?: string; precipitations?: string } = {};
     // ID
     if (!draft.id.trim()) next.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
-    if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
-    if (!draft.id.trim().toUpperCase().startsWith('CLIMATE_')) next.id = 'ID must start with "CLIMATE_"';
-    if (draft.id.trim().length <= 9) next.id = 'ID must contain additional characters after "CLIMATE_"';
+    else if (!draft.id.trim().toUpperCase().startsWith('CLIMATE_')) next.id = 'ID must start with "CLIMATE_"';
+    else if (draft.id.trim().length <= 9) next.id = 'ID must contain additional characters after "CLIMATE_"';
+    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
     // Name
     if (!draft.name.trim()) next.name = 'Name is required';
     // Temperature
@@ -79,7 +80,6 @@ export default function ClimateView() {
     setEditingId(null);
     setForm(emptyClimate());
     setErrors({});
-    setFormErr('');
     setShowForm(true);
   };
 
@@ -88,7 +88,6 @@ export default function ClimateView() {
     setEditingId(row.id);
     setForm({ ...row });
     setErrors({});
-    setFormErr('');
     setShowForm(true);
   };
 
@@ -110,7 +109,6 @@ export default function ClimateView() {
     setEditingId(row.id);       // we can reuse editingId to preload the item, but we won't allow saving
     setForm({ ...row });
     setErrors({});              // no need to compute field errors for read-only view, but we can keep formErr for any potential top-level messages
-    setFormErr('');
     setShowForm(true);
   };
 
@@ -119,7 +117,6 @@ export default function ClimateView() {
     setShowForm(false);
     setEditingId(null);
     setErrors({});
-    setFormErr('');
   };
 
   const saveForm = async () => {
@@ -133,7 +130,7 @@ export default function ClimateView() {
     const nextErrors = computeErrors(payload, Boolean(editingId));
     setErrors(nextErrors);
     const topError = nextErrors.id || nextErrors.name || nextErrors.temperature || nextErrors.precipitations || '';
-    if (topError) { setFormErr(topError); return; }
+    if (topError) return;
 
     const isEditing = Boolean(editingId);
     try {
@@ -162,7 +159,6 @@ export default function ClimateView() {
 
       setShowForm(false);
       setEditingId(null);
-      setFormErr('');
       toast({
         variant: 'success',
         title: isEditing ? 'Updated' : 'Saved',
@@ -289,17 +285,6 @@ export default function ClimateView() {
     <>
       <h2>Climates</h2>
 
-      {/* Create + Search */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-        <button onClick={startNew}>New Climate</button>
-        <DataTableSearchInput
-          value={query}
-          onChange={(e) => { setQuery(e.target.value); setPage(1); }}
-          placeholder="Search climates…"
-          aria-label="Search climates"
-        />
-      </div>
-
       {/* Form panel (Create & Edit) */}
       {showForm && (
         <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}>
@@ -347,8 +332,6 @@ export default function ClimateView() {
             />
           </div>
 
-          {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
-
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
             <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
@@ -357,37 +340,46 @@ export default function ClimateView() {
       )}
 
       {/* Shared DataTable */}
-      {loading ? (
-        <div>Loading…</div>
-      ) : error ? (
-        <div style={{ color: 'crimson' }}>Error: {error}</div>
-      ) : (
-        <DataTable<Climate>
-          rows={rows}
-          columns={columns}
-          rowId={(r) => r.id}
-          initialSort={{ colId: 'name', dir: 'asc' }}
-          // search
-          searchQuery={query}
-          globalFilter={globalFilter}
-          // pagination
-          mode="client"
-          page={page}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={setPageSize}
-          pageSizeOptions={[5, 10, 20, 50, 100]}
-          // styles
-          tableMinWidth={0} // Allow table to shrink below container width (enables horizontal scroll when needed)
-          zebra
-          hover
-          // Resizable columns
-          resizable
-          persistKey="dt.climate.v1"
-          ariaLabel="Climates data"
-        />
+      {!showForm && (
+        <>
+          {/* Create + Search */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+            <button onClick={startNew}>New Climate</button>
+            <DataTableSearchInput
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+              placeholder="Search climates…"
+              aria-label="Search climates"
+            />
+          </div>
+
+          <DataTable<Climate>
+            rows={rows}
+            columns={columns}
+            rowId={(r) => r.id}
+            initialSort={{ colId: 'name', dir: 'asc' }}
+            // search
+            searchQuery={query}
+            globalFilter={globalFilter}
+            // pagination
+            mode="client"
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[5, 10, 20, 50, 100]}
+            // styles
+            tableMinWidth={0} // Allow table to shrink below container width (enables horizontal scroll when needed)
+            zebra
+            hover
+            // Resizable columns
+            resizable
+            persistKey="dt.climate.v1"
+            ariaLabel="Climates data"
+          />
+        </>
       )}
-      {!rows.length && (
+      {!rows.length && !showForm && (
         <div style={{ marginTop: 8, color: 'var(--muted)' }}>
           No climates found.
         </div>

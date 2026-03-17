@@ -1,12 +1,12 @@
 import { fetchJson, sendJson } from './client';
-import type { DiseaseType, DiseaseTypesPayload, Severity } from '../types';
-import { SEVERITIES } from '../types';
+import type { DiseaseType, DiseaseTypesPayload } from '../types/diseasetype';
+import { MALADY_SEVERITIES, MaladySeverity } from '../types/enum';
 
 const BASE = '/rmce/objects/diseasetype';
 
 // sanitize helpers
-function isSeverity(v: unknown): v is Severity {
-  return typeof v === 'string' && (SEVERITIES as readonly string[]).includes(v);
+function isSeverity(v: unknown): v is MaladySeverity {
+  return typeof v === 'string' && (MALADY_SEVERITIES as readonly string[]).includes(v);
 }
 function sanitizeSymptoms(arr: unknown): DiseaseType['severitySymptoms'] {
   if (!Array.isArray(arr)) return [];

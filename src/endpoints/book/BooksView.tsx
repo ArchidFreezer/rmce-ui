@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { fetchBooks, upsertBook, deleteBook } from '../../api/books';
-import type { Book } from '../../types';
+import { fetchBooks, upsertBook, deleteBook } from '../../api/book';
+import type { Book } from '../../types/book';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { LabeledInput } from '../../components/inputs';
@@ -22,7 +22,6 @@ export default function BooksView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
   const [form, setForm] = useState<Book>(emptyBook());   // <- form is typed as Book
-  const [formErr, setFormErr] = useState('');
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -46,15 +45,17 @@ export default function BooksView() {
 
   // ----- Inline validation helpers -----
   const [errors, setErrors] = useState<{ id?: string; name?: string; type?: string; code?: string; abbreviation?: string; isbn?: string; }>({});
-  const hasErrors = Boolean(errors.id || errors.name || errors.code || errors.abbreviation || errors.isbn);
+  const hasErrors = Boolean(errors.id || errors.name || errors.type || errors.code || errors.abbreviation || errors.isbn);
   const computeErrors = (draft: Book, isEditing: boolean) => {
+    if (viewing) return {};             // suppress inline errors in view mode
+
     const next: { id?: string; name?: string; type?: string; code?: string; abbreviation?: string; isbn?: string; } = {};
     // ID (only on create, must be unique and start with prefix in ucase and contain additional characters)
     if (!draft.id.trim()) next.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
-    if (!draft.id.trim().toUpperCase().startsWith('BOOK_')) next.id = 'ID must start with "BOOK_"';
-    if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
-    if (draft.id.trim().length <= 5) next.id = 'ID must contain additional characters after "BOOK_"';
+    else if (!draft.id.trim().toUpperCase().startsWith('BOOK_')) next.id = 'ID must start with "BOOK_"';
+    else if (draft.id.trim().length <= 5) next.id = 'ID must contain additional characters after "BOOK_"';
+    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
     // Name
     if (!draft.name.trim()) next.name = 'Name is required';
     // Code
@@ -82,7 +83,6 @@ export default function BooksView() {
     setEditingId(null);
     setForm(emptyBook());
     setErrors({});
-    setFormErr('');
     setShowForm(true);
   };
 
@@ -90,7 +90,6 @@ export default function BooksView() {
     setViewing(false);
     setEditingId(row.id);
     setForm({ ...row });
-    setFormErr('');
     setErrors({});
     setShowForm(true);
   };
@@ -114,7 +113,6 @@ export default function BooksView() {
     setEditingId(row.id);       // we can reuse editingId to preload the item, but we won't allow saving
     setForm({ ...row });
     setErrors({});              // no need to compute field errors for read-only view, but we can keep formErr for any potential top-level messages
-    setFormErr('');
     setShowForm(true);
   }
 
@@ -123,7 +121,6 @@ export default function BooksView() {
     setShowForm(false);
     setEditingId(null);
     setErrors({});
-    setFormErr('');
   };
 
   const saveForm = async () => {
@@ -138,8 +135,8 @@ export default function BooksView() {
     const isEditing = Boolean(editingId);
     const nextErrors = computeErrors(payload, isEditing);
     setErrors(nextErrors);
-    const topError = nextErrors.id || nextErrors.name || nextErrors.code || nextErrors.abbreviation || nextErrors.isbn || '';
-    if (topError) { setFormErr(topError); return; }
+    const topError = nextErrors.id || nextErrors.name || nextErrors.type || nextErrors.code || nextErrors.abbreviation || nextErrors.isbn || '';
+    if (topError) return;
 
     try {
       // default POST to /rmce/objects/book/ with a single JSON object
@@ -168,7 +165,6 @@ export default function BooksView() {
 
       setShowForm(false);
       setEditingId(null);
-      setFormErr('');
       toast({
         variant: 'success',
         title: isEditing ? 'Updated' : 'Saved',
@@ -252,17 +248,6 @@ export default function BooksView() {
     <>
       <h2>Books</h2>
 
-      {/* New + Search */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-        <button onClick={startNew}>New Book</button>
-        <DataTableSearchInput
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search books…"
-          aria-label="Search books"
-        />
-      </div>
-
       {/* Form panel (Create & Edit) */}
       {showForm && (
         <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}>
@@ -295,7 +280,6 @@ export default function BooksView() {
             <LabeledInput label="ISBN" value={form.isbn} onChange={(v) => setForm((s) => ({ ...s, isbn: v }))} error={errors.isbn} disabled={viewing} />
           </div>
 
-          {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
             <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
@@ -304,36 +288,45 @@ export default function BooksView() {
       )}
 
       {/* Shared DataTable */}
-      {loading ? (
-        <div>Loading…</div>
-      ) : error ? (
-        <div style={{ color: 'crimson' }}>Error: {error}</div>
-      ) : (
-        <DataTable<Book>
-          rows={rows}
-          columns={columns}
-          rowId={(r) => r.id}
-          initialSort={{ colId: 'name', dir: 'asc' }}
-          // search
-          searchQuery={query}
-          globalFilter={globalFilter}
-          // pagination (client)
-          mode="client"
-          page={page}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={setPageSize}
-          pageSizeOptions={[5, 10, 20, 50]}
-          // styles
-          tableMinWidth={0} // allow table to shrink below container width (for better mobile support)
-          zebra
-          // Resizable columns
-          resizable
-          persistKey="dt.books.v1"
-          ariaLabel='Book data'
-        />
+      {!showForm && (
+        <>
+          {/* New + Search */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+            <button onClick={startNew}>New Book</button>
+            <DataTableSearchInput
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search books…"
+              aria-label="Search books"
+            />
+          </div>
+
+          <DataTable<Book>
+            rows={rows}
+            columns={columns}
+            rowId={(r) => r.id}
+            initialSort={{ colId: 'name', dir: 'asc' }}
+            // search
+            searchQuery={query}
+            globalFilter={globalFilter}
+            // pagination (client)
+            mode="client"
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[5, 10, 20, 50]}
+            // styles
+            tableMinWidth={0} // allow table to shrink below container width (for better mobile support)
+            zebra
+            // Resizable columns
+            resizable
+            persistKey="dt.books.v1"
+            ariaLabel='Book data'
+          />
+        </>
       )}
-      {!rows.length && (
+      {!rows.length && !showForm && (
         <div style={{ marginTop: 8, color: 'var(--muted)' }}>
           No books found.
         </div>

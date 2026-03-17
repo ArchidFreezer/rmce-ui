@@ -110,7 +110,7 @@ body.theme-dark .dt--zebra .dt__row--body:nth-child(even) .dt__cell--body {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 /* Resize handle (right edge of header cell) */

@@ -1,5 +1,5 @@
 import { fetchJson, sendJson } from './client';
-import type { Poison, PoisonsPayload } from '../types';
+import type { Poison, PoisonsPayload } from '../types/poison';
 
 const BASE = '/rmce/objects/poison';
 
