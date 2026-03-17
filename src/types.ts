@@ -159,3 +159,23 @@ export interface DiseaseType {
 export interface DiseaseTypesPayload {
   diseasetypes: DiseaseType[];
 }
+
+/**
+ * CreaturePace data
+ */
+export interface CreaturePace {
+  id: string;
+  name: string;
+  exhaustionMultiplier: number;   // accepts scientific notation on input; stored as number
+  movementMultiplier: number;     // accepts scientific notation on input; stored as number
+  manoeuvreDifficulty: ManoeuvreDifficulty;    // free text or pick from suggested difficulties below
+}
+
+export interface CreaturePacesPayload {
+  creaturepaces: CreaturePace[];
+}
+
+export type ManoeuvreDifficulty = 'Normal' | 'Routine' | 'Easy' | 'Light' | 'Medium' | 'Hard' | 'Very Hard' | 'Extremely Hard' | 'Sheer Folly' | 'Absurd'
+export const MANOEUVRE_DIFFICULTIES: ReadonlyArray<ManoeuvreDifficulty> = [
+  'Normal', 'Routine', 'Easy', 'Light', 'Medium', 'Hard', 'Very Hard', 'Extremely Hard', 'Sheer Folly', 'Absurd'
+] as const;
