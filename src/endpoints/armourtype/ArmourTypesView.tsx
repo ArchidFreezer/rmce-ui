@@ -21,7 +21,6 @@ export default function ArmourTypesView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
   const [form, setForm] = useState<ArmourType>(emptyArmourType());
-  const [formErr, setFormErr] = useState('');// legacy single message (kept for top-level)
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -47,19 +46,21 @@ export default function ArmourTypesView() {
   const [errors, setErrors] = useState<{ id?: string; name?: string; type?: string; numeric?: string }>({});
   const hasErrors = Boolean(errors.id || errors.name || errors.type || errors.numeric);
   const computeErrors = (draft: ArmourType, isEditing: boolean) => {
+    if (viewing) return {}; // no errors in view mode
+
     const next: { id?: string; name?: string; type?: string; numeric?: string } = {};
     // ID (only on create, must be unique and start with prefix in ucase and contain additional characters)
     if (!draft.id.trim()) next.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
-    if (!draft.id.trim().toUpperCase().startsWith('ARMOURTYPE_')) next.id = 'ID must start with "ARMOURTYPE_"';
-    if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
-    if (draft.id.trim().length <= 11) next.id = 'ID must contain additional characters after "ARMOURTYPE_"';
+    else if (!draft.id.trim().toUpperCase().startsWith('ARMOURTYPE_')) next.id = 'ID must start with "ARMOURTYPE_"';
+    else if (draft.id.trim().length <= 11) next.id = 'ID must contain additional characters after "ARMOURTYPE_"';
+    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
     // Name
     if (!draft.name.trim()) next.name = 'Name is required';
     // Type
     if (!draft.type.trim()) next.type = 'Type is required';
     else if (!isEditing && rows.some(r => r.type === draft.type.trim())) next.type = `Type "${draft.type.trim()}" already exists`;
-    if (!/^AT [1-2]?[0-9]$/.test(draft.type.trim())) next.type = 'Type must follow the pattern "AT [1-2]?[0-9]"';
+    else if (!/^AT [1-2]?[0-9]$/.test(draft.type.trim())) next.type = 'Type must follow the pattern "AT [1-2]?[0-9]"';
     // Numeric values
     if (!draft.minManoeuvreMod && draft.minManoeuvreMod !== 0) next.numeric = 'Min Manoeuvre Mod is required';
     else if (!isSignedIntegerString(String(draft.minManoeuvreMod))) next.numeric = 'Min Manoeuvre Mod must be an integer';
@@ -84,7 +85,6 @@ export default function ArmourTypesView() {
     setEditingId(null);
     setForm(emptyArmourType());
     setErrors({});
-    setFormErr('');
     setShowForm(true);
   };
 
@@ -92,7 +92,6 @@ export default function ArmourTypesView() {
     setViewing(false);
     setEditingId(row.id);
     setForm({ ...row });
-    setFormErr('');
     setErrors({});
     setShowForm(true);
   };
@@ -115,7 +114,6 @@ export default function ArmourTypesView() {
     setEditingId(row.id);       // we can reuse editingId to preload the item, but we won't allow saving
     setForm({ ...row });
     setErrors({});              // no need to compute field errors for read-only view, but we can keep formErr for any potential top-level messages
-    setFormErr('');
     setShowForm(true);
   };
 
@@ -124,7 +122,6 @@ export default function ArmourTypesView() {
     setShowForm(false);
     setEditingId(null);
     setErrors({});
-    setFormErr('');
   };
 
   const saveForm = async () => {
@@ -145,7 +142,7 @@ export default function ArmourTypesView() {
     const nextErrors = computeErrors(payload, Boolean(editingId));
     setErrors(nextErrors);
     const topError = nextErrors.id || nextErrors.name || nextErrors.type || nextErrors.numeric || '';
-    if (topError) { setFormErr(topError); return; }
+    if (topError) return;
 
     const isEditing = Boolean(editingId);
     try {
@@ -173,7 +170,6 @@ export default function ArmourTypesView() {
 
       setShowForm(false);
       setEditingId(null);
-      setFormErr('');
       toast({
         variant: 'success',
         title: isEditing ? 'Updated' : 'Saved',
@@ -346,7 +342,6 @@ export default function ArmourTypesView() {
             <CheckboxInput label="Includes Greaves" checked={form.includesGreaves} onChange={(v) => setForm(s => ({ ...s, includesGreaves: v }))} disabled={viewing} />
           </div>
 
-          {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
             <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
