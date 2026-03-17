@@ -20,7 +20,7 @@ const NUM_KEYS: ArmourNumberKey[] = [
   'quicknessPenalty',
 ];
 
-export default function ArmourtypesView() {
+export default function ArmourTypesView() {
   const [rows, setRows] = useState<ArmourType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -1,6 +1,6 @@
 import { lazy, type LazyExoticComponent, type ComponentType } from 'react';
 
-const ArmourtypesView = lazy(() => import('../endpoints/armourtypes/ArmourtypesView'));
+const ArmourTypesView = lazy(() => import('../endpoints/armourtype/ArmourTypesView'));
 const BooksView = lazy(() => import('../endpoints/books/BooksView'));
 const ClimateView = lazy(() => import('../endpoints/climates/ClimateView'));
 const CreaturePacesView = lazy(() => import('../endpoints/creaturepace/CreaturePacesView'));
@@ -20,7 +20,7 @@ export interface ResourceDef {
 /** Known resources with their routes/components */
 
 const known: Record<string, ResourceDef> = {
-  armourtype: { prefix: 'armourtype', label: 'Armour Types', path: '/armourtypes', Component: ArmourtypesView },
+  armourtype: { prefix: 'armourtype', label: 'Armour Types', path: '/armourtypes', Component: ArmourTypesView },
   book: { prefix: 'book', label: 'Books', path: '/books', Component: BooksView },
   climate: { prefix: 'climate', label: 'Climates', path: '/climates', Component: ClimateView },
   creaturepace: { prefix: 'creaturepace', label: 'Creature Paces', path: '/creaturepace', Component: CreaturePacesView },
