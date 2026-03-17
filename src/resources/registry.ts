@@ -7,7 +7,7 @@ const CreaturePaceView = lazy(() => import('../endpoints/creaturepace/CreaturePa
 const DiseaseView = lazy(() => import('../endpoints/disease/DiseaseView'));
 const DiseaseTypeView = lazy(() => import('../endpoints/diseasetype/DiseaseTypeView'));
 const PoisonView = lazy(() => import('../endpoints/poison/PoisonView'));
-const PoisonTypeView = lazy(() => import('../endpoints/poisontypes/PoisonTypeView'));
+const PoisonTypeView = lazy(() => import('../endpoints/poisontype/PoisonTypeView'));
 
 
 export interface ResourceDef {

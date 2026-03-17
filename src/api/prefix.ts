@@ -1,5 +1,5 @@
 import { fetchJson } from './client';
-import type { PrefixesPayload } from '../types';
+import type { PrefixesPayload } from '../types/prefix';
 
 // GET /rmce/prefixes → { prefixes: string[] }
 export async function fetchPrefixes(): Promise<string[]> {
