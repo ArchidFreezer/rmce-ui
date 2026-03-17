@@ -1,10 +1,10 @@
 import { fetchJson, sendJson } from './client';
-import type { Armourtype, ArmourtypesPayload } from '../types';
+import type { ArmourType, ArmourTypesPayload } from '../types/armourtype';
 
 const BASE = '/rmce/objects/armourtype';
 
-export async function fetchArmourtypes(): Promise<Armourtype[]> {
-  const data = await fetchJson<ArmourtypesPayload>(`${BASE}`);
+export async function fetchArmourTypes(): Promise<ArmourType[]> {
+  const data = await fetchJson<ArmourTypesPayload>(`${BASE}`);
   if (!data || !Array.isArray(data.armourtypes)) {
     throw new Error('Unexpected response: expected { armourtypes: [...] }');
   }
@@ -12,8 +12,8 @@ export async function fetchArmourtypes(): Promise<Armourtype[]> {
 }
 
 /** Create or update a single armourtype (POST to collection by default). */
-export async function upsertArmourtype(
-  armourtype: Armourtype,
+export async function upsertArmourType(
+  armourtype: ArmourType,
   opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {}
 ): Promise<unknown> {
   const { method = 'POST', useResourceIdPath = false } = opts;
@@ -25,8 +25,8 @@ export async function upsertArmourtype(
 }
 
 /** DELETE /rmce/objects/armourtype/{id} */
-export async function deleteArmourtype(id: string): Promise<unknown> {
-  if (!id) throw new Error('deleteArmourtype: id is required');
+export async function deleteArmourType(id: string): Promise<unknown> {
+  if (!id) throw new Error('deleteArmourType: id is required');
   const url = `${BASE}/${encodeURIComponent(id)}`;
   return fetchJson(url, { method: 'DELETE' });
 }

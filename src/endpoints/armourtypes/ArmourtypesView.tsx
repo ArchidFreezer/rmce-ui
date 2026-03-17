@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { fetchArmourtypes, upsertArmourtype, deleteArmourtype } from '../../api/armourtypes';
-import type { Armourtype } from '../../types';
+import { fetchArmourTypes, upsertArmourType, deleteArmourType } from '../../api/armourtype';
+import type { ArmourType } from '../../types/armourtype';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { CheckboxInput, LabeledInput } from '../../components/inputs';
@@ -21,7 +21,7 @@ const NUM_KEYS: ArmourNumberKey[] = [
 ];
 
 export default function ArmourtypesView() {
-  const [rows, setRows] = useState<Armourtype[]>([]);
+  const [rows, setRows] = useState<ArmourType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,7 +33,7 @@ export default function ArmourtypesView() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
-  const [form, setForm] = useState<Armourtype>(emptyArmourtype());
+  const [form, setForm] = useState<ArmourType>(emptyArmourType());
   const [formErr, setFormErr] = useState('');// legacy single message (kept for top-level)
   const toast = useToast();
   const confirm = useConfirm();
@@ -43,7 +43,7 @@ export default function ArmourtypesView() {
     let mounted = true;
     (async () => {
       try {
-        const data = await fetchArmourtypes();
+        const data = await fetchArmourTypes();
         if (!mounted) return;
         setRows(data);
       } catch (err) {
@@ -59,7 +59,7 @@ export default function ArmourtypesView() {
   // ----- Inline validation helpers -----
   const [errors, setErrors] = useState<{ id?: string; name?: string; type?: string; numeric?: string }>({});
   const hasErrors = Boolean(errors.id || errors.name || errors.type || errors.numeric);
-  const computeErrors = (draft: Armourtype, isEditing: boolean) => {
+  const computeErrors = (draft: ArmourType, isEditing: boolean) => {
     const next: { id?: string; name?: string; type?: string; numeric?: string } = {};
     // ID (only on create, must be unique and start with prefix in ucase and contain additional characters)
     if (!draft.id.trim()) next.id = 'ID is required';
@@ -91,13 +91,13 @@ export default function ArmourtypesView() {
   const startNew = () => {
     setViewing(false);
     setEditingId(null);
-    setForm(emptyArmourtype());
+    setForm(emptyArmourType());
     setErrors({});
     setFormErr('');
     setShowForm(true);
   };
 
-  const startEdit = (row: Armourtype) => {
+  const startEdit = (row: ArmourType) => {
     setViewing(false);
     setEditingId(row.id);
     setForm({ ...row });
@@ -106,7 +106,7 @@ export default function ArmourtypesView() {
     setShowForm(true);
   };
 
-  const startDuplicate = (row: Armourtype) => {
+  const startDuplicate = (row: ArmourType) => {
     setViewing?.(false);           // if you have viewing state; otherwise omit
     setEditingId(null);
 
@@ -114,12 +114,12 @@ export default function ArmourtypesView() {
     next.id = 'ARMOURTYPE_';
     next.name += ' (Copy)';
 
-    setForm(next as any); // if your form state = Armourtype
+    setForm(next as any); // if your form state = ArmourType
     setErrors?.({});      // if you have an errors object
     setShowForm(true);
   };
 
-  const startView = (row: Armourtype) => {
+  const startView = (row: ArmourType) => {
     setViewing(true);
     setEditingId(row.id);       // we can reuse editingId to preload the item, but we won't allow saving
     setForm({ ...row });
@@ -138,7 +138,7 @@ export default function ArmourtypesView() {
 
   const saveForm = async () => {
     // Normalize payload (strings -> numbers for numeric fields)
-    const payload: Armourtype = {
+    const payload: ArmourType = {
       id: String(form.id).trim(),
       name: String(form.name).trim(),
       type: String(form.type).trim(),
@@ -162,7 +162,7 @@ export default function ArmourtypesView() {
         ? { method: 'PUT' as const, useResourceIdPath: true }
         : { method: 'POST' as const, useResourceIdPath: false };
 
-      await upsertArmourtype(payload, opts);
+      await upsertArmourType(payload, opts);
 
       setRows((prev) => {
         if (isEditing) {
@@ -197,12 +197,12 @@ export default function ArmourtypesView() {
     }
   };
 
-  const onDelete = async (row: Armourtype) => {
+  const onDelete = async (row: ArmourType) => {
     const id = row?.id;
     if (!id) return;
     const ok = await confirm({
-      title: 'Delete Armourtype',
-      body: `Delete armourtype "${id}"? This cannot be undone.`,
+      title: 'Delete ArmourType',
+      body: `Delete ArmourType "${id}"? This cannot be undone.`,
       confirmText: 'Delete',
       cancelText: 'Cancel',
       tone: 'danger',
@@ -212,10 +212,10 @@ export default function ArmourtypesView() {
     const prev = rows;
     setRows(prev.filter(a => a.id !== id));
     try {
-      await deleteArmourtype(id);
+      await deleteArmourType(id);
       // if currently editing this item, close the form
       if (editingId === row.id) cancelForm();
-      toast({ variant: 'success', title: 'Deleted', description: `Armourtype "${id}" deleted.` });
+      toast({ variant: 'success', title: 'Deleted', description: `ArmourType "${id}" deleted.` });
     } catch (err) {
       setRows(prev);
       toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err) });
@@ -223,7 +223,7 @@ export default function ArmourtypesView() {
   };
 
   // ----- Columns (Edit + Delete) -----
-  const columns: ColumnDef<Armourtype>[] = useMemo(() => {
+  const columns: ColumnDef<ArmourType>[] = useMemo(() => {
     return [
       { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
       { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
@@ -254,7 +254,7 @@ export default function ArmourtypesView() {
   }, [rows, editingId]); // allows closing form on self-delete
 
   // ----- Search -----
-  const globalFilter = (a: Armourtype, q: string) => {
+  const globalFilter = (a: ArmourType, q: string) => {
     const s = q.toLowerCase();
     return [
       a.id, a.name, a.type, a.description,
@@ -380,7 +380,7 @@ export default function ArmourtypesView() {
       ) : error ? (
         <div style={{ color: 'crimson' }}>Error: {error}</div>
       ) : (
-        <DataTable<Armourtype>
+        <DataTable<ArmourType>
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}
@@ -414,7 +414,7 @@ export default function ArmourtypesView() {
   );
 }
 
-function emptyArmourtype(): Armourtype {
+function emptyArmourType(): ArmourType {
   return {
     id: 'ARMOURTYPE_',
     name: '',

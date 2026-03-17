@@ -67,7 +67,7 @@ export interface PoisonTypesPayload {
  * Note: Armourtype is a bit of an odd name, but it matches the API and avoids confusion with the Armour interface used for character equipment.
  * The API's "armourtype" is more like a template or category of armour, while the actual "armour" items that characters wear would be instances of these types.
  */
-export interface Armourtype {
+export interface ArmourType {
   id: string;
   name: string;
   type: string;
@@ -80,8 +80,8 @@ export interface Armourtype {
   includesGreaves: boolean;
 }
 
-export interface ArmourtypesPayload {
-  armourtypes: Armourtype[];
+export interface ArmourTypesPayload {
+  armourtypes: ArmourType[];
 }
 
 /**
