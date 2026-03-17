@@ -5,8 +5,8 @@ import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 
 import { fetchCreaturePaces, upsertCreaturePace, deleteCreaturePace } from '../../api/creaturepace';
-import type { CreaturePace } from '../../types';
-import { MANOEUVRE_DIFFICULTIES, type ManoeuvreDifficulty } from '../../types';
+import type { CreaturePace } from '../../types/creaturepace';
+import { MANOEUVRE_DIFFICULTIES, type ManoeuvreDifficulty } from '../../types/enum';
 
 // ------------------------
 // Form VM (strings for numbers while typing)
@@ -56,7 +56,7 @@ function sanitizeScientificInput(s: string): string {
   return s.replace(/[^0-9eE+.\-]/g, '');
 }
 
-export default function CreaturePacesView() {
+export default function CreaturePaceView() {
   const [rows, setRows] = useState<CreaturePace[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -103,30 +103,31 @@ export default function CreaturePacesView() {
   }>({});
   const hasErrors = Boolean(errors.id || errors.name || errors.exhaustionMultiplier || errors.movementMultiplier || errors.manoeuvreDifficulty);
   const computeErrors = (draft: FormState, isEditing: boolean) => {
+    if (viewing) return {};             // suppress inline errors in view mode
+
     const next: typeof errors = {};
+    // ID validation: non-empty, uppercase letters/numbers/underscores only, must start with "CREATUREPACE_", must be unique (create only)
     if (!draft.id.trim()) next.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
-    if (!draft.id.trim().toUpperCase().startsWith('CREATUREPACE_')) next.id = 'ID must start with "CREATUREPACE_"';
-    if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
-    if (draft.id.trim().length <= 14) next.id = 'ID must contain additional characters after "CREATUREPACE_"'; if (!draft.name.trim()) next.name = 'Name is required';
-
+    else if (!draft.id.trim().toUpperCase().startsWith('CREATUREPACE_')) next.id = 'ID must start with "CREATUREPACE_"';
+    else if (draft.id.trim().length <= 14) next.id = 'ID must contain additional characters after "CREATUREPACE_"';
+    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
+    // Name validation: non-empty, allow any chars (including spaces), but trim whitespace
+    if (!draft.name.trim()) next.name = 'Name is required';
+    // Exhaustion and movement multipliers: required, must be valid numbers (supporting scientific notation)
     const ex = draft.exhaustionMultiplier.trim();
     if (!ex) next.exhaustionMultiplier = 'Exhaustion multiplier is required';
     else if (!isScientificNumberString(ex)) next.exhaustionMultiplier = 'Must be a number (supports scientific notation)';
     else if (!Number.isFinite(Number(ex))) next.exhaustionMultiplier = 'Invalid number';
-
+    // Manoeuvre difficulty: required, must be one of the predefined difficulties
     const mv = draft.movementMultiplier.trim();
     if (!mv) next.movementMultiplier = 'Movement multiplier is required';
     else if (!isScientificNumberString(mv)) next.movementMultiplier = 'Must be a number (supports scientific notation)';
     else if (!Number.isFinite(Number(mv))) next.movementMultiplier = 'Invalid number';
-
+    // Manoeuvre difficulty: required, must be one of the predefined difficulties
     if (!draft.manoeuvreDifficulty.trim()) next.manoeuvreDifficulty = 'Manoeuvre difficulty is required';
     else if (!isDifficulty(draft.manoeuvreDifficulty)) next.manoeuvreDifficulty = 'Invalid manoeuvre difficulty';
 
-    // uniqueness (create only)
-    if (!editingId && rows.some((r) => r.id === draft.id.trim())) {
-      next.id = `ID "${draft.id.trim()}" already exists`;
-    }
     return next;
   };
 
@@ -256,7 +257,7 @@ export default function CreaturePacesView() {
       header: 'Exhaustion Multiplier',
       accessor: (r) => r.exhaustionMultiplier,
       sortType: 'number',
-      align: 'right',
+      align: 'center',
       minWidth: 180,
     },
     {
@@ -264,8 +265,8 @@ export default function CreaturePacesView() {
       header: 'Movement Multiplier',
       accessor: (r) => r.movementMultiplier,
       sortType: 'number',
-      align: 'right',
-      minWidth: 180,
+      align: 'center',
+      minWidth: 80,
     },
     {
       id: 'manoeuvreDifficulty',
@@ -306,17 +307,6 @@ export default function CreaturePacesView() {
   return (
     <>
       <h2>Creature Paces</h2>
-
-      {/* Toolbar */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-        <button onClick={startNew}>New Creature Pace</button>
-        <DataTableSearchInput
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search creature paces…"
-          aria-label="Search creature paces"
-        />
-      </div>
 
       {/* Form panel */}
       {showForm && (
@@ -381,33 +371,42 @@ export default function CreaturePacesView() {
       )}
 
       {/* Shared DataTable */}
-      {loading ? (
-        <div>Loading…</div>
-      ) : error ? (
-        <div style={{ color: 'crimson' }}>Error: {error}</div>
-      ) : (
-        <DataTable<CreaturePace>
-          rows={rows}
-          columns={columns}
-          rowId={(r) => r.id}
-          initialSort={{ colId: 'name', dir: 'asc' }}
-          searchQuery={query}
-          globalFilter={globalFilter}
-          mode="client"
-          page={page}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={setPageSize}
-          pageSizeOptions={[5, 10, 20, 50, 100]}
-          tableMinWidth={900}
-          zebra
-          hover
-          resizable
-          persistKey="dt.creaturepace.v1"
-          ariaLabel="Creature paces"
-        />
+      {!showForm && (
+        <>
+          {/* Toolbar */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+            <button onClick={startNew}>New Creature Pace</button>
+            <DataTableSearchInput
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search creature paces…"
+              aria-label="Search creature paces"
+            />
+          </div>
+
+          <DataTable<CreaturePace>
+            rows={rows}
+            columns={columns}
+            rowId={(r) => r.id}
+            initialSort={{ colId: 'movementMultiplier', dir: 'asc' }}
+            searchQuery={query}
+            globalFilter={globalFilter}
+            mode="client"
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[5, 10, 20, 50, 100]}
+            tableMinWidth={900}
+            zebra
+            hover
+            resizable
+            persistKey="dt.creaturepace.v1"
+            ariaLabel="Creature paces"
+          />
+        </>
       )}
-      {!rows.length && (
+      {!rows.length && !showForm && (
         <div style={{ marginTop: 8, color: 'var(--muted)' }}>
           No creature paces found.
         </div>

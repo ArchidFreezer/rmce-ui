@@ -3,7 +3,7 @@ import { lazy, type LazyExoticComponent, type ComponentType } from 'react';
 const ArmourTypesView = lazy(() => import('../endpoints/armourtype/ArmourTypesView'));
 const BooksView = lazy(() => import('../endpoints/book/BooksView'));
 const ClimateView = lazy(() => import('../endpoints/climate/ClimateView'));
-const CreaturePacesView = lazy(() => import('../endpoints/creaturepace/CreaturePacesView'));
+const CreaturePaceView = lazy(() => import('../endpoints/creaturepace/CreaturePaceView'));
 const DiseasesView = lazy(() => import('../endpoints/diseases/DiseasesView'));
 const DiseasetypesView = lazy(() => import('../endpoints/diseasetypes/DiseasetypesView'));
 const PoisonsView = lazy(() => import('../endpoints/poisons/PoisonsView'));
@@ -23,7 +23,7 @@ const known: Record<string, ResourceDef> = {
   armourtype: { prefix: 'armourtype', label: 'Armour Types', path: '/armourtypes', Component: ArmourTypesView },
   book: { prefix: 'book', label: 'Books', path: '/books', Component: BooksView },
   climate: { prefix: 'climate', label: 'Climates', path: '/climates', Component: ClimateView },
-  creaturepace: { prefix: 'creaturepace', label: 'Creature Paces', path: '/creaturepace', Component: CreaturePacesView },
+  creaturepace: { prefix: 'creaturepace', label: 'Creature Paces', path: '/creaturepaces', Component: CreaturePaceView },
   disease: { prefix: 'disease', label: 'Diseases', path: '/diseases', Component: DiseasesView },
   diseasetype: { prefix: 'diseasetype', label: 'Disease Types', path: '/diseasetypes', Component: DiseasetypesView },
   poison: { prefix: 'poison', label: 'Poisons', path: '/poisons', Component: PoisonsView },
