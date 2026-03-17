@@ -4,12 +4,12 @@ import { LabeledInput } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 
-import { fetchDiseasetypes, upsertDiseasetype, deleteDiseasetype } from '../../api/diseasetypes';
-import type { DiseaseType, Severity } from '../../types';
-import { SEVERITIES } from '../../types';
+import { fetchDiseasetypes, upsertDiseasetype, deleteDiseasetype } from '../../api/diseasetype';
+import type { DiseaseType } from '../../types/diseasetype';
+import { MALADY_SEVERITIES, MaladySeverity } from '../../types/enum';
 
 // ---- Form VM: keep symptoms editable with textareas ----
-type SymptomRowVM = { severity: Severity; symptoms: string };
+type SymptomRowVM = { severity: MaladySeverity; symptoms: string };
 
 type FormState = {
   id: string;
@@ -20,13 +20,13 @@ type FormState = {
 };
 
 function emptyVM(): FormState {
-  const mkSymptom = (s: Severity): SymptomRowVM => ({ severity: s, symptoms: '' });
+  const mkSymptom = (s: MaladySeverity): SymptomRowVM => ({ severity: s, symptoms: '' });
   return {
     id: 'DISEASETYPE_',
     type: '',
     transmission: '',
     description: '',
-    symptoms: SEVERITIES.map(mkSymptom),
+    symptoms: MALADY_SEVERITIES.map(mkSymptom),
   };
 }
 
@@ -38,7 +38,7 @@ function toVM(d: DiseaseType): FormState {
     type: d.type,
     transmission: d.transmission,
     description: d.description,
-    symptoms: SEVERITIES.map((s) => {
+    symptoms: MALADY_SEVERITIES.map((s) => {
       const r = by.get(s);
       return { severity: s, symptoms: r ? r.symptoms : '' };
     }),
@@ -56,7 +56,7 @@ function fromVM(vm: FormState): DiseaseType {
   };
 }
 
-export default function DiseasetypesView() {
+export default function DiseaseTypeView() {
   const [rows, setRows] = useState<DiseaseType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -95,34 +95,37 @@ export default function DiseasetypesView() {
   // ---- Validation ----
   const [errors, setErrors] = useState<{
     id?: string; type?: string; transmission?: string; description?: string;
-    symptoms?: Record<Severity, string | undefined>;
+    symptoms?: Record<MaladySeverity, string | undefined>;
   }>({});
   const hasErrors = Boolean(
     errors.id || errors.type || errors.transmission || errors.description ||
-    (errors.symptoms && SEVERITIES.some((s) => errors.symptoms?.[s]))
+    (errors.symptoms && MALADY_SEVERITIES.some((s) => errors.symptoms?.[s]))
   );
   const computeErrors = (draft = form, isEditing: boolean) => {
     const e: typeof errors = {};
+    // ID: required, unique (when creating), format (starts with DISEASETYPE_, only uppercase letters/numbers/underscores, etc.)
     if (!draft.id.trim()) e.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) e.id = `ID "${draft.id.trim()}" already exists`;
-    if (!draft.id.trim().toUpperCase().startsWith('DISEASETYPE_')) e.id = 'ID must start with "DISEASETYPE_"';
-    if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) e.id = 'ID can only contain uppercase letters, numbers and underscores';
-    if (draft.id.trim().length <= 12) e.id = 'ID must contain additional characters after "DISEASETYPE_"'; if (!draft.type.trim()) e.type = 'Type is required';
+    else if (!draft.id.trim().toUpperCase().startsWith('DISEASETYPE_')) e.id = 'ID must start with "DISEASETYPE_"';
+    else if (draft.id.trim().length <= 12) e.id = 'ID must contain additional characters after "DISEASETYPE_"';
+    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) e.id = 'ID can only contain uppercase letters, numbers and underscores';
+    // Type, Transmission, Description: required
+    if (!draft.type.trim()) e.type = 'Type is required';
     if (!draft.transmission.trim()) e.transmission = 'Transmission is required';
     if (!draft.description.trim()) e.description = 'Description is required';
 
-    const sy: Record<Severity, string | undefined> = {} as any;
-    const seen = new Set<Severity>();
+    const sy: Record<MaladySeverity, string | undefined> = {} as any;
+    const seen = new Set<MaladySeverity>();
     for (const r of draft.symptoms) {
       if (seen.has(r.severity)) sy[r.severity] = 'Duplicate severity';
       else seen.add(r.severity);
       if (!r.symptoms.trim()) sy[r.severity] = 'Symptoms are required';
     }
     // Ensure all severities
-    for (const s of SEVERITIES) {
+    for (const s of MALADY_SEVERITIES) {
       if (!draft.symptoms.some((r) => r.severity === s)) sy[s] = 'Missing severity';
     }
-    if (SEVERITIES.some((s) => sy[s])) e.symptoms = sy;
+    if (MALADY_SEVERITIES.some((s) => sy[s])) e.symptoms = sy;
 
     return e;
   };
@@ -182,12 +185,12 @@ export default function DiseasetypesView() {
   const saveForm = async () => {
     const payload = fromVM(form);
     const isEditing = Boolean(editingId);
-    
+
     const e = computeErrors(form, isEditing);
     setErrors(e);
     const firstTop =
       e.id || e.type || e.transmission || e.description ||
-      (e.symptoms && SEVERITIES.map((s) => e.symptoms?.[s]).find(Boolean)) || '';
+      (e.symptoms && MALADY_SEVERITIES.map((s) => e.symptoms?.[s]).find(Boolean)) || '';
     if (firstTop) return;
 
     try {
@@ -317,17 +320,6 @@ export default function DiseasetypesView() {
     <>
       <h2>Disease Types</h2>
 
-      {/* New + Search */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-        <button onClick={startNew}>New Disease Type</button>
-        <DataTableSearchInput
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search disease types…"
-          aria-label="Search disease types"
-        />
-      </div>
-
       {/* Form panel */}
       {showForm && (
         <div
@@ -401,27 +393,44 @@ export default function DiseasetypesView() {
         </div>
       )}
 
-      {/* Table */}
-      <DataTable<DiseaseType>
-        rows={rows}
-        columns={columns}
-        rowId={(r) => r.id}
-        initialSort={{ colId: 'type', dir: 'asc' }}
-        searchQuery={query}
-        globalFilter={globalFilter}
-        mode="client"
-        page={page}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-        pageSizeOptions={[5, 10, 20, 50, 100]}
-        tableMinWidth={900}
-        zebra
-        hover
-        resizable
-        persistKey="dt.diseasetype.v1"
-        ariaLabel="Disease types"
-      />
+      {/* Shared DataTable */}
+      {!showForm && (
+        <>
+          {/* New + Search */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+            <button onClick={startNew}>New Disease Type</button>
+            <DataTableSearchInput
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search disease types…"
+              aria-label="Search disease types"
+            />
+          </div>
+
+          {/* Table */}
+          <DataTable<DiseaseType>
+            rows={rows}
+            columns={columns}
+            rowId={(r) => r.id}
+            initialSort={{ colId: 'type', dir: 'asc' }}
+            searchQuery={query}
+            globalFilter={globalFilter}
+            mode="client"
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[5, 10, 20, 50, 100]}
+            tableMinWidth={900}
+            zebra
+            hover
+            resizable
+            persistKey="dt.diseasetype.v1"
+            ariaLabel="Disease types"
+          />
+        </>
+      )}
+
     </>
   );
 }

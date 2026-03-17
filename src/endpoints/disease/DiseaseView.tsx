@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable'
 import { fetchDiseases, upsertDisease, deleteDisease } from '../../api/disease';
-import { fetchDiseasetypes } from '../../api/diseasetypes';
+import { fetchDiseasetypes } from '../../api/diseasetype';
 import type { Disease } from '../../types/disease';
-import type { DiseaseType } from '../../types';
+import type { DiseaseType } from '../../types/diseasetype';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { LabeledInput, LabeledSelect } from '../../components/inputs';

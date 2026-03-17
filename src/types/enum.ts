@@ -23,3 +23,7 @@ export type ManoeuvreDifficulty = 'Normal' | 'Routine' | 'Easy' | 'Light' | 'Med
 export const MANOEUVRE_DIFFICULTIES: ReadonlyArray<ManoeuvreDifficulty> = [
   'Normal', 'Routine', 'Easy', 'Light', 'Medium', 'Hard', 'Very Hard', 'Extremely Hard', 'Sheer Folly', 'Absurd'
 ] as const;
+
+/** Enum for disease and poison severity reusable list for form dropdowns */
+export type MaladySeverity = 'Mild' | 'Moderate' | 'Severe' | 'Extreme';
+export const MALADY_SEVERITIES: ReadonlyArray<MaladySeverity> = ['Mild', 'Moderate', 'Severe', 'Extreme'] as const;

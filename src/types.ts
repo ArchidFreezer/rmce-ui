@@ -1,3 +1,5 @@
+import { MaladySeverity } from './types/enum';
+
 export interface PrefixesPayload {
   prefixes: string[];
 }
@@ -19,18 +21,16 @@ export interface PoisonsPayload {
   poisons: Poison[];
 }
 
-/** Enum plus reusable list for form dropdowns */
-export type Severity = 'Mild' | 'Moderate' | 'Severe' | 'Extreme';
-export const SEVERITIES: ReadonlyArray<Severity> = ['Mild', 'Moderate', 'Severe', 'Extreme'] as const;
+
 
 export interface PoisonTypeEffectOnset {
-  severity: Severity;
+  severity: MaladySeverity;
   min: number;
   max: number;
 }
 
 export interface PoisonTypeSymptom {
-  severity: Severity;
+  severity: MaladySeverity;
   symptoms: string;
 }
 
@@ -46,23 +46,5 @@ export interface PoisonTypesPayload {
   poisontypes: PoisonType[];
 }
 
-
-// --- Disease Types ---
-export interface DiseaseTypeSymptom {
-  severity: Severity;
-  symptoms: string;
-}
-
-export interface DiseaseType {
-  id: string;
-  type: string;           // “Bubonic”, “Chemical”, etc.
-  transmission: string;   // “Injection”, “Ingestion”, ...
-  description: string;
-  severitySymptoms: DiseaseTypeSymptom[]; // exactly 4 entries (Mild..Extreme)
-}
-
-export interface DiseaseTypesPayload {
-  diseasetypes: DiseaseType[];
-}
 
 
