@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable'
-import { fetchDiseases, upsertDisease, deleteDisease } from '../../api/diseases';
+import { fetchDiseases, upsertDisease, deleteDisease } from '../../api/disease';
 import { fetchDiseasetypes } from '../../api/diseasetypes';
-import type { Disease, DiseaseType } from '../../types';
+import type { Disease } from '../../types/disease';
+import type { DiseaseType } from '../../types';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { LabeledInput, LabeledSelect } from '../../components/inputs';
@@ -22,7 +23,6 @@ export default function DiseaseView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
   const [form, setForm] = useState<Disease>(emptyDisease());
-  const [formErr, setFormErr] = useState(''); // legacy single message (kept for top-level)
 
   // Form state for disease types dropdown
   const [diseaseTypes, setDiseaseTypes] = useState<DiseaseType[]>([]);
@@ -65,19 +65,21 @@ export default function DiseaseView() {
     })();
     return () => { mounted = false; };
   }, []);
-  const diseaseTypeIds = useMemo(() => new Set(diseaseTypes.map(dt => dt.id)), [diseaseTypes]);  
+  const diseaseTypeIds = useMemo(() => new Set(diseaseTypes.map(dt => dt.id)), [diseaseTypes]);
 
   // ----- Inline validation helpers -----
   const [errors, setErrors] = useState<{ id?: string; name?: string; type?: string; level?: string; variance?: string }>({});
   const hasErrors = Boolean(errors.id || errors.name || errors.type || errors.level || errors.variance);
   const computeErrors = (draft: Disease, isEditing: boolean) => {
+    if (viewing) return {};             // suppress inline errors in view mode
+
     const next: { id?: string; name?: string; type?: string; level?: string; variance?: string } = {};
     // ID (only on create, must be unique and start with prefix in ucase and contain additional characters)
     if (!draft.id.trim()) next.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
-    if (!draft.id.trim().toUpperCase().startsWith('DISEASE_')) next.id = 'ID must start with "DISEASE_"';
-    if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
-    if (draft.id.trim().length <= 8) next.id = 'ID must contain additional characters after "DISEASE_"';
+    else if (!draft.id.trim().toUpperCase().startsWith('DISEASE_')) next.id = 'ID must start with "DISEASE_"';
+    else if (draft.id.trim().length <= 8) next.id = 'ID must contain additional characters after "DISEASE_"';
+    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
     // Name
     if (!draft.name.trim()) next.name = 'Name is required';
     // Type
@@ -88,7 +90,7 @@ export default function DiseaseView() {
     if (!isIntegerString(raw)) next.level = `Level must be an integer`;
     // Variance must be a single uppercase character
     if (!draft.levelVariance.trim()) next.variance = `Level Variance is required`;
-    if (!/^[A-Z]$/.test(draft.levelVariance.trim())) next.variance = 'Level Variance must be a single uppercase character';
+    else if (!/^[A-Z]$/.test(draft.levelVariance.trim())) next.variance = 'Level Variance must be a single uppercase character';
 
     return next;
   };
@@ -105,7 +107,6 @@ export default function DiseaseView() {
     setEditingId(null);
     setForm(emptyDisease());
     setErrors({});
-    setFormErr('');
     setShowForm(true);
   };
 
@@ -114,7 +115,6 @@ export default function DiseaseView() {
     setEditingId(row.id);
     setForm({ ...row });
     setErrors({});
-    setFormErr('');
     setShowForm(true);
   };
 
@@ -136,7 +136,6 @@ export default function DiseaseView() {
     setEditingId(row.id);       // we can reuse editingId to preload the item, but we won't allow saving
     setForm({ ...row });
     setErrors({});              // no need to compute field errors for read-only view, but we can keep formErr for any potential top-level messages
-    setFormErr('');
     setShowForm(true);
   };
 
@@ -145,7 +144,6 @@ export default function DiseaseView() {
     setShowForm(false);
     setEditingId(null);
     setErrors({});
-    setFormErr('');
   };
 
   const saveForm = async () => {
@@ -161,7 +159,7 @@ export default function DiseaseView() {
     const nextErrors = computeErrors(payload, Boolean(editingId));
     setErrors(nextErrors);
     const topError = nextErrors.id || nextErrors.name || nextErrors.type || nextErrors.level || nextErrors.variance || '';
-    if (topError) { setFormErr(topError); return; }
+    if (topError) return;
 
     const isEditing = Boolean(editingId);
     try {
@@ -189,7 +187,6 @@ export default function DiseaseView() {
 
       setShowForm(false);
       setEditingId(null);
-      setFormErr('');
       toast({
         variant: 'success',
         title: isEditing ? 'Updated' : 'Saved',
@@ -246,10 +243,10 @@ export default function DiseaseView() {
         header: 'Type',
         accessor: (r) => r.type,
         sortType: 'string',
-        render: (r) =>  diseaseTypeLabelById.get(r.type) ?? r.type, // use label if available, otherwise fallback to raw id
+        render: (r) => diseaseTypeLabelById.get(r.type) ?? r.type, // use label if available, otherwise fallback to raw id
       },
-      { id: 'level', header: 'Level', accessor: r => r.level, sortType: 'number', align: 'center' },
-      { id: 'levelVariance', header: 'Level Variance', accessor: r => r.levelVariance, sortType: 'string', align: 'center' },
+      { id: 'level', header: 'Level', accessor: r => r.level, sortType: 'number', align: 'center', minWidth: 80 },
+      { id: 'levelVariance', header: 'Level Variance', accessor: r => r.levelVariance, sortType: 'string', align: 'center', minWidth: 80 },
       {
         id: 'actions',
         header: 'Actions',
@@ -267,13 +264,13 @@ export default function DiseaseView() {
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, diseaseTypeLabelById, editingId]); // allows closing form on self-delete
-  
+
   // ----- Search -----
   const globalFilter = (p: Disease, q: string) => {
     const s = q.toLowerCase();
     return [p.id, p.name, diseaseTypeLabelById.get(p.type) ?? p.type, p.level, p.levelVariance]
       .some(v => String(v ?? '').toLowerCase().includes(s));
-  };  
+  };
 
   // Prepare select options for Disease Types (for the LabeledSelect in the form), memoized for performance
   const diseaseTypeOptions = useMemo(
@@ -292,17 +289,6 @@ export default function DiseaseView() {
   return (
     <>
       <h2>Diseases</h2>
-
-      {/* New + Search */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-        <button onClick={startNew}>New Disease</button>
-        <DataTableSearchInput
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search diseases…"
-          aria-label="Search diseases"
-        />
-      </div>
 
       {/* Form panel (Create & Edit) */}
       {showForm && (
@@ -336,7 +322,6 @@ export default function DiseaseView() {
             <LabeledInput label="Level Variance" value={form.levelVariance} onChange={(v) => setForm((s) => ({ ...s, levelVariance: v }))} error={errors.variance} disabled={viewing} />
           </div>
 
-          {formErr && <div style={{ color: 'crimson', marginTop: 8 }}>{formErr}</div>}
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
             <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
@@ -345,36 +330,45 @@ export default function DiseaseView() {
       )}
 
       {/* Shared DataTable */}
-      {loading ? (
-        <div>Loading…</div>
-      ) : error ? (
-        <div style={{ color: 'crimson' }}>Error: {error}</div>
-      ) : (
-        <DataTable<Disease>
-          rows={rows}
-          columns={columns}
-          rowId={(r) => r.id}
-          initialSort={{ colId: 'name', dir: 'asc' }}
-          // search
-          searchQuery={query}
-          globalFilter={globalFilter}
-          // pagination (client)
-          mode="client"
-          page={page}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={setPageSize}
-          pageSizeOptions={[5, 10, 20, 50]}
-          // styles
-          tableMinWidth={0} // Allow table to shrink below container width (enables horizontal scroll when needed)
-          zebra
-          // Resizable columns
-          resizable
-          persistKey="dt.diseases.v1"
-          ariaLabel='Diseases data'
-        />
+      {!showForm && (
+        <>
+          {/* New + Search */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+            <button onClick={startNew}>New Disease</button>
+            <DataTableSearchInput
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search diseases…"
+              aria-label="Search diseases"
+            />
+          </div>
+
+          <DataTable<Disease>
+            rows={rows}
+            columns={columns}
+            rowId={(r) => r.id}
+            initialSort={{ colId: 'name', dir: 'asc' }}
+            // search
+            searchQuery={query}
+            globalFilter={globalFilter}
+            // pagination (client)
+            mode="client"
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[5, 10, 20, 50]}
+            // styles
+            tableMinWidth={0} // Allow table to shrink below container width (enables horizontal scroll when needed)
+            zebra
+            // Resizable columns
+            resizable
+            persistKey="dt.diseases.v1"
+            ariaLabel='Diseases data'
+          />
+        </>
       )}
-      {!rows.length && (
+      {!rows.length && !showForm && (
         <div style={{ marginTop: 8, color: 'var(--muted)' }}>
           No diseases found.
         </div>
