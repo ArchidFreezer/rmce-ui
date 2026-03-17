@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable'
 import { fetchPoisons, upsertPoison, deletePoison } from '../../api/poison';
-import { fetchPoisontypes } from '../../api/poisontypes';
+import { fetchPoisontypes } from '../../api/poisontype';
 import type { Poison } from '../../types/poison';
-import type { PoisonType } from '../../types';
+import type { PoisonType } from '../../types/poisontype';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { LabeledInput, LabeledSelect } from '../../components/inputs';

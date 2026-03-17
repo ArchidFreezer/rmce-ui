@@ -5,7 +5,7 @@ import type {
   PoisonTypesPayload,
   PoisonTypeEffectOnset,
   PoisonTypeSymptom,
-} from '../types';
+} from '../types/poisontype';
 import { MALADY_SEVERITIES, MaladySeverity } from '../types/enum';
 
 const BASE = '/rmce/objects/poisontype';

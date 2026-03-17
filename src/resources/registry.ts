@@ -7,7 +7,7 @@ const CreaturePaceView = lazy(() => import('../endpoints/creaturepace/CreaturePa
 const DiseaseView = lazy(() => import('../endpoints/disease/DiseaseView'));
 const DiseaseTypeView = lazy(() => import('../endpoints/diseasetype/DiseaseTypeView'));
 const PoisonView = lazy(() => import('../endpoints/poison/PoisonView'));
-const PoisontypesView = lazy(() => import('../endpoints/poisontypes/PoisontypesView'));
+const PoisonTypeView = lazy(() => import('../endpoints/poisontypes/PoisonTypeView'));
 
 
 export interface ResourceDef {
@@ -27,7 +27,7 @@ const known: Record<string, ResourceDef> = {
   disease: { prefix: 'disease', label: 'Diseases', path: '/diseases', Component: DiseaseView },
   diseasetype: { prefix: 'diseasetype', label: 'Disease Types', path: '/diseasetypes', Component: DiseaseTypeView },
   poison: { prefix: 'poison', label: 'Poisons', path: '/poisons', Component: PoisonView },
-  poisontype: { prefix: 'poisontype', label: 'Poison Types', path: '/poisontypes', Component: PoisontypesView },
+  poisontype: { prefix: 'poisontype', label: 'Poison Types', path: '/poisontypes', Component: PoisonTypeView },
 }
 
 

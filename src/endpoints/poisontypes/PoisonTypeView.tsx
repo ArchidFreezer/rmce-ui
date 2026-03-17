@@ -5,8 +5,8 @@ import { LabeledInput } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 
-import { fetchPoisontypes, upsertPoisontype, deletePoisontype } from '../../api/poisontypes';
-import type { PoisonType } from '../../types';
+import { fetchPoisontypes, upsertPoisontype, deletePoisontype } from '../../api/poisontype';
+import type { PoisonType } from '../../types/poisontype';
 import { MALADY_SEVERITIES, MaladySeverity } from '../../types/enum';
 
 // ----- Local form VM types (strings for numeric editors to allow partial typing) -----
@@ -73,7 +73,7 @@ function fromVM(vm: FormState): PoisonType {
   };
 }
 
-export default function PoisontypesView() {
+export default function PoisonTypeView() {
   const [rows, setRows] = useState<PoisonType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -124,13 +124,15 @@ export default function PoisontypesView() {
     (errors.symptoms && MALADY_SEVERITIES.some((s) => errors.symptoms?.[s]))
   );
   const computeErrors = (draft = form, isEditing: boolean) => {
+    if (viewing) return {};             // suppress inline errors in view mode
+
     const e: typeof errors = {};
     // ID
     if (!draft.id.trim()) e.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) e.id = `ID "${draft.id.trim()}" already exists`;
-    if (!draft.id.trim().toUpperCase().startsWith('POISONTYPE_')) e.id = 'ID must start with "POISONTYPE_"';
-    if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) e.id = 'ID can only contain uppercase letters, numbers and underscores';
-    if (draft.id.trim().length <= 12) e.id = 'ID must contain additional characters after "POISONTYPE_"';
+    else if (!draft.id.trim().toUpperCase().startsWith('POISONTYPE_')) e.id = 'ID must start with "POISONTYPE_"';
+    else if (draft.id.trim().length <= 12) e.id = 'ID must contain additional characters after "POISONTYPE_"';
+    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) e.id = 'ID can only contain uppercase letters, numbers and underscores';
     // Type
     if (!draft.type.trim()) e.type = 'Type is required';
     // Areas affected
@@ -143,13 +145,9 @@ export default function PoisontypesView() {
       if (seenOnsets.has(r.severity)) eo[r.severity] = 'Duplicate severity';
       else seenOnsets.add(r.severity);
 
-      if (r.min.trim() === '' || r.max.trim() === '') {
-        eo[r.severity] = 'Min and max are required';
-      } else if (!/^-?\d+$/.test(r.min) || !/^-?\d+$/.test(r.max)) {
-        eo[r.severity] = 'Min and max must be integers';
-      } else if (Number(r.min) > Number(r.max)) {
-        eo[r.severity] = 'Min must be ≤ max';
-      }
+      if (r.min.trim() === '' || r.max.trim() === '') eo[r.severity] = 'Min and max are required';
+      else if (!/^-?\d+$/.test(r.min) || !/^-?\d+$/.test(r.max)) eo[r.severity] = 'Min and max must be integers';
+      else if (Number(r.min) > Number(r.max)) eo[r.severity] = 'Min must be ≤ max';
     }
     if (Object.keys(eo).some((k) => eo[k as MaladySeverity])) e.effectOnsets = eo;
 
@@ -165,12 +163,8 @@ export default function PoisontypesView() {
 
     // Ensure all 4 severities present
     for (const s of MALADY_SEVERITIES) {
-      if (!draft.effectOnsets.some((r) => r.severity === s)) {
-        (e.effectOnsets ??= {} as any)[s] = 'Missing severity';
-      }
-      if (!draft.symptoms.some((r) => r.severity === s)) {
-        (e.symptoms ??= {} as any)[s] = 'Missing severity';
-      }
+      if (!draft.effectOnsets.some((r) => r.severity === s)) (e.effectOnsets ??= {} as any)[s] = 'Missing severity';
+      if (!draft.symptoms.some((r) => r.severity === s)) (e.symptoms ??= {} as any)[s] = 'Missing severity';
     }
 
     return e;
@@ -423,17 +417,6 @@ export default function PoisontypesView() {
     <>
       <h2>Poison Types</h2>
 
-      {/* New + Search */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-        <button onClick={startNew}>New Poison Type</button>
-        <DataTableSearchInput
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search poison types…"
-          aria-label="Search poison types"
-        />
-      </div>
-
       {/* Form panel */}
       {showForm && (
         <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}>
@@ -522,27 +505,48 @@ export default function PoisontypesView() {
         </div>
       )}
 
-      {/* Table */}
-      <DataTable<PoisonType>
-        rows={rows}
-        columns={columns}
-        rowId={(r) => r.id}
-        initialSort={{ colId: 'type', dir: 'asc' }}
-        searchQuery={query}
-        globalFilter={globalFilter}
-        mode="client"
-        page={page}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        onPageSizeChange={setPageSize}
-        pageSizeOptions={[5, 10, 20, 50, 100]}
-        tableMinWidth={900}
-        zebra
-        hover
-        resizable
-        persistKey="dt.poisontype.v1"
-        ariaLabel="Poison types"
-      />
+      {/* Shared DataTable */}
+      {!showForm && (
+        <>
+          {/* New + Search */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+            <button onClick={startNew}>New Poison Type</button>
+            <DataTableSearchInput
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search poison types…"
+              aria-label="Search poison types"
+            />
+          </div>
+
+          <DataTable<PoisonType>
+            rows={rows}
+            columns={columns}
+            rowId={(r) => r.id}
+            initialSort={{ colId: 'type', dir: 'asc' }}
+            searchQuery={query}
+            globalFilter={globalFilter}
+            mode="client"
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[5, 10, 20, 50, 100]}
+            tableMinWidth={900}
+            zebra
+            hover
+            resizable
+            persistKey="dt.poisontype.v1"
+            ariaLabel="Poison types"
+          />
+        </>
+      )}
+
+      {!rows.length && !showForm && (
+        <div style={{ marginTop: 8, color: 'var(--muted)' }}>
+          No poison types found.
+        </div>
+      )}
     </>
   );
 }
