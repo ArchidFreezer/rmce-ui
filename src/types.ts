@@ -47,44 +47,6 @@ export interface PoisonTypesPayload {
 }
 
 /**
- * Climate data
- * Note: The API's climate data includes a name, temperature category, and a list of precipitation types. I've defined the types accordingly, with enums for temperature and precipitation
- * to ensure consistency in the UI and to make it easier to work with these values in forms and dropdowns. The climate interface captures the structure of the API's climate data, and the 
- * payload interface wraps it in a way that matches the API's response format.
- */
-
-/** Enum plus reusable list for form checkboxes */
-export type Precipitation = 'Rainy' | 'Humid' | 'Temperate' | 'Dry' | 'Arid';
-export const PRECIPITATIONS: ReadonlyArray<Precipitation> = [
-  'Rainy',
-  'Humid',
-  'Temperate',
-  'Dry',
-  'Arid',
-] as const;
-
-/** Enum plus reusable list for form checkboxes */
-export type Temperature = 'Hot' | 'Warm' | 'Temperate' | 'Cool' | 'Cold';
-export const TEMPERATURES: ReadonlyArray<Temperature> = [
-  'Hot',
-  'Warm',
-  'Temperate',
-  'Cool',
-  'Cold',
-] as const;
-
-export interface Climate {
-  id: string;
-  name: string;
-  temperature: Temperature; // e.g., "Cold"
-  precipitations: Precipitation[];
-}
-
-export interface ClimatesPayload {
-  climates: Climate[];
-}
-
-/**
  * Disease data
  * Note: The API's disease data includes a type, transmission method, description, and a list of severity symptoms. I've defined the types accordingly, with enums for severity levels
  * to ensure consistency in the UI and to make it easier to work with these values in forms and dropdowns. The disease interface captures the structure of the API's disease data, and the 

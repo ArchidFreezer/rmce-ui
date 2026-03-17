@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchClimates, upsertClimate, deleteClimate } from '../../api/climate';
 import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import type { Climate, Precipitation, Temperature } from '../../types';
-import { PRECIPITATIONS, TEMPERATURES } from '../../types';
+import type { Climate } from '../../types/climate';
+import { PRECIPITATIONS, Precipitation, TEMPERATURES, Temperature } from '../../types/enum';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { CheckboxGroup, LabeledInput, LabeledSelect } from '../../components/inputs'
