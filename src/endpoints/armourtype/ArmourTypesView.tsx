@@ -43,7 +43,7 @@ export default function ArmourTypesView() {
   }, []);
 
   // ----- Inline validation helpers -----
-  const [errors, setErrors] = useState<{ id?: string; name?: string; type?: string; numeric?: string }>({});
+  const [errors, setErrors] = useState<{ id?: string; name?: string; type?: string; numeric?: string; }>({});
   const hasErrors = Boolean(errors.id || errors.name || errors.type || errors.numeric);
   const computeErrors = (draft: ArmourType, isEditing: boolean) => {
     if (viewing) return {}; // no errors in view mode
@@ -216,12 +216,12 @@ export default function ArmourTypesView() {
       { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
       { id: 'type', header: 'Type', accessor: r => r.type },
       // { id: 'description', header: 'Description', accessor: r => r.description },
-      { id: 'minManoeuvreMod', header: 'Min Manoeuvre Mod', accessor: (r) => r.minManoeuvreMod, sortType: 'number', align: 'right' },
-      { id: 'maxManoeuvreMod', header: 'Max Manoeuvre Mod', accessor: (r) => r.maxManoeuvreMod, sortType: 'number', align: 'right' },
-      { id: 'missileAttackPenalty', header: 'Missile Attack Penalty', accessor: (r) => r.missileAttackPenalty, sortType: 'number', align: 'right' },
-      { id: 'quicknessPenalty', header: 'Quickness Penalty', accessor: (r) => r.quicknessPenalty, sortType: 'number', align: 'right' },
-      { id: 'animalOnly', header: 'Animal Only', accessor: r => r.animalOnly, sortType: 'boolean', align: 'center' },
-      { id: 'includesGreaves', header: 'Includes Greaves', accessor: r => r.includesGreaves, sortType: 'boolean', align: 'center' },
+      { id: 'minManoeuvreMod', header: 'Min Manoeuvre Mod', accessor: (r) => r.minManoeuvreMod, sortType: 'number', align: 'right', minWidth: 140 },
+      { id: 'maxManoeuvreMod', header: 'Max Manoeuvre Mod', accessor: (r) => r.maxManoeuvreMod, sortType: 'number', align: 'right', minWidth: 140 },
+      { id: 'missileAttackPenalty', header: 'Missile Attack Penalty', accessor: (r) => r.missileAttackPenalty, sortType: 'number', align: 'right', minWidth: 140 },
+      { id: 'quicknessPenalty', header: 'Quickness Penalty', accessor: (r) => r.quicknessPenalty, sortType: 'number', align: 'right', minWidth: 140 },
+      { id: 'animalOnly', header: 'Animal Only', accessor: r => r.animalOnly, sortType: 'boolean', align: 'center', minWidth: 120 },
+      { id: 'includesGreaves', header: 'Includes Greaves', accessor: r => r.includesGreaves, sortType: 'boolean', align: 'center', minWidth: 140 },
       {
         id: 'actions',
         header: 'Actions',
@@ -390,7 +390,7 @@ export default function ArmourTypesView() {
       )}
 
       {/* Empty dataset */}
-      {!rows.length && (
+      {!rows.length && !showForm && (
         <div style={{ marginTop: 8, color: 'var(--muted)' }}>
           No armour types found.
         </div>

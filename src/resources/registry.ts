@@ -1,7 +1,7 @@
 import { lazy, type LazyExoticComponent, type ComponentType } from 'react';
 
 const ArmourTypesView = lazy(() => import('../endpoints/armourtype/ArmourTypesView'));
-const BooksView = lazy(() => import('../endpoints/books/BooksView'));
+const BooksView = lazy(() => import('../endpoints/book/BooksView'));
 const ClimateView = lazy(() => import('../endpoints/climates/ClimateView'));
 const CreaturePacesView = lazy(() => import('../endpoints/creaturepace/CreaturePacesView'));
 const DiseasesView = lazy(() => import('../endpoints/diseases/DiseasesView'));
