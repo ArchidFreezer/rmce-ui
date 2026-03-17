@@ -7,19 +7,6 @@ import { useToast } from '../../components/Toast';
 import { CheckboxInput, LabeledInput } from '../../components/inputs';
 import { isSignedIntegerString } from '../../components/inputs/validators';
 
-type ArmourNumberKey =
-  | 'minManoeuvreMod'
-  | 'maxManoeuvreMod'
-  | 'missileAttackPenalty'
-  | 'quicknessPenalty';
-
-const NUM_KEYS: ArmourNumberKey[] = [
-  'minManoeuvreMod',
-  'maxManoeuvreMod',
-  'missileAttackPenalty',
-  'quicknessPenalty',
-];
-
 export default function ArmourTypesView() {
   const [rows, setRows] = useState<ArmourType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,10 +61,14 @@ export default function ArmourTypesView() {
     else if (!isEditing && rows.some(r => r.type === draft.type.trim())) next.type = `Type "${draft.type.trim()}" already exists`;
     if (!/^AT [1-2]?[0-9]$/.test(draft.type.trim())) next.type = 'Type must follow the pattern "AT [1-2]?[0-9]"';
     // Numeric values
-    for (const k of NUM_KEYS) {
-      const raw = (draft[k] ?? '').toString().trim();
-      if (!isSignedIntegerString(raw)) next.numeric = `${k} must be an integer`;
-    }
+    if (!draft.minManoeuvreMod && draft.minManoeuvreMod !== 0) next.numeric = 'Min Manoeuvre Mod is required';
+    else if (!isSignedIntegerString(String(draft.minManoeuvreMod))) next.numeric = 'Min Manoeuvre Mod must be an integer';
+    if (!draft.maxManoeuvreMod && draft.maxManoeuvreMod !== 0) next.numeric = 'Max Manoeuvre Mod is required';
+    else if (!isSignedIntegerString(String(draft.maxManoeuvreMod))) next.numeric = 'Max Manoeuvre Mod must be an integer';
+    if (!draft.missileAttackPenalty && draft.missileAttackPenalty !== 0) next.numeric = 'Missile Attack Penalty is required';
+    else if (!isSignedIntegerString(String(draft.missileAttackPenalty))) next.numeric = 'Missile Attack Penalty must be an integer';
+    if (!draft.quicknessPenalty && draft.quicknessPenalty !== 0) next.numeric = 'Quickness Penalty is required';
+    else if (!isSignedIntegerString(String(draft.quicknessPenalty))) next.numeric = 'Quickness Penalty must be an integer';
     return next;
   };
 
@@ -107,7 +98,7 @@ export default function ArmourTypesView() {
   };
 
   const startDuplicate = (row: ArmourType) => {
-    setViewing?.(false);           // if you have viewing state; otherwise omit
+    setViewing(false);           // if you have viewing state; otherwise omit
     setEditingId(null);
 
     const next = { ...row };
@@ -272,17 +263,6 @@ export default function ArmourTypesView() {
     <>
       <h2>Armour Types</h2>
 
-      {/* New + Search */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-        <button onClick={startNew}>New Armour type</button>
-        <DataTableSearchInput
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search armour types…"
-          aria-label="Search armour types"
-        />
-      </div>
-
       {/* Form panel (Create & Edit) */}
       {showForm && (
         <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}>
@@ -375,41 +355,51 @@ export default function ArmourTypesView() {
       )}
 
       {/* Shared DataTable */}
-      {loading ? (
-        <div>Loading…</div>
-      ) : error ? (
-        <div style={{ color: 'crimson' }}>Error: {error}</div>
-      ) : (
-        <DataTable<ArmourType>
-          rows={rows}
-          columns={columns}
-          rowId={(r) => r.id}
-          initialSort={{ colId: 'name', dir: 'asc' }}
-          // search
-          searchQuery={query}
-          globalFilter={globalFilter}
-          // pagination (client)
-          mode="client"
-          page={page}
-          pageSize={pageSize}
-          onPageChange={setPage}
-          onPageSizeChange={setPageSize}
-          pageSizeOptions={[5, 10, 20, 50]}
-          // styles
-          tableMinWidth={0} // Allow table to shrink below container width (enables horizontal scroll when needed)
-          zebra
-          // Resizable columns
-          resizable
-          persistKey="dt.armourtypes.v1"
-          ariaLabel='ArmourTypes data'
-        />
+      {!showForm && (
+        <>
+          {/* New + Search */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+            <button onClick={startNew}>New Armour type</button>
+            <DataTableSearchInput
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search armour types…"
+              aria-label="Search armour types"
+            />
+          </div>
+
+          <DataTable<ArmourType>
+            rows={rows}
+            columns={columns}
+            rowId={(r) => r.id}
+            initialSort={{ colId: 'name', dir: 'asc' }}
+            // search
+            searchQuery={query}
+            globalFilter={globalFilter}
+            // pagination (client)
+            mode="client"
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+            pageSizeOptions={[5, 10, 20, 50]}
+            // styles
+            tableMinWidth={0} // Allow table to shrink below container width (enables horizontal scroll when needed)
+            zebra
+            // Resizable columns
+            resizable
+            persistKey="dt.armourtypes.v1"
+            ariaLabel='ArmourTypes data'
+          />
+        </>
       )}
+
+      {/* Empty dataset */}
       {!rows.length && (
         <div style={{ marginTop: 8, color: 'var(--muted)' }}>
           No armour types found.
         </div>
       )}
-
     </>
   );
 }
