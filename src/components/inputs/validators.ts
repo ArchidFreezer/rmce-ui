@@ -27,21 +27,29 @@ export function whenInvalid(
 }
 
 
-/** Returns true when s is one or more ASCII digits (optional leading minus sign, no decimals). */
-export function isIntegerString(s: string): boolean {
+/** Validate final signed integer string (no empty, no lone '-'). */
+export function isValidSignedInt(s: string): boolean {
   return /^-?\d+$/.test(s);
 }
 
-/** Returns true when s is one or more ASCII digits (no negatives, no decimals). */
-export function isUnsignedIntegerString(s: string): boolean {
+/** Validate final non-negative integer string (no empty). */
+export function isValidUnsignedInt(s: string): boolean {
   return /^\d+$/.test(s);
 }
 
+/** Validate final scientific number string (signed float with optional exponent). */
+export function isValidScientific(s: string): boolean {
+  // signed float with optional exponent
+  //  - matches "5", "-7", "3.14", ".5", "5.", "5e1", "6E-2", "-.7e+10"
+  return /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(s);
+}
+
 /** Returns true when s is a valid ISBN-10 or ISBN-13 (digits, optional dashes/spaces, optional X for ISBN-10). */
-export function isISBN(s: string): boolean {
+export function isValidISBN(s: string): boolean {
   return /^(?:\d{9}[\dXx]|\d{13})$/.test(s.replace(/[-\s]/g, ''));
 }
 
+/** Returns true when val is a valid ID with the given prefix. */
 export function isValidID(val: string, prefix: string): boolean {
   return val.startsWith(prefix.toUpperCase()) && /^[A-Z0-9_]+$/.test(val) && val.length > prefix.length;
 }

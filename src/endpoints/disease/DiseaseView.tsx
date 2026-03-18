@@ -7,7 +7,7 @@ import type { DiseaseType } from '../../types/diseasetype';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { LabeledInput, LabeledSelect } from '../../components/inputs';
-import { isIntegerString, isValidID } from '../../components/inputs/validators';
+import { isValidUnsignedInt, isValidID } from '../../components/inputs/validators';
 
 const prefix = 'DISEASE_';
 
@@ -87,7 +87,7 @@ export default function DiseaseView() {
     else if (!diseaseTypeIds.has(draft.type.trim())) next.type = `Type "${draft.type.trim()}" is not a valid DiseaseType id`;
     // Level (must be a number, but allow empty string for controlled input)
     const raw = (draft.level ?? '').toString().trim();
-    if (!isIntegerString(raw)) next.level = `Level must be an integer`;
+    if (!isValidUnsignedInt(raw)) next.level = `Level must be an integer`;
     // Variance must be a single uppercase character
     if (!draft.levelVariance.trim()) next.variance = `Level Variance is required`;
     else if (!/^[A-Z]$/.test(draft.levelVariance.trim())) next.variance = 'Level Variance must be a single uppercase character';

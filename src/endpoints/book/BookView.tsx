@@ -5,7 +5,8 @@ import type { Book } from '../../types/book';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { LabeledInput } from '../../components/inputs';
-import { isIntegerString, isISBN, isValidID } from '../../components/inputs/validators';
+import { isValidUnsignedInt, isValidISBN, isValidID } from '../../components/inputs/validators';
+import { makeNonNegativeIntOnChange, makeIDOnChange } from '../../components/inputs/sanitisers';
 
 const prefix = 'BOOK_';
 
@@ -61,12 +62,12 @@ export default function BookView() {
     // Code
     const code = (draft.code);
     if (!code) next.code = 'Code is required';
-    else if (!isIntegerString(String(code))) next.code = 'Code must be an integer (digits only)';
+    else if (!isValidUnsignedInt(String(code))) next.code = 'Code must be a positive integer';
     // Abbreviation
     if (!draft.abbreviation.trim()) next.abbreviation = 'Abbreviation is required';
     // ISBN
     if (!draft.isbn.trim()) next.isbn = 'ISBN is required';
-    else if (!isISBN(draft.isbn.trim())) next.isbn = 'ISBN must be a valid ISBN-10 or ISBN-13';
+    else if (!isValidISBN(draft.isbn.trim())) next.isbn = 'ISBN must be a valid ISBN-10 or ISBN-13';
 
     return next;
   };
@@ -254,26 +255,11 @@ export default function BookView() {
           <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Book' : 'New Book'}</h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput label="ID" value={form.id} onChange={(v) => setForm((s) => ({ ...s, id: v }))} disabled={!!editingId || viewing} error={errors.id} />
+            <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />
 
             <LabeledInput label="Code" value={String(form.code).trim()} disabled={viewing}
-              onChange={(v) => setForm((s) => {
-                // Sanitize: keep at most one leading '-', strip all other non-digits
-                // 1) Remove everything except digits and '-'
-                let raw = v.replace(/[^\d]+/g, '');
-                // 2) If there are multiple '-', keep only the first
-                const firstDash = raw.indexOf('-');
-                if (firstDash !== -1) {
-                  raw = '-' + raw.slice(firstDash + 1).replace(/-/g, '');
-                }
-                // 3) Allow raw === '-' temporarily so users can type the sign first;
-                //    validation will show an error until at least one digit is added.
-                return { ...s, code: Number(raw) };
-              })}
-              inputProps={{
-                inputMode: 'numeric', // mobile numeric keypad
-                pattern: '\\d*',
-              }}
+              onChange={makeNonNegativeIntOnChange<typeof form>('code', setForm)}
+              inputProps={{ inputMode: 'numeric', pattern: '\\d*', }} // mobile numeric keypad
               error={errors.code} />
             <LabeledInput label="Name" value={form.name} onChange={(v) => setForm((s) => ({ ...s, name: v }))} error={errors.name} disabled={viewing} />
             <LabeledInput label="Abbreviation" value={form.abbreviation} onChange={(v) => setForm((s) => ({ ...s, abbreviation: v }))} error={errors.abbreviation} disabled={viewing} />

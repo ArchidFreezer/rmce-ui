@@ -3,7 +3,7 @@ import { DataTable, DataTableSearchInput, type ColumnDef } from '../../component
 import { LabeledInput } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
-import { isIntegerString, isValidID } from '../../components/inputs/validators';
+import { isValidID, isValidSignedInt } from '../../components/inputs/validators';
 import { sanitizeUnsignedInt } from '../../components/inputs/sanitisers';
 
 import {
@@ -114,7 +114,7 @@ export default function SkillProgressionTypeView() {
     const checkInt = (label: keyof FormState) => {
       const v = (draft[label] ?? '').trim();
       if (!v) e[label] = `${label} is required`;
-      else if (!isIntegerString(v)) e[label] = `${label} must be a non-negative integer`;
+      else if (!isValidSignedInt(v)) e[label] = `${label} must be a non-negative integer`;
     };
 
     checkInt('zero');

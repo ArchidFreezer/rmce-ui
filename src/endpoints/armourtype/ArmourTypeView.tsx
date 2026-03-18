@@ -5,7 +5,8 @@ import type { ArmourType } from '../../types/armourtype';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { CheckboxInput, LabeledInput } from '../../components/inputs';
-import { isIntegerString, isUnsignedIntegerString, isValidID } from '../../components/inputs/validators';
+import { isValidSignedInt, isValidUnsignedInt, isValidID } from '../../components/inputs/validators';
+import { makeSignedIntOnChange, makeNonNegativeIntOnChange, makeIDOnChange } from '../../components/inputs/sanitisers';
 
 const prefix = 'ARMOURTYPE_';
 
@@ -122,13 +123,13 @@ export default function ArmourTypeView() {
     else if (!/^AT [1-2]?[0-9]$/.test(draft.type.trim())) next.type = 'Type must follow the pattern "AT [1-2]?[0-9]"';
     // Numeric values
     if (!draft.minManoeuvreMod) next.minManoeuvreMod = 'Min Manoeuvre Mod is required';
-    else if (!isIntegerString(draft.minManoeuvreMod)) next.minManoeuvreMod = 'Min Manoeuvre Mod must be an integer';
+    else if (!isValidSignedInt(draft.minManoeuvreMod)) next.minManoeuvreMod = 'Min Manoeuvre Mod must be an integer';
     if (!draft.maxManoeuvreMod) next.maxManoeuvreMod = 'Max Manoeuvre Mod is required';
-    else if (!isIntegerString(draft.maxManoeuvreMod)) next.maxManoeuvreMod = 'Max Manoeuvre Mod must be an integer';
+    else if (!isValidSignedInt(draft.maxManoeuvreMod)) next.maxManoeuvreMod = 'Max Manoeuvre Mod must be an integer';
     if (!draft.missileAttackPenalty) next.missileAttackPenalty = 'Missile Attack Penalty is required';
-    else if (!isUnsignedIntegerString(draft.missileAttackPenalty)) next.missileAttackPenalty = 'Missile Attack Penalty must be a positive integer';
+    else if (!isValidUnsignedInt(draft.missileAttackPenalty)) next.missileAttackPenalty = 'Missile Attack Penalty must be a positive integer';
     if (!draft.quicknessPenalty) next.quicknessPenalty = 'Quickness Penalty is required';
-    else if (!isUnsignedIntegerString(draft.quicknessPenalty)) next.quicknessPenalty = 'Quickness Penalty must be a positive integer';
+    else if (!isValidUnsignedInt(draft.quicknessPenalty)) next.quicknessPenalty = 'Quickness Penalty must be a positive integer';
     return next;
   };
 
@@ -313,83 +314,27 @@ export default function ArmourTypeView() {
           <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Armour Type' : 'New Armour Type'}</h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput label="ID" value={form.id} onChange={(v) => setForm(s => ({ ...s, id: v }))} disabled={!!editingId || viewing} error={errors.id} />
+            <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />
             <LabeledInput label="Name" value={form.name} onChange={(v) => setForm(s => ({ ...s, name: v }))} disabled={viewing} error={errors.name} />
             <LabeledInput label="Type" value={form.type} onChange={(v) => setForm(s => ({ ...s, type: v }))} disabled={viewing} error={errors.type} />
             <LabeledInput label="Description" value={form.description} onChange={(v) => setForm(s => ({ ...s, description: v }))} disabled={viewing} />
 
             <LabeledInput label="Min Manoeuvre Mod" value={String(form.minManoeuvreMod).trim()} disabled={viewing}
-
-              onChange={(v) => setForm((s) => {
-                // 1) Remove everything except digits and '-'
-                let raw = v.replace(/[^-\d]+/g, '');
-
-                // 2) Keep at most one leading '-'
-                const firstDash = raw.indexOf('-');
-                if (firstDash !== -1) {
-                  raw = '-' + raw.slice(firstDash + 1).replace(/-/g, '');
-                }
-
-                // 3) DO NOT coerce here; keep the string so '-' survives
-                return { ...s, minManoeuvreMod: raw }; // <-- string in state
-              })}
-
+              onChange={makeSignedIntOnChange<typeof form>('minManoeuvreMod', setForm)}
               inputProps={{ inputMode: 'numeric', pattern: '\\d*', }} // mobile numeric keypad
               error={errors.minManoeuvreMod} />
             <LabeledInput label="Max Manoeuvre Mod" value={String(form.maxManoeuvreMod)} disabled={viewing}
-
-              onChange={(v) => setForm((s) => {
-                // 1) Remove everything except digits and '-'
-                let raw = v.replace(/[^-\d]+/g, '');
-
-                // 2) Keep at most one leading '-'
-                const firstDash = raw.indexOf('-');
-                if (firstDash !== -1) {
-                  raw = '-' + raw.slice(firstDash + 1).replace(/-/g, '');
-                }
-
-                // 3) DO NOT coerce here; keep the string so '-' survives
-                return { ...s, maxManoeuvreMod: raw }; // <-- string in state
-              })}
+              onChange={makeSignedIntOnChange<typeof form>('maxManoeuvreMod', setForm)}
               inputProps={{ inputMode: 'numeric', pattern: '\\d*', }} // mobile numeric keypad
-              error={errors.maxManoeuvreMod}
-            />
+              error={errors.maxManoeuvreMod} />
             <LabeledInput label="Missile Attack Penalty" value={String(form.missileAttackPenalty)} disabled={viewing}
-
-              onChange={(v) => setForm((s) => {
-                // 1) Remove everything except digits
-                let raw = v.replace(/[^\d]+/g, '');
-
-                // 2) Keep at most one leading '-'
-                const firstDash = raw.indexOf('-');
-                if (firstDash !== -1) {
-                  raw = '-' + raw.slice(firstDash + 1).replace(/-/g, '');
-                }
-
-                // 3) DO NOT coerce here; keep the string so '-' survives
-                return { ...s, missileAttackPenalty: raw }; // <-- string in state
-              })}
+              onChange={makeNonNegativeIntOnChange<typeof form>('missileAttackPenalty', setForm)}
               inputProps={{ inputMode: 'numeric', pattern: '\\d*', }} // mobile numeric keypad
-              error={errors.missileAttackPenalty}
-            />
+              error={errors.missileAttackPenalty} />
             <LabeledInput label="Quickness Penalty" value={String(form.quicknessPenalty)} disabled={viewing}
-
-              onChange={(v) => setForm((s) => {
-                // 1) Remove everything except digits
-                let raw = v.replace(/[^\d]+/g, '');
-
-                // 2) Keep at most one leading '-'
-                const firstDash = raw.indexOf('-');
-                if (firstDash !== -1) {
-                  raw = '-' + raw.slice(firstDash + 1).replace(/-/g, '');
-                }
-
-                // 3) DO NOT coerce here; keep the string so '-' survives
-                return { ...s, quicknessPenalty: raw }; // <-- string in state
-              })}
+              onChange={makeNonNegativeIntOnChange<typeof form>('quicknessPenalty', setForm)}
               inputProps={{ inputMode: 'numeric', pattern: '\\d*', }} // mobile numeric keypad
-              error={errors.quicknessPenalty}
-            />
+              error={errors.quicknessPenalty} />
 
             <CheckboxInput label="Animal Only" checked={form.animalOnly} onChange={(v) => setForm(s => ({ ...s, animalOnly: v }))} disabled={viewing} />
             <CheckboxInput label="Includes Greaves" checked={form.includesGreaves} onChange={(v) => setForm(s => ({ ...s, includesGreaves: v }))} disabled={viewing} />
