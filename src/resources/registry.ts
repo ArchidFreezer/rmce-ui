@@ -6,6 +6,7 @@ const ClimateView = lazy(() => import('../endpoints/climate/ClimateView'));
 const CreaturePaceView = lazy(() => import('../endpoints/creaturepace/CreaturePaceView'));
 const DiseaseView = lazy(() => import('../endpoints/disease/DiseaseView'));
 const DiseaseTypeView = lazy(() => import('../endpoints/diseasetype/DiseaseTypeView'));
+const LanguageCategoryView = lazy(() => import('../endpoints/languagecategory/LanguageCategoryView'));
 const PoisonView = lazy(() => import('../endpoints/poison/PoisonView'));
 const PoisonTypeView = lazy(() => import('../endpoints/poisontype/PoisonTypeView'));
 const SkillGroupView = lazy(() => import('../endpoints/skillgroup/SkillGroupView'));
@@ -28,6 +29,7 @@ const known: Record<string, ResourceDef> = {
   creaturepace: { prefix: 'creaturepace', label: 'Creature Paces', path: '/creaturepaces', Component: CreaturePaceView },
   disease: { prefix: 'disease', label: 'Diseases', path: '/diseases', Component: DiseaseView },
   diseasetype: { prefix: 'diseasetype', label: 'Disease Types', path: '/diseasetypes', Component: DiseaseTypeView },
+  languagecategory: { prefix: 'languagecategory', label: 'Language Categories', path: '/languagecategories', Component: LanguageCategoryView },
   poison: { prefix: 'poison', label: 'Poisons', path: '/poisons', Component: PoisonView },
   poisontype: { prefix: 'poisontype', label: 'Poison Types', path: '/poisontypes', Component: PoisonTypeView },
   skillgroup: { prefix: 'skillgroup', label: 'Skill Groups', path: '/skillgroups', Component: SkillGroupView },
@@ -55,6 +57,7 @@ export const FALLBACK_RESOURCES: ResourceDef[] = [
   known.creaturepace,
   known.disease,
   known.diseasetype,
+  known.languagecategory,
   known.poison,
   known.poisontype,
   known.skillgroup,
