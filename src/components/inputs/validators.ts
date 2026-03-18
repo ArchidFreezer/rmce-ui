@@ -29,7 +29,7 @@ export function whenInvalid(
 
 /** Returns true when s is one or more ASCII digits (optional leading minus sign, no decimals). */
 export function isIntegerString(s: string): boolean {
-  return s === '-' || /^-?\d+$/.test(s);
+  return /^-?\d+$/.test(s);
 }
 
 /** Returns true when s is one or more ASCII digits (no negatives, no decimals). */
