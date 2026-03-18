@@ -8,6 +8,7 @@ const DiseaseView = lazy(() => import('../endpoints/disease/DiseaseView'));
 const DiseaseTypeView = lazy(() => import('../endpoints/diseasetype/DiseaseTypeView'));
 const PoisonView = lazy(() => import('../endpoints/poison/PoisonView'));
 const PoisonTypeView = lazy(() => import('../endpoints/poisontype/PoisonTypeView'));
+const SkillGroupView = lazy(() => import('../endpoints/skillgroup/SkillGroupView'));
 const SpellListView = lazy(() => import('../endpoints/spelllist/SpellListView'));
 
 
@@ -29,6 +30,7 @@ const known: Record<string, ResourceDef> = {
   diseasetype: { prefix: 'diseasetype', label: 'Disease Types', path: '/diseasetypes', Component: DiseaseTypeView },
   poison: { prefix: 'poison', label: 'Poisons', path: '/poisons', Component: PoisonView },
   poisontype: { prefix: 'poisontype', label: 'Poison Types', path: '/poisontypes', Component: PoisonTypeView },
+  skillgroup: { prefix: 'skillgroup', label: 'Skill Groups', path: '/skillgroups', Component: SkillGroupView },
   spelllist: { prefix: 'spelllist', label: 'Spell Lists', path: '/spelllists', Component: SpellListView },
 }
 
@@ -55,5 +57,6 @@ export const FALLBACK_RESOURCES: ResourceDef[] = [
   known.diseasetype,
   known.poison,
   known.poisontype,
+  known.skillgroup,
   known.spelllist,
 ].filter((r): r is ResourceDef => Boolean(r));
