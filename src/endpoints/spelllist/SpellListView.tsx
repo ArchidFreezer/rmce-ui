@@ -151,10 +151,6 @@ export default function SpellListView() {
     // Realms validations
     if (!draft.realms || draft.realms.length === 0) next.realms = 'Select at least one realm';
 
-    // uniqueness (create only)
-    if (!editingId && rows.some(r => r.id === draft.id.trim())) {
-      next.id = `ID "${draft.id.trim()}" already exists`;
-    }
     return next;
   };
 
@@ -263,74 +259,68 @@ export default function SpellListView() {
   };
 
   // ---- Table ----
-  const columns: ColumnDef<SpellList>[] = useMemo(() => [
-    { id: 'id', header: 'ID', accessor: r => r.id, sortType: 'string', minWidth: 260 },
-    { id: 'name', header: 'Name', accessor: r => r.name, sortType: 'string', minWidth: 160 },
+  const columns: ColumnDef<SpellList>[] = useMemo(() => {
+    /** Helper to render a "pill" UI for realms. This is just a styled span with the realm name. */
+    const pill = (txt: string) => (
+      <span
+        key={txt}
+        style={{
+          display: 'inline-block',
+          padding: '2px 8px',
+          marginRight: 6,
+          marginBottom: 4,
+          borderRadius: 999,
+          fontSize: 12,
+          border: '1px solid var(--border)',
+          background: 'var(--panel)',
+        }}
+        title={txt}
+      >
+        {txt}
+      </span>
+    );
 
-    {
-      id: 'book',
-      header: 'Book',
-      // sort by the label (fallback to id)
-      accessor: (r) => bookNameById.get(r.book) ?? r.book,
-      sortType: 'string',
-      minWidth: 240,
-      render: (r) => {
-        const label = bookNameById.get(r.book);
-        return label ? `${label}` : r.book;
+    return [
+      { id: 'id', header: 'ID', accessor: r => r.id, sortType: 'string', minWidth: 260 },
+      { id: 'name', header: 'Name', accessor: r => r.name, sortType: 'string', minWidth: 160 },
+
+      {
+        id: 'book', header: 'Book', accessor: (r) => bookNameById.get(r.book) ?? r.book, sortType: 'string', minWidth: 240,
+        render: (r) => {
+          const label = bookNameById.get(r.book);
+          return label ? `${label}` : r.book;
+        },
       },
-    },
 
-    { id: 'type', header: 'Type', accessor: r => r.type, sortType: 'string', minWidth: 160 },
-    {
-      id: 'evil', header: 'Evil', accessor: r => Number(r.evil), sortType: 'number', minWidth: 90,
-      render: r => (r.evil ? 'Yes' : 'No'),
-    },
-    {
-      id: 'summoning', header: 'Summoning', accessor: r => Number(r.summoning), sortType: 'number', minWidth: 90,
-      render: r => (r.summoning ? 'Yes' : 'No'),
-    },
-    {
-      id: 'realms',
-      header: 'Realms',
-      accessor: r => r.realms.length,
-      sortType: 'number',
-      minWidth: 260,
-      render: r => (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {r.realms.map(rx => (
-            <span
-              key={rx}
-              style={{
-                display: 'inline-block',
-                padding: '2px 8px',
-                borderRadius: 999,
-                fontSize: 12,
-                border: '1px solid var(--border)',
-                background: 'var(--panel)',
-              }}
-              title={rx}
-            >
-              {rx}
-            </span>
-          ))}
-        </div>
-      ),
-    },
-    {
-      id: 'actions',
-      header: 'Actions',
-      sortable: false,
-      width: 320,
-      render: row => (
-        <>
-          <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
-          <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
-          <button onClick={() => startDuplicate(row)} style={{ marginRight: 6 }}>Duplicate</button>
-          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
-        </>
-      ),
-    },
-  ], [bookNameById]);
+      { id: 'type', header: 'Type', accessor: r => r.type, sortType: 'string', minWidth: 160 },
+      {
+        id: 'evil', header: 'Evil', accessor: r => Number(r.evil), sortType: 'number', minWidth: 90,
+        render: r => (r.evil ? 'Yes' : 'No'),
+      },
+      {
+        id: 'summoning', header: 'Summoning', accessor: r => Number(r.summoning), sortType: 'number', minWidth: 90,
+        render: r => (r.summoning ? 'Yes' : 'No'),
+      },
+      {
+        id: 'realms', header: 'Realms', accessor: r => r.realms.length, sortType: 'number', minWidth: 260,
+        render: (r) => {
+          const parts = r.realms.map((x) => x.trim()).filter(Boolean);
+          return <div style={{ display: 'flex', flexWrap: 'wrap' }}>{parts.map(pill)}</div>;
+        },
+      },
+      {
+        id: 'actions', header: 'Actions', sortable: false, width: 320,
+        render: row => (
+          <>
+            <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
+            <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
+            <button onClick={() => startDuplicate(row)} style={{ marginRight: 6 }}>Duplicate</button>
+            <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
+          </>
+        ),
+      },
+    ]
+  }, [bookNameById]);
 
   const globalFilter = (r: SpellList, q: string) => {
     const s = q.toLowerCase();
