@@ -7,7 +7,7 @@ import { useToast } from '../../components/Toast';
 import { CheckboxInput, LabeledInput } from '../../components/inputs';
 import { isSignedIntegerString } from '../../components/inputs/validators';
 
-export default function ArmourTypesView() {
+export default function ArmourTypeView() {
   const [rows, setRows] = useState<ArmourType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

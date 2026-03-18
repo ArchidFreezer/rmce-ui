@@ -7,7 +7,7 @@ import { useToast } from '../../components/Toast';
 import { LabeledInput } from '../../components/inputs';
 import { isIntegerString, isISBN } from '../../components/inputs/validators';
 
-export default function BooksView() {
+export default function BookView() {
   const [rows, setRows] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
