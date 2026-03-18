@@ -1,5 +1,5 @@
 import { fetchJson, sendJson } from './client';
-import type { Book, BooksPayload } from '../types';
+import type { Book, BooksPayload } from '../types/book';
 
 const BASE = '/rmce/objects/book';
 

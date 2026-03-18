@@ -27,3 +27,12 @@ export const MANOEUVRE_DIFFICULTIES: ReadonlyArray<ManoeuvreDifficulty> = [
 /** Enum for disease and poison severity reusable list for form dropdowns */
 export type MaladySeverity = 'Mild' | 'Moderate' | 'Severe' | 'Extreme';
 export const MALADY_SEVERITIES: ReadonlyArray<MaladySeverity> = ['Mild', 'Moderate', 'Severe', 'Extreme'] as const;
+
+/** Enum for realms */
+export type Realm = 'Arcane' | 'Arms' | 'Channeling' | 'Essence' | 'Mentalism' | 'Neutral';
+export const REALMS: ReadonlyArray<Realm> = ['Arcane', 'Arms', 'Channeling', 'Essence', 'Mentalism', 'Neutral'] as const;
+export const SPELL_REALMS: ReadonlyArray<Realm> = ['Arcane', 'Channeling', 'Essence', 'Mentalism', 'Neutral'] as const;
+
+/** Enum for spell types */
+export type SpellType = 'Base' | 'Closed' | 'Open' | 'Racial' | 'Training Package';
+export const SPELL_TYPES: ReadonlyArray<SpellType> = ['Base', 'Closed', 'Open', 'Racial', 'Training Package'] as const;
