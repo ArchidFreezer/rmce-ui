@@ -10,6 +10,7 @@ import reactHooksPlugin from 'eslint-plugin-react-hooks';
 import jsxA11yPlugin from 'eslint-plugin-jsx-a11y';
 import importPlugin from 'eslint-plugin-import';
 import prettierPlugin from 'eslint-plugin-prettier';
+import vitestPlugin from 'eslint-plugin-vitest';
 
 // Utility: resolve tsconfig for parser
 const tsconfigPath = path.resolve(process.cwd(), 'tsconfig.json');
@@ -17,12 +18,7 @@ const tsconfigPath = path.resolve(process.cwd(), 'tsconfig.json');
 // Common file globs
 const TS = ['**/*.ts', '**/*.tsx'];
 const JS = ['**/*.js', '**/*.jsx', '**/*.mjs', '**/*.cjs'];
-const TESTS = [
-  '**/*.test.*',
-  '**/*.spec.*',
-  '**/tests/**',
-  '**/__tests__/**',
-];
+const TESTS = ['**/*.{test,spec}.{ts,tsx,js,jsx}', '**/__tests__/**/*.{ts,tsx,js,jsx}', '**/tests/**/*.{ts,tsx,js,jsx}'];
 const CONFIG = ['*.config.*', 'scripts/**', 'tooling/**'];
 
 // Ignores
@@ -111,6 +107,16 @@ export default [
       ecmaVersion: 'latest',
       sourceType: 'module',
     },
+
+    // Add to help 'import' plugin resolve TS paths/aliases
+    settings: {
+      'import/resolver': {
+        typescript: {
+          // the tsconfig that contains "compilerOptions.paths"
+          project: tsconfigPath,
+        },
+      },
+    },
     linterOptions: {
       reportUnusedDisableDirectives: true,
     },
@@ -172,13 +178,36 @@ export default [
     },
   },
 
-  // 4) Test files: relax some rules, add jest/vitest env globs
+  // 4) Test files: relax some rules, add jest/vitest env globs, and enable vitest plugin
   {
     files: TESTS,
+    plugins: {
+      vitest: vitestPlugin,
+    },
+    // Recognize vitest globals
+    languageOptions: {
+      globals: {
+        // core
+        describe: 'readonly',
+        it: 'readonly',
+        test: 'readonly',
+        expect: 'readonly',
+        // lifecycle
+        beforeAll: 'readonly',
+        afterAll: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        // vitest mock/timer/util
+        vi: 'readonly',
+      },
+    },
+    // Use vitest:recommended rules, then tweak as desired
     rules: {
-      'no-console': 'off',
-      '@typescript-eslint/no-non-null-assertion': 'off',
-      '@typescript-eslint/no-explicit-any': 'off',
+      ...vitestPlugin.configs.recommended.rules,
+      // Optional niceties:
+      // 'vitest/no-disabled-tests': 'warn',
+      // 'vitest/no-identical-title': 'error',
+      // 'vitest/expect-expect': 'off', // turn off if using custom assertions
     },
   },
 
