@@ -5,7 +5,9 @@ import type { Book } from '../../types/book';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { LabeledInput } from '../../components/inputs';
-import { isIntegerString, isISBN } from '../../components/inputs/validators';
+import { isIntegerString, isISBN, isValidID } from '../../components/inputs/validators';
+
+const prefix = 'BOOK_';
 
 export default function BookView() {
   const [rows, setRows] = useState<Book[]>([]);
@@ -53,9 +55,7 @@ export default function BookView() {
     // ID (only on create, must be unique and start with prefix in ucase and contain additional characters)
     if (!draft.id.trim()) next.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
-    else if (!draft.id.trim().toUpperCase().startsWith('BOOK_')) next.id = 'ID must start with "BOOK_"';
-    else if (draft.id.trim().length <= 5) next.id = 'ID must contain additional characters after "BOOK_"';
-    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
+    else if (!isValidID(draft.id.trim(), prefix)) next.id = `ID must start with "${prefix}" and contain only uppercase letters, numbers and underscores`;
     // Name
     if (!draft.name.trim()) next.name = 'Name is required';
     // Code
@@ -99,7 +99,7 @@ export default function BookView() {
     setEditingId(null);
 
     const next = { ...row };
-    next.id = 'BOOK_';
+    next.id = prefix; // Reset ID to force user to enter a new one, since it must be unique
     next.name += ' (Copy)';
     next.isbn = ''; // Clear ISBN to force user to enter a new one, since it must be unique
 
@@ -336,5 +336,5 @@ export default function BookView() {
 }
 
 function emptyBook(): Book {
-  return { id: 'BOOK_', code: 1234, name: '', abbreviation: '', isbn: '' };
+  return { id: prefix, code: 1234, name: '', abbreviation: '', isbn: '' };
 }

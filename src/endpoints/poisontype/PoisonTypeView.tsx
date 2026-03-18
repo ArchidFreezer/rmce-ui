@@ -8,6 +8,9 @@ import { useConfirm } from '../../components/ConfirmDialog';
 import { fetchPoisontypes, upsertPoisontype, deletePoisontype } from '../../api/poisontype';
 import type { PoisonType } from '../../types/poisontype';
 import { MALADY_SEVERITIES, MaladySeverity } from '../../types/enum';
+import { isValidID } from '../../components/inputs/validators';
+
+const prefix = 'POISONTYPE_';
 
 // ----- Local form VM types (strings for numeric editors to allow partial typing) -----
 type EffectRowVM = { severity: MaladySeverity; min: string; max: string };
@@ -26,7 +29,7 @@ function emptyVM(): FormState {
   const mkEffect = (s: MaladySeverity): EffectRowVM => ({ severity: s, min: '', max: '' });
   const mkSymptom = (s: MaladySeverity): SymptomRowVM => ({ severity: s, symptoms: '' });
   return {
-    id: 'POISONTYPE_',
+    id: prefix,
     type: '',
     areasAffected: '',
     effectOnsets: MALADY_SEVERITIES.map(mkEffect),
@@ -130,9 +133,7 @@ export default function PoisonTypeView() {
     // ID
     if (!draft.id.trim()) e.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) e.id = `ID "${draft.id.trim()}" already exists`;
-    else if (!draft.id.trim().toUpperCase().startsWith('POISONTYPE_')) e.id = 'ID must start with "POISONTYPE_"';
-    else if (draft.id.trim().length <= 12) e.id = 'ID must contain additional characters after "POISONTYPE_"';
-    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) e.id = 'ID can only contain uppercase letters, numbers and underscores';
+    else if (!isValidID(draft.id, prefix)) e.id = `ID must start with "${prefix}" and contain additional characters`;
     // Type
     if (!draft.type.trim()) e.type = 'Type is required';
     // Areas affected
@@ -199,7 +200,7 @@ export default function PoisonTypeView() {
     setEditingId(null);
     // Create a copy of the row 
     const vm = toVM(row);
-    vm.id = 'POISONTYPE_'; // Set the ID to a default value that the user must change
+    vm.id = prefix; // Set the ID to a default value that the user must change
     vm.type += ' (Copy)'; // Append " (Copy)" to the type for clarity
     setForm(vm);
     setErrors({});

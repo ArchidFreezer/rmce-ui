@@ -8,6 +8,9 @@ import { fetchLanguages, upsertLanguage, deleteLanguage } from '../../api/langua
 import { fetchLanguagecategories } from '../../api/languagecategory';
 import type { Language } from '../../types/language';
 import type { LanguageCategory } from '../../types/languagecategory';
+import { isValidID } from '../../components/inputs/validators';
+
+const prefix = 'LANGUAGE_';
 
 // ------------------------
 // Form VM (strings for inputs, booleans as booleans)
@@ -23,7 +26,7 @@ type FormState = {
 };
 
 const emptyVM = (): FormState => ({
-  id: 'LANGUAGE_',
+  id: prefix,
   name: '',
   category: '',
   baseLanguage: '',
@@ -149,9 +152,7 @@ export default function LanguagesView() {
   const computeErrors = (draft = form) => {
     const e: typeof errors = {};
     if (!draft.id.trim()) e.id = 'ID is required';
-    else if (!draft.id.trim().toUpperCase().startsWith('LANGUAGE_')) e.id = 'ID must start with "LANGUAGE_"';
-    else if (draft.id.trim().length <= 9) e.id = 'ID must contain additional characters after "LANGUAGE_"';
-    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) e.id = 'ID can only contain uppercase letters, numbers and underscores';
+    else if (!isValidID(draft.id, prefix)) e.id = `ID must start with "${prefix}" and contain additional characters`;
     if (!draft.name.trim()) e.name = 'Name is required';
 
     const cat = draft.category.trim();
@@ -201,8 +202,8 @@ export default function LanguagesView() {
     setViewing(false);
     setEditingId(null);
     const vm = toVM(row);
-    vm.id = 'LANGUAGE_';
-    vm.name += ' (copy)';
+    vm.id = prefix;
+    vm.name += ' (Copy)';
     setForm(vm);
     setErrors({});
     setShowForm(true);

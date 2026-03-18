@@ -6,9 +6,12 @@ import { PRECIPITATIONS, Precipitation, TEMPERATURES, Temperature } from '../../
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { CheckboxGroup, LabeledInput, LabeledSelect } from '../../components/inputs'
-import { requireAtLeastOne } from '../../components/inputs/validators';
+import { requireAtLeastOne, isValidID } from '../../components/inputs/validators';
+
+const prefix = 'CLIMATE_';
 
 export default function ClimateView() {
+
   const [rows, setRows] = useState<Climate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,9 +57,7 @@ export default function ClimateView() {
     // ID
     if (!draft.id.trim()) next.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
-    else if (!draft.id.trim().toUpperCase().startsWith('CLIMATE_')) next.id = 'ID must start with "CLIMATE_"';
-    else if (draft.id.trim().length <= 9) next.id = 'ID must contain additional characters after "CLIMATE_"';
-    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
+    else if (!isValidID(draft.id, prefix)) next.id = `ID must start with "${prefix}" and contain additional characters`;
     // Name
     if (!draft.name.trim()) next.name = 'Name is required';
     // Temperature
@@ -78,7 +79,7 @@ export default function ClimateView() {
   const startNew = () => {
     setViewing(false);
     setEditingId(null);
-    setForm(emptyClimate());
+    setForm(emptyClimate());   // reset form to empty state with prefix
     setErrors({});
     setShowForm(true);
   };
@@ -96,7 +97,7 @@ export default function ClimateView() {
     setEditingId(null);
 
     const vm = { ...row }; // your Climate form already uses domain type as form state
-    vm.id = 'CLIMATE_';
+    vm.id = prefix;
     vm.name += ' (Copy)';
 
     setForm(vm);
@@ -389,5 +390,5 @@ export default function ClimateView() {
 }
 
 function emptyClimate(): Climate {
-  return { id: 'CLIMATE_', name: '', temperature: 'Temperate', precipitations: [] };
+  return { id: prefix, name: '', temperature: 'Temperate', precipitations: [] };
 }

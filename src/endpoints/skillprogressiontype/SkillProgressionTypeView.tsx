@@ -3,6 +3,8 @@ import { DataTable, DataTableSearchInput, type ColumnDef } from '../../component
 import { LabeledInput } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
+import { isIntegerString, isValidID } from '../../components/inputs/validators';
+import { sanitizeUnsignedInt } from '../../components/inputs/sanitisers';
 
 import {
   fetchSkillprogressiontypes,
@@ -10,6 +12,8 @@ import {
   deleteSkillprogressiontype,
 } from '../../api/skillprogressiontype';
 import type { SkillProgressionType } from '../../types/skillprogressiontype';
+
+const prefix = 'SKILLPROGRESSIONTYPE_';
 
 /* ------------------------
    Form VM (use strings for number inputs while typing)
@@ -25,7 +29,7 @@ type FormState = {
 };
 
 const emptyVM = (): FormState => ({
-  id: 'SKILLPROGRESSIONTYPE_',
+  id: prefix,
   name: '',
   zero: '',
   ten: '',
@@ -54,9 +58,7 @@ const fromVM = (vm: FormState): SkillProgressionType => ({
   remaining: Number(vm.remaining),
 });
 
-// integer-only sanitizer
-const INT_RE = /^[+-]?\d+$/;
-const sanitizeInt = (s: string) => s.replace(/[^0-9+\-]/g, '');
+
 
 export default function SkillProgressionTypeView() {
   const [rows, setRows] = useState<SkillProgressionType[]>([]);
@@ -106,15 +108,13 @@ export default function SkillProgressionTypeView() {
   const computeErrors = (draft = form) => {
     const e: typeof errors = {};
     if (!draft.id.trim()) e.id = 'ID is required';
-    else if (!draft.id.trim().toUpperCase().startsWith('SKILLPROGRESSIONTYPE_')) e.id = 'ID must start with "SKILLPROGRESSIONTYPE_"';
-    else if (draft.id.trim().length <= 21) e.id = 'ID must contain additional characters after "SKILLPROGRESSIONTYPE_"';
-    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) e.id = 'ID can only contain uppercase letters, numbers and underscores';
+    else if (!isValidID(draft.id, prefix)) e.id = `ID must start with "${prefix}" and contain additional characters`;
     if (!draft.name.trim()) e.name = 'Name is required';
 
     const checkInt = (label: keyof FormState) => {
       const v = (draft[label] ?? '').trim();
       if (!v) e[label] = `${label} is required`;
-      else if (!INT_RE.test(v)) e[label] = `${label} must be an integer`;
+      else if (!isIntegerString(v)) e[label] = `${label} must be a non-negative integer`;
     };
 
     checkInt('zero');
@@ -168,8 +168,8 @@ export default function SkillProgressionTypeView() {
     setViewing(false);
     setEditingId(null);
     const vm = toVM(row);
-    const ids = new Set(rows.map(r => r.id));
-    vm.id = 'SKILLPROGRESSIONTYPE_';
+    vm.id = prefix;
+    vm.name += ' (Copy)';
     setForm(vm);
     setErrors({});
     setShowForm(true);
@@ -327,45 +327,45 @@ export default function SkillProgressionTypeView() {
             <LabeledInput
               label="0–9 (zero)"
               value={form.zero}
-              onChange={(v) => setForm(s => ({ ...s, zero: sanitizeInt(v) }))}
+              onChange={(v) => setForm(s => ({ ...s, zero: sanitizeUnsignedInt(v) }))}
               disabled={viewing}
-              inputProps={{ inputMode: 'numeric', pattern: '^[+\\-]?\\d+$' }}
+              inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
               error={viewing ? undefined : errors.zero}
             />
 
             <LabeledInput
               label="10–19 (ten)"
               value={form.ten}
-              onChange={(v) => setForm(s => ({ ...s, ten: sanitizeInt(v) }))}
+              onChange={(v) => setForm(s => ({ ...s, ten: sanitizeUnsignedInt(v) }))}
               disabled={viewing}
-              inputProps={{ inputMode: 'numeric', pattern: '^[+\\-]?\\d+$' }}
+              inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
               error={viewing ? undefined : errors.ten}
             />
 
             <LabeledInput
               label="20–29 (twenty)"
               value={form.twenty}
-              onChange={(v) => setForm(s => ({ ...s, twenty: sanitizeInt(v) }))}
+              onChange={(v) => setForm(s => ({ ...s, twenty: sanitizeUnsignedInt(v) }))}
               disabled={viewing}
-              inputProps={{ inputMode: 'numeric', pattern: '^[+\\-]?\\d+$' }}
+              inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
               error={viewing ? undefined : errors.twenty}
             />
 
             <LabeledInput
               label="30–39 (thirty)"
               value={form.thirty}
-              onChange={(v) => setForm(s => ({ ...s, thirty: sanitizeInt(v) }))}
+              onChange={(v) => setForm(s => ({ ...s, thirty: sanitizeUnsignedInt(v) }))}
               disabled={viewing}
-              inputProps={{ inputMode: 'numeric', pattern: '^[+\\-]?\\d+$' }}
+              inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
               error={viewing ? undefined : errors.thirty}
             />
 
             <LabeledInput
               label="40+ (remaining)"
               value={form.remaining}
-              onChange={(v) => setForm(s => ({ ...s, remaining: sanitizeInt(v) }))}
+              onChange={(v) => setForm(s => ({ ...s, remaining: sanitizeUnsignedInt(v) }))}
               disabled={viewing}
-              inputProps={{ inputMode: 'numeric', pattern: '^[+\\-]?\\d+$' }}
+              inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
               error={viewing ? undefined : errors.remaining}
             />
           </div>

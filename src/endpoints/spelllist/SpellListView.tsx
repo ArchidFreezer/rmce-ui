@@ -11,6 +11,9 @@ import { SPELL_TYPES, SPELL_REALMS, SpellType, Realm } from '../../types/enum';
 import { fetchBooks } from '../../api/book';
 import type { Book } from '../../types/book';
 
+import { isValidID } from '../../components/inputs/validators';
+
+const prefix = 'SPELLLIST_';
 
 // ------------------------
 // Form VM
@@ -26,7 +29,7 @@ type FormState = {
 };
 
 function emptyVM(): FormState {
-  return { id: 'SPELLLIST_', name: '', book: '', type: '', evil: false, summoning: false, realms: [] };
+  return { id: prefix, name: '', book: '', type: '', evil: false, summoning: false, realms: [] };
 }
 function toVM(s: SpellList): FormState {
   return { ...s, type: s.type };
@@ -131,9 +134,7 @@ export default function SpellListView() {
     // ID validations
     if (!draft.id.trim()) next.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
-    else if (!draft.id.trim().toUpperCase().startsWith('SPELLLIST_')) next.id = 'ID must start with "SPELLLIST_"';
-    else if (draft.id.trim().length <= 10) next.id = 'ID must contain additional characters after "SPELLLIST_"';
-    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
+    else if (!isValidID(draft.id, prefix)) next.id = `ID must start with "${prefix}" and contain additional characters`;
 
     // Book validations (non-fatal, just warn if unknown)
     if (draft.book.trim() && !bookNameById.has(draft.book.trim())) {
@@ -187,8 +188,8 @@ export default function SpellListView() {
     setViewing(false);
     setEditingId(null);
     const vm = toVM(row);
-    const ids = new Set(rows.map(r => r.id));
-    vm.id = 'SPELLLIST_';
+    vm.id = prefix;
+    vm.name += ' (Copy)';
     setForm(vm);
     setErrors({});
     setShowForm(true);
@@ -204,7 +205,7 @@ export default function SpellListView() {
     const isEditing = Boolean(editingId);
     const e = computeErrors(form, isEditing);
     setErrors(e);
-    const top = e.id || e.name || e.type || e.realms || '';
+    const top = e.id || e.name || e.type || e.realms || e.book || '';
     if (top) return;
 
     const payload = fromVM(form);

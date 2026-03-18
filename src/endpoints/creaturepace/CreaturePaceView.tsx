@@ -7,6 +7,9 @@ import { useConfirm } from '../../components/ConfirmDialog';
 import { fetchCreaturePaces, upsertCreaturePace, deleteCreaturePace } from '../../api/creaturepace';
 import type { CreaturePace } from '../../types/creaturepace';
 import { MANOEUVRE_DIFFICULTIES, type ManoeuvreDifficulty } from '../../types/enum';
+import { isValidID } from '../../components/inputs/validators';
+
+const prefix = 'CREATUREPACE_';
 
 // ------------------------
 // Form VM (strings for numbers while typing)
@@ -20,7 +23,7 @@ type FormState = {
 };
 
 function emptyVM(): FormState {
-  return { id: 'CREATUREPACE_', name: '', exhaustionMultiplier: '', movementMultiplier: '', manoeuvreDifficulty: 'Normal' };
+  return { id: prefix, name: '', exhaustionMultiplier: '', movementMultiplier: '', manoeuvreDifficulty: 'Normal' };
 }
 
 function toVM(c: CreaturePace): FormState {
@@ -109,9 +112,7 @@ export default function CreaturePaceView() {
     // ID validation: non-empty, uppercase letters/numbers/underscores only, must start with "CREATUREPACE_", must be unique (create only)
     if (!draft.id.trim()) next.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
-    else if (!draft.id.trim().toUpperCase().startsWith('CREATUREPACE_')) next.id = 'ID must start with "CREATUREPACE_"';
-    else if (draft.id.trim().length <= 13) next.id = 'ID must contain additional characters after "CREATUREPACE_"';
-    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
+    else if (!isValidID(draft.id, 'CREATUREPACE_')) next.id = 'ID must start with "CREATUREPACE_" and contain additional characters';
     // Name validation: non-empty, allow any chars (including spaces), but trim whitespace
     if (!draft.name.trim()) next.name = 'Name is required';
     // Exhaustion and movement multipliers: required, must be valid numbers (supporting scientific notation)
@@ -167,7 +168,7 @@ export default function CreaturePaceView() {
     setViewing(false);
     setEditingId(null);
     const vm = toVM(row);
-    vm.id = 'CREATUREPACE_';
+    vm.id = prefix; // Reset ID to force user to enter a new one, since it must be unique
     vm.name += ' (Copy)';
     setForm(vm);
     setErrors({});

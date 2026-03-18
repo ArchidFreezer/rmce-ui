@@ -5,7 +5,9 @@ import type { ArmourType } from '../../types/armourtype';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { CheckboxInput, LabeledInput } from '../../components/inputs';
-import { isSignedIntegerString } from '../../components/inputs/validators';
+import { isIntegerString, isUnsignedIntegerString, isValidID } from '../../components/inputs/validators';
+
+const prefix = 'ARMOURTYPE_';
 
 export default function ArmourTypeView() {
   const [rows, setRows] = useState<ArmourType[]>([]);
@@ -52,9 +54,7 @@ export default function ArmourTypeView() {
     // ID (only on create, must be unique and start with prefix in ucase and contain additional characters)
     if (!draft.id.trim()) next.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
-    else if (!draft.id.trim().toUpperCase().startsWith('ARMOURTYPE_')) next.id = 'ID must start with "ARMOURTYPE_"';
-    else if (draft.id.trim().length <= 11) next.id = 'ID must contain additional characters after "ARMOURTYPE_"';
-    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
+    else if (!isValidID(draft.id, prefix)) next.id = `ID must start with "${prefix}" and contain additional characters`;
     // Name
     if (!draft.name.trim()) next.name = 'Name is required';
     // Type
@@ -63,13 +63,13 @@ export default function ArmourTypeView() {
     else if (!/^AT [1-2]?[0-9]$/.test(draft.type.trim())) next.type = 'Type must follow the pattern "AT [1-2]?[0-9]"';
     // Numeric values
     if (!draft.minManoeuvreMod && draft.minManoeuvreMod !== 0) next.numeric = 'Min Manoeuvre Mod is required';
-    else if (!isSignedIntegerString(String(draft.minManoeuvreMod))) next.numeric = 'Min Manoeuvre Mod must be an integer';
+    else if (!isIntegerString(String(draft.minManoeuvreMod))) next.numeric = 'Min Manoeuvre Mod must be an integer';
     if (!draft.maxManoeuvreMod && draft.maxManoeuvreMod !== 0) next.numeric = 'Max Manoeuvre Mod is required';
-    else if (!isSignedIntegerString(String(draft.maxManoeuvreMod))) next.numeric = 'Max Manoeuvre Mod must be an integer';
+    else if (!isIntegerString(String(draft.maxManoeuvreMod))) next.numeric = 'Max Manoeuvre Mod must be an integer';
     if (!draft.missileAttackPenalty && draft.missileAttackPenalty !== 0) next.numeric = 'Missile Attack Penalty is required';
-    else if (!isSignedIntegerString(String(draft.missileAttackPenalty))) next.numeric = 'Missile Attack Penalty must be an integer';
+    else if (!isUnsignedIntegerString(String(draft.missileAttackPenalty))) next.numeric = 'Missile Attack Penalty must be an integer';
     if (!draft.quicknessPenalty && draft.quicknessPenalty !== 0) next.numeric = 'Quickness Penalty is required';
-    else if (!isSignedIntegerString(String(draft.quicknessPenalty))) next.numeric = 'Quickness Penalty must be an integer';
+    else if (!isUnsignedIntegerString(String(draft.quicknessPenalty))) next.numeric = 'Quickness Penalty must be an integer';
     return next;
   };
 
@@ -101,7 +101,7 @@ export default function ArmourTypeView() {
     setEditingId(null);
 
     const next = { ...row };
-    next.id = 'ARMOURTYPE_';
+    next.id = prefix;
     next.name += ' (Copy)';
 
     setForm(next as any); // if your form state = ArmourType
@@ -401,7 +401,7 @@ export default function ArmourTypeView() {
 
 function emptyArmourType(): ArmourType {
   return {
-    id: 'ARMOURTYPE_',
+    id: prefix,
     name: '',
     type: '',
     description: '',

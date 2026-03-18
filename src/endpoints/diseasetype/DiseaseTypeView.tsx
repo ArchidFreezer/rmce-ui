@@ -7,6 +7,9 @@ import { useConfirm } from '../../components/ConfirmDialog';
 import { fetchDiseasetypes, upsertDiseasetype, deleteDiseasetype } from '../../api/diseasetype';
 import type { DiseaseType } from '../../types/diseasetype';
 import { MALADY_SEVERITIES, MaladySeverity } from '../../types/enum';
+import { isValidID } from '../../components/inputs/validators';
+
+const prefix = 'DISEASETYPE_';
 
 // ---- Form VM: keep symptoms editable with textareas ----
 type SymptomRowVM = { severity: MaladySeverity; symptoms: string };
@@ -22,7 +25,7 @@ type FormState = {
 function emptyVM(): FormState {
   const mkSymptom = (s: MaladySeverity): SymptomRowVM => ({ severity: s, symptoms: '' });
   return {
-    id: 'DISEASETYPE_',
+    id: prefix,
     type: '',
     transmission: '',
     description: '',
@@ -106,9 +109,7 @@ export default function DiseaseTypeView() {
     // ID: required, unique (when creating), format (starts with DISEASETYPE_, only uppercase letters/numbers/underscores, etc.)
     if (!draft.id.trim()) e.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) e.id = `ID "${draft.id.trim()}" already exists`;
-    else if (!draft.id.trim().toUpperCase().startsWith('DISEASETYPE_')) e.id = 'ID must start with "DISEASETYPE_"';
-    else if (draft.id.trim().length <= 12) e.id = 'ID must contain additional characters after "DISEASETYPE_"';
-    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) e.id = 'ID can only contain uppercase letters, numbers and underscores';
+    else if (!isValidID(draft.id.trim(), prefix)) e.id = `ID must start with "${prefix}" and contain only uppercase letters, numbers, and underscores`;
     // Type, Transmission, Description: required
     if (!draft.type.trim()) e.type = 'Type is required';
     if (!draft.transmission.trim()) e.transmission = 'Transmission is required';
@@ -167,7 +168,7 @@ export default function DiseaseTypeView() {
     setEditingId(null);
 
     const vm = toVM(row);
-    vm.id = 'DISEASETYPE_';
+    vm.id = prefix;
     vm.type += ' (Copy)'; // Append " (Copy)" to the type for clarity
 
     setForm(vm);

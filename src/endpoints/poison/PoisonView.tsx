@@ -7,7 +7,9 @@ import type { PoisonType } from '../../types/poisontype';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { LabeledInput, LabeledSelect } from '../../components/inputs';
-import { isIntegerString } from '../../components/inputs/validators';
+import { isIntegerString, isValidID } from '../../components/inputs/validators';
+
+const prefix = 'POISON_';
 
 export default function PoisonView() {
   const [rows, setRows] = useState<Poison[]>([]);
@@ -79,9 +81,7 @@ export default function PoisonView() {
     // ID (only on create, must be unique and start with prefix in ucase and contain additional characters)
     if (!draft.id.trim()) next.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
-    else if (!draft.id.trim().toUpperCase().startsWith('POISON_')) next.id = 'ID must start with "POISON_"';
-    else if (draft.id.trim().length <= 7) next.id = 'ID must contain additional characters after "POISON_"';
-    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
+    else if (!isValidID(draft.id, prefix)) next.id = `ID must start with "${prefix}" and contain additional characters`;
     // Name
     if (!draft.name.trim()) next.name = 'Name is required';
     // Type
@@ -125,7 +125,7 @@ export default function PoisonView() {
     setEditingId(null);
 
     const next = { ...row };
-    next.id = 'POISON_';
+    next.id = prefix; // reset ID to prefix for user to edit (enforce new ID)
     next.name += ' (Copy)';
 
     setForm(next); // if your form state = Poison

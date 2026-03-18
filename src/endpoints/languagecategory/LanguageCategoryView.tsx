@@ -7,11 +7,14 @@ import { useConfirm } from '../../components/ConfirmDialog';
 import { fetchLanguagecategories, upsertLanguagecategory, deleteLanguagecategory } from '../../api/languagecategory';
 
 import type { LanguageCategory } from '../../types/languagecategory';
+import { isValidID } from '../../components/inputs/validators';
+
+const prefix = 'LANGUAGECATEGORY_';
 
 // --- Form VM (same shape) ---
 type FormState = { id: string; name: string };
 
-const emptyVM = (): FormState => ({ id: 'LANGUAGECATEGORY_', name: '' });
+const emptyVM = (): FormState => ({ id: prefix, name: '' });
 const toVM = (x: LanguageCategory): FormState => ({ id: x.id, name: x.name });
 const fromVM = (vm: FormState): LanguageCategory => ({ id: vm.id.trim(), name: vm.name.trim() });
 
@@ -58,9 +61,7 @@ export default function LanguageCategoryView() {
     const e: typeof errors = {};
     // ID rules:
     if (!draft.id.trim()) e.id = 'ID is required';
-    else if (!draft.id.trim().toUpperCase().startsWith('LANGUAGECATEGORY_')) e.id = 'ID must start with "LANGUAGECATEGORY_"';
-    else if (draft.id.trim().length <= 17) e.id = 'ID must contain additional characters after "LANGUAGECATEGORY_"';
-    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) e.id = 'ID can only contain uppercase letters, numbers and underscores';
+    else if (!isValidID(draft.id, prefix)) e.id = `ID must start with "${prefix}" and contain additional characters`;
     else if (!editingId && rows.some(r => r.id === draft.id.trim())) e.id = `ID "${draft.id.trim()}" already exists`;
     // Name rules:
     if (!draft.name.trim()) e.name = 'Name is required';
@@ -100,7 +101,7 @@ export default function LanguageCategoryView() {
     setViewing(false);
     setEditingId(null);
     const vm = toVM(row);
-    vm.id = 'LANGUAGECATEGORY_';
+    vm.id = prefix;
     vm.name += ' (Copy)';
     setForm(vm);
     setErrors({});

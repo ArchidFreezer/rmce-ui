@@ -28,16 +28,20 @@ export function whenInvalid(
 
 
 /** Returns true when s is one or more ASCII digits (optional leading minus sign, no decimals). */
-export function isSignedIntegerString(s: string): boolean {
-  return /^-?\d+$/.test(s);
+export function isIntegerString(s: string): boolean {
+  return s === '-' || /^-?\d+$/.test(s);
 }
 
 /** Returns true when s is one or more ASCII digits (no negatives, no decimals). */
-export function isIntegerString(s: string): boolean {
+export function isUnsignedIntegerString(s: string): boolean {
   return /^\d+$/.test(s);
 }
 
 /** Returns true when s is a valid ISBN-10 or ISBN-13 (digits, optional dashes/spaces, optional X for ISBN-10). */
 export function isISBN(s: string): boolean {
   return /^(?:\d{9}[\dXx]|\d{13})$/.test(s.replace(/[-\s]/g, ''));
+}
+
+export function isValidID(val: string, prefix: string): boolean {
+  return val.startsWith(prefix.toUpperCase()) && /^[A-Z0-9_]+$/.test(val) && val.length > prefix.length;
 }

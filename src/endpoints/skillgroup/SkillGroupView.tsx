@@ -6,6 +6,8 @@ import { useConfirm } from '../../components/ConfirmDialog';
 
 import { fetchSkillgroups, upsertSkillgroup, deleteSkillgroup } from '../../api/skillgroup';
 import type { SkillGroup } from '../../types/skillgroup';
+import { isValidID } from '../../components/inputs/validators';
+const prefix = 'SKILLGROUP_';
 
 // ------------------------
 // Form VM (simple: same as domain)
@@ -16,7 +18,7 @@ type FormState = {
 };
 
 function emptyVM(): FormState {
-  return { id: 'SKILLGROUP_', name: '' };
+  return { id: prefix, name: '' };
 }
 function toVM(s: SkillGroup): FormState {
   return { id: s.id, name: s.name };
@@ -66,9 +68,7 @@ export default function SkillGroupView() {
     const e: typeof errors = {};
     if (!draft.id.trim()) e.id = 'ID is required';
     else if (!editingId && rows.some(r => r.id === draft.id.trim())) e.id = `ID "${draft.id.trim()}" already exists`;
-    else if (!draft.id.trim().toUpperCase().startsWith('SKILLGROUP_')) e.id = 'ID must start with "SKILLGROUP_"';
-    else if (draft.id.trim().length <= 11) e.id = 'ID must contain additional characters after "SKILLGROUP_"';
-    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) e.id = 'ID can only contain uppercase letters, numbers and underscores';
+    else if (!isValidID(draft.id, prefix)) e.id = `ID must start with "${prefix}" and contain additional characters`;
 
     if (!draft.name.trim()) e.name = 'Name is required';
     return e;
@@ -106,8 +106,8 @@ export default function SkillGroupView() {
     setViewing(false);
     setEditingId(null);
     const vm = toVM(row);
-    const ids = new Set(rows.map(r => r.id));
-    vm.id = 'SKILLGROUP_';
+    vm.id = prefix;
+    vm.name += ' (Copy)';
     setForm(vm);
     setErrors({});
     setShowForm(true);

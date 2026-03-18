@@ -7,7 +7,9 @@ import type { DiseaseType } from '../../types/diseasetype';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { LabeledInput, LabeledSelect } from '../../components/inputs';
-import { isIntegerString } from '../../components/inputs/validators';
+import { isIntegerString, isValidID } from '../../components/inputs/validators';
+
+const prefix = 'DISEASE_';
 
 export default function DiseaseView() {
   const [rows, setRows] = useState<Disease[]>([]);
@@ -77,9 +79,7 @@ export default function DiseaseView() {
     // ID (only on create, must be unique and start with prefix in ucase and contain additional characters)
     if (!draft.id.trim()) next.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
-    else if (!draft.id.trim().toUpperCase().startsWith('DISEASE_')) next.id = 'ID must start with "DISEASE_"';
-    else if (draft.id.trim().length <= 8) next.id = 'ID must contain additional characters after "DISEASE_"';
-    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
+    else if (!isValidID(draft.id, prefix)) next.id = `ID must start with "${prefix}" and contain additional characters`;
     // Name
     if (!draft.name.trim()) next.name = 'Name is required';
     // Type
@@ -123,7 +123,7 @@ export default function DiseaseView() {
     setEditingId(null);
 
     const next = { ...row };
-    next.id = 'DISEASE_';
+    next.id = prefix;
     next.name += ' (Copy)';
 
     setForm(next); // if your form state = Disease
@@ -379,5 +379,5 @@ export default function DiseaseView() {
 }
 
 function emptyDisease(): Disease {
-  return { id: 'DISEASE_', name: '', type: '', level: 0, levelVariance: '' };
+  return { id: prefix, name: '', type: '', level: 0, levelVariance: '' };
 }
