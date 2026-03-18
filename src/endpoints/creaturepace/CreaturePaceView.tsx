@@ -110,7 +110,7 @@ export default function CreaturePaceView() {
     if (!draft.id.trim()) next.id = 'ID is required';
     else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
     else if (!draft.id.trim().toUpperCase().startsWith('CREATUREPACE_')) next.id = 'ID must start with "CREATUREPACE_"';
-    else if (draft.id.trim().length <= 14) next.id = 'ID must contain additional characters after "CREATUREPACE_"';
+    else if (draft.id.trim().length <= 13) next.id = 'ID must contain additional characters after "CREATUREPACE_"';
     else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
     // Name validation: non-empty, allow any chars (including spaces), but trim whitespace
     if (!draft.name.trim()) next.name = 'Name is required';
