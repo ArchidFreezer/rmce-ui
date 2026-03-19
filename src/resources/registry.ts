@@ -14,6 +14,7 @@ const SkillCategoryView = lazy(() => import('../endpoints/skillcategory/SkillCat
 const SkillGroupView = lazy(() => import('../endpoints/skillgroup/SkillGroupView'));
 const SkillProgressionTypeView = lazy(() => import('../endpoints/skillprogressiontype/SkillProgressionTypeView'));
 const SpellListView = lazy(() => import('../endpoints/spelllist/SpellListView'));
+const TreasureCodeView = lazy(() => import('../endpoints/treasurecode/TreasureCodeView'));
 
 
 export interface ResourceDef {
@@ -22,7 +23,6 @@ export interface ResourceDef {
   path: `/${string}`;
   Component: LazyExoticComponent<ComponentType>;
 }
-
 /** Known resources with their routes/components */
 
 const known: Record<string, ResourceDef> = {
@@ -40,6 +40,7 @@ const known: Record<string, ResourceDef> = {
   skillgroup: { prefix: 'skillgroup', label: 'Skill Groups', path: '/skillgroups', Component: SkillGroupView },
   skillprogressiontype: { prefix: 'skillprogressiontype', label: 'Skill Progression Types', path: '/skillprogressiontypes', Component: SkillProgressionTypeView },
   spelllist: { prefix: 'spelllist', label: 'Spell Lists', path: '/spelllists', Component: SpellListView },
+  treasurecode: { prefix: 'treasurecode', label: 'Treasure Codes', path: '/treasurecodes', Component:TreasureCodeView },
 }
 
 
@@ -71,4 +72,5 @@ export const FALLBACK_RESOURCES: ResourceDef[] = [
   known.skillgroup,
   known.skillprogressiontype,
   known.spelllist,
+  known.treasurecode,
 ].filter((r): r is ResourceDef => Boolean(r));
