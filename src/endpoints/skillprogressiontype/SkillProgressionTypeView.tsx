@@ -3,8 +3,7 @@ import { DataTable, DataTableSearchInput, type ColumnDef } from '../../component
 import { LabeledInput } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
-import { isValidID, isValidSignedInt } from '../../components/inputs/validators';
-import { sanitizeUnsignedInt } from '../../components/inputs/sanitisers';
+import { isValidID, makeIDOnChange, isValidSignedInt, makeSignedIntOnChange, isValidUnsignedInt, makeUnsignedIntOnChange } from '../../utils/inputHelpers';
 
 import {
   fetchSkillprogressiontypes,
@@ -64,6 +63,8 @@ export default function SkillProgressionTypeView() {
   const [rows, setRows] = useState<SkillProgressionType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ id?: string | undefined; name?: string | undefined; zero?: string | undefined; ten?: string | undefined; twenty?: string | undefined; thirty?: string | undefined; remaining?: string | undefined; }>({});
+  const hasErrors = Boolean(errors.id || errors.name || errors.zero || errors.ten || errors.twenty || errors.thirty || errors.remaining);
 
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -73,15 +74,6 @@ export default function SkillProgressionTypeView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
   const [form, setForm] = useState<FormState>(emptyVM());
-  const [errors, setErrors] = useState<{
-    id?: string | undefined;
-    name?: string | undefined;
-    zero?: string | undefined;
-    ten?: string | undefined;
-    twenty?: string | undefined;
-    thirty?: string | undefined;
-    remaining?: string | undefined;
-  }>({});
 
   const toast = useToast();
   const confirm = useConfirm();
@@ -108,31 +100,27 @@ export default function SkillProgressionTypeView() {
   const computeErrors = (draft = form) => {
     const e: typeof errors = {};
     if (!draft.id.trim()) e.id = 'ID is required';
+    else if (!editingId && rows.some(r => r.id === draft.id.trim())) e.id = `ID "${draft.id.trim()}" already exists`;
     else if (!isValidID(draft.id, prefix)) e.id = `ID must start with "${prefix}" and contain additional characters`;
     if (!draft.name.trim()) e.name = 'Name is required';
+
+    if (!draft.zero) e.zero = 'Zero is required';
+    else if (!isValidSignedInt(draft.zero)) e.zero = 'Zero must be an integer';
 
     const checkInt = (label: keyof FormState) => {
       const v = (draft[label] ?? '').trim();
       if (!v) e[label] = `${label} is required`;
-      else if (!isValidSignedInt(v)) e[label] = `${label} must be a non-negative integer`;
+      else if (!isValidUnsignedInt(v)) e[label] = `${label} must be a non-negative integer`;
     };
 
-    checkInt('zero');
     checkInt('ten');
     checkInt('twenty');
     checkInt('thirty');
     checkInt('remaining');
 
-    // uniqueness (create only)
-    if (!editingId && rows.some(r => r.id === draft.id.trim())) {
-      e.id = `ID "${draft.id.trim()}" already exists`;
-    }
     return e;
   };
 
-  const hasErrors = Boolean(
-    errors.id || errors.name || errors.zero || errors.ten || errors.twenty || errors.thirty || errors.remaining
-  );
 
   useEffect(() => {
     if (!showForm || viewing) return;
@@ -183,12 +171,12 @@ export default function SkillProgressionTypeView() {
   };
 
   const saveForm = async () => {
-    const e = computeErrors(form);
-    setErrors(e);
-    const top = e.id || e.name || e.zero || e.ten || e.twenty || e.thirty || e.remaining || '';
-    if (top) return;
-
     const payload = fromVM(form);
+
+    const nextErrors = computeErrors(form);
+    setErrors(nextErrors);
+    if (hasErrors) return;
+
     const isEditing = Boolean(editingId);
     try {
       const opts = isEditing
@@ -252,11 +240,11 @@ export default function SkillProgressionTypeView() {
   const columns: ColumnDef<SkillProgressionType>[] = useMemo(() => [
     { id: 'id', header: 'id', accessor: r => r.id, sortType: 'string', minWidth: 350 },
     { id: 'name', header: 'name', accessor: r => r.name, sortType: 'string', minWidth: 180 },
-    { id: 'zero', header: '0–9', accessor: r => r.zero, sortType: 'number', align: 'center', minWidth: 90, },
-    { id: 'ten', header: '10–19', accessor: r => r.ten, sortType: 'number', align: 'center', minWidth: 90, },
-    { id: 'twenty', header: '20–29', accessor: r => r.twenty, sortType: 'number', align: 'center', minWidth: 90, },
-    { id: 'thirty', header: '30–39', accessor: r => r.thirty, sortType: 'number', align: 'center', minWidth: 90, },
-    { id: 'remaining', header: '40+', accessor: r => r.remaining, sortType: 'number', align: 'center', minWidth: 90, },
+    { id: 'zero', header: '0', accessor: r => r.zero, sortType: 'number', align: 'center', minWidth: 90, },
+    { id: 'ten', header: '1-9', accessor: r => r.ten, sortType: 'number', align: 'center', minWidth: 90, },
+    { id: 'twenty', header: '10-19', accessor: r => r.twenty, sortType: 'number', align: 'center', minWidth: 90, },
+    { id: 'thirty', header: '20-29', accessor: r => r.thirty, sortType: 'number', align: 'center', minWidth: 90, },
+    { id: 'remaining', header: '30+', accessor: r => r.remaining, sortType: 'number', align: 'center', minWidth: 90, },
     {
       id: 'actions', header: 'actions', sortable: false, width: 360,
       render: (row) => (
@@ -309,65 +297,33 @@ export default function SkillProgressionTypeView() {
           </h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput
-              label="ID"
-              value={form.id}
-              onChange={(v) => setForm(s => ({ ...s, id: v }))}
-              disabled={!!editingId || viewing}
-              error={viewing ? undefined : errors.id}
-            />
-            <LabeledInput
-              label="Name"
-              value={form.name}
-              onChange={(v) => setForm(s => ({ ...s, name: v }))}
-              disabled={viewing}
-              error={viewing ? undefined : errors.name}
-            />
+            <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />
+            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm(s => ({ ...s, name: v }))} disabled={viewing} error={errors.name} />
 
-            <LabeledInput
-              label="0–9 (zero)"
-              value={form.zero}
-              onChange={(v) => setForm(s => ({ ...s, zero: sanitizeUnsignedInt(v) }))}
-              disabled={viewing}
-              inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
-              error={viewing ? undefined : errors.zero}
-            />
+            <LabeledInput label="0 (zero)" value={form.zero} disabled={viewing}
+              onChange={makeSignedIntOnChange<typeof form>('zero', setForm)}
+              inputProps={{ inputMode: 'numeric', pattern: '\\d*', }}
+              error={errors.zero} />
 
-            <LabeledInput
-              label="10–19 (ten)"
-              value={form.ten}
-              onChange={(v) => setForm(s => ({ ...s, ten: sanitizeUnsignedInt(v) }))}
-              disabled={viewing}
-              inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
-              error={viewing ? undefined : errors.ten}
-            />
+            <LabeledInput label="1-9 (ten)" value={form.ten} disabled={viewing}
+              onChange={makeUnsignedIntOnChange<typeof form>('ten', setForm)}
+              inputProps={{ inputMode: 'numeric', pattern: '\\d*', }}
+              error={errors.ten} />
 
-            <LabeledInput
-              label="20–29 (twenty)"
-              value={form.twenty}
-              onChange={(v) => setForm(s => ({ ...s, twenty: sanitizeUnsignedInt(v) }))}
-              disabled={viewing}
-              inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
-              error={viewing ? undefined : errors.twenty}
-            />
+            <LabeledInput label="10-19 (twenty)" value={form.twenty} disabled={viewing}
+              onChange={makeUnsignedIntOnChange<typeof form>('twenty', setForm)}
+              inputProps={{ inputMode: 'numeric', pattern: '\\d*', }}
+              error={errors.twenty} />
 
-            <LabeledInput
-              label="30–39 (thirty)"
-              value={form.thirty}
-              onChange={(v) => setForm(s => ({ ...s, thirty: sanitizeUnsignedInt(v) }))}
-              disabled={viewing}
-              inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
-              error={viewing ? undefined : errors.thirty}
-            />
+            <LabeledInput label="20-29 (thirty)" value={form.thirty} disabled={viewing}
+              onChange={makeUnsignedIntOnChange<typeof form>('thirty', setForm)}
+              inputProps={{ inputMode: 'numeric', pattern: '\\d*', }}
+              error={errors.thirty} />
 
-            <LabeledInput
-              label="40+ (remaining)"
-              value={form.remaining}
-              onChange={(v) => setForm(s => ({ ...s, remaining: sanitizeUnsignedInt(v) }))}
-              disabled={viewing}
-              inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
-              error={viewing ? undefined : errors.remaining}
-            />
+            <LabeledInput label="30+ (remaining)" value={form.remaining} disabled={viewing}
+              onChange={makeUnsignedIntOnChange<typeof form>('remaining', setForm)}
+              inputProps={{ inputMode: 'numeric', pattern: '\\d*', }}
+              error={errors.remaining} />
           </div>
 
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
@@ -392,7 +348,7 @@ export default function SkillProgressionTypeView() {
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
           pageSizeOptions={[5, 10, 20, 50, 100]}
-          tableMinWidth={900}
+          tableMinWidth={0}
           zebra
           hover
           resizable

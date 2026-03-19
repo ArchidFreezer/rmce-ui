@@ -6,7 +6,7 @@ import { useConfirm } from '../../components/ConfirmDialog';
 
 import { fetchSkillgroups, upsertSkillgroup, deleteSkillgroup } from '../../api/skillgroup';
 import type { SkillGroup } from '../../types/skillgroup';
-import { isValidID } from '../../components/inputs/validators';
+import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
 const prefix = 'SKILLGROUP_';
 
 // ------------------------
@@ -31,6 +31,8 @@ export default function SkillGroupView() {
   const [rows, setRows] = useState<SkillGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ id?: string | undefined; name?: string | undefined }>({});
+  const hasErrors = Boolean(errors.id || errors.name);
 
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -40,7 +42,6 @@ export default function SkillGroupView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
   const [form, setForm] = useState<FormState>(emptyVM());
-  const [errors, setErrors] = useState<{ id?: string | undefined; name?: string | undefined }>({});
 
   const toast = useToast();
   const confirm = useConfirm();
@@ -73,7 +74,6 @@ export default function SkillGroupView() {
     if (!draft.name.trim()) e.name = 'Name is required';
     return e;
   };
-  const hasErrors = Boolean(errors.id || errors.name);
 
   useEffect(() => {
     if (!showForm || viewing) return;
@@ -120,12 +120,12 @@ export default function SkillGroupView() {
   };
 
   const saveForm = async () => {
-    const e = computeErrors(form);
-    setErrors(e);
-    const top = e.id || e.name || '';
-    if (top) return;
-
     const payload = fromVM(form);
+
+    const nextErrors = computeErrors(form);
+    setErrors(nextErrors);
+    if (hasErrors) return;
+
     const isEditing = Boolean(editingId);
     try {
       const opts = isEditing
@@ -247,20 +247,8 @@ export default function SkillGroupView() {
           </h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput
-              label="ID"
-              value={form.id}
-              onChange={(v) => setForm(s => ({ ...s, id: v }))}
-              disabled={!!editingId || viewing}
-              error={viewing ? undefined : errors.id}
-            />
-            <LabeledInput
-              label="Name"
-              value={form.name}
-              onChange={(v) => setForm(s => ({ ...s, name: v }))}
-              disabled={viewing}
-              error={viewing ? undefined : errors.name}
-            />
+            <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />
+            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm(s => ({ ...s, name: v }))} disabled={viewing} error={errors.name} />
           </div>
 
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
@@ -285,13 +273,19 @@ export default function SkillGroupView() {
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
           pageSizeOptions={[5, 10, 20, 50, 100]}
-          tableMinWidth={700}
+          tableMinWidth={0}
           zebra
           hover
           resizable
           persistKey="dt.skillgroup.v1"
           ariaLabel="Skill groups"
         />
+      )}
+      {/* Empty dataset */}
+      {!rows.length && !showForm && (
+        <div style={{ marginTop: 8, color: 'var(--muted)' }}>
+          No skill groups found.
+        </div>
       )}
     </>
   );

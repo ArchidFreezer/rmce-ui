@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { LabeledInput, LabeledSelect, CheckboxGroup } from '../../components/inputs';
+import { LabeledInput, LabeledSelect, CheckboxGroup, CheckboxInput } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 
@@ -11,7 +11,7 @@ import { SPELL_TYPES, SPELL_REALMS, SpellType, Realm } from '../../types/enum';
 import { fetchBooks } from '../../api/book';
 import type { Book } from '../../types/book';
 
-import { isValidID } from '../../components/inputs/validators';
+import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
 
 const prefix = 'SPELLLIST_';
 
@@ -50,6 +50,8 @@ export default function SpellListView() {
   const [rows, setRows] = useState<SpellList[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ id?: string | undefined; name?: string | undefined; type?: string | undefined; realms?: string | undefined; book?: string | undefined; }>({});
+  const hasErrors = Boolean(errors.id || errors.name || errors.type || errors.realms || errors.book);
 
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -59,8 +61,6 @@ export default function SpellListView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
   const [form, setForm] = useState<FormState>(emptyVM());
-
-
 
   // Books for dropdown (non-fatal)
   const [books, setBooks] = useState<Book[]>([]);
@@ -121,29 +121,19 @@ export default function SpellListView() {
 
   // ---- Validation ----
   const isSpellType = (s: string) => (SPELL_TYPES as readonly string[]).includes(s);
-  const [errors, setErrors] = useState<{
-    id?: string | undefined;
-    name?: string | undefined;
-    type?: string | undefined;
-    realms?: string | undefined;
-    book?: string | undefined;
-  }>({});
-  const hasErrors = Boolean(errors.id || errors.name || errors.type || errors.realms || errors.book);
-  const computeErrors = (draft: FormState = form, isEditing: boolean) => {
+  const computeErrors = (draft: FormState = form) => {
     const next: typeof errors = {};
     // ID validations
     if (!draft.id.trim()) next.id = 'ID is required';
-    else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
+    else if (!editingId && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
     else if (!isValidID(draft.id, prefix)) next.id = `ID must start with "${prefix}" and contain additional characters`;
 
     // Book validations (non-fatal, just warn if unknown)
-    if (draft.book.trim() && !bookNameById.has(draft.book.trim())) {
-      next.book = `Unknown book ID "${draft.book.trim()}"`;
-    }
+    if (draft.book.trim() && !bookNameById.has(draft.book.trim())) next.book = `Unknown book ID "${draft.book.trim()}"`;
 
     // Name validations
     if (!draft.name.trim()) next.name = 'Name is required';
-    else if (!isEditing && rows.some(r => r.name === draft.name.trim())) next.name = `Name "${draft.name.trim()}" already exists`;
+    else if (!editingId && rows.some(r => r.name === draft.name.trim())) next.name = `Name "${draft.name.trim()}" already exists`;
 
     // Type validations
     if (!draft.type.trim()) next.type = 'Type is required';
@@ -158,8 +148,7 @@ export default function SpellListView() {
 
   useEffect(() => {
     if (!showForm || viewing) return;
-    const isEditing = Boolean(editingId);
-    setErrors(computeErrors(form, isEditing));
+    setErrors(computeErrors(form));
   }, [form, showForm, viewing]);
 
   // ---- Actions ----
@@ -202,13 +191,13 @@ export default function SpellListView() {
   };
 
   const saveForm = async () => {
-    const isEditing = Boolean(editingId);
-    const e = computeErrors(form, isEditing);
-    setErrors(e);
-    const top = e.id || e.name || e.type || e.realms || e.book || '';
-    if (top) return;
-
     const payload = fromVM(form);
+
+    const nextErrors = computeErrors(form);
+    setErrors(nextErrors);
+    if (hasErrors) return;
+
+    const isEditing = Boolean(editingId);
     try {
       const opts = isEditing
         ? { method: 'PUT' as const, useResourceIdPath: true }
@@ -366,21 +355,8 @@ export default function SpellListView() {
           </h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput
-              label="ID"
-              value={form.id}
-              onChange={(v) => setForm(s => ({ ...s, id: v }))}
-              disabled={!!editingId || viewing}
-              error={viewing ? undefined : errors.id}
-            />
-            <LabeledInput
-              label="Name"
-              value={form.name}
-              onChange={(v) => setForm(s => ({ ...s, name: v }))}
-              disabled={viewing}
-              error={viewing ? undefined : errors.name}
-            />
-
+            <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />
+            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm(s => ({ ...s, name: v }))} disabled={viewing} error={errors.name} />
 
             <LabeledSelect
               label="Book"
@@ -392,7 +368,6 @@ export default function SpellListView() {
               helperText={booksLoading ? 'Loading Books…' : 'Select a Book ID'}
             />
 
-
             <LabeledSelect
               label="Type"
               value={form.type}
@@ -402,18 +377,8 @@ export default function SpellListView() {
               error={viewing ? undefined : errors.type}
             />
 
-            <LabeledCheckbox
-              label="Evil"
-              checked={form.evil}
-              onChange={(c) => setForm(s => ({ ...s, evil: c }))}
-              disabled={viewing}
-            />
-            <LabeledCheckbox
-              label="Summoning"
-              checked={form.summoning}
-              onChange={(c) => setForm(s => ({ ...s, summoning: c }))}
-              disabled={viewing}
-            />
+            <CheckboxInput label="Evil" checked={form.evil} onChange={(c) => setForm(s => ({ ...s, evil: c }))} disabled={viewing} />
+            <CheckboxInput label="Summoning" checked={form.summoning} onChange={(c) => setForm(s => ({ ...s, summoning: c }))} disabled={viewing} />
 
             <div style={{ gridColumn: '1 / -1' }}>
               <CheckboxGroup<Realm>
@@ -452,7 +417,7 @@ export default function SpellListView() {
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
           pageSizeOptions={[5, 10, 20, 50, 100]}
-          tableMinWidth={900}
+          tableMinWidth={0}
           zebra
           hover
           resizable
@@ -460,34 +425,13 @@ export default function SpellListView() {
           ariaLabel="Spell lists"
         />
       )}
+
+      {/* Empty dataset */}
+      {!rows.length && !showForm && (
+        <div style={{ marginTop: 8, color: 'var(--muted)' }}>
+          No spell lists found.
+        </div>
+      )}
     </>
   );
 }
-
-/** Small Fix‑A compliant checkbox wrapper (local to this file) */
-function LabeledCheckbox({
-  label,
-  checked,
-  onChange,
-  disabled,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (val: boolean) => void;
-  disabled?: boolean | undefined;
-}) {
-  const id = React.useId();
-  return (
-    <label htmlFor={id} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, paddingTop: 6 }}>
-      <input
-        id={id}
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        disabled={disabled}
-      />
-      <span>{label}</span>
-    </label>
-  );
-}
-``
