@@ -8,6 +8,7 @@ import { fetchCreaturePaces, upsertCreaturePace, deleteCreaturePace } from '../.
 import type { CreaturePace } from '../../types/creaturepace';
 import { MANOEUVRE_DIFFICULTIES, type ManoeuvreDifficulty } from '../../types/enum';
 import { isValidID } from '../../components/inputs/validators';
+import { makeIDOnChange } from '../../components/inputs/sanitisers';
 
 const prefix = 'CREATUREPACE_';
 
@@ -323,7 +324,7 @@ export default function CreaturePaceView() {
             <LabeledInput
               label="ID"
               value={form.id}
-              onChange={(v) => setForm(s => ({ ...s, id: v }))}
+              onChange={makeIDOnChange<typeof form>('id', setForm, prefix)}
               disabled={!!editingId || viewing}
               error={viewing ? undefined : errors.id}
             />

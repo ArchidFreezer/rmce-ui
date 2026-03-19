@@ -7,6 +7,7 @@ import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { CheckboxGroup, LabeledInput, LabeledSelect } from '../../components/inputs'
 import { requireAtLeastOne, isValidID } from '../../components/inputs/validators';
+import { makeIDOnChange } from '../../components/inputs/sanitisers';
 
 const prefix = 'CLIMATE_';
 
@@ -295,7 +296,7 @@ export default function ClimateView() {
             <LabeledInput
               label="ID"
               value={form.id}
-              onChange={(v) => setForm(s => ({ ...s, id: v }))}
+              onChange={makeIDOnChange<typeof form>('id', setForm, prefix)}
               disabled={!!editingId || viewing}
               error={errors.id}
             />

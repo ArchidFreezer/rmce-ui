@@ -8,6 +8,7 @@ import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { LabeledInput, LabeledSelect } from '../../components/inputs';
 import { isValidUnsignedInt, isValidID } from '../../components/inputs/validators';
+import { makeIDOnChange } from '../../components/inputs/sanitisers';
 
 const prefix = 'DISEASE_';
 
@@ -296,7 +297,7 @@ export default function DiseaseView() {
           <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Disease' : 'New Disease'}</h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput label="ID" value={form.id} onChange={(v) => setForm((s) => ({ ...s, id: v }))} disabled={!!editingId || viewing} error={errors.id} />
+            <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />
             <LabeledInput label="Name" value={form.name} onChange={(v) => setForm((s) => ({ ...s, name: v }))} error={errors.name} disabled={viewing} />
 
             <LabeledSelect
