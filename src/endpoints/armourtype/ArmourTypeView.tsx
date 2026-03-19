@@ -108,8 +108,6 @@ export default function ArmourTypeView() {
   // ----- Inline validation helpers -----
 
   const computeErrors = (draft = form) => {
-    if (viewing) return {}; // no errors in view mode
-
     const next: { id?: string; name?: string; type?: string; minManoeuvreMod?: string; maxManoeuvreMod?: string; missileAttackPenalty?: string; quicknessPenalty?: string } = {};
     // ID (only on create, must be unique and start with prefix in ucase and contain additional characters)
     if (!draft.id.trim()) next.id = 'ID is required';
@@ -309,12 +307,12 @@ export default function ArmourTypeView() {
       {/* Toolbar shown only when table visible */}
       {!showForm && (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-          <button onClick={startNew}>New Spell List</button>
+          <button onClick={startNew}>New Armour Type</button>
           <DataTableSearchInput
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search xxx …"
-            aria-label="Search xxx"
+            placeholder="Search armour types…"
+            aria-label="Search armour types"
           />
         </div>
       )}

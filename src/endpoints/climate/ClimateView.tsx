@@ -6,16 +6,21 @@ import { PRECIPITATIONS, Precipitation, TEMPERATURES, Temperature } from '../../
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { CheckboxGroup, LabeledInput, LabeledSelect } from '../../components/inputs'
-import { requireAtLeastOne, isValidID } from '../../components/inputs/validators';
-import { makeIDOnChange } from '../../components/inputs/sanitisers';
+import { requireAtLeastOne, isValidID, makeIDOnChange } from '../../utils/inputHelpers';
 
 const prefix = 'CLIMATE_';
+
+function emptyClimate(): Climate {
+  return { id: prefix, name: '', temperature: 'Temperate', precipitations: [] };
+}
 
 export default function ClimateView() {
 
   const [rows, setRows] = useState<Climate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ id?: string; name?: string; temperature?: string; precipitations?: string }>({});
+  const hasErrors = Boolean(errors.id || errors.name || errors.temperature || errors.precipitations);
 
   // table UX
   const [query, setQuery] = useState('');
@@ -49,15 +54,11 @@ export default function ClimateView() {
   }, []);
 
   // ----- Inline validation helpers -----
-  const [errors, setErrors] = useState<{ id?: string; name?: string; temperature?: string; precipitations?: string }>({});
-  const hasErrors = Boolean(errors.id || errors.name || errors.temperature || errors.precipitations);
-  const computeErrors = (draft: Climate, isEditing: boolean) => {
-    if (viewing) return {};             // suppress inline errors in view mode
-
+  const computeErrors = (draft: Climate) => {
     const next: { id?: string; name?: string; temperature?: string; precipitations?: string } = {};
     // ID
     if (!draft.id.trim()) next.id = 'ID is required';
-    else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
+    else if (!editingId && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
     else if (!isValidID(draft.id, prefix)) next.id = `ID must start with "${prefix}" and contain additional characters`;
     // Name
     if (!draft.name.trim()) next.name = 'Name is required';
@@ -71,10 +72,9 @@ export default function ClimateView() {
   };
 
   useEffect(() => {
-    if (!showForm) return;
-    const isEditing = Boolean(editingId);
-    setErrors(computeErrors(form, isEditing));
-  }, [form, editingId, showForm]); // keep current
+    if (!showForm || viewing) return;
+    setErrors(computeErrors(form));
+  }, [form, showForm, viewing]); // keep current
 
   // ----- Handlers (Create / Edit / Delete) -----
   const startNew = () => {
@@ -129,10 +129,9 @@ export default function ClimateView() {
       precipitations: [...form.precipitations],
     };
 
-    const nextErrors = computeErrors(payload, Boolean(editingId));
+    const nextErrors = computeErrors(form);
     setErrors(nextErrors);
-    const topError = nextErrors.id || nextErrors.name || nextErrors.temperature || nextErrors.precipitations || '';
-    if (topError) return;
+    if (hasErrors) return;
 
     const isEditing = Boolean(editingId);
     try {
@@ -203,7 +202,7 @@ export default function ClimateView() {
 
   // ----- Columns (Edit + Delete) -----
   const columns: ColumnDef<Climate>[] = useMemo(() => {
-    const chip = (p: string) => (
+    const pill = (p: string) => (
       <span
         key={p}
         style={{
@@ -246,7 +245,7 @@ export default function ClimateView() {
           <div style={{ display: 'flex', flexWrap: 'wrap' }}>
             {r.precipitations.length === 0
               ? <span style={{ color: 'var(--muted)' }}>—</span>
-              : r.precipitations.map(chip)}
+              : r.precipitations.map(pill)}
           </div>
         ),
       },
@@ -287,26 +286,27 @@ export default function ClimateView() {
     <>
       <h2>Climates</h2>
 
+      {/* Toolbar shown only when table visible */}
+      {!showForm && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+          <button onClick={startNew}>New Climate</button>
+          <DataTableSearchInput
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search climates…"
+            aria-label="Search climates"
+          />
+        </div>
+      )}
+
       {/* Form panel (Create & Edit) */}
       {showForm && (
         <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}>
           <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Climate' : 'New Climate'}</h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput
-              label="ID"
-              value={form.id}
-              onChange={makeIDOnChange<typeof form>('id', setForm, prefix)}
-              disabled={!!editingId || viewing}
-              error={errors.id}
-            />
-            <LabeledInput
-              label="Name"
-              value={form.name}
-              onChange={(v) => setForm(s => ({ ...s, name: v }))}
-              disabled={viewing}
-              error={errors.name}
-            />
+            <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />
+            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm(s => ({ ...s, name: v }))} disabled={viewing} error={errors.name} />
 
             <LabeledSelect
               label="Temperature"
@@ -343,43 +343,29 @@ export default function ClimateView() {
 
       {/* Shared DataTable */}
       {!showForm && (
-        <>
-          {/* Create + Search */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-            <button onClick={startNew}>New Climate</button>
-            <DataTableSearchInput
-              value={query}
-              onChange={(e) => { setQuery(e.target.value); setPage(1); }}
-              placeholder="Search climates…"
-              aria-label="Search climates"
-            />
-          </div>
-
-          <DataTable<Climate>
-            rows={rows}
-            columns={columns}
-            rowId={(r) => r.id}
-            initialSort={{ colId: 'name', dir: 'asc' }}
-            // search
-            searchQuery={query}
-            globalFilter={globalFilter}
-            // pagination
-            mode="client"
-            page={page}
-            pageSize={pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={setPageSize}
-            pageSizeOptions={[5, 10, 20, 50, 100]}
-            // styles
-            tableMinWidth={0} // Allow table to shrink below container width (enables horizontal scroll when needed)
-            zebra
-            hover
-            // Resizable columns
-            resizable
-            persistKey="dt.climate.v1"
-            ariaLabel="Climates data"
-          />
-        </>
+        <DataTable<Climate>
+          rows={rows}
+          columns={columns}
+          rowId={(r) => r.id}
+          initialSort={{ colId: 'name', dir: 'asc' }}
+          // search
+          searchQuery={query}
+          globalFilter={globalFilter}
+          // pagination
+          mode="client"
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[5, 10, 20, 50, 100]}
+          // styles
+          tableMinWidth={0} // Allow table to shrink below container width (enables horizontal scroll when needed)
+          zebra
+          // Resizable columns
+          resizable
+          persistKey="dt.climate.v1"
+          ariaLabel="Climates data"
+        />
       )}
       {!rows.length && !showForm && (
         <div style={{ marginTop: 8, color: 'var(--muted)' }}>
@@ -388,8 +374,4 @@ export default function ClimateView() {
       )}
     </>
   );
-}
-
-function emptyClimate(): Climate {
-  return { id: prefix, name: '', temperature: 'Temperate', precipitations: [] };
 }
