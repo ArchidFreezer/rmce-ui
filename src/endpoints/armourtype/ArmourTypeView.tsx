@@ -5,8 +5,7 @@ import type { ArmourType } from '../../types/armourtype';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { CheckboxInput, LabeledInput } from '../../components/inputs';
-import { isValidSignedInt, isValidUnsignedInt, isValidID } from '../../components/inputs/validators';
-import { makeSignedIntOnChange, makeNonNegativeIntOnChange, makeIDOnChange } from '../../components/inputs/sanitisers';
+import { isValidSignedInt, makeSignedIntOnChange, isValidUnsignedInt, makeUnsignedIntOnChange, isValidID, makeIDOnChange } from '../../utils/inputHelpers';
 
 const prefix = 'ARMOURTYPE_';
 
@@ -73,6 +72,8 @@ export default function ArmourTypeView() {
   const [rows, setRows] = useState<ArmourType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ id?: string; name?: string; type?: string; minManoeuvreMod?: string; maxManoeuvreMod?: string; missileAttackPenalty?: string; quicknessPenalty?: string; }>({});
+  const hasErrors = Boolean(errors.id || errors.name || errors.type || errors.minManoeuvreMod || errors.maxManoeuvreMod || errors.missileAttackPenalty || errors.quicknessPenalty);
 
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -105,21 +106,20 @@ export default function ArmourTypeView() {
   }, []);
 
   // ----- Inline validation helpers -----
-  const [errors, setErrors] = useState<{ id?: string; name?: string; type?: string; minManoeuvreMod?: string; maxManoeuvreMod?: string; missileAttackPenalty?: string; quicknessPenalty?: string; }>({});
-  const hasErrors = Boolean(errors.id || errors.name || errors.type || errors.minManoeuvreMod || errors.maxManoeuvreMod || errors.missileAttackPenalty || errors.quicknessPenalty);
-  const computeErrors = (draft = form, isEditing: boolean) => {
+
+  const computeErrors = (draft = form) => {
     if (viewing) return {}; // no errors in view mode
 
     const next: { id?: string; name?: string; type?: string; minManoeuvreMod?: string; maxManoeuvreMod?: string; missileAttackPenalty?: string; quicknessPenalty?: string } = {};
     // ID (only on create, must be unique and start with prefix in ucase and contain additional characters)
     if (!draft.id.trim()) next.id = 'ID is required';
-    else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
+    else if (!editingId && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
     else if (!isValidID(draft.id, prefix)) next.id = `ID must start with "${prefix}" and contain additional characters`;
     // Name
     if (!draft.name.trim()) next.name = 'Name is required';
     // Type
     if (!draft.type.trim()) next.type = 'Type is required';
-    else if (!isEditing && rows.some(r => r.type === draft.type.trim())) next.type = `Type "${draft.type.trim()}" already exists`;
+    else if (!editingId && rows.some(r => r.type === draft.type.trim())) next.type = `Type "${draft.type.trim()}" already exists`;
     else if (!/^AT [1-2]?[0-9]$/.test(draft.type.trim())) next.type = 'Type must follow the pattern "AT [1-2]?[0-9]"';
     // Numeric values
     if (!draft.minManoeuvreMod) next.minManoeuvreMod = 'Min Manoeuvre Mod is required';
@@ -134,10 +134,9 @@ export default function ArmourTypeView() {
   };
 
   useEffect(() => {
-    if (!showForm) return;
-    const isEditing = Boolean(editingId);
-    setErrors(computeErrors(form, isEditing));
-  }, [form, editingId, showForm]); // keep current with form changes for live validation
+    if (!showForm || viewing) return;
+    setErrors(computeErrors(form));
+  }, [form, showForm, viewing]); // keep current with form changes for live validation (but skip in view mode)
 
   // ----- Handlers (Create / Edit / Delete) -----
   const startNew = () => {
@@ -188,10 +187,9 @@ export default function ArmourTypeView() {
     // Normalize payload (strings -> numbers for numeric fields)
     const payload = fromVM(form);
 
-    const nextErrors = computeErrors(form, Boolean(editingId));
+    const nextErrors = computeErrors(form);
     setErrors(nextErrors);
-    const topError = nextErrors.id || nextErrors.name || nextErrors.type || nextErrors.minManoeuvreMod || nextErrors.maxManoeuvreMod || nextErrors.missileAttackPenalty || nextErrors.quicknessPenalty || '';
-    if (topError) return;
+    if (hasErrors) return;
 
     const isEditing = Boolean(editingId);
     try {
@@ -287,7 +285,7 @@ export default function ArmourTypeView() {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, editingId]); // allows closing form on self-delete
+  }, []); // allows closing form on self-delete
 
   // ----- Search -----
   const globalFilter = (a: ArmourType, q: string) => {
@@ -307,6 +305,19 @@ export default function ArmourTypeView() {
   return (
     <>
       <h2>Armour Types</h2>
+
+      {/* Toolbar shown only when table visible */}
+      {!showForm && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+          <button onClick={startNew}>New Spell List</button>
+          <DataTableSearchInput
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search xxx …"
+            aria-label="Search xxx"
+          />
+        </div>
+      )}
 
       {/* Form panel (Create & Edit) */}
       {showForm && (
@@ -328,11 +339,11 @@ export default function ArmourTypeView() {
               inputProps={{ inputMode: 'numeric', pattern: '\\d*', }} // mobile numeric keypad
               error={errors.maxManoeuvreMod} />
             <LabeledInput label="Missile Attack Penalty" value={String(form.missileAttackPenalty)} disabled={viewing}
-              onChange={makeNonNegativeIntOnChange<typeof form>('missileAttackPenalty', setForm)}
+              onChange={makeUnsignedIntOnChange<typeof form>('missileAttackPenalty', setForm)}
               inputProps={{ inputMode: 'numeric', pattern: '\\d*', }} // mobile numeric keypad
               error={errors.missileAttackPenalty} />
             <LabeledInput label="Quickness Penalty" value={String(form.quicknessPenalty)} disabled={viewing}
-              onChange={makeNonNegativeIntOnChange<typeof form>('quicknessPenalty', setForm)}
+              onChange={makeUnsignedIntOnChange<typeof form>('quicknessPenalty', setForm)}
               inputProps={{ inputMode: 'numeric', pattern: '\\d*', }} // mobile numeric keypad
               error={errors.quicknessPenalty} />
 
@@ -349,42 +360,29 @@ export default function ArmourTypeView() {
 
       {/* Shared DataTable */}
       {!showForm && (
-        <>
-          {/* New + Search */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-            <button onClick={startNew}>New Armour type</button>
-            <DataTableSearchInput
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search armour types…"
-              aria-label="Search armour types"
-            />
-          </div>
-
-          <DataTable<ArmourType>
-            rows={rows}
-            columns={columns}
-            rowId={(r) => r.id}
-            initialSort={{ colId: 'name', dir: 'asc' }}
-            // search
-            searchQuery={query}
-            globalFilter={globalFilter}
-            // pagination (client)
-            mode="client"
-            page={page}
-            pageSize={pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={setPageSize}
-            pageSizeOptions={[5, 10, 20, 50]}
-            // styles
-            tableMinWidth={0} // Allow table to shrink below container width (enables horizontal scroll when needed)
-            zebra
-            // Resizable columns
-            resizable
-            persistKey="dt.armourtypes.v1"
-            ariaLabel='ArmourTypes data'
-          />
-        </>
+        <DataTable<ArmourType>
+          rows={rows}
+          columns={columns}
+          rowId={(r) => r.id}
+          initialSort={{ colId: 'name', dir: 'asc' }}
+          // search
+          searchQuery={query}
+          globalFilter={globalFilter}
+          // pagination (client)
+          mode="client"
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[5, 10, 20, 50]}
+          // styles
+          tableMinWidth={0} // Allow table to shrink below container width (enables horizontal scroll when needed)
+          zebra
+          // Resizable columns
+          resizable
+          persistKey="dt.armourtypes.v1"
+          ariaLabel='ArmourTypes data'
+        />
       )}
 
       {/* Empty dataset */}
