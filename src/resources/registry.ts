@@ -10,6 +10,7 @@ const LanguageView = lazy(() => import('../endpoints/language/LanguageView'));
 const LanguageCategoryView = lazy(() => import('../endpoints/languagecategory/LanguageCategoryView'));
 const PoisonView = lazy(() => import('../endpoints/poison/PoisonView'));
 const PoisonTypeView = lazy(() => import('../endpoints/poisontype/PoisonTypeView'));
+const SkillCategoryView = lazy(() => import('../endpoints/skillcategory/SkillCategoryView'));
 const SkillGroupView = lazy(() => import('../endpoints/skillgroup/SkillGroupView'));
 const SkillProgressionTypeView = lazy(() => import('../endpoints/skillprogressiontype/SkillProgressionTypeView'));
 const SpellListView = lazy(() => import('../endpoints/spelllist/SpellListView'));
@@ -35,6 +36,7 @@ const known: Record<string, ResourceDef> = {
   languagecategory: { prefix: 'languagecategory', label: 'Language Categories', path: '/languagecategories', Component: LanguageCategoryView },
   poison: { prefix: 'poison', label: 'Poisons', path: '/poisons', Component: PoisonView },
   poisontype: { prefix: 'poisontype', label: 'Poison Types', path: '/poisontypes', Component: PoisonTypeView },
+  skillcategory: { prefix: 'skillcategory', label: 'Skill Categories', path: '/skillcategories', Component: SkillCategoryView },
   skillgroup: { prefix: 'skillgroup', label: 'Skill Groups', path: '/skillgroups', Component: SkillGroupView },
   skillprogressiontype: { prefix: 'skillprogressiontype', label: 'Skill Progression Types', path: '/skillprogressiontypes', Component: SkillProgressionTypeView },
   spelllist: { prefix: 'spelllist', label: 'Spell Lists', path: '/spelllists', Component: SpellListView },
@@ -65,6 +67,7 @@ export const FALLBACK_RESOURCES: ResourceDef[] = [
   known.languagecategory,
   known.poison,
   known.poisontype,
+  known.skillcategory,
   known.skillgroup,
   known.skillprogressiontype,
   known.spelllist,

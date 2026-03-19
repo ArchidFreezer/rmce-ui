@@ -36,3 +36,8 @@ export const SPELL_REALMS: ReadonlyArray<Realm> = ['Arcane', 'Channeling', 'Esse
 /** Enum for spell types */
 export type SpellType = 'Base' | 'Closed' | 'Open' | 'Racial' | 'Training Package';
 export const SPELL_TYPES: ReadonlyArray<SpellType> = ['Base', 'Closed', 'Open', 'Racial', 'Training Package'] as const;
+
+/** Enum for stats */
+export type Stat = 'Agility' | 'Constitution' | 'Empathy' | 'Intuition' | 'Memory' | 'Presence' | 'Quickness' | 'Reasoning' | 'Self Discipline' | 'Strength';
+export const STATS: ReadonlyArray<Stat> = ['Agility', 'Constitution', 'Empathy', 'Intuition', 'Memory', 'Presence', 'Quickness', 'Reasoning', 'Self Discipline', 'Strength'] as const;
+export const DEVELOPMENT_STATS: ReadonlyArray<Stat> = ['Agility', 'Constitution', 'Empathy', 'Intuition', 'Memory'] as const;
