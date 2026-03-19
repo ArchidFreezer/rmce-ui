@@ -180,6 +180,31 @@ export function sanitizeSignedFloat(input: string): string {
 }
 
 /**
+ * Create an onChange handler for a signed-float field stored as string in state.
+ * The handler will sanitize the input to allow only digits, an optional leading '-', and at most one '.'.
+ * This ensures the value is always a valid signed float string (or empty for in-progress).
+ * Examples:
+ *  onChange('3.14') -> '3.14'
+ *  onChange('-0.5') -> '-0.5'
+ *  onChange('abc') -> ''
+ *  onChange('1-2') -> '12'
+ *  onChange('3..1') -> '3.1'
+ *  onChange('--4') -> '-4'
+ *  onChange('') -> ''
+ */
+export function makeSignedFloatOnChange<T extends Record<string, any>>(
+  field: keyof T,
+  setForm: React.Dispatch<React.SetStateAction<T>>
+) {
+  return (v: string) => {
+    setForm((s) => ({
+      ...s,
+      [field]: sanitizeSignedFloat(v),
+    }));
+  };
+}
+
+/**
  * Validate a final signed float string (no empty or transient states).
  * Accepts: '-1', '0', '3.14', '-.5' (normalize check), '.5'
  * Treats '.5' and '-.5' as valid floats.
