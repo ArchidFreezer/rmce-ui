@@ -86,7 +86,7 @@ export function sanitizeUnsignedInt(input: string): string {
  *  onChange('-5') -> '5'
  *  onChange('') -> ''
  */
-export function makeNonNegativeIntOnChange<T extends Record<string, any>>(
+export function makeUnsignedIntOnChange<T extends Record<string, any>>(
   field: keyof T,
   setForm: React.Dispatch<React.SetStateAction<T>>
 ) {
