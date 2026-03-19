@@ -264,7 +264,7 @@ export default function BookView() {
       {/* Form panel (Create & Edit) */}
       {showForm && (
         <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}>
-          <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Book' : 'New Book'}</h3>
+          <h3 style={{ marginTop: 0 }}>{viewing ? 'View Book' : (editingId ? 'Edit Book' : 'New Book')}</h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />

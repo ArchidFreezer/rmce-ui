@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { LabeledInput, LabeledSelect } from '../../components/inputs';
+import { CheckboxInput, LabeledInput, LabeledSelect } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 
@@ -8,7 +8,7 @@ import { fetchLanguages, upsertLanguage, deleteLanguage } from '../../api/langua
 import { fetchLanguagecategories } from '../../api/languagecategory';
 import type { Language } from '../../types/language';
 import type { LanguageCategory } from '../../types/languagecategory';
-import { isValidID } from '../../components/inputs/validators';
+import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
 
 const prefix = 'LANGUAGE_';
 
@@ -55,31 +55,12 @@ const fromVM = (vm: FormState): Language => ({
   isSomantic: !!vm.isSomantic,
 });
 
-/** Local Fix‑A checkbox wrapper */
-function LabeledCheckbox({
-  label,
-  checked,
-  onChange,
-  disabled,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (val: boolean) => void;
-  disabled?: boolean | undefined;
-}) {
-  const id = React.useId();
-  return (
-    <label htmlFor={id} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, paddingTop: 6 }}>
-      <input id={id} type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} disabled={disabled} />
-      <span>{label}</span>
-    </label>
-  );
-}
-
 export default function LanguagesView() {
   const [rows, setRows] = useState<Language[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ id?: string | undefined; name?: string | undefined; category?: string | undefined; baseLanguage?: string | undefined; }>({});
+  const hasErrors = Boolean(errors.id || errors.name || errors.category || errors.baseLanguage);
 
   const [categories, setCategories] = useState<LanguageCategory[]>([]);
   const [catLoading, setCatLoading] = useState(true);
@@ -92,11 +73,6 @@ export default function LanguagesView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
   const [form, setForm] = useState<FormState>(emptyVM());
-  const [errors, setErrors] = useState<{
-    id?: string | undefined;
-    name?: string | undefined;
-    category?: string | undefined;
-  }>({});
 
   const toast = useToast();
   const confirm = useConfirm();
@@ -152,6 +128,7 @@ export default function LanguagesView() {
   const computeErrors = (draft = form) => {
     const e: typeof errors = {};
     if (!draft.id.trim()) e.id = 'ID is required';
+    else if (!editingId && rows.some(r => r.id === draft.id.trim())) e.id = `ID "${draft.id.trim()}" already exists`;
     else if (!isValidID(draft.id, prefix)) e.id = `ID must start with "${prefix}" and contain additional characters`;
     if (!draft.name.trim()) e.name = 'Name is required';
 
@@ -159,14 +136,8 @@ export default function LanguagesView() {
     if (!cat) e.category = 'Category is required';
     else if (!categoryNameById.has(cat)) e.category = 'Category must be a valid LanguageCategory ID';
 
-    // uniqueness (create only)
-    if (!editingId && rows.some((r) => r.id === draft.id.trim())) {
-      e.id = `ID "${draft.id.trim()}" already exists`;
-    }
     return e;
   };
-
-  const hasErrors = Boolean(errors.id || errors.name || errors.category);
 
   useEffect(() => {
     if (!showForm || viewing) return;
@@ -217,12 +188,13 @@ export default function LanguagesView() {
   };
 
   const saveForm = async () => {
-    const e = computeErrors(form);
-    setErrors(e);
-    const top = e.id || e.name || e.category || '';
-    if (top) return;
-
+    // Normalize payload (strings -> numbers for numeric fields)
     const payload = fromVM(form);
+
+    const nextErrors = computeErrors(form);
+    setErrors(nextErrors);
+    if (hasErrors) return;
+
     const isEditing = Boolean(editingId);
     try {
       const opts = isEditing
@@ -388,20 +360,8 @@ export default function LanguagesView() {
           </h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput
-              label="ID"
-              value={form.id}
-              onChange={(v) => setForm((s) => ({ ...s, id: v }))}
-              disabled={!!editingId || viewing}
-              error={viewing ? undefined : errors.id}
-            />
-            <LabeledInput
-              label="Name"
-              value={form.name}
-              onChange={(v) => setForm((s) => ({ ...s, name: v }))}
-              disabled={viewing}
-              error={viewing ? undefined : errors.name}
-            />
+            <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />
+            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm(s => ({ ...s, name: v }))} disabled={viewing} error={errors.name} />
 
             <LabeledSelect
               label="Category"
@@ -421,9 +381,9 @@ export default function LanguagesView() {
             />
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-              <LabeledCheckbox label="Spoken" checked={form.isSpoken} onChange={(c) => setForm((s) => ({ ...s, isSpoken: c }))} disabled={viewing} />
-              <LabeledCheckbox label="Written" checked={form.isWritten} onChange={(c) => setForm((s) => ({ ...s, isWritten: c }))} disabled={viewing} />
-              <LabeledCheckbox label="Somantic" checked={form.isSomantic} onChange={(c) => setForm((s) => ({ ...s, isSomantic: c }))} disabled={viewing} />
+              <CheckboxInput label="Spoken" checked={form.isSpoken} onChange={(c) => setForm((s) => ({ ...s, isSpoken: c }))} disabled={viewing} />
+              <CheckboxInput label="Written" checked={form.isWritten} onChange={(c) => setForm((s) => ({ ...s, isWritten: c }))} disabled={viewing} />
+              <CheckboxInput label="Somantic" checked={form.isSomantic} onChange={(c) => setForm((s) => ({ ...s, isSomantic: c }))} disabled={viewing} />
             </div>
           </div>
 
@@ -449,7 +409,7 @@ export default function LanguagesView() {
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
           pageSizeOptions={[5, 10, 20, 50, 100]}
-          tableMinWidth={900}
+          tableMinWidth={0}
           zebra
           hover
           resizable
