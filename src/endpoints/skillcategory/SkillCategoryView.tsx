@@ -71,7 +71,7 @@ const fromVM = (vm: FormState): SkillCategory => {
   };
 };
 
-export default function SkillcategoriesView() {
+export default function SkillCategoryView() {
   // data
   const [rows, setRows] = useState<SkillCategory[]>([]);
   const [spts, setSpts] = useState<SkillProgressionType[]>([]);
@@ -526,6 +526,12 @@ export default function SkillcategoriesView() {
           ariaLabel="Skill categories"
         />
       )}
-    </>
+
+      {/* Empty dataset */}
+      {!rows.length && !showForm && (
+        <div style={{ marginTop: 8, color: 'var(--muted)' }}>
+          No skill categories found.
+        </div>
+      )}    </>
   );
 }
