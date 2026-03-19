@@ -1,11 +1,14 @@
 import { NavLink } from 'react-router-dom';
-import { useEffect, useRef, useState } from 'react';
+import * as React from 'react';
+// import { useEffect, useRef, useState } from 'react';
+import { useResourceCounts, inferPrefixFromPath } from '../hooks/useResourceCounts';
 
 
 export type SidebarItem = {
   label: string;
   path: `/${string}`;
   isKnown?: boolean;
+  prefix?: string;
 };
 
 export function Sidebar({
@@ -27,13 +30,13 @@ export function Sidebar({
   maxWidth?: number;
   persistKey?: string;
 }) {
-  
-  
+
+
   const list = sortInside
     ? [...items].sort((a, b) => a.label.localeCompare(b.label))
     : items;
 
-  useEffect(() => {
+  React.useEffect(() => {
     const raw = localStorage.getItem(persistKey);
     const val = raw ? Number(raw) : NaN;
     if (!Number.isNaN(val) && val > 0) {
@@ -41,7 +44,8 @@ export function Sidebar({
     }
     return () => { };
   }, [persistKey]);
-  const dragRef = useRef<{ startX: number; startW: number } | null>(null);
+
+  const dragRef = React.useRef<{ startX: number; startW: number } | null>(null);
 
   const onPointerDown: React.PointerEventHandler<HTMLSpanElement> = (e) => {
     if (!enableResize || window.matchMedia('(max-width: 899px)').matches) return; // desktop only
@@ -84,11 +88,46 @@ export function Sidebar({
     if (!Number.isNaN(px)) localStorage.setItem(persistKey, String(px));
   };
 
+  // Build a lightweight list with "path" and "prefix" only for the hook
+  const countTargets = React.useMemo(
+    () => list.map(({ path, prefix }: { path: `/${string}`; prefix?: string }) => ({ path, prefix })),
+    [list]
+  );
+
+  const counts = useResourceCounts(countTargets); // Map<prefix, CountEntry>
+
+  const getBadge = (it: SidebarItem) => {
+    const prefix = it.prefix ?? inferPrefixFromPath(it.path);
+    if (!prefix) return null;
+    const entry = counts.get(prefix);
+    if (!entry) return <span className="sidebar__count sidebar__count--loading" aria-label="loading count">…</span>;
+    if (entry.loading) {
+      return <span className="sidebar__count sidebar__count--loading" aria-label="loading count">…</span>;
+    }
+    if (entry.count == null) {
+      return <span className="sidebar__count sidebar__count--error" title="Unable to load count">—</span>;
+    }
+    return <span className="sidebar__count" aria-label={`${it.label} items`}>{entry.count}</span>;
+  };
+
   return (
 
     <aside className={`sidebar ${open ? 'open' : ''}`} aria-label="Resource navigation">
+
+      {/* Sidebar header */}
       <div className="sidebar__header">
         <div className="sidebar__title">RMCE Objects</div>
+        <button
+          aria-label="Refresh resource counts"
+          title="Refresh counts"
+          onClick={() => {
+            counts.clear?.();
+            location.reload();
+          }}
+          style={{ marginLeft: 'auto' }}
+        >
+          ↻
+        </button>
       </div>
 
       <nav className="sidebar__nav" role="navigation" aria-label="Resources">
@@ -107,7 +146,8 @@ export function Sidebar({
                 onClick={onClose}
                 title={it.isKnown ? 'Known resource' : 'Discovered resource'}
               >
-                {it.label}
+                <span>{it.label}</span>
+                {getBadge(it)}
               </NavLink>
             </li>
           ))}
