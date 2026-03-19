@@ -94,7 +94,7 @@ export default function DiseaseView() {
     if (!isValidUnsignedInt(raw)) next.level = `Level must be an integer`;
     // Variance must be a single uppercase character
     if (!draft.levelVariance.trim()) next.variance = `Level Variance is required`;
-    else if (!/^[A-Z]$/.test(draft.levelVariance.trim())) next.variance = 'Level Variance must be a single uppercase character';
+    else if (!/^[A-H]$/.test(draft.levelVariance.trim())) next.variance = 'Level Variance must be a single uppercase character between A and H';
 
     return next;
   };
