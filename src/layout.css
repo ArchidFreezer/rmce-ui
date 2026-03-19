@@ -304,6 +304,48 @@ body.theme-dark .sidebar__link:hover { background: color-mix(in oklch, var(--pan
   }
 }
 
+/* Sidebar count badges */
+.sidebar__count {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 12px;
+  line-height: 1;
+  border: 1px solid var(--border);
+  background: color-mix(in oklch, var(--panel), var(--bg) 20%);
+  color: var(--text);
+}
+
+/* Subtle skeleton while loading */
+.sidebar__count--loading {
+  background: linear-gradient(90deg,
+    color-mix(in oklch, var(--panel), var(--bg) 10%) 0%,
+    color-mix(in oklch, var(--panel), var(--bg) 25%) 50%,
+    color-mix(in oklch, var(--panel), var(--bg) 10%) 100%
+  );
+  background-size: 200% 100%;
+  animation: sidebar-count-pulse 1.2s ease-in-out infinite;
+  color: transparent;
+  border-color: color-mix(in oklch, var(--border), var(--bg) 20%);
+}
+
+@keyframes sidebar-count-pulse {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Error/unknown state */
+.sidebar__count--error {
+  color: var(--muted);
+  background: color-mix(in oklch, var(--panel), var(--bg) 10%);
+  border-color: color-mix(in oklch, var(--border), var(--bg) 30%);
+}
+
 /* Mobile backdrop when sidebar open */
 .backdrop {
   position: fixed;

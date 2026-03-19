@@ -46,21 +46,18 @@ function Shell() {
   // Build sidebar items: known → their paths; unknown → generic /r/:prefix
   // Build sidebar items with isKnown flag
   const sidebarItems: SidebarItem[] = useMemo(() => {
-    const knownItems: SidebarItem[] = resources.map(({ label, path }) => ({
-      label,
-      path,
-      isKnown: true, // known
+    const knownItems = resources.map(({ label, path, prefix }) => ({
+      label, path, prefix, isKnown: true,
     }));
-
-    const unknownItems: SidebarItem[] = unknown.map((p) => ({
+    const unknownItems = unknown.map((p) => ({
       label: toTitle(p),
       path: `/r/${p}` as `/${string}`,
-      isKnown: false, // unknown
+      prefix: p,
+      isKnown: false,
     }));
-
-    // Sort alphabetically (label) across both sets
     return [...knownItems, ...unknownItems].sort((a, b) => a.label.localeCompare(b.label));
   }, [resources, unknown]);
+
 
   // Default redirect path
   const defaultPath = useMemo(() => {
