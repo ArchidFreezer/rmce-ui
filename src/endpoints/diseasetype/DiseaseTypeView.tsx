@@ -7,6 +7,9 @@ import { useConfirm } from '../../components/ConfirmDialog';
 import { fetchDiseasetypes, upsertDiseasetype, deleteDiseasetype } from '../../api/diseasetype';
 import type { DiseaseType } from '../../types/diseasetype';
 import { MALADY_SEVERITIES, MaladySeverity } from '../../types/enum';
+import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
+
+const prefix = 'DISEASETYPE_';
 
 // ---- Form VM: keep symptoms editable with textareas ----
 type SymptomRowVM = { severity: MaladySeverity; symptoms: string };
@@ -22,7 +25,7 @@ type FormState = {
 function emptyVM(): FormState {
   const mkSymptom = (s: MaladySeverity): SymptomRowVM => ({ severity: s, symptoms: '' });
   return {
-    id: 'DISEASETYPE_',
+    id: prefix,
     type: '',
     transmission: '',
     description: '',
@@ -60,7 +63,14 @@ export default function DiseaseTypeView() {
   const [rows, setRows] = useState<DiseaseType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
+  const [errors, setErrors] = useState<{
+    id?: string; type?: string; transmission?: string; description?: string;
+    symptoms?: Record<MaladySeverity, string | undefined>;
+  }>({});
+  const hasErrors = Boolean(
+    errors.id || errors.type || errors.transmission || errors.description ||
+    (errors.symptoms && MALADY_SEVERITIES.some((s) => errors.symptoms?.[s]))
+  );
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -93,22 +103,13 @@ export default function DiseaseTypeView() {
   }, []);
 
   // ---- Validation ----
-  const [errors, setErrors] = useState<{
-    id?: string; type?: string; transmission?: string; description?: string;
-    symptoms?: Record<MaladySeverity, string | undefined>;
-  }>({});
-  const hasErrors = Boolean(
-    errors.id || errors.type || errors.transmission || errors.description ||
-    (errors.symptoms && MALADY_SEVERITIES.some((s) => errors.symptoms?.[s]))
-  );
-  const computeErrors = (draft = form, isEditing: boolean) => {
+
+  const computeErrors = (draft = form) => {
     const e: typeof errors = {};
     // ID: required, unique (when creating), format (starts with DISEASETYPE_, only uppercase letters/numbers/underscores, etc.)
     if (!draft.id.trim()) e.id = 'ID is required';
-    else if (!isEditing && rows.some(r => r.id === draft.id.trim())) e.id = `ID "${draft.id.trim()}" already exists`;
-    else if (!draft.id.trim().toUpperCase().startsWith('DISEASETYPE_')) e.id = 'ID must start with "DISEASETYPE_"';
-    else if (draft.id.trim().length <= 12) e.id = 'ID must contain additional characters after "DISEASETYPE_"';
-    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) e.id = 'ID can only contain uppercase letters, numbers and underscores';
+    else if (!editingId && rows.some(r => r.id === draft.id.trim())) e.id = `ID "${draft.id.trim()}" already exists`;
+    else if (!isValidID(draft.id.trim(), prefix)) e.id = `ID must start with "${prefix}" and contain only uppercase letters, numbers, and underscores`;
     // Type, Transmission, Description: required
     if (!draft.type.trim()) e.type = 'Type is required';
     if (!draft.transmission.trim()) e.transmission = 'Transmission is required';
@@ -131,11 +132,9 @@ export default function DiseaseTypeView() {
   };
 
   useEffect(() => {
-    if (!showForm) return;
-    if (viewing) return;               // suppress live errors while viewing
-    const isEditing = Boolean(editingId);
-    setErrors(computeErrors(form, isEditing));
-  }, [form, showForm, editingId]); // keep current to avoid stale closure
+    if (!showForm || viewing) return;
+    setErrors(computeErrors(form));
+  }, [form, showForm, viewing]); // keep current with form changes for live validation (but skip in view mode)
 
   // ---- Actions ----
   const startNew = () => {
@@ -167,7 +166,7 @@ export default function DiseaseTypeView() {
     setEditingId(null);
 
     const vm = toVM(row);
-    vm.id = 'DISEASETYPE_';
+    vm.id = prefix;
     vm.type += ' (Copy)'; // Append " (Copy)" to the type for clarity
 
     setForm(vm);
@@ -184,15 +183,12 @@ export default function DiseaseTypeView() {
 
   const saveForm = async () => {
     const payload = fromVM(form);
+
+    const nextErrors = computeErrors(form);
+    setErrors(nextErrors);
+    if (hasErrors) return;
+
     const isEditing = Boolean(editingId);
-
-    const e = computeErrors(form, isEditing);
-    setErrors(e);
-    const firstTop =
-      e.id || e.type || e.transmission || e.description ||
-      (e.symptoms && MALADY_SEVERITIES.map((s) => e.symptoms?.[s]).find(Boolean)) || '';
-    if (firstTop) return;
-
     try {
       const opts = isEditing
         ? { method: 'PUT' as const, useResourceIdPath: true }
@@ -258,13 +254,7 @@ export default function DiseaseTypeView() {
       { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 260 },
       { id: 'type', header: 'Type', accessor: (r) => r.type, sortType: 'string', minWidth: 160 },
       { id: 'transmission', header: 'Transmission', accessor: (r) => r.transmission, sortType: 'string', minWidth: 160 },
-      {
-        id: 'description',
-        header: 'Description',
-        accessor: (r) => r.description,
-        sortType: 'string',
-        minWidth: 320,
-      },
+      { id: 'description', header: 'Description', accessor: (r) => r.description, sortType: 'string', minWidth: 320 },
       // We do not display the symptoms directly in the table since they can be long and would require a lot of space.
       // The full symptoms details can be viewed/edited in the form panel. This keeps the table concise and readable.
       // {
@@ -320,6 +310,19 @@ export default function DiseaseTypeView() {
     <>
       <h2>Disease Types</h2>
 
+      {/* Toolbar shown only when table visible */}
+      {!showForm && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+          <button onClick={startNew}>New Disease Type</button>
+          <DataTableSearchInput
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search disease types…"
+            aria-label="Search disease types"
+          />
+        </div>
+      )}
+
       {/* Form panel */}
       {showForm && (
         <div
@@ -332,34 +335,10 @@ export default function DiseaseTypeView() {
 
           {/* Basics */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
-            <LabeledInput
-              label="ID"
-              value={form.id}
-              onChange={(v) => setForm(s => ({ ...s, id: v }))}
-              disabled={!!editingId || viewing}
-              error={viewing ? undefined : errors.id}
-            />
-            <LabeledInput
-              label="Type"
-              value={form.type}
-              onChange={(v) => setForm(s => ({ ...s, type: v }))}
-              disabled={viewing}
-              error={viewing ? undefined : errors.type}
-            />
-            <LabeledInput
-              label="Transmission"
-              value={form.transmission}
-              onChange={(v) => setForm(s => ({ ...s, transmission: v }))}
-              disabled={viewing}
-              error={viewing ? undefined : errors.transmission}
-            />
-            <LabeledInput
-              label="Description"
-              value={form.description}
-              onChange={(v) => setForm(s => ({ ...s, description: v }))}
-              disabled={viewing}
-              error={viewing ? undefined : errors.description}
-            />
+            <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />
+            <LabeledInput label="Type" value={form.type} onChange={(v) => setForm(s => ({ ...s, type: v }))} disabled={viewing} error={errors.type} />
+            <LabeledInput label="Transmission" value={form.transmission} onChange={(v) => setForm(s => ({ ...s, transmission: v }))} disabled={viewing} error={errors.transmission} />
+            <LabeledInput label="Description" value={form.description} onChange={(v) => setForm(s => ({ ...s, description: v }))} disabled={viewing} error={errors.description} />
           </div>
 
           {/* Symptoms editor */}
@@ -373,7 +352,7 @@ export default function DiseaseTypeView() {
                 <FragmentRowSymptom
                   key={row.severity}
                   row={row}
-                  error={viewing ? undefined : errors.symptoms?.[row.severity]}
+                  error={errors.symptoms?.[row.severity]}
                   disabled={viewing}
                   onChange={(next) => setForm(s => {
                     const copy = [...s.symptoms];
@@ -395,40 +374,33 @@ export default function DiseaseTypeView() {
 
       {/* Shared DataTable */}
       {!showForm && (
-        <>
-          {/* New + Search */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-            <button onClick={startNew}>New Disease Type</button>
-            <DataTableSearchInput
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search disease types…"
-              aria-label="Search disease types"
-            />
-          </div>
+        <DataTable<DiseaseType>
+          rows={rows}
+          columns={columns}
+          rowId={(r) => r.id}
+          initialSort={{ colId: 'type', dir: 'asc' }}
+          searchQuery={query}
+          globalFilter={globalFilter}
+          mode="client"
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[5, 10, 20, 50, 100]}
+          tableMinWidth={0}
+          zebra
+          hover
+          resizable
+          persistKey="dt.diseasetype.v1"
+          ariaLabel="Disease types"
+        />
+      )}
 
-          {/* Table */}
-          <DataTable<DiseaseType>
-            rows={rows}
-            columns={columns}
-            rowId={(r) => r.id}
-            initialSort={{ colId: 'type', dir: 'asc' }}
-            searchQuery={query}
-            globalFilter={globalFilter}
-            mode="client"
-            page={page}
-            pageSize={pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={setPageSize}
-            pageSizeOptions={[5, 10, 20, 50, 100]}
-            tableMinWidth={900}
-            zebra
-            hover
-            resizable
-            persistKey="dt.diseasetype.v1"
-            ariaLabel="Disease types"
-          />
-        </>
+      {/* Empty dataset */}
+      {!rows.length && !showForm && (
+        <div style={{ marginTop: 8, color: 'var(--muted)' }}>
+          No disease types found.
+        </div>
       )}
 
     </>

@@ -7,12 +7,20 @@ import type { DiseaseType } from '../../types/diseasetype';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { LabeledInput, LabeledSelect } from '../../components/inputs';
-import { isIntegerString } from '../../components/inputs/validators';
+import { isValidUnsignedInt, makeUnsignedIntOnChange, isValidID, makeIDOnChange } from '../../utils/inputHelpers';
+
+const prefix = 'DISEASE_';
+
+function emptyDisease(): Disease {
+  return { id: prefix, name: '', type: '', level: 0, levelVariance: '' };
+}
 
 export default function DiseaseView() {
   const [rows, setRows] = useState<Disease[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ id?: string; name?: string; type?: string; level?: string; variance?: string }>({});
+  const hasErrors = Boolean(errors.id || errors.name || errors.type || errors.level || errors.variance);
 
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -68,18 +76,14 @@ export default function DiseaseView() {
   const diseaseTypeIds = useMemo(() => new Set(diseaseTypes.map(dt => dt.id)), [diseaseTypes]);
 
   // ----- Inline validation helpers -----
-  const [errors, setErrors] = useState<{ id?: string; name?: string; type?: string; level?: string; variance?: string }>({});
-  const hasErrors = Boolean(errors.id || errors.name || errors.type || errors.level || errors.variance);
-  const computeErrors = (draft: Disease, isEditing: boolean) => {
+  const computeErrors = (draft: Disease) => {
     if (viewing) return {};             // suppress inline errors in view mode
 
     const next: { id?: string; name?: string; type?: string; level?: string; variance?: string } = {};
     // ID (only on create, must be unique and start with prefix in ucase and contain additional characters)
     if (!draft.id.trim()) next.id = 'ID is required';
-    else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
-    else if (!draft.id.trim().toUpperCase().startsWith('DISEASE_')) next.id = 'ID must start with "DISEASE_"';
-    else if (draft.id.trim().length <= 8) next.id = 'ID must contain additional characters after "DISEASE_"';
-    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) next.id = 'ID can only contain uppercase letters, numbers and underscores';
+    else if (!editingId && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
+    else if (!isValidID(draft.id, prefix)) next.id = `ID must start with "${prefix}" and contain additional characters`;
     // Name
     if (!draft.name.trim()) next.name = 'Name is required';
     // Type
@@ -87,19 +91,18 @@ export default function DiseaseView() {
     else if (!diseaseTypeIds.has(draft.type.trim())) next.type = `Type "${draft.type.trim()}" is not a valid DiseaseType id`;
     // Level (must be a number, but allow empty string for controlled input)
     const raw = (draft.level ?? '').toString().trim();
-    if (!isIntegerString(raw)) next.level = `Level must be an integer`;
+    if (!isValidUnsignedInt(raw)) next.level = `Level must be an integer`;
     // Variance must be a single uppercase character
     if (!draft.levelVariance.trim()) next.variance = `Level Variance is required`;
-    else if (!/^[A-Z]$/.test(draft.levelVariance.trim())) next.variance = 'Level Variance must be a single uppercase character';
+    else if (!/^[A-H]$/.test(draft.levelVariance.trim())) next.variance = 'Level Variance must be a single uppercase character between A and H';
 
     return next;
   };
 
   useEffect(() => {
-    if (!showForm) return;
-    const isEditing = Boolean(editingId);
-    setErrors(computeErrors(form, isEditing));
-  }, [form, editingId, showForm]); // keep current for live validation
+    if (!showForm || viewing) return;
+    setErrors(computeErrors(form));
+  }, [form, showForm, viewing]); // keep current with form changes for live validation (but skip in view mode)
 
   // ----- Handlers (Create / Edit / Delete) -----
   const startNew = () => {
@@ -123,7 +126,7 @@ export default function DiseaseView() {
     setEditingId(null);
 
     const next = { ...row };
-    next.id = 'DISEASE_';
+    next.id = prefix;
     next.name += ' (Copy)';
 
     setForm(next); // if your form state = Disease
@@ -156,10 +159,9 @@ export default function DiseaseView() {
       levelVariance: String(form.levelVariance).trim(),
     };
 
-    const nextErrors = computeErrors(payload, Boolean(editingId));
+    const nextErrors = computeErrors(form);
     setErrors(nextErrors);
-    const topError = nextErrors.id || nextErrors.name || nextErrors.type || nextErrors.level || nextErrors.variance || '';
-    if (topError) return;
+    if (hasErrors) return;
 
     const isEditing = Boolean(editingId);
     try {
@@ -263,7 +265,7 @@ export default function DiseaseView() {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, diseaseTypeLabelById, editingId]); // allows closing form on self-delete
+  }, [rows, diseaseTypeLabelById]); // allows closing form on self-delete
 
   // ----- Search -----
   const globalFilter = (p: Disease, q: string) => {
@@ -290,13 +292,26 @@ export default function DiseaseView() {
     <>
       <h2>Diseases</h2>
 
+      {/* Toolbar shown only when table visible */}
+      {!showForm && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+          <button onClick={startNew}>New Disease</button>
+          <DataTableSearchInput
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search diseases…"
+            aria-label="Search diseases"
+          />
+        </div>
+      )}
+
       {/* Form panel (Create & Edit) */}
       {showForm && (
         <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}>
-          <h3 style={{ marginTop: 0 }}>{editingId ? 'Edit Disease' : 'New Disease'}</h3>
+          <h3 style={{ marginTop: 0 }}>{viewing ? 'View Disease' : (editingId ? 'Edit Disease' : 'New Disease')}</h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput label="ID" value={form.id} onChange={(v) => setForm((s) => ({ ...s, id: v }))} disabled={!!editingId || viewing} error={errors.id} />
+            <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />
             <LabeledInput label="Name" value={form.name} onChange={(v) => setForm((s) => ({ ...s, name: v }))} error={errors.name} disabled={viewing} />
 
             <LabeledSelect
@@ -310,11 +325,7 @@ export default function DiseaseView() {
             />
 
             <LabeledInput label="Level" type="number" value={String(form.level).trim()} disabled={viewing}
-              onChange={(v) => setForm((s) => {
-                // 1) Remove everything except digits
-                let raw = v.replace(/[^\d]+/g, '');
-                return { ...s, level: Number(raw) };
-              })}
+              onChange={makeUnsignedIntOnChange<typeof form>('level', setForm)}
               inputProps={{ inputMode: 'numeric', pattern: '\\d*', }} // mobile numeric keypad
               error={errors.level}
             />
@@ -331,42 +342,29 @@ export default function DiseaseView() {
 
       {/* Shared DataTable */}
       {!showForm && (
-        <>
-          {/* New + Search */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-            <button onClick={startNew}>New Disease</button>
-            <DataTableSearchInput
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search diseases…"
-              aria-label="Search diseases"
-            />
-          </div>
-
-          <DataTable<Disease>
-            rows={rows}
-            columns={columns}
-            rowId={(r) => r.id}
-            initialSort={{ colId: 'name', dir: 'asc' }}
-            // search
-            searchQuery={query}
-            globalFilter={globalFilter}
-            // pagination (client)
-            mode="client"
-            page={page}
-            pageSize={pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={setPageSize}
-            pageSizeOptions={[5, 10, 20, 50]}
-            // styles
-            tableMinWidth={0} // Allow table to shrink below container width (enables horizontal scroll when needed)
-            zebra
-            // Resizable columns
-            resizable
-            persistKey="dt.diseases.v1"
-            ariaLabel='Diseases data'
-          />
-        </>
+        <DataTable<Disease>
+          rows={rows}
+          columns={columns}
+          rowId={(r) => r.id}
+          initialSort={{ colId: 'name', dir: 'asc' }}
+          // search
+          searchQuery={query}
+          globalFilter={globalFilter}
+          // pagination (client)
+          mode="client"
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[5, 10, 20, 50]}
+          // styles
+          tableMinWidth={0} // Allow table to shrink below container width (enables horizontal scroll when needed)
+          zebra
+          // Resizable columns
+          resizable
+          persistKey="dt.diseases.v1"
+          ariaLabel='Diseases data'
+        />
       )}
       {!rows.length && !showForm && (
         <div style={{ marginTop: 8, color: 'var(--muted)' }}>
@@ -378,6 +376,3 @@ export default function DiseaseView() {
 
 }
 
-function emptyDisease(): Disease {
-  return { id: 'DISEASE_', name: '', type: '', level: 0, levelVariance: '' };
-}

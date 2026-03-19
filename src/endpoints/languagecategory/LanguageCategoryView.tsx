@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
 import { LabeledInput } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
@@ -7,11 +7,14 @@ import { useConfirm } from '../../components/ConfirmDialog';
 import { fetchLanguagecategories, upsertLanguagecategory, deleteLanguagecategory } from '../../api/languagecategory';
 
 import type { LanguageCategory } from '../../types/languagecategory';
+import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
+
+const prefix = 'LANGUAGECATEGORY_';
 
 // --- Form VM (same shape) ---
 type FormState = { id: string; name: string };
 
-const emptyVM = (): FormState => ({ id: 'LANGUAGECATEGORY_', name: '' });
+const emptyVM = (): FormState => ({ id: prefix, name: '' });
 const toVM = (x: LanguageCategory): FormState => ({ id: x.id, name: x.name });
 const fromVM = (vm: FormState): LanguageCategory => ({ id: vm.id.trim(), name: vm.name.trim() });
 
@@ -21,6 +24,8 @@ export default function LanguageCategoryView() {
   const [rows, setRows] = useState<LanguageCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ id?: string | undefined; name?: string | undefined }>({});
+  const hasErrors = Boolean(errors.id || errors.name);
 
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -30,7 +35,6 @@ export default function LanguageCategoryView() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
   const [form, setForm] = useState<FormState>(emptyVM());
-  const [errors, setErrors] = useState<{ id?: string | undefined; name?: string | undefined }>({});
 
   const toast = useToast();
   const confirm = useConfirm();
@@ -58,20 +62,17 @@ export default function LanguageCategoryView() {
     const e: typeof errors = {};
     // ID rules:
     if (!draft.id.trim()) e.id = 'ID is required';
-    else if (!draft.id.trim().toUpperCase().startsWith('LANGUAGECATEGORY_')) e.id = 'ID must start with "LANGUAGECATEGORY_"';
-    else if (draft.id.trim().length <= 17) e.id = 'ID must contain additional characters after "LANGUAGECATEGORY_"';
-    else if (!/^[A-Z0-9_]+$/.test(draft.id.trim())) e.id = 'ID can only contain uppercase letters, numbers and underscores';
+    else if (!isValidID(draft.id, prefix)) e.id = `ID must start with "${prefix}" and contain additional characters`;
     else if (!editingId && rows.some(r => r.id === draft.id.trim())) e.id = `ID "${draft.id.trim()}" already exists`;
     // Name rules:
     if (!draft.name.trim()) e.name = 'Name is required';
 
     return e;
   };
-  const hasErrors = Boolean(errors.id || errors.name);
 
   useEffect(() => {
     if (!showForm || viewing) return;
-    setErrors(computeErrors());
+    setErrors(computeErrors(form));
   }, [form, showForm, viewing]);
 
   // ---- Actions ----
@@ -100,7 +101,7 @@ export default function LanguageCategoryView() {
     setViewing(false);
     setEditingId(null);
     const vm = toVM(row);
-    vm.id = 'LANGUAGECATEGORY_';
+    vm.id = prefix;
     vm.name += ' (Copy)';
     setForm(vm);
     setErrors({});
@@ -114,14 +115,13 @@ export default function LanguageCategoryView() {
   };
 
   const saveForm = async () => {
-    const e = computeErrors(form);
-    setErrors(e);
-    const top = e.id || e.name || '';
-    if (top) return;
-
     const payload = fromVM(form);
-    const isEditing = Boolean(editingId);
 
+    const nextErrors = computeErrors(form);
+    setErrors(nextErrors);
+    if (hasErrors) return;
+
+    const isEditing = Boolean(editingId);
     try {
       const opts = isEditing
         ? { method: 'PUT' as const, useResourceIdPath: true }
@@ -228,35 +228,14 @@ export default function LanguageCategoryView() {
 
       {/* Form panel */}
       {showForm && (
-        <div
-          className={`form-panel ${viewing ? 'form-panel--view' : ''}`}
-          style={{
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            padding: 12,
-            marginBottom: 16,
-            background: 'var(--panel)',
-          }}
-        >
+        <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}>
           <h3 style={{ marginTop: 0 }}>
             {viewing ? 'View Language Category' : (editingId ? 'Edit Language Category' : 'New Language Category')}
           </h3>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput
-              label="ID"
-              value={form.id}
-              onChange={(v) => setForm(s => ({ ...s, id: v }))}
-              disabled={!!editingId || viewing}
-              error={viewing ? undefined : errors.id}
-            />
-            <LabeledInput
-              label="Name"
-              value={form.name}
-              onChange={(v) => setForm(s => ({ ...s, name: v }))}
-              disabled={viewing}
-              error={viewing ? undefined : errors.name}
-            />
+            <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />
+            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm(s => ({ ...s, name: v }))} disabled={viewing} error={errors.name} />
           </div>
 
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
