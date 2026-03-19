@@ -265,7 +265,7 @@ export default function ClimateView() {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, editingId]); // allows closing form on self-delete
+  }, [rows]); // allows closing form on self-delete
 
   // ----- Search -----
   const globalFilter = (r: Climate, q: string) => {

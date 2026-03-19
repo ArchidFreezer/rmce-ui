@@ -229,7 +229,7 @@ export default function BookView() {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, editingId]); // allows closing form on self-delete
+  }, [rows]); // allows closing form on self-delete
 
   // ----- Search -----
   const globalFilter = (b: Book, q: string) => {

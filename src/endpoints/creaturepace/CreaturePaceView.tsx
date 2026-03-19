@@ -7,8 +7,7 @@ import { useConfirm } from '../../components/ConfirmDialog';
 import { fetchCreaturePaces, upsertCreaturePace, deleteCreaturePace } from '../../api/creaturepace';
 import type { CreaturePace } from '../../types/creaturepace';
 import { MANOEUVRE_DIFFICULTIES, type ManoeuvreDifficulty } from '../../types/enum';
-import { isValidID } from '../../components/inputs/validators';
-import { makeIDOnChange } from '../../components/inputs/sanitisers';
+import { isValidID, makeIDOnChange, isValidScientific, makeScientificOnChange } from '../../utils/inputHelpers';
 
 const prefix = 'CREATUREPACE_';
 
@@ -47,23 +46,18 @@ function fromVM(vm: FormState): CreaturePace {
   };
 }
 
-// ------------------------
-// Helpers for scientific-notation input
-// ------------------------
-const SCI_RE = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
-function isScientificNumberString(s: string): boolean {
-  return SCI_RE.test(s);
-}
-function sanitizeScientificInput(s: string): string {
-  // Keep digits, '.', 'e'/'E', '+'/'-', and make sure only one 'e' and sign placement is sensible.
-  // For UX: allow imperfect intermediate states; rely on final validation.
-  return s.replace(/[^0-9eE+.\-]/g, '');
-}
-
 export default function CreaturePaceView() {
   const [rows, setRows] = useState<CreaturePace[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{
+    id?: string | undefined;
+    name?: string | undefined;
+    exhaustionMultiplier?: string | undefined;
+    movementMultiplier?: string | undefined;
+    manoeuvreDifficulty?: string | undefined;
+  }>({});
+  const hasErrors = Boolean(errors.id || errors.name || errors.exhaustionMultiplier || errors.movementMultiplier || errors.manoeuvreDifficulty);
 
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -98,33 +92,23 @@ export default function CreaturePaceView() {
 
   // ---- Validation ----
   const isDifficulty = (s: string): s is ManoeuvreDifficulty => (MANOEUVRE_DIFFICULTIES as readonly string[]).includes(s);
-  const [errors, setErrors] = useState<{
-    id?: string | undefined;
-    name?: string | undefined;
-    exhaustionMultiplier?: string | undefined;
-    movementMultiplier?: string | undefined;
-    manoeuvreDifficulty?: string | undefined;
-  }>({});
-  const hasErrors = Boolean(errors.id || errors.name || errors.exhaustionMultiplier || errors.movementMultiplier || errors.manoeuvreDifficulty);
-  const computeErrors = (draft: FormState, isEditing: boolean) => {
-    if (viewing) return {};             // suppress inline errors in view mode
-
+  const computeErrors = (draft: FormState) => {
     const next: typeof errors = {};
     // ID validation: non-empty, uppercase letters/numbers/underscores only, must start with "CREATUREPACE_", must be unique (create only)
     if (!draft.id.trim()) next.id = 'ID is required';
-    else if (!isEditing && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
-    else if (!isValidID(draft.id, 'CREATUREPACE_')) next.id = 'ID must start with "CREATUREPACE_" and contain additional characters';
+    else if (!editingId && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
+    else if (!isValidID(draft.id, prefix)) next.id = `ID must start with "${prefix}" and contain additional characters`;
     // Name validation: non-empty, allow any chars (including spaces), but trim whitespace
     if (!draft.name.trim()) next.name = 'Name is required';
     // Exhaustion and movement multipliers: required, must be valid numbers (supporting scientific notation)
     const ex = draft.exhaustionMultiplier.trim();
     if (!ex) next.exhaustionMultiplier = 'Exhaustion multiplier is required';
-    else if (!isScientificNumberString(ex)) next.exhaustionMultiplier = 'Must be a number (supports scientific notation)';
+    else if (!isValidScientific(ex)) next.exhaustionMultiplier = 'Must be a number (supports scientific notation)';
     else if (!Number.isFinite(Number(ex))) next.exhaustionMultiplier = 'Invalid number';
     // Manoeuvre difficulty: required, must be one of the predefined difficulties
     const mv = draft.movementMultiplier.trim();
     if (!mv) next.movementMultiplier = 'Movement multiplier is required';
-    else if (!isScientificNumberString(mv)) next.movementMultiplier = 'Must be a number (supports scientific notation)';
+    else if (!isValidScientific(mv)) next.movementMultiplier = 'Must be a number (supports scientific notation)';
     else if (!Number.isFinite(Number(mv))) next.movementMultiplier = 'Invalid number';
     // Manoeuvre difficulty: required, must be one of the predefined difficulties
     if (!draft.manoeuvreDifficulty.trim()) next.manoeuvreDifficulty = 'Manoeuvre difficulty is required';
@@ -134,11 +118,9 @@ export default function CreaturePaceView() {
   };
 
   useEffect(() => {
-    if (!showForm) return;
-    if (viewing) return;             // suppress inline errors in view mode
-    const isEditing = Boolean(editingId);
-    setErrors(computeErrors(form, isEditing));
-  }, [form, showForm, viewing]);
+    if (!showForm || viewing) return;
+    setErrors(computeErrors(form));
+  }, [form, showForm, viewing]); // keep current with form changes for live validation (but skip in view mode)
 
   // ----- Handlers (Create / Edit / Delete) -----
   const startNew = () => {
@@ -184,13 +166,14 @@ export default function CreaturePaceView() {
   };
 
   const saveForm = async () => {
-    const isEditing = Boolean(editingId);
-    const nextErrors = computeErrors(form, isEditing);
-    setErrors(nextErrors);
-    const topError = nextErrors.id || nextErrors.name || nextErrors.exhaustionMultiplier || nextErrors.movementMultiplier || nextErrors.manoeuvreDifficulty || '';
-    if (topError) return;
-
+    // Normalize payload (strings -> numbers for numeric fields)
     const payload = fromVM(form);
+
+    const nextErrors = computeErrors(form);
+    setErrors(nextErrors);
+    if (hasErrors) return;
+
+    const isEditing = Boolean(editingId);
     try {
       const opts = isEditing
         ? { method: 'PUT' as const, useResourceIdPath: true }
@@ -291,7 +274,7 @@ export default function CreaturePaceView() {
         </>
       ),
     },
-  ], [rows, editingId]); // columns here don’t depend on external label maps
+  ], [rows]); // columns here don’t depend on external label maps
 
   // ----- Search -----
   const globalFilter = (r: CreaturePace, q: string) => {
@@ -309,6 +292,19 @@ export default function CreaturePaceView() {
   return (
     <>
       <h2>Creature Paces</h2>
+
+      {/* Toolbar shown only when table visible */}
+      {!showForm && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+          <button onClick={startNew}>New Creature Pace</button>
+          <DataTableSearchInput
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search creature paces…"
+            aria-label="Search creature paces"
+          />
+        </div>
+      )}
 
       {/* Form panel */}
       {showForm && (
@@ -339,7 +335,7 @@ export default function CreaturePaceView() {
             <LabeledInput
               label="Exhaustion Multiplier"
               value={form.exhaustionMultiplier}
-              onChange={(v) => setForm(s => ({ ...s, exhaustionMultiplier: sanitizeScientificInput(v) }))}
+              onChange={makeScientificOnChange<typeof form>('exhaustionMultiplier', setForm)}
               disabled={viewing}
               inputProps={{ inputMode: 'decimal', pattern: '^[+\\-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+\\-]?\\d+)?$' }}
               error={viewing ? undefined : errors.exhaustionMultiplier}
@@ -348,7 +344,7 @@ export default function CreaturePaceView() {
             <LabeledInput
               label="Movement Multiplier"
               value={form.movementMultiplier}
-              onChange={(v) => setForm(s => ({ ...s, movementMultiplier: sanitizeScientificInput(v) }))}
+              onChange={makeScientificOnChange<typeof form>('movementMultiplier', setForm)}
               disabled={viewing}
               inputProps={{ inputMode: 'decimal', pattern: '^[+\\-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+\\-]?\\d+)?$' }}
               error={viewing ? undefined : errors.movementMultiplier}
@@ -374,39 +370,26 @@ export default function CreaturePaceView() {
 
       {/* Shared DataTable */}
       {!showForm && (
-        <>
-          {/* Toolbar */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-            <button onClick={startNew}>New Creature Pace</button>
-            <DataTableSearchInput
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search creature paces…"
-              aria-label="Search creature paces"
-            />
-          </div>
-
-          <DataTable<CreaturePace>
-            rows={rows}
-            columns={columns}
-            rowId={(r) => r.id}
-            initialSort={{ colId: 'movementMultiplier', dir: 'asc' }}
-            searchQuery={query}
-            globalFilter={globalFilter}
-            mode="client"
-            page={page}
-            pageSize={pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={setPageSize}
-            pageSizeOptions={[5, 10, 20, 50, 100]}
-            tableMinWidth={900}
-            zebra
-            hover
-            resizable
-            persistKey="dt.creaturepace.v1"
-            ariaLabel="Creature paces"
-          />
-        </>
+        <DataTable<CreaturePace>
+          rows={rows}
+          columns={columns}
+          rowId={(r) => r.id}
+          initialSort={{ colId: 'movementMultiplier', dir: 'asc' }}
+          searchQuery={query}
+          globalFilter={globalFilter}
+          mode="client"
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[5, 10, 20, 50, 100]}
+          tableMinWidth={0}
+          zebra
+          hover
+          resizable
+          persistKey="dt.creaturepace.v1"
+          ariaLabel="Creature paces"
+        />
       )}
       {!rows.length && !showForm && (
         <div style={{ marginTop: 8, color: 'var(--muted)' }}>

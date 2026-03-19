@@ -283,7 +283,7 @@ export default function ArmourTypeView() {
       },
     ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // allows closing form on self-delete
+  }, [rows]); // allows closing form on self-delete
 
   // ----- Search -----
   const globalFilter = (a: ArmourType, q: string) => {
