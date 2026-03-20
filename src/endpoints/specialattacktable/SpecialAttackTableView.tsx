@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
 import { LabeledInput } from '../../components/inputs/LabeledInput';
 import { AttackTableEditor, type AttackTableRowVM } from '../../components/inputs/AttackTableEditor';
 import { useToast } from '../../components/Toast';
@@ -92,6 +92,7 @@ const INT_RE = /^\d+$/;
 const sanitizeInt = (s: string) => s.replace(/[^\d]/g, '');
 
 export default function SpecialattacktablesView() {
+  const dtRef = useRef<DataTableHandle>(null);
   const [rows, setRows] = useState<SpecialAttackTable[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -356,6 +357,16 @@ export default function SpecialattacktablesView() {
             placeholder="Search special attack tables…"
             aria-label="Search special attack tables"
           />
+
+          {/* Reset widths button */}
+          <button
+            type="button"
+            onClick={() => dtRef.current?.resetColumnWidths()}
+            title="Reset all column widths"
+            style={{ marginLeft: 'auto' }}
+          >
+            Reset column widths
+          </button>
         </div>
       )}
 
@@ -373,7 +384,7 @@ export default function SpecialattacktablesView() {
             <LabeledInput
               label="ID"
               value={form.id}
-              onChange={(v) => setForm(s => ({ ...s, id: v }))}
+              onChange={makeIDOnChange<typeof form>('id', setForm, prefix)}
               disabled={!!editingId || viewing}
               error={viewing ? undefined : errors.id}
             />
@@ -461,6 +472,7 @@ export default function SpecialattacktablesView() {
 
       {!showForm && (
         <DataTable<SpecialAttackTable>
+          ref={dtRef}
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}
