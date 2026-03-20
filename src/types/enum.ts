@@ -45,3 +45,7 @@ export const DEVELOPMENT_STATS: ReadonlyArray<Stat> = ['Agility', 'Constitution'
 /** Enum for treasure value types */
 export type TreasureValueType = 'Very Poor' | 'Poor' | 'Normal' | 'Rich' | 'Very Rich' | 'Special';
 export const TREASUREVALUETYPES: ReadonlyArray<TreasureValueType> = ['Very Poor', 'Poor', 'Normal', 'Rich', 'Very Rich', 'Special'] as const;
+
+//** Enum for armour types  */
+export type ArmourType = 'AT 1' | 'AT 2' | 'AT 3' | 'AT 4' | 'AT 5' | 'AT 6' | 'AT 7' | 'AT 8' | 'AT 9' | 'AT 10' | 'AT 11' | 'AT 12' | 'AT 13' | 'AT 14' | 'AT 15' | 'AT 16' | 'AT 17' | 'AT 18' | 'AT 19' | 'AT 20';
+export const ARMOUR_TYPES: ReadonlyArray<ArmourType> = ['AT 1', 'AT 2', 'AT 3', 'AT 4', 'AT 5', 'AT 6', 'AT 7', 'AT 8', 'AT 9', 'AT 10', 'AT 11', 'AT 12', 'AT 13', 'AT 14', 'AT 15', 'AT 16', 'AT 17', 'AT 18', 'AT 19', 'AT 20'] as const;

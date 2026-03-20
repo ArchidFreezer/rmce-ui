@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { LabeledInput } from './LabeledInput';
+import { ARMOUR_TYPES } from '../../types/enum';
 
 export type AttackTableRowVM = {
   min: string;
@@ -36,7 +37,7 @@ export function AttackTableEditor({
   onChangeRows,
   viewing,
   error,
-  atColumns = 20,
+  atColumns = ARMOUR_TYPES.length,
   minMaxWidth = 72,
   atCellWidth,
   allowAddInView = false,
@@ -181,8 +182,8 @@ export function AttackTableEditor({
     <div style={gridStyle}>
       <div style={{ fontWeight: 600 }}>Min</div>
       <div style={{ fontWeight: 600 }}>Max</div>
-      {Array.from({ length: atColumns }, (_, i) => (
-        <div key={`h-${i}`} style={{ fontWeight: 600 }}>{`AT ${i + 1}`}</div>
+      {ARMOUR_TYPES.map((at, i) => (
+        <div key={`h-${i}`} style={{ fontWeight: 600 }}>{at}</div>
       ))}
       <div style={{ fontWeight: 600 }}>Actions</div>
     </div>
