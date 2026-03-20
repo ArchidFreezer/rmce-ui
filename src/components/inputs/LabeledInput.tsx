@@ -1,31 +1,31 @@
 import * as React from 'react';
 
 export interface LabeledInputProps {
-  /** The visible label. Optional to allow compact grid cells. */
+  /** Optional visible label (omit or hide for compact grid rows). */
   label?: string | undefined;
 
-  /** Input value */
+  /** Controlled value. */
   value: string;
 
   /**
-   * Preferred: string-based change handler (new code).
-   * Called with e.target.value on each change.
+   * String-based change handler (preferred + legacy-compatible).
+   * Your legacy forms can keep passing `onChange={(val) => ...}`.
    */
   onChange?: (val: string) => void;
 
   /**
-   * Event-based change handler (old code still works).
-   * If provided, it will be called with the original event.
+   * Event-based change handler (optional).
+   * Use only when you need the native ChangeEvent.
    */
   onChangeEvent?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 
-  /** Optional explicit accessible name if you hide the label */
+  /** If you hide the visual label, provide an accessible name. */
   ariaLabel?: string | undefined;
 
-  /** Hide the label element (useful for dense grids). Defaults to false. */
+  /** Hide the visual label (but keep accessible name via ariaLabel/label). */
   hideLabel?: boolean | undefined;
 
-  /** Common input attributes you use elsewhere */
+  /** Common input attributes */
   type?: React.InputHTMLAttributes<HTMLInputElement>['type'];
   id?: string | undefined;
   placeholder?: string | undefined;
@@ -34,19 +34,19 @@ export interface LabeledInputProps {
   disabled?: boolean | undefined;
 
   /**
-   * Extra attributes to spread onto the underlying <input>.
-   * We omit the ones controlled by this component.
+   * Extra input props (excluding those controlled here).
+   * Kept strict for exactOptionalPropertyTypes.
    */
   inputProps?: Omit<
     React.InputHTMLAttributes<HTMLInputElement>,
     'value' | 'onChange' | 'disabled' | 'id' | 'type' | 'aria-label' | 'aria-invalid' | 'required'
   >;
 
-  /** Validation UI */
+  /** Validation helpers */
   error?: string | undefined;
   helperText?: string | undefined;
 
-  /** Optional className/style hooks */
+  /** Optional styling hooks */
   className?: string | undefined;
   style?: React.CSSProperties | undefined;
 }
@@ -54,8 +54,8 @@ export interface LabeledInputProps {
 export function LabeledInput({
   label,
   value,
-  onChange,
-  onChangeEvent,
+  onChange,         // string handler (legacy + new)
+  onChangeEvent,    // event handler (optional)
   ariaLabel,
   hideLabel = false,
   type = 'text',
@@ -70,12 +70,14 @@ export function LabeledInput({
   className,
   style,
 }: LabeledInputProps) {
-  // Derive an accessible label when the visual label is hidden or missing
+  // Provide accessible name if label is not visible
   const computedAriaLabel =
     (!label || hideLabel) ? (ariaLabel ?? label ?? undefined) : undefined;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // 1) Call the string handler first (legacy screens expect this).
     if (onChange) onChange(e.target.value);
+    // 2) Then call the optional event handler if present.
     if (onChangeEvent) onChangeEvent(e);
   };
 
@@ -84,7 +86,7 @@ export function LabeledInput({
       className={className}
       style={{ display: 'grid', gap: 6, ...(style ?? {}) }}
     >
-      {/* Render label only if provided and not hidden */}
+      {/* Only render a visible label if provided and not hidden */}
       {(!hideLabel && label) ? (
         <span>
           {label}
