@@ -1,79 +1,116 @@
-import { useId, type InputHTMLAttributes } from 'react';
+import * as React from 'react';
 
 export interface LabeledInputProps {
-  label: string;
+  /** The visible label. Optional to allow compact grid cells. */
+  label?: string | undefined;
+
+  /** Input value */
   value: string;
-  onChange: (val: string) => void;
-  type?: InputHTMLAttributes<HTMLInputElement>['type']; // 'text' | 'number' | ...
-  disabled?: boolean | undefined;
-  id?: string;
-  placeholder?: string;
-  required?: boolean;
-  autoComplete?: string;
-  inputProps?: Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'type' | 'disabled' | 'id'>;
+
   /**
-   * EXACT OPTIONAL PROP (Fix A):
-   * When tsconfig has "exactOptionalPropertyTypes": true, an optional prop does NOT include undefined
-   * unless we state it. This allows passing `error={errors.id}` where type is `string | undefined`.
+   * Preferred: string-based change handler (new code).
+   * Called with e.target.value on each change.
    */
+  onChange?: (val: string) => void;
+
+  /**
+   * Event-based change handler (old code still works).
+   * If provided, it will be called with the original event.
+   */
+  onChangeEvent?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+
+  /** Optional explicit accessible name if you hide the label */
+  ariaLabel?: string | undefined;
+
+  /** Hide the label element (useful for dense grids). Defaults to false. */
+  hideLabel?: boolean | undefined;
+
+  /** Common input attributes you use elsewhere */
+  type?: React.InputHTMLAttributes<HTMLInputElement>['type'];
+  id?: string | undefined;
+  placeholder?: string | undefined;
+  required?: boolean | undefined;
+  autoComplete?: string | undefined;
+  disabled?: boolean | undefined;
+
+  /**
+   * Extra attributes to spread onto the underlying <input>.
+   * We omit the ones controlled by this component.
+   */
+  inputProps?: Omit<
+    React.InputHTMLAttributes<HTMLInputElement>,
+    'value' | 'onChange' | 'disabled' | 'id' | 'type' | 'aria-label' | 'aria-invalid' | 'required'
+  >;
+
+  /** Validation UI */
   error?: string | undefined;
-  /** Optional helper text under the field (separate from error) */
   helperText?: string | undefined;
+
+  /** Optional className/style hooks */
+  className?: string | undefined;
+  style?: React.CSSProperties | undefined;
 }
 
 export function LabeledInput({
   label,
   value,
   onChange,
+  onChangeEvent,
+  ariaLabel,
+  hideLabel = false,
   type = 'text',
-  disabled = false,
   id,
   placeholder,
   required,
   autoComplete,
+  disabled,
   inputProps,
   error,
   helperText,
+  className,
+  style,
 }: LabeledInputProps) {
-  const autoId = useId();
-  const inputId = id ?? `li-${autoId}`;
-  const errorId = error ? `${inputId}-error` : undefined;
-  const helperId = helperText ? `${inputId}-help` : undefined;
+  // Derive an accessible label when the visual label is hidden or missing
+  const computedAriaLabel =
+    (!label || hideLabel) ? (ariaLabel ?? label ?? undefined) : undefined;
 
-  const describedBy = [errorId, helperId].filter(Boolean).join(' ') || undefined;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (onChange) onChange(e.target.value);
+    if (onChangeEvent) onChangeEvent(e);
+  };
 
   return (
-    <label htmlFor={inputId} style={{ display: 'grid', gap: 6, fontSize: 14 }}>
-      <span>{label}{required ? ' *' : ''}</span>
+    <label
+      className={className}
+      style={{ display: 'grid', gap: 6, ...(style ?? {}) }}
+    >
+      {/* Render label only if provided and not hidden */}
+      {(!hideLabel && label) ? (
+        <span>
+          {label}
+          {required ? ' *' : ''}
+        </span>
+      ) : null}
+
       <input
-        id={inputId}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+        id={id}
         type={type}
-        disabled={disabled}
+        value={value}
         placeholder={placeholder}
         required={required}
         autoComplete={autoComplete}
+        disabled={disabled}
+        aria-label={computedAriaLabel}
         aria-invalid={!!error}
-        aria-describedby={describedBy}
-        style={{
-          padding: 8,
-          border: error ? '1px solid #b00020' : '1px solid var(--border)',
-          outline: 'none',
-          background: 'var(--bg)',
-          color: 'var(--text)',
-        }}
+        onChange={handleChange}
         {...inputProps}
       />
+
       {helperText && !error && (
-        <span id={helperId} style={{ color: 'var(--muted)', fontSize: 12 }}>
-          {helperText}
-        </span>
+        <small style={{ color: 'var(--muted)' }}>{helperText}</small>
       )}
       {error && (
-        <span id={errorId} style={{ color: '#b00020', fontSize: 12 }}>
-          {error}
-        </span>
+        <small style={{ color: '#b00020' }}>{error}</small>
       )}
     </label>
   );

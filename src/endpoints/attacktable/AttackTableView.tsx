@@ -635,6 +635,7 @@ function RichRowsEditor({
             {/* min */}
             <LabeledInput
               label="min"
+              hideLabel
               value={r.min}
               onChange={(val) => {
                 if (viewing) return;
@@ -651,6 +652,7 @@ function RichRowsEditor({
             {/* max */}
             <LabeledInput
               label="max"
+              hideLabel
               value={r.max}
               onChange={(val) => {
                 if (viewing) return;
