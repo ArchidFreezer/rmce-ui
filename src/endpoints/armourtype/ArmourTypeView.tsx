@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
 import { fetchArmourTypes, upsertArmourType, deleteArmourType } from '../../api/armourtype';
 import type { ArmourType } from '../../types/armourtype';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -69,6 +69,7 @@ function fromVM(vm: FormState): ArmourType {
 }
 
 export default function ArmourTypeView() {
+  const dtRef = useRef<DataTableHandle>(null);
   const [rows, setRows] = useState<ArmourType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -314,6 +315,15 @@ export default function ArmourTypeView() {
             placeholder="Search armour types…"
             aria-label="Search armour types"
           />
+          {/* Reset widths button */}
+          <button
+            type="button"
+            onClick={() => dtRef.current?.resetColumnWidths()}
+            title="Reset all column widths"
+            style={{ marginLeft: 'auto' }}
+          >
+            Reset column widths
+          </button>
         </div>
       )}
 
@@ -359,6 +369,7 @@ export default function ArmourTypeView() {
       {/* Shared DataTable */}
       {!showForm && (
         <DataTable<ArmourType>
+          ref={dtRef}
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}

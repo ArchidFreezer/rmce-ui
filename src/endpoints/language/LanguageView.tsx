@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
 import { CheckboxInput, LabeledInput, LabeledSelect } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -56,6 +56,7 @@ const fromVM = (vm: FormState): Language => ({
 });
 
 export default function LanguagesView() {
+  const dtRef = useRef<DataTableHandle>(null);
   const [rows, setRows] = useState<Language[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -346,6 +347,14 @@ export default function LanguagesView() {
             placeholder="Search languages…"
             aria-label="Search languages"
           />
+          <button
+            type="button"
+            onClick={() => dtRef.current?.resetColumnWidths()}
+            title="Reset all column widths"
+            style={{ marginLeft: 'auto' }}
+          >
+            Reset column widths
+          </button>
         </div>
       )}
 
@@ -397,6 +406,7 @@ export default function LanguagesView() {
       {/* Table hidden while form up */}
       {!showForm && (
         <DataTable<Language>
+          ref={dtRef}
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}

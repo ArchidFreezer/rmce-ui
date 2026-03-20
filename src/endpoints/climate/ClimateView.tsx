@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { fetchClimates, upsertClimate, deleteClimate } from '../../api/climate';
-import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
+import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
 import type { Climate } from '../../types/climate';
 import { PRECIPITATIONS, Precipitation, TEMPERATURES, Temperature } from '../../types/enum';
 import { useToast } from '../../components/Toast';
@@ -16,6 +16,7 @@ function emptyClimate(): Climate {
 
 export default function ClimateView() {
 
+  const dtRef = useRef<DataTableHandle>(null);
   const [rows, setRows] = useState<Climate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -296,6 +297,14 @@ export default function ClimateView() {
             placeholder="Search climates…"
             aria-label="Search climates"
           />
+          <button
+            type="button"
+            onClick={() => dtRef.current?.resetColumnWidths()}
+            title="Reset all column widths"
+            style={{ marginLeft: 'auto' }}
+          >
+            Reset column widths
+          </button>
         </div>
       )}
 
@@ -344,6 +353,7 @@ export default function ClimateView() {
       {/* Shared DataTable */}
       {!showForm && (
         <DataTable<Climate>
+          ref={dtRef}
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}

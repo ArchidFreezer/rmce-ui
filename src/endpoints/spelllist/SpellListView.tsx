@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
 import { LabeledInput, LabeledSelect, CheckboxGroup, CheckboxInput } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -47,6 +47,7 @@ function fromVM(vm: FormState): SpellList {
 }
 
 export default function SpellListView() {
+  const dtRef = useRef<DataTableHandle>(null);
   const [rows, setRows] = useState<SpellList[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -341,6 +342,14 @@ export default function SpellListView() {
             placeholder="Search spell lists…"
             aria-label="Search spell lists"
           />
+          <button
+            type="button"
+            onClick={() => dtRef.current?.resetColumnWidths()}
+            title="Reset all column widths"
+            style={{ marginLeft: 'auto' }}
+          >
+            Reset column widths
+          </button>
         </div>
       )}
 
@@ -405,6 +414,7 @@ export default function SpellListView() {
       {/* Table hidden while form is up */}
       {!showForm && (
         <DataTable<SpellList>
+          ref={dtRef}
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}

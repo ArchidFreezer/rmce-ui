@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
 import { LabeledInput, LabeledSelect } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -47,6 +47,7 @@ function fromVM(vm: FormState): CreaturePace {
 }
 
 export default function CreaturePaceView() {
+  const dtRef = useRef<DataTableHandle>(null);
   const [rows, setRows] = useState<CreaturePace[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -303,6 +304,14 @@ export default function CreaturePaceView() {
             placeholder="Search creature paces…"
             aria-label="Search creature paces"
           />
+          <button
+            type="button"
+            onClick={() => dtRef.current?.resetColumnWidths()}
+            title="Reset all column widths"
+            style={{ marginLeft: 'auto' }}
+          >
+            Reset column widths
+          </button>
         </div>
       )}
 
@@ -371,6 +380,7 @@ export default function CreaturePaceView() {
       {/* Shared DataTable */}
       {!showForm && (
         <DataTable<CreaturePace>
+          ref={dtRef}
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}

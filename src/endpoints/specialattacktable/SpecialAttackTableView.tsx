@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
 import { LabeledInput } from '../../components/inputs/LabeledInput';
 import { AttackTableEditor, type AttackTableRowVM } from '../../components/inputs/AttackTableEditor';
