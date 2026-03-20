@@ -635,13 +635,13 @@ function RichRowsEditor({
             {/* min */}
             <LabeledInput
               label="min"
-              value={rows[rowIdx].min}
+              value={r.min}
               onChange={(val) => {
                 if (viewing) return;
                 const digits = val.replace(/[^\d]/g, '');
                 if (rowIdx < 0 || rowIdx >= rows.length) return;
                 const next = rows.slice();
-                next[rowIdx] = updateRowField(next[rowIdx], 'min', digits);
+                next[rowIdx] = updateRowField(r, 'min', digits);
                 onChangeRows(next);
               }}
               disabled={viewing}
@@ -651,13 +651,13 @@ function RichRowsEditor({
             {/* max */}
             <LabeledInput
               label="max"
-              value={rows[rowIdx].max}
+              value={r.max}
               onChange={(val) => {
                 if (viewing) return;
                 const digits = val.replace(/[^\d]/g, '');
                 if (rowIdx < 0 || rowIdx >= rows.length) return;
                 const next = rows.slice();
-                next[rowIdx] = updateRowField(next[rowIdx], 'max', digits);
+                next[rowIdx] = updateRowField(r, 'max', digits);
                 onChangeRows(next);
               }}
               disabled={viewing}
@@ -675,8 +675,10 @@ function RichRowsEditor({
                 onChange={(e) => {
                   if (viewing) return;
                   const val = e.target.value;
-                  const next = rows.map((rr) => ({ ...rr, cells: rr.cells.slice() }));
-                  next[rowIdx] = updateRowCell(next[rowIdx], i, val === '' ? '' : val);
+                  const next = rows.slice();
+                  if (rowIdx < 0 || rowIdx >= next.length) return;
+                  const row = next[rowIdx]; if (!row) return;
+                  next[rowIdx] = updateRowCell(row, i, val === '' ? '' : val);  // a full RowVM
                   onChangeRows(next);
                 }}
                 onKeyDown={handleNav}
