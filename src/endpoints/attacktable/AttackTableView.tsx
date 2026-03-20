@@ -210,6 +210,7 @@ export default function AttacktablesView() {
     setEditingId(null);
     const vm = toVM(row);
     vm.id = prefix;
+    vm.name += ' (Copy)';
     setForm(vm);
     setErrors({});
     setShowForm(true);
