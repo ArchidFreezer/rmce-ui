@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
 import { LabeledInput, LabeledSelect, CheckboxInput } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -72,6 +72,7 @@ const fromVM = (vm: FormState): SkillCategory => {
 };
 
 export default function SkillCategoryView() {
+  const dtRef = useRef<DataTableHandle>(null);
   // data
   const [rows, setRows] = useState<SkillCategory[]>([]);
   const [spts, setSpts] = useState<SkillProgressionType[]>([]);
@@ -415,6 +416,14 @@ export default function SkillCategoryView() {
             placeholder="Search skill categories…"
             aria-label="Search skill categories"
           />
+          <button
+            type="button"
+            onClick={() => dtRef.current?.resetColumnWidths()}
+            title="Reset all column widths"
+            style={{ marginLeft: 'auto' }}
+          >
+            Reset column widths
+          </button>
         </div>
       )}
 
@@ -506,6 +515,7 @@ export default function SkillCategoryView() {
       {/* Table hidden while form is visible */}
       {!showForm && (
         <DataTable<SkillCategory>
+          ref={dtRef}
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}

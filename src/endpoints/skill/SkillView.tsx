@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { DataTable, DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
 import { LabeledInput } from '../../components/inputs/LabeledInput';
 import { LabeledSelect } from '../../components/inputs/LabeledSelect';
 import { useToast } from '../../components/Toast';
@@ -139,6 +139,7 @@ function fromVM(vm: FormState): Skill {
 }
 
 export default function SkillView() {
+  const dtRef = useRef<DataTableHandle>(null);
   const [rows, setRows] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -522,6 +523,16 @@ export default function SkillView() {
             placeholder="Search skills…"
             aria-label="Search skills"
           />
+
+          {/* Reset widths button */}
+          <button
+            type="button"
+            onClick={() => dtRef.current?.resetColumnWidths()}
+            title="Reset all column widths"
+            style={{ marginLeft: 'auto' }}
+          >
+            Reset column widths
+          </button>
         </div>
       )}
 
@@ -786,6 +797,7 @@ export default function SkillView() {
 
       {!showForm && (
         <DataTable<Skill>
+          ref={dtRef}
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}

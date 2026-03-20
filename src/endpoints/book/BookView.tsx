@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
 import { fetchBooks, upsertBook, deleteBook } from '../../api/book';
 import type { Book } from '../../types/book';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -14,6 +14,7 @@ function emptyBook(): Book {
 }
 
 export default function BookView() {
+  const dtRef = useRef<DataTableHandle>(null);
   const [rows, setRows] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -257,6 +258,14 @@ export default function BookView() {
             placeholder="Search books…"
             aria-label="Search books"
           />
+          <button
+            type="button"
+            onClick={() => dtRef.current?.resetColumnWidths()}
+            title="Reset all column widths"
+            style={{ marginLeft: 'auto' }}
+          >
+            Reset column widths
+          </button>
         </div>
       )}
 
@@ -288,6 +297,7 @@ export default function BookView() {
       {/* Shared DataTable */}
       {!showForm && (
         <DataTable<Book>
+          ref={dtRef}
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}

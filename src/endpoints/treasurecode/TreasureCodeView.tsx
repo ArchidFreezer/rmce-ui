@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
 import { LabeledInput, LabeledSelect } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -41,6 +41,8 @@ const fromVM = (vm: FormState): TreasureCode => ({
 
 
 export default function TreasureCodeView() {
+  const dtRef = useRef<DataTableHandle>(null);
+
   const [rows, setRows] = useState<TreasureCode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -256,6 +258,14 @@ export default function TreasureCodeView() {
             placeholder="Search treasure codes…"
             aria-label="Search treasure codes"
           />
+          <button
+            type="button"
+            onClick={() => dtRef.current?.resetColumnWidths()}
+            title="Reset all column widths"
+            style={{ marginLeft: 'auto' }}
+          >
+            Reset column widths
+          </button>
         </div>
       )}
 
@@ -301,6 +311,7 @@ export default function TreasureCodeView() {
       {/* Table hidden while form is visible */}
       {!showForm && (
         <DataTable<TreasureCode>
+          ref={dtRef}
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}

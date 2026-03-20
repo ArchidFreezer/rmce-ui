@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
 import { LabeledInput, AttackTableEditor, AttackTableRowVM } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -87,6 +87,7 @@ function updateRowCell(row: AttackTableRowVM, index: number, val: string): Attac
 }
 
 export default function AttacktablesView() {
+  const dtRef = useRef<DataTableHandle>(null);
   const [rows, setRows] = useState<AttackTable[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -356,6 +357,14 @@ export default function AttacktablesView() {
             placeholder="Search attack tables…"
             aria-label="Search attack tables"
           />
+          <button
+            type="button"
+            onClick={() => dtRef.current?.resetColumnWidths()}
+            title="Reset all column widths"
+            style={{ marginLeft: 'auto' }}
+          >
+            Reset column widths
+          </button>
         </div>
       )}
 
@@ -428,6 +437,7 @@ export default function AttacktablesView() {
       {/* Table hidden while form visible */}
       {!showForm && (
         <DataTable<AttackTable>
+          ref={dtRef}
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}

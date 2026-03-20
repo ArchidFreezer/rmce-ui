@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable'
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable'
 import { fetchPoisons, upsertPoison, deletePoison } from '../../api/poison';
 import { fetchPoisontypes } from '../../api/poisontype';
 import type { Poison } from '../../types/poison';
@@ -16,6 +16,7 @@ function emptyPoison(): Poison {
 }
 
 export default function PoisonView() {
+  const dtRef = useRef<DataTableHandle>(null);
   const [rows, setRows] = useState<Poison[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -292,6 +293,14 @@ export default function PoisonView() {
             placeholder="Search poisons…"
             aria-label="Search poisons"
           />
+          <button
+            type="button"
+            onClick={() => dtRef.current?.resetColumnWidths()}
+            title="Reset all column widths"
+            style={{ marginLeft: 'auto' }}
+          >
+            Reset column widths
+          </button>
         </div>
       )}
 
@@ -335,6 +344,7 @@ export default function PoisonView() {
       {/* Shared DataTable */}
       {!showForm && (
         <DataTable<Poison>
+          ref={dtRef}
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}

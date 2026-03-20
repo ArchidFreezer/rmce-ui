@@ -1,5 +1,14 @@
-// src/components/DataTable.tsx
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useImperativeHandle,
+  forwardRef,
+  JSX,
+} from 'react'
+
+
 import './DataTable.css';
 
 export type SortDir = 'asc' | 'desc';
@@ -15,6 +24,37 @@ export type SortType<T> =
   | 'number'
   | 'boolean'
   | ((a: T, b: T) => number);
+
+type ColumnWidthMap = Record<string, number>;
+
+function loadWidths(persistKey?: string): ColumnWidthMap {
+  if (!persistKey) return {};
+  try {
+    const s = localStorage.getItem(`${persistKey}:colWidths`);
+    return s ? (JSON.parse(s) as ColumnWidthMap) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveWidths(persistKey: string | undefined, widths: ColumnWidthMap) {
+  if (!persistKey) return;
+  try {
+    localStorage.setItem(`${persistKey}:colWidths`, JSON.stringify(widths));
+  } catch { }
+}
+
+function clearWidths(persistKey?: string) {
+  if (!persistKey) return;
+  try {
+    localStorage.removeItem(`${persistKey}:colWidths`);
+  } catch { }
+}
+
+export interface DataTableHandle {
+  /** Clears persisted column widths and resets the current rendered widths. */
+  resetColumnWidths: () => void;
+}
 
 export interface ColumnDef<T> {
   /** Unique column id */
@@ -102,9 +142,9 @@ export interface DataTableProps<T> {
 
   // **** NEW: Column resizing ****
   /** Enable resizers for header columns (default: true) */
-  resizable?: boolean;
+  resizable?: boolean | undefined;
   /** Persist widths to localStorage under this key (optional) */
-  persistKey?: string;
+  persistKey?: string | undefined;
   /** Callback after a resize finishes (all current widths in px where available) */
   onColumnResizeEnd?: (widthsPx: Record<string, number | undefined>) => void;
 }
@@ -124,46 +164,84 @@ export function DataTableSearchInput(props: React.InputHTMLAttributes<HTMLInputE
   );
 }
 
-export function DataTable<T>({
-  rows,
-  columns,
-  rowId,
+export type DataTableComponent =
+  <T>(
+    props: DataTableProps<T> & { ref?: React.Ref<DataTableHandle | undefined> }
+  ) => JSX.Element;
 
-  // sort
-  initialSort = null,
-  sort: sortProp,
-  onSortChange,
+// Keep the same implementation, but name the inner function (better stacks)
+const DataTableInner = <T,>(
+  props: DataTableProps<T>,
+  ref: React.Ref<DataTableHandle | undefined>
+) => {
 
-  // search
-  searchQuery,
-  globalFilter,
+  const {
+    rows,
+    columns,
+    rowId,
 
-  // pagination
-  mode = 'client',
-  page: pageProp,
-  pageSize: pageSizeProp,
-  totalRows: totalRowsProp,
-  initialPage = 1,
-  initialPageSize = 10,
-  onPageChange,
-  onPageSizeChange,
-  pageSizeOptions = [5, 10, 20, 50, 100],
-  showPagination = true,
+    // sort
+    initialSort = null,
+    sort: sortProp,
+    onSortChange,
 
-  // theming/UX
-  className,
-  hover = true,
-  zebra = false,
-  dense = false,
-  emptyMessage = 'No results.',
-  tableMinWidth = 800,
-  ariaLabel,
+    // search
+    searchQuery,
+    globalFilter,
 
-  // resizing
-  resizable = true,
-  persistKey,
-  onColumnResizeEnd,
-}: DataTableProps<T>) {
+    // pagination
+    mode = 'client',
+    page: pageProp,
+    pageSize: pageSizeProp,
+    totalRows: totalRowsProp,
+    initialPage = 1,
+    initialPageSize = 10,
+    onPageChange,
+    onPageSizeChange,
+    pageSizeOptions = [5, 10, 20, 50, 100],
+    showPagination = true,
+
+    // theming/UX
+    className,
+    hover = true,
+    zebra = false,
+    dense = false,
+    emptyMessage = 'No results.',
+    tableMinWidth = 800,
+    ariaLabel,
+
+    // resizing
+    resizable = true,
+    persistKey,
+    onColumnResizeEnd,
+  } = props;
+
+  // widths state keyed by column id
+  const [colWidths, setColWidths] = useState<ColumnWidthMap>(() => loadWidths(persistKey));
+
+  // Expose imperative API to parent
+  useImperativeHandle(ref, (): DataTableHandle => ({
+    resetColumnWidths: () => {
+      // 1) Clear persisted value
+      clearWidths(persistKey);
+      // 2) Drop local state
+      setColWidths({});
+      // 3) Optionally force a layout pass; most tables will auto-reflow
+    },
+  }), [persistKey]);
+
+  // Optional convenience: also export a static helper for non-ref usage
+  (DataTable as any).resetWidthsByPersistKey = (key: string) => clearWidths(key);
+
+  // When user resizes a column (wherever you implement drag handles), update and save:
+  const onResizeColumn = (colId: string, widthPx: number) => {
+    setColWidths(prev => {
+      const next = { ...prev, [colId]: widthPx };
+      saveWidths(persistKey, next);
+      return next;
+    });
+  };
+
   // ---------- Controlled/uncontrolled sort ----------
   const [innerSort, setInnerSort] = useState<SortState | null>(initialSort);
   const sortState = sortProp !== undefined ? sortProp : innerSort;
@@ -269,23 +347,23 @@ export function DataTable<T>({
   };
 
   // ---------- Column resizing state ----------
-  type WidthMap = Record<string, number | string | undefined>;
-  const [colWidths, setColWidths] = useState<WidthMap>(() => {
-    // Load from localStorage -> else from column.width -> else undefined
-    if (persistKey && typeof window !== 'undefined') {
-      try {
-        const raw = localStorage.getItem(persistKey);
-        if (raw) return JSON.parse(raw) as WidthMap;
-      } catch {}
-    }
-    const init: WidthMap = {};
-    for (const c of columns) {
-      if (typeof c.width === 'number' || typeof c.width === 'string') {
-        init[c.id] = c.width;
-      }
-    }
-    return init;
-  });
+  // type WidthMap = Record<string, number | string | undefined>;
+  // const [colWidths, setColWidths] = useState<WidthMap>(() => {
+  //   // Load from localStorage -> else from column.width -> else undefined
+  //   if (persistKey && typeof window !== 'undefined') {
+  //     try {
+  //       const raw = localStorage.getItem(persistKey);
+  //       if (raw) return JSON.parse(raw) as WidthMap;
+  //     } catch { }
+  //   }
+  //   const init: WidthMap = {};
+  //   for (const c of columns) {
+  //     if (typeof c.width === 'number' || typeof c.width === 'string') {
+  //       init[c.id] = c.width;
+  //     }
+  //   }
+  //   return init;
+  // });
 
   // Refs to header cells to measure when needed
   const headRefs = useRef<Record<string, HTMLTableCellElement | null>>({});
@@ -293,7 +371,7 @@ export function DataTable<T>({
     headRefs.current[id] = el;
   };
 
-    // Utility: clamp a number
+  // Utility: clamp a number
   const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 
   // Get a css numeric property (e.g., padding) as number
@@ -379,8 +457,8 @@ export function DataTable<T>({
 
   // Helper: normalize current column width to a px number if available
   const prevWidthNumber = (w: number | string | undefined): number | undefined =>
-    typeof w === 'number' ? w : undefined;  
-  
+    typeof w === 'number' ? w : undefined;
+
   const resizingRef = useRef<{
     id: string;
     startX: number;
@@ -392,9 +470,7 @@ export function DataTable<T>({
   // Persist widths on change
   useEffect(() => {
     if (!persistKey || typeof window === 'undefined') return;
-    try {
-      localStorage.setItem(persistKey, JSON.stringify(colWidths));
-    } catch {}
+    saveWidths(persistKey, colWidths);  // writes to `${persistKey}:colWidths`
   }, [persistKey, colWidths]);
 
   // Pointer handlers
@@ -605,7 +681,9 @@ export function DataTable<T>({
       )}
     </>
   );
-}
+};
+
+export const DataTable = forwardRef(DataTableInner) as DataTableComponent
 
 /** Pagination control (unchanged) */
 export function DataTablePagination({

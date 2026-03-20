@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
 import { LabeledInput } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -60,6 +60,7 @@ const fromVM = (vm: FormState): SkillProgressionType => ({
 
 
 export default function SkillProgressionTypeView() {
+  const dtRef = useRef<DataTableHandle>(null);
   const [rows, setRows] = useState<SkillProgressionType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -283,6 +284,14 @@ export default function SkillProgressionTypeView() {
             placeholder="Search skill progression types…"
             aria-label="Search skill progression types"
           />
+          <button
+            type="button"
+            onClick={() => dtRef.current?.resetColumnWidths()}
+            title="Reset all column widths"
+            style={{ marginLeft: 'auto' }}
+          >
+            Reset column widths
+          </button>
         </div>
       )}
 
@@ -336,6 +345,7 @@ export default function SkillProgressionTypeView() {
       {/* Table hidden while form visible */}
       {!showForm && (
         <DataTable<SkillProgressionType>
+          ref={dtRef}
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}

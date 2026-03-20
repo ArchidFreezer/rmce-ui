@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable'
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable'
 import { fetchDiseases, upsertDisease, deleteDisease } from '../../api/disease';
 import { fetchDiseasetypes } from '../../api/diseasetype';
 import type { Disease } from '../../types/disease';
@@ -16,6 +16,7 @@ function emptyDisease(): Disease {
 }
 
 export default function DiseaseView() {
+  const dtRef = useRef<DataTableHandle>(null);
   const [rows, setRows] = useState<Disease[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -302,6 +303,14 @@ export default function DiseaseView() {
             placeholder="Search diseases…"
             aria-label="Search diseases"
           />
+          <button
+            type="button"
+            onClick={() => dtRef.current?.resetColumnWidths()}
+            title="Reset all column widths"
+            style={{ marginLeft: 'auto' }}
+          >
+            Reset column widths
+          </button>
         </div>
       )}
 
@@ -343,6 +352,7 @@ export default function DiseaseView() {
       {/* Shared DataTable */}
       {!showForm && (
         <DataTable<Disease>
+          ref={dtRef}
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}
