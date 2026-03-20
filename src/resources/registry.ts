@@ -1,6 +1,7 @@
 import { lazy, type LazyExoticComponent, type ComponentType } from 'react';
 
 const ArmourTypeView = lazy(() => import('../endpoints/armourtype/ArmourTypeView'));
+const AttackTableView = lazy(() => import('../endpoints/attacktable/AttackTableView'));
 const BookView = lazy(() => import('../endpoints/book/BookView'));
 const ClimateView = lazy(() => import('../endpoints/climate/ClimateView'));
 const CreaturePaceView = lazy(() => import('../endpoints/creaturepace/CreaturePaceView'));
@@ -27,6 +28,7 @@ export interface ResourceDef {
 
 const known: Record<string, ResourceDef> = {
   armourtype: { prefix: 'armourtype', label: 'Armour Types', path: '/armourtypes', Component: ArmourTypeView },
+  attacktable: { prefix: 'attacktable', label: 'Attack Tables', path: '/attacktables', Component: AttackTableView },
   book: { prefix: 'book', label: 'Books', path: '/books', Component: BookView },
   climate: { prefix: 'climate', label: 'Climates', path: '/climates', Component: ClimateView },
   creaturepace: { prefix: 'creaturepace', label: 'Creature Paces', path: '/creaturepaces', Component: CreaturePaceView },
@@ -59,6 +61,7 @@ export function splitResources(prefixes: string[]): { known: ResourceDef[]; unkn
 /** Optional: static fallback if /rmce/prefixes fails */
 export const FALLBACK_RESOURCES: ResourceDef[] = [
   known.armourtype,
+  known.attacktable,
   known.book,
   known.climate,
   known.creaturepace,

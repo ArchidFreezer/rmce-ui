@@ -1,79 +1,156 @@
-import { useId, type InputHTMLAttributes } from 'react';
+import * as React from 'react';
 
 export interface LabeledInputProps {
-  label: string;
+  /** Optional visible label (omit or hide for compact grid rows). */
+  label?: string | undefined;
+
+  /** Controlled value. */
   value: string;
-  onChange: (val: string) => void;
-  type?: InputHTMLAttributes<HTMLInputElement>['type']; // 'text' | 'number' | ...
-  disabled?: boolean | undefined;
-  id?: string;
-  placeholder?: string;
-  required?: boolean;
-  autoComplete?: string;
-  inputProps?: Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'type' | 'disabled' | 'id'>;
+
   /**
-   * EXACT OPTIONAL PROP (Fix A):
-   * When tsconfig has "exactOptionalPropertyTypes": true, an optional prop does NOT include undefined
-   * unless we state it. This allows passing `error={errors.id}` where type is `string | undefined`.
+   * String-based change handler (preferred + legacy-compatible).
+   * Your legacy forms can keep passing `onChange={(val) => ...}`.
    */
+  onChange?: (val: string) => void;
+
+  /**
+   * Event-based change handler (optional).
+   * Use only when you need the native ChangeEvent.
+   */
+  onChangeEvent?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+
+  /** Accessibility helpers (recommended when label is visually hidden). */
+  ariaLabel?: string | undefined;
+  hideLabel?: boolean | undefined;
+
+  /** Common input attributes */
+  type?: React.InputHTMLAttributes<HTMLInputElement>['type'];
+  id?: string | undefined;
+  placeholder?: string | undefined;
+  required?: boolean | undefined;
+  autoComplete?: string | undefined;
+  disabled?: boolean | undefined;
+
+  /**
+   * Quick way to size the input itself. Examples: '72px', 80, '6rem'.
+   * If provided as a number, it's treated as pixels.
+   */
+  width?: number | string | undefined;
+
+  /**
+   * Fine-grained styling/class hooks.
+   * - inputStyle / inputClassName target only the <input> element
+   * - containerStyle / containerClassName target the outer <label> wrapper
+   */
+  inputStyle?: React.CSSProperties | undefined;
+  inputClassName?: string | undefined;
+  containerStyle?: React.CSSProperties | undefined;
+  containerClassName?: string | undefined;
+
+  /**
+   * Extra input props (excluding those controlled here).
+   * Kept strict for exactOptionalPropertyTypes.
+   */
+  inputProps?: Omit<
+    React.InputHTMLAttributes<HTMLInputElement>,
+    'value' | 'onChange' | 'disabled' | 'id' | 'type' | 'aria-label' | 'aria-invalid' | 'required'
+  >;
+
+  /** Validation helpers */
   error?: string | undefined;
-  /** Optional helper text under the field (separate from error) */
   helperText?: string | undefined;
+
+  /** Optional styling hook for the whole control (legacy; prefer containerStyle) */
+  style?: React.CSSProperties | undefined;
+  className?: string | undefined;
 }
 
 export function LabeledInput({
   label,
   value,
-  onChange,
+  onChange,         // string handler (legacy + new)
+  onChangeEvent,    // event handler (optional)
+  ariaLabel,
+  hideLabel = false,
   type = 'text',
-  disabled = false,
   id,
   placeholder,
   required,
   autoComplete,
+  disabled,
+
+  width,
+  inputStyle,
+  inputClassName,
+  containerStyle,
+  containerClassName,
+
   inputProps,
   error,
   helperText,
-}: LabeledInputProps) {
-  const autoId = useId();
-  const inputId = id ?? `li-${autoId}`;
-  const errorId = error ? `${inputId}-error` : undefined;
-  const helperId = helperText ? `${inputId}-help` : undefined;
 
-  const describedBy = [errorId, helperId].filter(Boolean).join(' ') || undefined;
+  // legacy hooks for the whole control
+  style,
+  className,
+}: LabeledInputProps) {
+  // Provide accessible name if label is not visible
+  const computedAriaLabel =
+    (!label || hideLabel) ? (ariaLabel ?? label ?? undefined) : undefined;
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // 1) Call the string handler first (legacy screens expect this).
+    if (onChange) onChange(e.target.value);
+    // 2) Then call the optional event handler if present.
+    if (onChangeEvent) onChangeEvent(e);
+  };
+
+  // Normalize width to CSS string if number was provided
+  const resolvedWidth =
+    typeof width === 'number' ? `${width}px` : width;
 
   return (
-    <label htmlFor={inputId} style={{ display: 'grid', gap: 6, fontSize: 14 }}>
-      <span>{label}{required ? ' *' : ''}</span>
+    <label
+      className={[className, containerClassName].filter(Boolean).join(' ') || undefined}
+      style={{
+        display: 'grid',
+        gap: 6,
+        ...(style ?? {}),
+        ...(containerStyle ?? {}),
+      }}
+    >
+      {/* Only render a visible label if provided and not hidden */}
+      {(!hideLabel && label) ? (
+        <span>
+          {label}
+          {required ? ' *' : ''}
+        </span>
+      ) : null}
+
       <input
-        id={inputId}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+        id={id}
         type={type}
-        disabled={disabled}
+        value={value}
         placeholder={placeholder}
         required={required}
         autoComplete={autoComplete}
+        disabled={disabled}
+        aria-label={computedAriaLabel}
         aria-invalid={!!error}
-        aria-describedby={describedBy}
+        onChange={handleChange}
+        className={inputClassName}
         style={{
-          padding: 8,
-          border: error ? '1px solid #b00020' : '1px solid var(--border)',
-          outline: 'none',
-          background: 'var(--bg)',
-          color: 'var(--text)',
+          // width applies to the INPUT (not the outer label)
+          ...(resolvedWidth ? { width: resolvedWidth } : {}),
+          ...(inputStyle ?? {}),
         }}
         {...inputProps}
       />
+
       {helperText && !error && (
-        <span id={helperId} style={{ color: 'var(--muted)', fontSize: 12 }}>
-          {helperText}
-        </span>
+        <small style={{ color: 'var(--muted)' }}>{helperText}</small>
       )}
       {error && (
-        <span id={errorId} style={{ color: '#b00020', fontSize: 12 }}>
-          {error}
-        </span>
+        <small style={{ color: '#b00020' }}>{error}</small>
       )}
     </label>
   );
