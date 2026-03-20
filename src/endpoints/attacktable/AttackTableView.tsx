@@ -646,6 +646,7 @@ function RichRowsEditor({
                 onChangeRows(next);
               }}
               disabled={viewing}
+              width={64}
               inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
             />
 
@@ -663,6 +664,7 @@ function RichRowsEditor({
                 onChangeRows(next);
               }}
               disabled={viewing}
+              width={64}
               inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
             />
 
