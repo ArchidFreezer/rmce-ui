@@ -5,6 +5,7 @@ import { LabeledSelect } from '../../components/inputs/LabeledSelect';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { CheckboxInput } from '../../components/inputs';
+import { HtmlPreview } from '../../components/inputs/HtmlPreview';
 
 import { fetchSkills, upsertSkill, deleteSkill } from '../../api/skill';
 import { fetchSkillcategories } from '../../api/skillcategory';
@@ -137,7 +138,7 @@ function fromVM(vm: FormState): Skill {
   };
 }
 
-export default function SkillsView() {
+export default function SkillView() {
   const [rows, setRows] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -165,6 +166,14 @@ export default function SkillsView() {
     exhaustion?: string | undefined;
     distanceMultiplier?: string | undefined;
   }>({});
+
+  // HTML preview toggles
+  const [previewAll, setPreviewAll] = useState(false);
+  const [showPreview, setShowPreview] = useState<{
+    description: boolean;
+    difficulties: boolean;
+    notes: boolean;
+  }>({ description: false, difficulties: false, notes: false });
 
   const toast = useToast();
   const confirm = useConfirm();
@@ -525,6 +534,16 @@ export default function SkillsView() {
             {viewing ? 'View Skill' : (editingId ? 'Edit Skill' : 'New Skill')}
           </h3>
 
+          <button
+            type="button"
+            onClick={() => {
+              setPreviewAll(p => !p);
+              setShowPreview({ description: !previewAll, difficulties: !previewAll, notes: !previewAll });
+            }}
+          >
+            {previewAll ? 'Hide Previews' : 'Show Previews'}
+          </button>
+
           {/* Basics */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <LabeledInput
@@ -616,41 +635,102 @@ export default function SkillsView() {
 
           {/* Long text sections */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginTop: 12 }}>
+            {/* Description */}
             <div>
-              <label style={{ display: 'grid', gap: 6 }}>
-                <span>Description (HTML allowed)</span>
-                <textarea
-                  value={form.description}
-                  onChange={(e) => setForm(s => ({ ...s, description: e.target.value }))}
-                  disabled={viewing}
-                  rows={5}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h4 style={{ margin: '8px 0' }}>Description (HTML allowed)</h4>
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(s => ({ ...s, description: !s.description }))}
+                >
+                  {showPreview.description ? 'Edit' : 'Preview'}
+                </button>
+              </div>
+
+              {showPreview.description ? (
+                <HtmlPreview
+                  title={undefined}
+                  html={form.description}
+                  emptyHint="No description"
+                  className="preview-html"
+                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
                 />
-              </label>
+              ) : (
+                <label style={{ display: 'grid', gap: 6 }}>
+                  <textarea
+                    value={form.description}
+                    onChange={(e) => setForm(s => ({ ...s, description: e.target.value }))}
+                    disabled={viewing}
+                    rows={5}
+                  />
+                </label>
+              )}
             </div>
+
+            {/* Difficulties Summary */}
             <div>
-              <label style={{ display: 'grid', gap: 6 }}>
-                <span>Difficulties Summary (HTML allowed)</span>
-                <textarea
-                  value={form.difficultiesSummary}
-                  onChange={(e) => setForm(s => ({ ...s, difficultiesSummary: e.target.value }))}
-                  disabled={viewing}
-                  rows={6}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h4 style={{ margin: '8px 0' }}>Difficulties Summary (HTML allowed)</h4>
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(s => ({ ...s, difficulties: !s.difficulties }))}
+                >
+                  {showPreview.difficulties ? 'Edit' : 'Preview'}
+                </button>
+              </div>
+
+              {showPreview.difficulties ? (
+                <HtmlPreview
+                  title={undefined}
+                  html={form.difficultiesSummary}
+                  emptyHint="No difficulties summary"
+                  className="preview-html"
+                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
                 />
-              </label>
+              ) : (
+                <label style={{ display: 'grid', gap: 6 }}>
+                  <textarea
+                    value={form.difficultiesSummary}
+                    onChange={(e) => setForm(s => ({ ...s, difficultiesSummary: e.target.value }))}
+                    disabled={viewing}
+                    rows={6}
+                  />
+                </label>
+              )}
             </div>
+
+            {/* Notes */}
             <div>
-              <label style={{ display: 'grid', gap: 6 }}>
-                <span>Notes</span>
-                <textarea
-                  value={form.notes}
-                  onChange={(e) => setForm(s => ({ ...s, notes: e.target.value }))}
-                  disabled={viewing}
-                  rows={5}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h4 style={{ margin: '8px 0' }}>Notes (HTML allowed)</h4>
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(s => ({ ...s, notes: !s.notes }))}
+                >
+                  {showPreview.notes ? 'Edit' : 'Preview'}
+                </button>
+              </div>
+
+              {showPreview.notes ? (
+                <HtmlPreview
+                  title={undefined}
+                  html={form.notes}
+                  emptyHint="No notes"
+                  className="preview-html"
+                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
                 />
-              </label>
+              ) : (
+                <label style={{ display: 'grid', gap: 6 }}>
+                  <textarea
+                    value={form.notes}
+                    onChange={(e) => setForm(s => ({ ...s, notes: e.target.value }))}
+                    disabled={viewing}
+                    rows={5}
+                  />
+                </label>
+              )}
             </div>
           </div>
-
           {/* Subcategories */}
           <div style={{ marginTop: 12 }}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 8 }}>
@@ -718,7 +798,7 @@ export default function SkillsView() {
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
           pageSizeOptions={[5, 10, 20, 50, 100]}
-          tableMinWidth={1200}
+          tableMinWidth={0}
           zebra
           hover
           resizable
