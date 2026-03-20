@@ -14,6 +14,7 @@ const PoisonTypeView = lazy(() => import('../endpoints/poisontype/PoisonTypeView
 const SkillCategoryView = lazy(() => import('../endpoints/skillcategory/SkillCategoryView'));
 const SkillGroupView = lazy(() => import('../endpoints/skillgroup/SkillGroupView'));
 const SkillProgressionTypeView = lazy(() => import('../endpoints/skillprogressiontype/SkillProgressionTypeView'));
+const SpecialAttackTableView = lazy(() => import('../endpoints/specialattacktable/SpecialAttackTableView'));
 const SpellListView = lazy(() => import('../endpoints/spelllist/SpellListView'));
 const TreasureCodeView = lazy(() => import('../endpoints/treasurecode/TreasureCodeView'));
 
@@ -41,6 +42,7 @@ const known: Record<string, ResourceDef> = {
   skillcategory: { prefix: 'skillcategory', label: 'Skill Categories', path: '/skillcategories', Component: SkillCategoryView },
   skillgroup: { prefix: 'skillgroup', label: 'Skill Groups', path: '/skillgroups', Component: SkillGroupView },
   skillprogressiontype: { prefix: 'skillprogressiontype', label: 'Skill Progression Types', path: '/skillprogressiontypes', Component: SkillProgressionTypeView },
+  specialattacktable: { prefix: 'specialattacktable', label: 'Special Attack Tables', path: '/specialattacktables', Component: SpecialAttackTableView },
   spelllist: { prefix: 'spelllist', label: 'Spell Lists', path: '/spelllists', Component: SpellListView },
   treasurecode: { prefix: 'treasurecode', label: 'Treasure Codes', path: '/treasurecodes', Component:TreasureCodeView },
 }
@@ -74,6 +76,7 @@ export const FALLBACK_RESOURCES: ResourceDef[] = [
   known.skillcategory,
   known.skillgroup,
   known.skillprogressiontype,
+  known.specialattacktable,
   known.spelllist,
   known.treasurecode,
 ].filter((r): r is ResourceDef => Boolean(r));
