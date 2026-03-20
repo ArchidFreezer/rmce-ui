@@ -1,7 +1,7 @@
 // src/endpoints/poisontype/PoisontypesView.tsx
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { DataTable, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { LabeledInput } from '../../components/inputs';
+import { LabeledInput, HtmlPreview } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 
@@ -572,37 +572,72 @@ function FragmentRowSymptom({
 }: {
   row: SymptomRowVM;
   onChange: (next: SymptomRowVM) => void;
-  disabled?: boolean;
+  disabled?: boolean | undefined;
   error?: string | undefined;
 }) {
   const id = `sym-${row.severity}`;
+
+  // Show preview by default in view mode; allow toggling at any time
+  const [showPreview, setShowPreview] = React.useState<boolean>(!!disabled);
+  React.useEffect(() => {
+    if (disabled) setShowPreview(true);
+  }, [disabled]);
+
   return (
     <>
-      <div style={{ alignSelf: 'start', fontWeight: 600, paddingTop: 6 }}>{row.severity}</div>
-      <label htmlFor={id} style={{ display: 'grid', gap: 6 }}>
-        <textarea
-          id={id}
-          value={row.symptoms}
-          onChange={(e) => onChange({ ...row, symptoms: e.target.value })}
-          disabled={disabled}
-          aria-invalid={!!error}
-          aria-describedby={error ? `${id}-error` : undefined}
-          rows={3}
-          style={{
-            padding: 8,
-            border: error ? '1px solid #b00020' : '1px solid var(--border)',
-            outline: 'none',
-            background: 'var(--bg)',
-            color: 'var(--text)',
-            resize: 'vertical',
-          }}
-        />
-        {error && (
-          <span id={`${id}-error`} style={{ color: '#b00020', fontSize: 12 }}>
-            {error}
-          </span>
+      {/* Left column: severity label */}
+      <div style={{ alignSelf: 'start', fontWeight: 600, paddingTop: 6 }}>
+        {row.severity}
+      </div>
+
+      {/* Right column: editor/preview + toggle */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+          {/* <label htmlFor={id} style={{ fontWeight: 600 }}>Symptoms</label> - We don't want a label as it is clear from the table heading */}
+          <button
+            type="button"
+            onClick={() => setShowPreview((v) => !v)}
+            // Allow toggling even in view mode (useful if you want to see raw HTML)
+            aria-pressed={showPreview}
+          >
+            {disabled ? 'Raw' : showPreview ? 'Edit' : 'Preview'}
+          </button>
+        </div>
+
+        {showPreview ? (
+          <HtmlPreview
+            html={row.symptoms}
+            emptyHint="No symptoms provided"
+            className="preview-html"
+            style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
+          />
+        ) : (
+          <label htmlFor={id} style={{ display: 'grid', gap: 6 }}>
+            <textarea
+              id={id}
+              value={row.symptoms}
+              onChange={(e) => onChange({ ...row, symptoms: e.target.value })}
+              disabled={disabled}
+              aria-invalid={!!error}
+              aria-describedby={error ? `${id}-error` : undefined}
+              rows={3}
+              style={{
+                padding: 8,
+                border: error ? '1px solid #b00020' : '1px solid var(--border)',
+                outline: 'none',
+                background: 'var(--bg)',
+                color: 'var(--text)',
+                resize: 'vertical',
+              }}
+            />
+            {error && (
+              <span id={`${id}-error`} style={{ color: '#b00020', fontSize: 12 }}>
+                {error}
+              </span>
+            )}
+          </label>
         )}
-      </label>
+      </div>
     </>
   );
 }

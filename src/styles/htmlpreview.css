@@ -1,0 +1,10 @@
+.preview-html h1, .preview-html h2, .preview-html h3,
+.preview-html h4, .preview-html h5, .preview-html h6 {
+  margin: 0.5rem 0 0.25rem;
+}
+.preview-html p { margin: 0.5rem 0; }
+.preview-html ul, .preview-html ol { margin: 0.5rem 0 0.5rem 1.0rem; }
+.preview-html code, .preview-html pre { background: color-mix(in oklch, var(--panel), var(--bg) 15%); }
+.preview-html table { border-collapse: collapse; }
+.preview-html th, .preview-html td { border: 1px solid var(--border); padding: 4px 6px; }
+.preview-html a { color: var(--link); text-decoration: underline; }
