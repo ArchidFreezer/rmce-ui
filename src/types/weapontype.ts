@@ -45,5 +45,5 @@ export interface WeaponType {
 }
 
 export interface WeaponTypesPayload {
-  weaponTypes: WeaponType[];
+  weapontypes: WeaponType[];
 }

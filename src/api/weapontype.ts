@@ -86,10 +86,10 @@ function fromJson(x: any): WeaponType {
  */
 export async function fetchWeaponTypes(): Promise<WeaponType[]> {
   const data = await fetchJson<WeaponTypesPayload>(BASE);
-  if (!data || !Array.isArray((data as any).weaponTypes)) {
-    throw new Error('Unexpected response: expected { weaponTypes: [...] }');
+  if (!data || !Array.isArray((data as any).weapontypes)) {
+    throw new Error('Unexpected response: expected { weapontypes: [...] }');
   }
-  return (data as WeaponTypesPayload).weaponTypes.map(fromJson);
+  return (data as WeaponTypesPayload).weapontypes.map(fromJson);
 }
 
 /**
