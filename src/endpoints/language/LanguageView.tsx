@@ -347,14 +347,9 @@ export default function LanguagesView() {
             placeholder="Search languages…"
             aria-label="Search languages"
           />
-          <button
-            type="button"
-            onClick={() => dtRef.current?.resetColumnWidths()}
-            title="Reset all column widths"
-            style={{ marginLeft: 'auto' }}
-          >
-            Reset column widths
-          </button>
+          {/* Reset and auto-fit column widths */}
+          <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
+          <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
         </div>
       )}
 

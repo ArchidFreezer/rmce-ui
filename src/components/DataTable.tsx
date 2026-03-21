@@ -54,6 +54,8 @@ function clearWidths(persistKey?: string) {
 export interface DataTableHandle {
   /** Clears persisted column widths and resets the current rendered widths. */
   resetColumnWidths: () => void;
+  /** Adjusts the widths of all columns to fit their content */
+  autoFitAllColumns: () => void;
 }
 
 export interface ColumnDef<T> {
@@ -222,16 +224,33 @@ const DataTableInner = <T,>(
   // Expose imperative API to parent
   useImperativeHandle(ref, (): DataTableHandle => ({
     resetColumnWidths: () => {
-      // 1) Clear persisted value
       clearWidths(persistKey);
-      // 2) Drop local state
       setColWidths({});
-      // 3) Optionally force a layout pass; most tables will auto-reflow
     },
-  }), [persistKey]);
+    autoFitAllColumns: () => {
+      const next: Record<string, number> = {};
+      for (const c of columns) {
+        const min = Math.max(60, c.minWidth ?? 80);
+        const max = Math.max(min, c.maxWidth ?? 800);
+        const natural = getMaxNaturalWidthInColumn(c.id);
+        const fitted = clamp(natural, min, max);
+        next[c.id] = fitted;
+      }
+      setColWidths(next);
+      if (onColumnResizeEnd) {
+        const out: Record<string, number | undefined> = {};
+        for (const c of columns) out[c.id] = next[c.id];
+        onColumnResizeEnd(out);
+      }
+    },
+  }), [persistKey, columns, onColumnResizeEnd]);
 
   // Optional convenience: also export a static helper for non-ref usage
   (DataTable as any).resetWidthsByPersistKey = (key: string) => clearWidths(key);
+  (DataTable as any).autoFitAllColumnsByPersistKey = (key: string) => {
+    // This is a no-op for non-ref usage, as we need the columns context
+    console.warn('autoFitAllColumnsByPersistKey is not supported without a ref');
+  };
 
   // When user resizes a column (wherever you implement drag handles), update and save:
   const onResizeColumn = (colId: string, widthPx: number) => {

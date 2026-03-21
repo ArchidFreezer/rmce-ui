@@ -417,14 +417,9 @@ export default function PoisonTypeView() {
             placeholder="Search poison types…"
             aria-label="Search poison types"
           />
-          <button
-            type="button"
-            onClick={() => dtRef.current?.resetColumnWidths()}
-            title="Reset all column widths"
-            style={{ marginLeft: 'auto' }}
-          >
-            Reset column widths
-          </button>
+          {/* Reset and auto-fit column widths */}
+          <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
+          <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
         </div>
       )}
 

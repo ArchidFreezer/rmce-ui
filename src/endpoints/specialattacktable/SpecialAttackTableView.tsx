@@ -358,15 +358,9 @@ export default function SpecialattacktablesView() {
             aria-label="Search special attack tables"
           />
 
-          {/* Reset widths button */}
-          <button
-            type="button"
-            onClick={() => dtRef.current?.resetColumnWidths()}
-            title="Reset all column widths"
-            style={{ marginLeft: 'auto' }}
-          >
-            Reset column widths
-          </button>
+          {/* Reset and auto-fit column widths */}
+          <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
+          <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
         </div>
       )}
 
