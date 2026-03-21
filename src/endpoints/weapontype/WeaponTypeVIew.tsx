@@ -5,6 +5,7 @@ import { LabeledInput } from '../../components/inputs/LabeledInput';
 import { LabeledSelect } from '../../components/inputs/LabeledSelect';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
+import { HtmlPreview } from '../../components/inputs/HtmlPreview';
 
 import { fetchWeapontypes, upsertWeapontype, deleteWeapontype } from '../../api/weapontype';
 import { fetchSkills } from '../../api/skill';                 // assume you have this
@@ -177,6 +178,12 @@ export default function WeaponTypeView() {
     criticals?: string | undefined;
     ranges?: string | undefined;
   }>({});
+
+  // HTML preview toggles
+  const [previewAll, setPreviewAll] = useState(false);
+  const [showPreview, setShowPreview] = useState<{
+    notes: boolean;
+  }>({ notes: false });
 
   const toast = useToast();
   const confirm = useConfirm();
@@ -562,6 +569,16 @@ export default function WeaponTypeView() {
             {viewing ? 'View Weapon Type' : (editingId ? 'Edit Weapon Type' : 'New Weapon Type')}
           </h3>
 
+          <button
+            type="button"
+            onClick={() => {
+              setPreviewAll(p => !p);
+              setShowPreview({ notes: !previewAll });
+            }}
+          >
+            {previewAll ? 'Hide Previews' : 'Show Previews'}
+          </button>
+
           {/* Basics */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <LabeledInput
@@ -605,13 +622,35 @@ export default function WeaponTypeView() {
               error={viewing ? undefined : errors.attackTable}
               helperText={attackTablesLoading ? 'Loading attack tables…' : undefined}
             />
+          </div>
 
-            <LabeledInput
-              label="Notes (HTML or text)"
-              value={form.notes}
-              onChange={(v) => setForm(s => ({ ...s, notes: v }))}
-              disabled={viewing}
-            />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginTop: 12 }}>
+            {/* Notes */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <label style={{ display: 'grid', gap: 6 }}>Notes (HTML allowed)</label>
+                <button type="button" onClick={() => setShowPreview(s => ({ ...s, notes: !s.notes }))}>{showPreview.notes ? (viewing ? 'Raw' : 'Edit') : 'Preview'}</button>
+              </div>
+
+              {showPreview.notes ? (
+                <HtmlPreview
+                  title={undefined}
+                  html={form.notes}
+                  emptyHint="No notes"
+                  className="preview-html"
+                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
+                />
+              ) : (
+                <label style={{ display: 'grid', gap: 6 }}>
+                  <textarea
+                    value={form.notes}
+                    onChange={(e) => setForm(s => ({ ...s, notes: e.target.value }))}
+                    disabled={viewing}
+                    rows={5}
+                  />
+                </label>
+              )}
+            </div>
           </div>
 
           {/* Numbers */}
