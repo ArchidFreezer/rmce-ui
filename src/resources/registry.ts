@@ -18,6 +18,7 @@ const SkillProgressionTypeView = lazy(() => import('../endpoints/skillprogressio
 const SpecialAttackTableView = lazy(() => import('../endpoints/specialattacktable/SpecialAttackTableView'));
 const SpellListView = lazy(() => import('../endpoints/spelllist/SpellListView'));
 const TreasureCodeView = lazy(() => import('../endpoints/treasurecode/TreasureCodeView'));
+const WeaponTypeView = lazy(() => import('../endpoints/weapontype/WeaponTypeVIew'));
 
 
 export interface ResourceDef {
@@ -47,6 +48,7 @@ const known: Record<string, ResourceDef> = {
   specialattacktable: { prefix: 'specialattacktable', label: 'Special Attack Tables', path: '/specialattacktables', Component: SpecialAttackTableView },
   spelllist: { prefix: 'spelllist', label: 'Spell Lists', path: '/spelllists', Component: SpellListView },
   treasurecode: { prefix: 'treasurecode', label: 'Treasure Codes', path: '/treasurecodes', Component:TreasureCodeView },
+  weapontype: { prefix: 'weapontype', label: 'Weapon Types', path: '/weapontypes', Component: WeaponTypeView },
 }
 
 
@@ -82,4 +84,5 @@ export const FALLBACK_RESOURCES: ResourceDef[] = [
   known.specialattacktable,
   known.spelllist,
   known.treasurecode,
+  known.weapontype,
 ].filter((r): r is ResourceDef => Boolean(r));

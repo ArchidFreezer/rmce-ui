@@ -1,0 +1,801 @@
+// src/endpoints/weapontype/WeapontypesView.tsx
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { DataTable, DataTableSearchInput, type ColumnDef, type DataTableHandle } from '../../components/DataTable';
+import { LabeledInput } from '../../components/inputs/LabeledInput';
+import { LabeledSelect } from '../../components/inputs/LabeledSelect';
+import { useToast } from '../../components/Toast';
+import { useConfirm } from '../../components/ConfirmDialog';
+import { HtmlPreview } from '../../components/inputs/HtmlPreview';
+
+import { fetchWeaponTypes, upsertWeaponType, deleteWeaponType } from '../../api/weapontype';
+import { fetchSkills } from '../../api/skill';                 // assume you have this
+import { fetchBooks } from '../../api/book';                   // assume you have this
+import { fetchAttacktables } from '../../api/attacktable';
+import type { Skill } from '../../types/skill';                      // has id,name
+import type { Book } from '../../types/book';
+import { AttackTable } from '../../types/attacktable';
+import type { WeaponType } from '../../types/weapontype';
+import { CRITICAL_TYPES, type CriticalType } from '../../types/enum';          // array of strings for select
+import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
+
+const prefix = 'WEAPONTYPE_';
+
+// ------------------------
+// Form VM (strings for numbers while typing)
+// ------------------------
+type CriticalVM = { critical: CriticalType | ''; modifier: string };
+type RangeVM = { min: string; max: string; modifier: string };
+
+type FormState = {
+  id: string;
+  name: string;
+  notes: string;
+
+  skill: string;
+  book: string;
+  attackTable: string; // AttackTable.id or '' while editing
+
+  fumble: string;
+  breakage: string;
+
+  minLength: string;
+  maxLength: string;
+
+  minStrength: string;
+  maxStrength: string;
+
+  minWeight: string;
+  maxWeight: string;
+
+  woodenHaft: boolean;
+
+  criticals: CriticalVM[];
+  ranges: RangeVM[];
+};
+
+const emptyVM = (): FormState => ({
+  id: prefix,
+  name: '',
+  notes: '',
+
+  skill: '',
+  book: '',
+  attackTable: '',
+
+  fumble: '',
+  breakage: '',
+
+  minLength: '',
+  maxLength: '',
+
+  minStrength: '',
+  maxStrength: '',
+
+  minWeight: '',
+  maxWeight: '',
+
+  woodenHaft: false,
+
+  criticals: [],
+  ranges: [],
+});
+
+const toVM = (x: WeaponType): FormState => ({
+  id: x.id,
+  name: x.name,
+  notes: x.notes ?? '',
+
+  skill: x.skill,
+  book: x.book,
+  attackTable: x.attackTable ?? '',
+
+  fumble: String(x.fumble),
+  breakage: String(x.breakage),
+
+  minLength: String(x.minLength),
+  maxLength: String(x.maxLength),
+
+  minStrength: String(x.minStrength),
+  maxStrength: String(x.maxStrength),
+
+  minWeight: String(x.minWeight),
+  maxWeight: String(x.maxWeight),
+
+  woodenHaft: !!x.woodenHaft,
+
+  criticals: (x.criticals ?? []).map(c => ({ critical: c.critical, modifier: String(c.modifier) })),
+  ranges: (x.ranges ?? []).map(r => ({ min: String(r.min), max: String(r.max), modifier: String(r.modifier) })),
+});
+
+const fromVM = (vm: FormState): WeaponType => ({
+  id: vm.id.trim(),
+  name: vm.name.trim(),
+  notes: vm.notes.trim() || undefined,
+
+  skill: vm.skill.trim(),
+  book: vm.book.trim(),
+  attackTable: vm.attackTable.trim(),
+
+  fumble: Number(vm.fumble),
+  breakage: Number(vm.breakage),
+
+  minLength: Number(vm.minLength),
+  maxLength: Number(vm.maxLength),
+
+  minStrength: Number(vm.minStrength),
+  maxStrength: Number(vm.maxStrength),
+
+  minWeight: Number(vm.minWeight),
+  maxWeight: Number(vm.maxWeight),
+
+  woodenHaft: !!vm.woodenHaft,
+
+  criticals: vm.criticals.map(c => ({ critical: c.critical as CriticalType, modifier: Number(c.modifier) })),
+  ranges: vm.ranges.map(r => ({ min: Number(r.min), max: Number(r.max), modifier: Number(r.modifier) })),
+});
+
+// helpers
+const INT_RE = /^\d+$/;
+const sanitizeInt = (s: string) => s.replace(/[^\d]/g, '');
+
+export default function WeaponTypeView() {
+  const dtRef = useRef<DataTableHandle>(null);
+
+  const [rows, setRows] = useState<WeaponType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [books, setBooks] = useState<Book[]>([]);
+  const [skillLoading, setSkillLoading] = useState(true);
+  const [bookLoading, setBookLoading] = useState(true);
+  const [attackTables, setAttackTables] = useState<AttackTable[]>([]);
+  const [attackTablesLoading, setAttackTablesLoading] = useState(true);
+
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [viewing, setViewing] = useState(false);
+  const [form, setForm] = useState<FormState>(emptyVM());
+
+  const [errors, setErrors] = useState<{
+    id?: string | undefined;
+    name?: string | undefined;
+    skill?: string | undefined;
+    book?: string | undefined;
+    attackTable?: string | undefined;
+    fumble?: string | undefined;
+    breakage?: string | undefined;
+    minLength?: string | undefined;
+    maxLength?: string | undefined;
+    minStrength?: string | undefined;
+    maxStrength?: string | undefined;
+    minWeight?: string | undefined;
+    maxWeight?: string | undefined;
+    criticals?: string | undefined;
+    ranges?: string | undefined;
+  }>({});
+
+  // HTML preview toggles
+  const [previewAll, setPreviewAll] = useState(false);
+  const [showPreview, setShowPreview] = useState<{
+    notes: boolean;
+  }>({ notes: false });
+
+  const toast = useToast();
+  const confirm = useConfirm();
+
+  // Load list
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const list = await fetchWeaponTypes();
+        if (!mounted) return;
+        setRows(list);
+      } catch (e) {
+        if (!mounted) return;
+        setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Load reference lists
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const list = await fetchSkills();
+        if (!mounted) return;
+        setSkills(list);
+      } finally { if (mounted) setSkillLoading(false); }
+    })();
+    return () => { mounted = false; };
+  }, []);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const list = await fetchBooks();
+        if (!mounted) return;
+        setBooks(list);
+      } finally { if (mounted) setBookLoading(false); }
+    })();
+    return () => { mounted = false; };
+  }, []);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const list = await fetchAttacktables();
+        if (!mounted) return;
+        setAttackTables(list);
+      } finally { if (mounted) setAttackTablesLoading(false); }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Display labels
+  const skillNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const s of skills) m.set(s.id, s.name);
+    return m;
+  }, [skills]);
+  const bookNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const b of books) m.set(b.id, b.name);
+    return m;
+  }, [books]);
+  const attackTableNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const a of attackTables) m.set(a.id, a.name);
+    return m;
+  }, [attackTables]);
+
+  const skillOptions = useMemo(
+    () => skills.map(s => ({ value: s.id, label: `${s.id} — ${s.name}` })),
+    [skills]
+  );
+  const bookOptions = useMemo(
+    () => books.map(b => ({ value: b.id, label: `${b.id} — ${b.name}` })),
+    [books]
+  );
+  const attackTableOptions = useMemo(
+    () => attackTables.map(a => ({ value: a.id, label: `${a.id} — ${a.name}` })),
+    [attackTables]
+  );
+  const criticalTypeOptions = useMemo(
+    () => (CRITICAL_TYPES as readonly string[]).map(v => ({ value: v, label: v })),
+    []
+  );
+
+  // Validation
+  const computeErrors = (draft = form) => {
+    const e: typeof errors = {};
+    const id = draft.id.trim();
+    const nm = draft.name.trim();
+
+    if (!id) e.id = 'ID is required';
+    else if (!editingId && rows.some(r => r.id === id)) e.id = `ID "${id}" already exists`;
+    else if (!isValidID(id, prefix)) e.id = `ID must start with "${prefix}" and contain additional characters`;
+
+    if (!nm) e.name = 'Name is required';
+
+    if (!draft.skill) e.skill = 'Skill is required';
+    else if (!skillNameById.has(draft.skill)) e.skill = 'Pick a valid Skill id';
+
+    if (!draft.book) e.book = 'Book is required';
+    else if (!bookNameById.has(draft.book)) e.book = 'Pick a valid Book id';
+
+    if (!draft.attackTable) e.attackTable = 'Attack table is required';
+    else if (!attackTableNameById.has(draft.attackTable)) e.attackTable = 'Pick a valid AttackTable id'
+
+    const checkInt = (key: keyof FormState, label: string) => {
+      const v = (draft[key] as string).trim();
+      if (!v) e[key as keyof typeof e] = `${label} is required`;
+      else if (!INT_RE.test(v)) e[key as keyof typeof e] = `${label} must be a non-negative integer`;
+    };
+
+    checkInt('fumble', 'Fumble');
+    checkInt('breakage', 'Breakage');
+    checkInt('minLength', 'Min length');
+    checkInt('maxLength', 'Max length');
+    checkInt('minStrength', 'Min strength');
+    checkInt('maxStrength', 'Max strength');
+    checkInt('minWeight', 'Min weight');
+    checkInt('maxWeight', 'Max weight');
+
+    // Ranges
+    for (let i = 0; i < draft.ranges.length; i++) {
+      const r = draft.ranges[i];
+      if (!r) continue; // should not happen
+      if (!INT_RE.test(r.min) || !INT_RE.test(r.max) || !INT_RE.test(r.modifier)) {
+        e.ranges = `Range[${i + 1}]: min/max/modifier must be integers`;
+        break;
+      }
+      if (Number(r.min) > Number(r.max)) {
+        e.ranges = `Range[${i + 1}]: min must be ≤ max`;
+        break;
+      }
+    }
+
+    // Criticals
+    for (let i = 0; i < draft.criticals.length; i++) {
+      const c = draft.criticals[i];
+      if (!c) continue
+      if (!c.critical) { e.criticals = `Critical[${i + 1}]: type is required`; break; }
+      if (!(CRITICAL_TYPES as readonly string[]).includes(c.critical)) {
+        e.criticals = `Critical[${i + 1}]: invalid CriticalType`; break;
+      }
+      if (!INT_RE.test(c.modifier)) { e.criticals = `Critical[${i + 1}]: modifier must be integer`; break; }
+    }
+
+    // simple logical checks
+    if (!e.minLength && !e.maxLength && Number(draft.minLength) > Number(draft.maxLength)) {
+      e.minLength = 'minLength must be ≤ maxLength';
+    }
+    if (!e.minStrength && !e.maxStrength && Number(draft.minStrength) > Number(draft.maxStrength)) {
+      e.minStrength = 'minStrength must be ≤ maxStrength';
+    }
+    if (!e.minWeight && !e.maxWeight && Number(draft.minWeight) > Number(draft.maxWeight)) {
+      e.minWeight = 'minWeight must be ≤ maxWeight';
+    }
+
+    return e;
+  };
+
+  const hasErrors = Boolean(Object.values(errors).some(Boolean));
+
+  useEffect(() => {
+    if (!showForm || viewing) return;
+    setErrors(computeErrors());
+  }, [form, showForm, viewing, skillNameById, bookNameById, attackTableNameById]);
+
+  // Actions
+  const startNew = () => {
+    setViewing(false);
+    setEditingId(null);
+    setForm(emptyVM());
+    setErrors({});
+    setShowForm(true);
+  };
+  const startView = (row: WeaponType) => {
+    setViewing(true);
+    setEditingId(row.id);
+    setForm(toVM(row));
+    setErrors({});
+    setShowForm(true);
+  };
+  const startEdit = (row: WeaponType) => {
+    setViewing(false);
+    setEditingId(row.id);
+    setForm(toVM(row));
+    setErrors({});
+    setShowForm(true);
+  };
+  const startDuplicate = (row: WeaponType) => {
+    setViewing(false);
+    setEditingId(null);
+    const vm = toVM(row);
+    vm.id = prefix;
+    vm.name += ' (Copy)';
+    setForm(vm);
+    setErrors({});
+    setShowForm(true);
+  };
+  const cancelForm = () => {
+    setShowForm(false);
+    setViewing(false);
+    setEditingId(null);
+    setErrors({});
+  };
+
+  const saveForm = async () => {
+    const nextErrors = computeErrors(form);
+    setErrors(nextErrors);
+    if (Object.values(nextErrors).some(Boolean)) return;
+
+    const payload = fromVM(form);
+    const isEditing = Boolean(editingId);
+    try {
+      const opts = isEditing
+        ? { method: 'PUT' as const, useResourceIdPath: true }
+        : { method: 'POST' as const, useResourceIdPath: false };
+      await upsertWeaponType(payload, opts);
+
+      setRows(prev => {
+        if (isEditing) {
+          const idx = prev.findIndex(r => r.id === payload.id);
+          if (idx >= 0) {
+            const copy = [...prev];
+            copy[idx] = { ...copy[idx], ...payload };
+            return copy;
+          }
+          return [payload, ...prev];
+        }
+        return [payload, ...prev];
+      });
+
+      setShowForm(false);
+      setViewing(false);
+      setEditingId(null);
+      toast({
+        variant: 'success',
+        title: isEditing ? 'Updated' : 'Saved',
+        description: `Weapon type "${payload.id}" ${isEditing ? 'updated' : 'created'}.`,
+      });
+    } catch (err) {
+      toast({
+        variant: 'danger',
+        title: 'Save failed',
+        description: String(err instanceof Error ? err.message : err),
+      });
+    }
+  };
+
+  const onDelete = async (row: WeaponType) => {
+    const ok = await confirm({
+      title: 'Delete Weapon Type',
+      body: `Delete "${row.id}"? This cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      tone: 'danger',
+    });
+    if (!ok) return;
+
+    const prev = rows;
+    setRows(prev.filter(r => r.id !== row.id));
+    try {
+      await deleteWeaponType(row.id);
+      if (editingId === row.id || viewing) cancelForm();
+      toast({ variant: 'success', title: 'Deleted', description: `Weapon type "${row.id}" deleted.` });
+    } catch (err) {
+      setRows(prev);
+      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err) });
+    }
+  };
+
+  // Columns
+  const columns: ColumnDef<WeaponType>[] = useMemo(() => [
+    { id: 'id', header: 'ID', accessor: r => r.id, sortType: 'string', minWidth: 260 },
+    { id: 'name', header: 'Name', accessor: r => r.name, sortType: 'string', minWidth: 180 },
+    {
+      id: 'skill', header: 'Skill', accessor: r => r.skill, sortType: 'string', minWidth: 240,
+      render: r => skillNameById.get(r.skill) ? `${skillNameById.get(r.skill)}` : r.skill,
+    },
+    {
+      id: 'book', header: 'Book', accessor: r => r.book, sortType: 'string', minWidth: 240,
+      render: r => bookNameById.get(r.book) ? `${bookNameById.get(r.book)}` : r.book,
+    },
+    {
+      id: 'attackTable', header: 'Attack Table', accessor: r => r.attackTable, sortType: 'string', minWidth: 180,
+      render: r => attackTableNameById.get(r.attackTable) ? `${attackTableNameById.get(r.attackTable)}` : r.attackTable,
+    },
+    { id: 'fumble', header: 'Fumble', accessor: r => r.fumble, sortType: 'number', align: 'right', minWidth: 90 },
+    { id: 'breakage', header: 'Breakage', accessor: r => r.breakage, sortType: 'number', align: 'right', minWidth: 90 },
+    {
+      id: 'actions',
+      header: 'Actions',
+      sortable: false,
+      width: 420,
+      render: (row) => (
+        <>
+          <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
+          <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
+          <button onClick={() => startDuplicate(row)} style={{ marginRight: 6 }}>Duplicate</button>
+          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
+        </>
+      ),
+    },
+  ], [skillNameById, bookNameById, attackTableNameById]);
+
+  const globalFilter = (r: WeaponType, q: string) => {
+    const s = q.toLowerCase();
+    return [
+      r.id, r.name, r.skill, skillNameById.get(r.skill) ?? '',
+      r.book, bookNameById.get(r.book) ?? '',
+      r.attackTable,
+      r.fumble, r.breakage,
+      r.minStrength, r.maxStrength,
+    ].some(v => String(v ?? '').toLowerCase().includes(s));
+  };
+
+  if (loading) return <div>Loading…</div>;
+  if (error) return <div style={{ color: 'crimson' }}>Error: {error}</div>;
+
+  // ---- Criticals editor row ----
+  const addCritical = () => setForm(s => ({ ...s, criticals: [...s.criticals, { critical: '' as const, modifier: '' }] }));
+  const updateCritical = (i: number, patch: Partial<CriticalVM>) =>
+    setForm(s => {
+      const copy = s.criticals.slice();
+      if (!copy[i]) return s; // should not happen
+      copy[i] = { ...copy[i], ...patch };
+      return { ...s, criticals: copy };
+    });
+  const removeCritical = (i: number) =>
+    setForm(s => {
+      const copy = s.criticals.slice();
+      copy.splice(i, 1);
+      return { ...s, criticals: copy };
+    });
+
+  // ---- Ranges editor row ----
+  const addRange = () => setForm(s => ({ ...s, ranges: [...s.ranges, { min: '', max: '', modifier: '' }] }));
+  const updateRange = (i: number, patch: Partial<RangeVM>) =>
+    setForm(s => {
+      const copy = s.ranges.slice();
+      if (!copy[i]) return s; // should not happen
+      copy[i] = { ...copy[i], ...patch };
+      return { ...s, ranges: copy };
+    });
+  const removeRange = (i: number) =>
+    setForm(s => {
+      const copy = s.ranges.slice();
+      copy.splice(i, 1);
+      return { ...s, ranges: copy };
+    });
+
+  return (
+    <>
+      <h2>Weapon Types</h2>
+
+      {!showForm && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+          <button onClick={startNew}>New Weapon Type</button>
+          <DataTableSearchInput
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search weapon types…"
+            aria-label="Search weapon types"
+          />
+          {/* Reset and auto-fit column widths */}
+          <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
+          <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
+        </div>
+      )}
+
+      {showForm && (
+        <div
+          className={`form-panel ${viewing ? 'form-panel--view' : ''}`}
+          style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}
+        >
+          <h3 style={{ marginTop: 0 }}>
+            {viewing ? 'View Weapon Type' : (editingId ? 'Edit Weapon Type' : 'New Weapon Type')}
+          </h3>
+
+          <button
+            type="button"
+            onClick={() => {
+              setPreviewAll(p => !p);
+              setShowPreview({ notes: !previewAll });
+            }}
+          >
+            {previewAll ? 'Hide Previews' : 'Show Previews'}
+          </button>
+
+          {/* Basics */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <LabeledInput
+              label="ID"
+              value={form.id}
+              onChange={makeIDOnChange<typeof form>('id', setForm, prefix)}
+              disabled={!!editingId || viewing}
+              error={viewing ? undefined : errors.id}
+            />
+            <LabeledInput
+              label="Name"
+              value={form.name}
+              onChange={(v) => setForm(s => ({ ...s, name: v }))}
+              disabled={viewing}
+              error={viewing ? undefined : errors.name}
+            />
+            <LabeledSelect
+              label="Skill"
+              value={form.skill}
+              onChange={(v) => setForm(s => ({ ...s, skill: v }))}
+              options={skillOptions}
+              disabled={skillLoading || viewing}
+              error={viewing ? undefined : errors.skill}
+              helperText={skillLoading ? 'Loading skills…' : undefined}
+            />
+            <LabeledSelect
+              label="Book"
+              value={form.book}
+              onChange={(v) => setForm(s => ({ ...s, book: v }))}
+              options={bookOptions}
+              disabled={bookLoading || viewing}
+              error={viewing ? undefined : errors.book}
+              helperText={bookLoading ? 'Loading books…' : undefined}
+            />
+            <LabeledSelect
+              label="Attack Table"
+              value={form.attackTable}
+              onChange={(v) => setForm(s => ({ ...s, attackTable: v }))}
+              options={attackTableOptions}
+              disabled={viewing || attackTablesLoading}
+              error={viewing ? undefined : errors.attackTable}
+              helperText={attackTablesLoading ? 'Loading attack tables…' : undefined}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginTop: 12 }}>
+            {/* Notes */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <label style={{ display: 'grid', gap: 6 }}>Notes (HTML allowed)</label>
+                <button type="button" onClick={() => setShowPreview(s => ({ ...s, notes: !s.notes }))}>{showPreview.notes ? (viewing ? 'Raw' : 'Edit') : 'Preview'}</button>
+              </div>
+
+              {showPreview.notes ? (
+                <HtmlPreview
+                  title={undefined}
+                  html={form.notes}
+                  emptyHint="No notes"
+                  className="preview-html"
+                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
+                />
+              ) : (
+                <label style={{ display: 'grid', gap: 6 }}>
+                  <textarea
+                    value={form.notes}
+                    onChange={(e) => setForm(s => ({ ...s, notes: e.target.value }))}
+                    disabled={viewing}
+                    rows={5}
+                  />
+                </label>
+              )}
+            </div>
+          </div>
+
+          {/* Numbers */}
+          <h4 style={{ margin: '12px 0 4px' }}>Stats</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+            <LabeledInput label="Fumble" value={form.fumble} onChange={(v) => setForm(s => ({ ...s, fumble: sanitizeInt(v) }))} disabled={viewing} width={90} />
+            <LabeledInput label="Breakage" value={form.breakage} onChange={(v) => setForm(s => ({ ...s, breakage: sanitizeInt(v) }))} disabled={viewing} width={90} />
+            <LabeledInput label="Min Length" value={form.minLength} onChange={(v) => setForm(s => ({ ...s, minLength: sanitizeInt(v) }))} disabled={viewing} width={110} />
+            <LabeledInput label="Max Length" value={form.maxLength} onChange={(v) => setForm(s => ({ ...s, maxLength: sanitizeInt(v) }))} disabled={viewing} width={110} />
+            <LabeledInput label="Min Strength" value={form.minStrength} onChange={(v) => setForm(s => ({ ...s, minStrength: sanitizeInt(v) }))} disabled={viewing} width={110} />
+            <LabeledInput label="Max Strength" value={form.maxStrength} onChange={(v) => setForm(s => ({ ...s, maxStrength: sanitizeInt(v) }))} disabled={viewing} width={110} />
+            <LabeledInput label="Min Weight" value={form.minWeight} onChange={(v) => setForm(s => ({ ...s, minWeight: sanitizeInt(v) }))} disabled={viewing} width={110} />
+            <LabeledInput label="Max Weight" value={form.maxWeight} onChange={(v) => setForm(s => ({ ...s, maxWeight: sanitizeInt(v) }))} disabled={viewing} width={110} />
+          </div>
+
+          {/* Wooden Haft */}
+          <div style={{ marginTop: 8 }}>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="checkbox"
+                checked={form.woodenHaft}
+                onChange={(e) => setForm(s => ({ ...s, woodenHaft: e.target.checked }))}
+                disabled={viewing}
+              />
+              <span>Wooden haft</span>
+            </label>
+          </div>
+
+          {/* Criticals */}
+          <section style={{ marginTop: 12 }}>
+            <h4 style={{ margin: '8px 0' }}>Criticals</h4>
+            {!viewing && <button type="button" onClick={addCritical} style={{ marginBottom: 8 }}>+ Add critical</button>}
+            <div style={{ display: 'grid', gridTemplateColumns: '240px 140px auto', gap: 8 }}>
+              <div style={{ fontWeight: 600 }}>Critical</div>
+              <div style={{ fontWeight: 600 }}>Modifier</div>
+              <div />
+              {form.criticals.map((c, i) => (
+                <React.Fragment key={`c-${i}`}>
+                  <LabeledSelect
+                    label="Critical"
+                    hideLabel
+                    value={c.critical}
+                    onChange={(v) => updateCritical(i, { critical: v as CriticalType })}
+                    options={criticalTypeOptions}
+                    disabled={viewing}
+                  />
+                  <LabeledInput
+                    label="Modifier"
+                    hideLabel
+                    ariaLabel="Modifier"
+                    value={c.modifier}
+                    onChange={(v) => updateCritical(i, { modifier: sanitizeInt(v) })}
+                    disabled={viewing}
+                    width={120}
+                  />
+                  {!viewing && (
+                    <button type="button" onClick={() => removeCritical(i)} style={{ color: '#b00020' }}>
+                      Remove
+                    </button>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+            {errors.criticals && <div style={{ color: '#b00020', marginTop: 6 }}>{errors.criticals}</div>}
+          </section>
+
+          {/* Ranges */}
+          <section style={{ marginTop: 12 }}>
+            <h4 style={{ margin: '8px 0' }}>Ranges</h4>
+            {!viewing && <button type="button" onClick={addRange} style={{ marginBottom: 8 }}>+ Add range</button>}
+            <div style={{ display: 'grid', gridTemplateColumns: '120px 120px 140px auto', gap: 8 }}>
+              <div style={{ fontWeight: 600 }}>Min</div>
+              <div style={{ fontWeight: 600 }}>Max</div>
+              <div style={{ fontWeight: 600 }}>Modifier</div>
+              <div />
+              {form.ranges.map((r, i) => (
+                <React.Fragment key={`r-${i}`}>
+                  <LabeledInput
+                    label="Min"
+                    hideLabel
+                    ariaLabel="Min"
+                    value={r.min}
+                    onChange={(v) => updateRange(i, { min: sanitizeInt(v) })}
+                    disabled={viewing}
+                    width={100}
+                  />
+                  <LabeledInput
+                    label="Max"
+                    hideLabel
+                    ariaLabel="Max"
+                    value={r.max}
+                    onChange={(v) => updateRange(i, { max: sanitizeInt(v) })}
+                    disabled={viewing}
+                    width={100}
+                  />
+                  <LabeledInput
+                    label="Modifier"
+                    hideLabel
+                    ariaLabel="Modifier"
+                    value={r.modifier}
+                    onChange={(v) => updateRange(i, { modifier: sanitizeInt(v) })}
+                    disabled={viewing}
+                    width={120}
+                  />
+                  {!viewing && (
+                    <button type="button" onClick={() => removeRange(i)} style={{ color: '#b00020' }}>
+                      Remove
+                    </button>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+            {errors.ranges && <div style={{ color: '#b00020', marginTop: 6 }}>{errors.ranges}</div>}
+          </section>
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
+            <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
+          </div>
+        </div>
+      )}
+
+      {!showForm && (
+        <DataTable<WeaponType>
+          ref={dtRef}
+          rows={rows}
+          columns={columns}
+          rowId={(r) => r.id}
+          initialSort={{ colId: 'name', dir: 'asc' }}
+          searchQuery={query}
+          globalFilter={globalFilter}
+          mode="client"
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[5, 10, 20, 50, 100]}
+          tableMinWidth={1200}
+          zebra
+          hover
+          resizable
+          persistKey="dt.weapontype.v1"
+          ariaLabel="Weapon types"
+        />
+      )}
+    </>
+  );
+}

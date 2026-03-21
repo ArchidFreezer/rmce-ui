@@ -69,3 +69,7 @@ export const ARMOUR_TYPES: ReadonlyArray<ArmourType> = ['AT 1', 'AT 2', 'AT 3', 
 /** Enum for SkillActionType */
 export type SkillActionType = 'Moving' | 'OB' | 'Special' | 'Static';
 export const SKILL_ACTION_TYPES: ReadonlyArray<SkillActionType> = ['Moving', 'OB', 'Special', 'Static'] as const;
+
+/** Enum for Critical Types */
+export type CriticalType = 'Brawling' | 'Grapple' | 'Impact' | 'Krush' | 'Martial Arts Strikes' | 'Martial Arts Sweeps' | 'Puncture' | 'Slash' | 'Subdual' | 'Tiny' | 'Unbalance' | 'Aether' | 'Cold' | 'Electrical' | 'Heat' | 'Nether';
+export const CRITICAL_TYPES: ReadonlyArray<CriticalType> = ['Brawling', 'Grapple', 'Impact', 'Krush', 'Martial Arts Strikes', 'Martial Arts Sweeps', 'Puncture', 'Slash', 'Subdual', 'Tiny', 'Unbalance', 'Aether', 'Cold', 'Electrical', 'Heat', 'Nether'] as const;
