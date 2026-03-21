@@ -7,7 +7,7 @@ import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { HtmlPreview } from '../../components/inputs/HtmlPreview';
 
-import { fetchWeapontypes, upsertWeapontype, deleteWeapontype } from '../../api/weapontype';
+import { fetchWeaponTypes, upsertWeaponType, deleteWeaponType } from '../../api/weapontype';
 import { fetchSkills } from '../../api/skill';                 // assume you have this
 import { fetchBooks } from '../../api/book';                   // assume you have this
 import { fetchAttacktables } from '../../api/attacktable';
@@ -193,7 +193,7 @@ export default function WeaponTypeView() {
     let mounted = true;
     (async () => {
       try {
-        const list = await fetchWeapontypes();
+        const list = await fetchWeaponTypes();
         if (!mounted) return;
         setRows(list);
       } catch (e) {
@@ -407,7 +407,7 @@ export default function WeaponTypeView() {
       const opts = isEditing
         ? { method: 'PUT' as const, useResourceIdPath: true }
         : { method: 'POST' as const, useResourceIdPath: false };
-      await upsertWeapontype(payload, opts);
+      await upsertWeaponType(payload, opts);
 
       setRows(prev => {
         if (isEditing) {
@@ -452,7 +452,7 @@ export default function WeaponTypeView() {
     const prev = rows;
     setRows(prev.filter(r => r.id !== row.id));
     try {
-      await deleteWeapontype(row.id);
+      await deleteWeaponType(row.id);
       if (editingId === row.id || viewing) cancelForm();
       toast({ variant: 'success', title: 'Deleted', description: `Weapon type "${row.id}" deleted.` });
     } catch (err) {

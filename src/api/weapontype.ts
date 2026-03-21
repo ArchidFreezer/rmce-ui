@@ -82,14 +82,14 @@ function fromJson(x: any): WeaponType {
 
 /**
  * Fetch all weapon types.
- * Expects: { weapontypes: WeaponType[] }
+ * Expects: { weaponTypes: WeaponType[] }
  */
-export async function fetchWeapontypes(): Promise<WeaponType[]> {
+export async function fetchWeaponTypes(): Promise<WeaponType[]> {
   const data = await fetchJson<WeaponTypesPayload>(BASE);
-  if (!data || !Array.isArray((data as any).weapontypes)) {
-    throw new Error('Unexpected response: expected { weapontypes: [...] }');
+  if (!data || !Array.isArray((data as any).weaponTypes)) {
+    throw new Error('Unexpected response: expected { weaponTypes: [...] }');
   }
-  return (data as WeaponTypesPayload).weapontypes.map(fromJson);
+  return (data as WeaponTypesPayload).weaponTypes.map(fromJson);
 }
 
 /**
@@ -97,7 +97,7 @@ export async function fetchWeapontypes(): Promise<WeaponType[]> {
  * - POST to /rmce/objects/weapontype/   (useResourceIdPath=false)
  * - PUT  to /rmce/objects/weapontype/{id} (useResourceIdPath=true)
  */
-export async function upsertWeapontype(
+export async function upsertWeaponType(
   w: WeaponType,
   opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {},
 ) {
@@ -113,8 +113,8 @@ export async function upsertWeapontype(
 /**
  * Delete a weapon type by id.
  */
-export async function deleteWeapontype(id: string) {
-  if (!id) throw new Error('deleteWeapontype: id is required');
+export async function deleteWeaponType(id: string) {
+  if (!id) throw new Error('deleteWeaponType: id is required');
   await fetchJson<void>(`${BASE}/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
