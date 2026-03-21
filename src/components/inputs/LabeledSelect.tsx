@@ -8,6 +8,7 @@ export interface LabeledSelectOption {
 
 export interface LabeledSelectProps {
   label: string;
+  hideLabel?: boolean | undefined;
   value: string;
   onChange: (val: string) => void;
 
@@ -20,12 +21,13 @@ export interface LabeledSelectProps {
   selectProps?: Omit<SelectHTMLAttributes<HTMLSelectElement>, 'value' | 'onChange' | 'disabled' | 'id' | 'required'>;
   error?: string | undefined;       // Fix A
   placeholderOption?: string;
-  helperText?: string;
+  helperText?: string | undefined;
 }
 
 export function LabeledSelect({
   label,
   value,
+  hideLabel = false,
   onChange,
   options,
   disabled = false,
@@ -46,13 +48,13 @@ export function LabeledSelect({
   const norm =
     (options as readonly string[]).map
       ? (options as readonly any[]).map((opt) =>
-          typeof opt === 'string' ? { label: opt, value: opt } : opt
-        )
+        typeof opt === 'string' ? { label: opt, value: opt } : opt
+      )
       : [];
 
   return (
     <label htmlFor={selectId} style={{ display: 'grid', gap: 6, fontSize: 14 }}>
-      <span>{label}{required ? ' *' : ''}</span>
+      {!hideLabel && <span>{label}{required ? ' *' : ''}</span>}
       <select
         id={selectId}
         value={value}
