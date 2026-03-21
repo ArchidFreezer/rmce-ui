@@ -281,23 +281,23 @@ export default function CultureTypeView() {
 
   // Option lists
   const armourOptions = useMemo(
-    () => armours.map(a => ({ value: a.id, label: `${a.id} — ${a.name}` })),
+    () => armours.map(a => ({ value: a.id, label: a.name })),
     [armours]
   );
   const weaponOptions = useMemo(
-    () => weapons.map(w => ({ value: w.id, label: `${w.id} — ${w.name}` })),
+    () => weapons.map(w => ({ value: w.id, label: w.name })),
     [weapons]
   );
   const skillOptions = useMemo(
-    () => skills.map(s => ({ value: s.id, label: `${s.id} — ${s.name}` })),
+    () => skills.map(s => ({ value: s.id, label: s.name })),
     [skills]
   );
   const categoryOptions = useMemo(
-    () => categories.map(c => ({ value: c.id, label: `${c.id} — ${c.name}` })),
+    () => categories.map(c => ({ value: c.id, label: c.name })),
     [categories]
   );
   const climateOptions = useMemo(
-    () => climates.map(c => ({ value: c.id, label: `${c.id} — ${c.name}` })),
+    () => climates.map(c => ({ value: c.id, label: c.name })),
     [climates]
   );
   const featureOptions = useMemo(
