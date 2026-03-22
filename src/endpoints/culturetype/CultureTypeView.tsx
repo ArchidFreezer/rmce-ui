@@ -281,7 +281,7 @@ export default function CultureTypeView() {
 
   // Option lists
   const armourOptions = useMemo(
-    () => armours.map(a => ({ value: a.id, label: a.name })),
+    () => armours.map(a => ({ value: a.id, label: `${a.name} - (${a.type})` })),
     [armours]
   );
   const weaponOptions = useMemo(
