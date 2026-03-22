@@ -12,6 +12,7 @@ import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { CheckboxInput } from '../../components/inputs/CheckboxInput';
 import { IdValueListEditor } from '../../components/inputs/IdValueListEditor';
+import { IdTypeListEditor } from '../../components/inputs/IdTypeListEditor';
 
 import { fetchProfessions, upsertProfession, deleteProfession } from '../../api/profession';
 import { fetchBooks } from '../../api/book';
@@ -1261,75 +1262,31 @@ export default function ProfessionView() {
           </section>
 
           {/* Category / Group Skill Development Types */}
-          {[
-            {
-              title: 'Skill Category Skill Development Types',
-              key: 'skillCategorySkillDevelopmentTypes' as const,
-              options: categoryOptions,
-              loading: categoriesLoading,
-              error: errors.skillCategorySkillDevelopmentTypes,
-            },
-            {
-              title: 'Skill Group Skill Development Types',
-              key: 'skillGroupSkillDevelopmentTypes' as const,
-              options: groupOptions,
-              loading: groupsLoading,
-              error: errors.skillGroupSkillDevelopmentTypes,
-            },
-          ].map(({ title, key, options, loading, error }) => (
-            <section key={key} style={{ marginTop: 12 }}>
-              <h4 style={{ margin: '8px 0' }}>{title}</h4>
-              {!viewing && (
-                <button
-                  type="button"
-                  onClick={() => setForm((s) => ({ ...s, [key]: [...s[key], { id: '', value: '' }] }))}
-                  style={{ marginBottom: 8 }}
-                >
-                  + Add row
-                </button>
-              )}
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) 220px auto', gap: 8 }}>
-                <div style={{ fontWeight: 600 }}>ID</div>
-                <div style={{ fontWeight: 600 }}>Type</div>
-                <div />
-                {form[key].map((r, i) => (
-                  <React.Fragment key={`${key}-${i}`}>
-                    <LabeledSelect
-                      label="ID"
-                      hideLabel
-                      value={r.id}
-                      onChange={(v) => updateIdDevTypeAt(key, i, { id: v })}
-                      options={options}
-                      disabled={loading || viewing}
-                    />
-                    <LabeledSelect
-                      label="Type"
-                      hideLabel
-                      value={r.value}
-                      onChange={(v) => updateIdDevTypeAt(key, i, { value: v as SkillDevelopmentType })}
-                      options={developmentTypeOptions}
-                      disabled={viewing}
-                    />
-                    {!viewing && (
-                      <button
-                        type="button"
-                        onClick={() => setForm((s) => {
-                          const copy = s[key].slice();
-                          if (i < 0 || i >= copy.length) return s;
-                          copy.splice(i, 1);
-                          return { ...s, [key]: copy };
-                        })}
-                        style={{ color: '#b00020' }}
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </React.Fragment>
-                ))}
-              </div>
-              {error && <div style={{ color: '#b00020', marginTop: 6 }}>{error}</div>}
-            </section>
-          ))}
+          <IdTypeListEditor<SkillDevelopmentType>
+            title="Skill Category Skill Development Types"
+            rows={form.skillCategorySkillDevelopmentTypes}
+            onChangeRows={(next) =>
+              setForm((s) => ({ ...s, skillCategorySkillDevelopmentTypes: next }))
+            }
+            idOptions={categoryOptions}
+            typeOptions={developmentTypeOptions}
+            loading={categoriesLoading}
+            viewing={viewing}
+            error={errors.skillCategorySkillDevelopmentTypes}
+          />
+
+          <IdTypeListEditor<SkillDevelopmentType>
+            title="Skill Group Skill Development Types"
+            rows={form.skillGroupSkillDevelopmentTypes}
+            onChangeRows={(next) =>
+              setForm((s) => ({ ...s, skillGroupSkillDevelopmentTypes: next }))
+            }
+            idOptions={groupOptions}
+            typeOptions={developmentTypeOptions}
+            loading={groupsLoading}
+            viewing={viewing}
+            error={errors.skillGroupSkillDevelopmentTypes}
+          />
 
           {/* Skill Subcategory Development Type Choices */}
           <section style={{ marginTop: 12 }}>
