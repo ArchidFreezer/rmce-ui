@@ -680,18 +680,28 @@ export default function ProfessionView() {
     { id: 'name', header: 'Name', accessor: r => r.name, sortType: 'string', minWidth: 180 },
     { id: 'spellUserType', header: 'Spell User Type', accessor: r => r.spellUserType, sortType: 'string', minWidth: 140 },
     {
-      id: 'realms',
-      header: 'Realms',
-      accessor: r => r.realms.join(','),
-      sortType: 'string',
-      minWidth: 180,
+      id: 'realms', header: 'Realms', accessor: r => r.realms.join(','), sortType: 'string', minWidth: 180,
+      render: r => (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {r.realms.map((s, i) => (
+            <span key={`${s}-${i}`} style={{ display: 'inline-block', padding: '2px 8px', border: '1px solid var(--border)', borderRadius: 999, fontSize: 12 }}>
+              {s}
+            </span>
+          ))}
+        </div>
+      )
     },
     {
-      id: 'stats',
-      header: 'Stats',
-      accessor: r => r.stats.join(','),
-      sortType: 'string',
-      minWidth: 180,
+      id: 'stats', header: 'Stats', accessor: r => r.stats.join(','), sortType: 'string', minWidth: 220,
+      render: r => (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {r.stats.map((s, i) => (
+            <span key={`${s}-${i}`} style={{ display: 'inline-block', padding: '2px 8px', border: '1px solid var(--border)', borderRadius: 999, fontSize: 12 }}>
+              {s}
+            </span>
+          ))}
+        </div>
+      )
     },
     { id: 'book', header: 'Book', accessor: r => r.book, sortType: 'string', minWidth: 220 },
     {
