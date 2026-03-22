@@ -11,6 +11,7 @@ import { HtmlPreview } from '../../components/inputs/HtmlPreview';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { CheckboxInput } from '../../components/inputs/CheckboxInput';
+import { IdValueListEditor } from '../../components/inputs/IdValueListEditor';
 
 import { fetchProfessions, upsertProfession, deleteProfession } from '../../api/profession';
 import { fetchBooks } from '../../api/book';
@@ -747,28 +748,6 @@ export default function ProfessionView() {
     });
   };
 
-  const updateIdValueAt = (
-    key:
-      | 'skillCategoryProfessionBonuses'
-      | 'skillCategorySpecialBonuses'
-      | 'skillGroupProfessionBonuses'
-      | 'skillGroupSpecialBonuses',
-    index: number,
-    patch: Partial<IdValueVM>
-  ) => {
-    setForm((s) => {
-      const copy = s[key].slice();
-      if (index < 0 || index >= copy.length) return s;
-      const current = copy[index];
-      if (!current) return s;
-      copy[index] = {
-        id: patch.id ?? current.id,
-        value: patch.value ?? current.value,
-      };
-      return { ...s, [key]: copy };
-    });
-  };
-
   const updateSkillDevTypeAt = (index: number, patch: Partial<SkillDevTypeVM>) => {
     setForm((s) => {
       const copy = s.skillDevelopmentTypes.slice();
@@ -1171,90 +1150,49 @@ export default function ProfessionView() {
           </section>
 
           {/* Category/Group bonus sections */}
-          {[
-            {
-              title: 'Skill Category Profession Bonuses',
-              key: 'skillCategoryProfessionBonuses' as const,
-              options: categoryOptions,
-              loading: categoriesLoading,
-              error: errors.skillCategoryProfessionBonuses,
-            },
-            {
-              title: 'Skill Category Special Bonuses',
-              key: 'skillCategorySpecialBonuses' as const,
-              options: categoryOptions,
-              loading: categoriesLoading,
-              error: errors.skillCategorySpecialBonuses,
-            },
-            {
-              title: 'Skill Group Profession Bonuses',
-              key: 'skillGroupProfessionBonuses' as const,
-              options: groupOptions,
-              loading: groupsLoading,
-              error: errors.skillGroupProfessionBonuses,
-            },
-            {
-              title: 'Skill Group Special Bonuses',
-              key: 'skillGroupSpecialBonuses' as const,
-              options: groupOptions,
-              loading: groupsLoading,
-              error: errors.skillGroupSpecialBonuses,
-            },
-          ].map(({ title, key, options, loading, error }) => (
-            <section key={key} style={{ marginTop: 12 }}>
-              <h4 style={{ margin: '8px 0' }}>{title}</h4>
-              {!viewing && (
-                <button
-                  type="button"
-                  onClick={() => setForm((s) => ({ ...s, [key]: [...s[key], { id: '', value: '' }] }))}
-                  style={{ marginBottom: 8 }}
-                >
-                  + Add row
-                </button>
-              )}
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) 120px auto', gap: 8 }}>
-                <div style={{ fontWeight: 600 }}>ID</div>
-                <div style={{ fontWeight: 600 }}>Value</div>
-                <div />
-                {form[key].map((r, i) => (
-                  <React.Fragment key={`${key}-${i}`}>
-                    <LabeledSelect
-                      label="ID"
-                      hideLabel
-                      value={r.id}
-                      onChange={(v) => updateIdValueAt(key, i, { id: v })}
-                      options={options}
-                      disabled={loading || viewing}
-                    />
-                    <LabeledInput
-                      label="Value"
-                      hideLabel
-                      ariaLabel="Value"
-                      value={r.value}
-                      onChange={(v) => updateIdValueAt(key, i, { value: sanitizeSignedInt(v) })}
-                      disabled={viewing}
-                      width={100}
-                    />
-                    {!viewing && (
-                      <button
-                        type="button"
-                        onClick={() => setForm((s) => {
-                          const copy = s[key].slice();
-                          if (i < 0 || i >= copy.length) return s;
-                          copy.splice(i, 1);
-                          return { ...s, [key]: copy };
-                        })}
-                        style={{ color: '#b00020' }}
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </React.Fragment>
-                ))}
-              </div>
-              {error && <div style={{ color: '#b00020', marginTop: 6 }}>{error}</div>}
-            </section>
-          ))}
+          <IdValueListEditor
+            title="Skill Category Profession Bonuses"
+            rows={form.skillCategoryProfessionBonuses}
+            onChangeRows={(next) => setForm((s) => ({ ...s, skillCategoryProfessionBonuses: next }))}
+            options={categoryOptions}
+            loading={categoriesLoading}
+            viewing={viewing}
+            error={errors.skillCategoryProfessionBonuses}
+            signedValues
+          />
+
+          <IdValueListEditor
+            title="Skill Category Special Bonuses"
+            rows={form.skillCategorySpecialBonuses}
+            onChangeRows={(next) => setForm((s) => ({ ...s, skillCategorySpecialBonuses: next }))}
+            options={categoryOptions}
+            loading={categoriesLoading}
+            viewing={viewing}
+            error={errors.skillCategorySpecialBonuses}
+            signedValues
+          />
+
+          <IdValueListEditor
+            title="Skill Group Profession Bonuses"
+            rows={form.skillGroupProfessionBonuses}
+            onChangeRows={(next) => setForm((s) => ({ ...s, skillGroupProfessionBonuses: next }))}
+            options={groupOptions}
+            loading={groupsLoading}
+            viewing={viewing}
+            error={errors.skillGroupProfessionBonuses}
+            signedValues
+          />
+
+          <IdValueListEditor
+            title="Skill Group Special Bonuses"
+            rows={form.skillGroupSpecialBonuses}
+            onChangeRows={(next) => setForm((s) => ({ ...s, skillGroupSpecialBonuses: next }))}
+            options={groupOptions}
+            loading={groupsLoading}
+            viewing={viewing}
+            error={errors.skillGroupSpecialBonuses}
+            signedValues
+          />
 
           {/* Skill Development Types */}
           <section style={{ marginTop: 12 }}>
