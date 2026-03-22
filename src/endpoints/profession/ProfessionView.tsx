@@ -16,6 +16,7 @@ import { IdTypeListEditor } from '../../components/inputs/IdTypeListEditor';
 import { IdSubcategoryValueListEditor } from '../../components/inputs/IdSubcategoryValueListEditor';
 import { IdSubcategoryTypeListEditor } from '../../components/inputs/IdSubcategoryTypeListEditor';
 import { ChoiceListEditor } from '../../components/inputs/ChoiceListEditor';
+import { IdCostListEditor } from '../../components/inputs/IdCostListEditor';
 
 import { fetchProfessions, upsertProfession, deleteProfession } from '../../api/profession';
 import { fetchBooks } from '../../api/book';
@@ -739,20 +740,6 @@ export default function ProfessionView() {
     });
   };
 
-  const updateCategoryCostAt = (index: number, patch: Partial<CategoryCostVM>) => {
-    setForm((s) => {
-      const copy = s.skillCategoryCosts.slice();
-      if (index < 0 || index >= copy.length) return s;
-      const current = copy[index];
-      if (!current) return s;
-      copy[index] = {
-        category: patch.category ?? current.category,
-        cost: patch.cost ?? current.cost,
-      };
-      return { ...s, skillCategoryCosts: copy };
-    });
-  };
-
   const toggleStringInArray = (
     key: 'realms' | 'stats',
     value: string
@@ -1152,64 +1139,18 @@ export default function ProfessionView() {
           />
 
           {/* Skill Category Costs */}
-          <section style={{ marginTop: 12 }}>
-            <h4 style={{ margin: '8px 0' }}>Skill Category Costs</h4>
-            {!viewing && (
-              <button
-                type="button"
-                onClick={() => setForm((s) => ({
-                  ...s,
-                  skillCategoryCosts: [...s.skillCategoryCosts, { category: '', cost: '' }],
-                }))}
-                style={{ marginBottom: 8 }}
-              >
-                + Add category cost
-              </button>
-            )}
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) 160px auto', gap: 8 }}>
-              <div style={{ fontWeight: 600 }}>Category</div>
-              <div style={{ fontWeight: 600 }}>Cost</div>
-              <div />
-              {form.skillCategoryCosts.map((r, i) => (
-                <React.Fragment key={`scc-${i}`}>
-                  <LabeledSelect
-                    label="Category"
-                    hideLabel
-                    value={r.category}
-                    onChange={(v) => updateCategoryCostAt(i, { category: v })}
-                    options={categoryOptions}
-                    disabled={categoriesLoading || viewing}
-                  />
-                  <LabeledInput
-                    label="Cost"
-                    hideLabel
-                    ariaLabel="Cost"
-                    value={r.cost}
-                    onChange={(v) => updateCategoryCostAt(i, { cost: v.replace(/[^0-9:]/g, '') })}
-                    disabled={viewing}
-                    width={140}
-                    helperText="e.g. 11 or 3:3:3"
-                  />
-                  {!viewing && (
-                    <button
-                      type="button"
-                      onClick={() => setForm((s) => {
-                        const copy = s.skillCategoryCosts.slice();
-                        if (i < 0 || i >= copy.length) return s;
-                        copy.splice(i, 1);
-                        return { ...s, skillCategoryCosts: copy };
-                      })}
-                      style={{ color: '#b00020' }}
-                    >
-                      Remove
-                    </button>
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
-            {errors.skillCategoryCosts && <div style={{ color: '#b00020', marginTop: 6 }}>{errors.skillCategoryCosts}</div>}
-          </section>
+          <IdCostListEditor
+            title="Skill Category Costs"
+            rows={form.skillCategoryCosts}
+            onChangeRows={(next) =>
+              setForm((s) => ({ ...s, skillCategoryCosts: next }))
+            }
+            categoryOptions={categoryOptions}
+            loading={categoriesLoading}
+            viewing={viewing}
+            error={errors.skillCategoryCosts}
+            costWidth={140}
+          />
 
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
