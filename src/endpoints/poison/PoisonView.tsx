@@ -317,7 +317,7 @@ export default function PoisonView() {
               options={poisonTypeOptions}
               disabled={typesLoading || viewing}
               error={viewing ? undefined : errors.type}
-              helperText={typesLoading ? 'Loading Poison Types…' : 'Select a PoisonType id'}
+              helperText={typesLoading ? 'Loading Poison Types…' : undefined}
             />
 
             <LabeledInput label="Level" type="number" value={String(form.level).trim()} disabled={viewing}

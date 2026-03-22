@@ -644,15 +644,14 @@ export default function SkillView() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <h4 style={{ margin: '8px 0' }}>Description (HTML allowed)</h4>
-                <button
-                  type="button"
-                  onClick={() => setShowPreview(s => ({ ...s, description: !s.description }))}
-                >
-                  {showPreview.description ? 'Edit' : 'Preview'}
-                </button>
+                {!viewing && (
+                  <button type="button" onClick={() => setShowPreview(s => ({ ...s, description: !s.description }))}>
+                    {showPreview.description ? 'Edit' : 'Preview'}
+                  </button>
+                )}
               </div>
 
-              {showPreview.description ? (
+              {(showPreview.description || viewing) ? (
                 <HtmlPreview
                   title={undefined}
                   html={form.description}
@@ -676,15 +675,17 @@ export default function SkillView() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <h4 style={{ margin: '8px 0' }}>Difficulties Summary (HTML allowed)</h4>
-                <button
-                  type="button"
-                  onClick={() => setShowPreview(s => ({ ...s, difficulties: !s.difficulties }))}
-                >
-                  {showPreview.difficulties ? 'Edit' : 'Preview'}
-                </button>
+                {!viewing && (
+                  <button
+                    type="button"
+                    onClick={() => setShowPreview(s => ({ ...s, difficulties: !s.difficulties }))}
+                  >
+                    {showPreview.difficulties ? 'Edit' : 'Preview'}
+                  </button>
+                )}
               </div>
 
-              {showPreview.difficulties ? (
+              {(showPreview.difficulties || viewing) ? (
                 <HtmlPreview
                   title={undefined}
                   html={form.difficultiesSummary}
@@ -708,15 +709,17 @@ export default function SkillView() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <h4 style={{ margin: '8px 0' }}>Notes (HTML allowed)</h4>
-                <button
-                  type="button"
-                  onClick={() => setShowPreview(s => ({ ...s, notes: !s.notes }))}
-                >
-                  {showPreview.notes ? 'Edit' : 'Preview'}
-                </button>
+                {!viewing && (
+                  <button
+                    type="button"
+                    onClick={() => setShowPreview(s => ({ ...s, notes: !s.notes }))}
+                  >
+                    {showPreview.notes ? 'Edit' : 'Preview'}
+                  </button>
+                )}
               </div>
 
-              {showPreview.notes ? (
+              {(showPreview.notes || viewing) ? (
                 <HtmlPreview
                   title={undefined}
                   html={form.notes}

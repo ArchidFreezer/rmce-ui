@@ -34,6 +34,8 @@ import {
 } from '../../types/enum';
 
 import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
+import { IdSubcategoryValueListEditor } from '../../components/inputs/IdSubcategoryValueListEditor';
+import { IdValueListEditor } from '../../components/inputs/IdValueListEditor';
 
 const prefix = 'CULTURETYPE_';
 
@@ -518,16 +520,17 @@ export default function CultureTypeView() {
     });
 
   // Long text preview toggles
-
   const renderHtmlField = (label: string, key: keyof FormState, rowsCount = 6) => {
-    const p = !!preview[key as string];
+    const p = viewing ? true : !!preview[key as string];
     return (
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <h4 style={{ margin: '8px 0' }}>{label}</h4>
-          <button type="button" onClick={() => setPreview(s => ({ ...s, [key as string]: !p }))}>
-            {p ? 'Edit' : 'Preview'}
-          </button>
+          {!viewing && (
+            <button type="button" onClick={() => setPreview(s => ({ ...s, [key as string]: !p }))}>
+              {p ? 'Edit' : 'Preview'}
+            </button>
+          )}
         </div>
         {p ? (
           <HtmlPreview
@@ -548,49 +551,6 @@ export default function CultureTypeView() {
         )}
       </div>
     );
-  };
-
-  const updateSkillRankAt = (
-    index: number,
-    patch: Partial<SkillRankVM>
-  ) => {
-    setForm((s) => {
-      const copy = s.skillRanks.slice();
-
-      if (index < 0 || index >= copy.length) return s;
-      const current = copy[index];
-      if (!current) return s;
-
-      copy[index] = {
-        id: patch.id ?? current.id,
-        subcategory:
-          patch.subcategory !== undefined ? patch.subcategory : current.subcategory,
-        value: patch.value ?? current.value,
-      };
-
-      return { ...s, skillRanks: copy };
-    });
-  };
-
-  const updateCategoryRankAt = (
-    key: 'skillCategoryRanks' | 'skillCategorySkillRanks',
-    index: number,
-    patch: Partial<CategoryRankVM>
-  ) => {
-    setForm((s) => {
-      const copy = s[key].slice();
-
-      if (index < 0 || index >= copy.length) return s;
-      const current = copy[index];
-      if (!current) return s;
-
-      copy[index] = {
-        id: patch.id ?? current.id,
-        value: patch.value ?? current.value,
-      };
-
-      return { ...s, [key]: copy };
-    });
   };
 
   return (
@@ -673,7 +633,7 @@ export default function CultureTypeView() {
                 + Add armour
               </button>
             )}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'auto auto auto auto', gap: 8 }}>
               {form.preferredArmours.map((id, i) => (
                 <React.Fragment key={`pa-${i}`}>
                   <LabeledSelect
@@ -699,7 +659,7 @@ export default function CultureTypeView() {
                 + Add weapon
               </button>
             )}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'auto auto auto auto', gap: 8 }}>
               {form.preferredWeapons.map((id, i) => (
                 <React.Fragment key={`pw-${i}`}>
                   <LabeledSelect
@@ -721,152 +681,40 @@ export default function CultureTypeView() {
           </section>
 
           {/* Skill Ranks */}
-          <section style={{ marginTop: 12 }}>
-            <h4 style={{ margin: '8px 0' }}>Skill Ranks</h4>
-            {!viewing && (
-              <button type="button" onClick={() =>
-                setForm(s => ({ ...s, skillRanks: [...s.skillRanks, { id: '', subcategory: '', value: '' }] }))
-              } style={{ marginBottom: 8 }}>
-                + Add skill rank
-              </button>
-            )}
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) 1fr 120px auto', gap: 8 }}>
-              <div style={{ fontWeight: 600 }}>Skill</div>
-              <div style={{ fontWeight: 600 }}>Subcategory (optional)</div>
-              <div style={{ fontWeight: 600 }}>Value</div>
-              <div />
-              {form.skillRanks.map((r, i) => (
-                <React.Fragment key={`sr-${i}`}>
-                  <LabeledSelect
-                    label="Skill"
-                    hideLabel
-                    value={r.id}
-                    onChange={(v) => updateSkillRankAt(i, { id: v })}
-                    options={skillOptions}
-                    disabled={skillLoading || viewing}
-                  />
-                  <LabeledInput
-                    label="Subcategory"
-                    hideLabel
-                    value={r.subcategory ?? ''}
-                    onChange={(v) => updateSkillRankAt(i, { subcategory: v || undefined })}
-                    disabled={viewing}
-                  />
-                  <LabeledInput
-                    label="Value"
-                    hideLabel
-                    value={r.value}
-                    onChange={(v) => updateSkillRankAt(i, { value: sanitizeInt(v) })}
-                    disabled={viewing}
-                    width={100}
-                  />
-                  {!viewing && (
-                    <button type="button" onClick={() => setForm(s => {
-                      const copy = s.skillRanks.slice(); copy.splice(i, 1);
-                      return { ...s, skillRanks: copy };
-                    })} style={{ color: '#b00020' }}>
-                      Remove
-                    </button>
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
-            {errors.skillRanks && <div style={{ color: '#b00020', marginTop: 6 }}>{errors.skillRanks}</div>}
-          </section>
+          <IdSubcategoryValueListEditor
+            title="Skill Ranks"
+            rows={form.skillRanks}
+            onChangeRows={(next) => setForm((s) => ({ ...s, skillRanks: next }))}
+            idOptions={skillOptions}
+            loading={skillLoading}
+            viewing={viewing}
+            error={errors.skillRanks}
+            signedValues
+          />
 
           {/* Category Ranks */}
-          <section style={{ marginTop: 12 }}>
-            <h4 style={{ margin: '8px 0' }}>Skill Category Ranks</h4>
-            {!viewing && (
-              <button type="button" onClick={() =>
-                setForm(s => ({ ...s, skillCategoryRanks: [...s.skillCategoryRanks, { id: '', value: '' }] }))
-              } style={{ marginBottom: 8 }}>
-                + Add category rank
-              </button>
-            )}
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) 120px auto', gap: 8 }}>
-              <div style={{ fontWeight: 600 }}>Category</div>
-              <div style={{ fontWeight: 600 }}>Value</div>
-              <div />
-              {form.skillCategoryRanks.map((r, i) => (
-                <React.Fragment key={`scr-${i}`}>
-                  <LabeledSelect
-                    label="Category"
-                    hideLabel
-                    value={r.id}
-                    onChange={(v) => updateCategoryRankAt('skillCategoryRanks', i, { id: v })}
-                    options={categoryOptions}
-                    disabled={categoryLoading || viewing}
-                  />
-                  <LabeledInput
-                    label="Value"
-                    hideLabel
-                    ariaLabel="Value"
-                    value={r.value}
-                    onChange={(v) => updateCategoryRankAt('skillCategoryRanks', i, { value: sanitizeInt(v) })}
-                    disabled={viewing}
-                    width={100}
-                  />
-                  {!viewing && (
-                    <button type="button" onClick={() => setForm(s => {
-                      const copy = s.skillCategoryRanks.slice(); copy.splice(i, 1);
-                      return { ...s, skillCategoryRanks: copy };
-                    })} style={{ color: '#b00020' }}>
-                      Remove
-                    </button>
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
-            {errors.skillCategoryRanks && <div style={{ color: '#b00020', marginTop: 6 }}>{errors.skillCategoryRanks}</div>}
-          </section>
+          <IdValueListEditor
+            title="Skill Category Ranks"
+            rows={form.skillCategoryRanks}
+            onChangeRows={(next) => setForm((s) => ({ ...s, skillCategoryRanks: next }))}
+            options={categoryOptions}
+            loading={categoryLoading}
+            viewing={viewing}
+            error={errors.skillCategoryRanks}
+            signedValues
+          />
 
           {/* Category Skill Ranks */}
-          <section style={{ marginTop: 12 }}>
-            <h4 style={{ margin: '8px 0' }}>Skill Category Skill Ranks</h4>
-            {!viewing && (
-              <button type="button" onClick={() =>
-                setForm(s => ({ ...s, skillCategorySkillRanks: [...s.skillCategorySkillRanks, { id: '', value: '' }] }))
-              } style={{ marginBottom: 8 }}>
-                + Add category-skill rank
-              </button>
-            )}
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) 120px auto', gap: 8 }}>
-              <div style={{ fontWeight: 600 }}>Category</div>
-              <div style={{ fontWeight: 600 }}>Value</div>
-              <div />
-              {form.skillCategorySkillRanks.map((r, i) => (
-                <React.Fragment key={`scsr-${i}`}>
-                  <LabeledSelect
-                    label="Category"
-                    hideLabel
-                    value={r.id}
-                    onChange={(v) => updateCategoryRankAt('skillCategorySkillRanks', i, { id: v })}
-                    options={categoryOptions}
-                    disabled={categoryLoading || viewing}
-                  />
-                  <LabeledInput
-                    label="Value"
-                    hideLabel
-                    ariaLabel="Value"
-                    value={r.value}
-                    onChange={(v) => updateCategoryRankAt('skillCategorySkillRanks', i, { value: sanitizeInt(v) })}
-                    disabled={viewing}
-                    width={100}
-                  />
-                  {!viewing && (
-                    <button type="button" onClick={() => setForm(s => {
-                      const copy = s.skillCategorySkillRanks.slice(); copy.splice(i, 1);
-                      return { ...s, skillCategorySkillRanks: copy };
-                    })} style={{ color: '#b00020' }}>
-                      Remove
-                    </button>
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
-            {errors.skillCategorySkillRanks && <div style={{ color: '#b00020', marginTop: 6 }}>{errors.skillCategorySkillRanks}</div>}
-          </section>
+          <IdValueListEditor
+            title="Skill Category Skill Ranks"
+            rows={form.skillCategorySkillRanks}
+            onChangeRows={(next) => setForm((s) => ({ ...s, skillCategorySkillRanks: next }))}
+            options={categoryOptions}
+            loading={categoryLoading}
+            viewing={viewing}
+            error={errors.skillCategorySkillRanks}
+            signedValues
+          />
 
           {/* Requirements */}
           <section style={{ marginTop: 12 }}>

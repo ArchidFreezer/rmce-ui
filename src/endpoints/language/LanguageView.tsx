@@ -374,7 +374,7 @@ export default function LanguagesView() {
               options={categoryOptions}
               disabled={catLoading || viewing}
               error={viewing ? undefined : errors.category}
-              helperText={catLoading ? 'Loading categories…' : 'Select a LanguageCategory id'}
+              helperText={catLoading ? 'Loading categories…' : undefined}
             />
 
             <LabeledInput

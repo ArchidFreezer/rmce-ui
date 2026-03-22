@@ -443,7 +443,7 @@ export default function SkillCategoryView() {
               options={groupOptions}
               disabled={grpLoading || viewing}
               error={viewing ? undefined : errors.group}
-              helperText={grpLoading ? 'Loading groups…' : 'Select a SkillGroup id'}
+              helperText={grpLoading ? 'Loading groups…' : undefined}
             />
 
             <CheckboxInput
@@ -460,7 +460,7 @@ export default function SkillCategoryView() {
               options={sptOptions}
               disabled={sptLoading || viewing}
               error={viewing ? undefined : errors.skillProgression}
-              helperText={sptLoading ? 'Loading progression types…' : 'Select a SkillProgressionType id'}
+              helperText={sptLoading ? 'Loading progression types…' : undefined}
             />
 
             <LabeledSelect
@@ -470,7 +470,7 @@ export default function SkillCategoryView() {
               options={sptOptions}
               disabled={sptLoading || viewing}
               error={viewing ? undefined : errors.categoryProgression}
-              helperText={sptLoading ? 'Loading progression types…' : 'Select a SkillProgressionType id'}
+              helperText={sptLoading ? 'Loading progression types…' : undefined}
             />
 
             {/* Stats (3 slots, allow duplicates & order) */}

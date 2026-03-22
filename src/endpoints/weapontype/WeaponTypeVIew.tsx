@@ -16,7 +16,7 @@ import type { Book } from '../../types/book';
 import { AttackTable } from '../../types/attacktable';
 import type { WeaponType } from '../../types/weapontype';
 import { CRITICAL_TYPES, type CriticalType } from '../../types/enum';          // array of strings for select
-import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
+import { isValidID, makeIDOnChange, isValidSignedInt, sanitizeSignedInt, isValidUnsignedInt, makeUnsignedIntOnChange, sanitizeUnsignedInt } from '../../utils/inputHelpers';
 
 const prefix = 'WEAPONTYPE_';
 
@@ -133,10 +133,6 @@ const fromVM = (vm: FormState): WeaponType => ({
   criticals: vm.criticals.map(c => ({ critical: c.critical as CriticalType, modifier: Number(c.modifier) })),
   ranges: vm.ranges.map(r => ({ min: Number(r.min), max: Number(r.max), modifier: Number(r.modifier) })),
 });
-
-// helpers
-const INT_RE = /^\d+$/;
-const sanitizeInt = (s: string) => s.replace(/[^\d]/g, '');
 
 export default function WeaponTypeView() {
   const dtRef = useRef<DataTableHandle>(null);
@@ -299,7 +295,7 @@ export default function WeaponTypeView() {
     const checkInt = (key: keyof FormState, label: string) => {
       const v = (draft[key] as string).trim();
       if (!v) e[key as keyof typeof e] = `${label} is required`;
-      else if (!INT_RE.test(v)) e[key as keyof typeof e] = `${label} must be a non-negative integer`;
+      else if (!isValidUnsignedInt(v)) e[key as keyof typeof e] = `${label} must be a non-negative integer`;
     };
 
     checkInt('fumble', 'Fumble');
@@ -315,7 +311,7 @@ export default function WeaponTypeView() {
     for (let i = 0; i < draft.ranges.length; i++) {
       const r = draft.ranges[i];
       if (!r) continue; // should not happen
-      if (!INT_RE.test(r.min) || !INT_RE.test(r.max) || !INT_RE.test(r.modifier)) {
+      if (!isValidSignedInt(r.min) || !isValidSignedInt(r.max) || !isValidSignedInt(r.modifier)) {
         e.ranges = `Range[${i + 1}]: min/max/modifier must be integers`;
         break;
       }
@@ -333,7 +329,7 @@ export default function WeaponTypeView() {
       if (!(CRITICAL_TYPES as readonly string[]).includes(c.critical)) {
         e.criticals = `Critical[${i + 1}]: invalid CriticalType`; break;
       }
-      if (!INT_RE.test(c.modifier)) { e.criticals = `Critical[${i + 1}]: modifier must be integer`; break; }
+      if (!isValidSignedInt(c.modifier)) { e.criticals = `Critical[${i + 1}]: modifier must be integer`; break; }
     }
 
     // simple logical checks
@@ -629,10 +625,14 @@ export default function WeaponTypeView() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <label style={{ display: 'grid', gap: 6 }}>Notes (HTML allowed)</label>
-                <button type="button" onClick={() => setShowPreview(s => ({ ...s, notes: !s.notes }))}>{showPreview.notes ? (viewing ? 'Raw' : 'Edit') : 'Preview'}</button>
+                {!viewing && (
+                  <button type="button" onClick={() => setShowPreview(s => ({ ...s, notes: !s.notes }))}>
+                    {showPreview.notes ? 'Edit' : 'Preview'}
+                  </button>
+                )}
               </div>
 
-              {showPreview.notes ? (
+              {(showPreview.notes || viewing) ? (
                 <HtmlPreview
                   title={undefined}
                   html={form.notes}
@@ -656,14 +656,14 @@ export default function WeaponTypeView() {
           {/* Numbers */}
           <h4 style={{ margin: '12px 0 4px' }}>Stats</h4>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-            <LabeledInput label="Fumble" value={form.fumble} onChange={(v) => setForm(s => ({ ...s, fumble: sanitizeInt(v) }))} disabled={viewing} width={90} />
-            <LabeledInput label="Breakage" value={form.breakage} onChange={(v) => setForm(s => ({ ...s, breakage: sanitizeInt(v) }))} disabled={viewing} width={90} />
-            <LabeledInput label="Min Length" value={form.minLength} onChange={(v) => setForm(s => ({ ...s, minLength: sanitizeInt(v) }))} disabled={viewing} width={110} />
-            <LabeledInput label="Max Length" value={form.maxLength} onChange={(v) => setForm(s => ({ ...s, maxLength: sanitizeInt(v) }))} disabled={viewing} width={110} />
-            <LabeledInput label="Min Strength" value={form.minStrength} onChange={(v) => setForm(s => ({ ...s, minStrength: sanitizeInt(v) }))} disabled={viewing} width={110} />
-            <LabeledInput label="Max Strength" value={form.maxStrength} onChange={(v) => setForm(s => ({ ...s, maxStrength: sanitizeInt(v) }))} disabled={viewing} width={110} />
-            <LabeledInput label="Min Weight" value={form.minWeight} onChange={(v) => setForm(s => ({ ...s, minWeight: sanitizeInt(v) }))} disabled={viewing} width={110} />
-            <LabeledInput label="Max Weight" value={form.maxWeight} onChange={(v) => setForm(s => ({ ...s, maxWeight: sanitizeInt(v) }))} disabled={viewing} width={110} />
+            <LabeledInput label="Fumble" value={form.fumble} onChange={makeUnsignedIntOnChange<typeof form>('fumble', setForm)} disabled={viewing} width={90} />
+            <LabeledInput label="Breakage" value={form.breakage} onChange={makeUnsignedIntOnChange<typeof form>('breakage', setForm)} disabled={viewing} width={90} />
+            <LabeledInput label="Min Length" value={form.minLength} onChange={makeUnsignedIntOnChange<typeof form>('minLength', setForm)} disabled={viewing} width={110} />
+            <LabeledInput label="Max Length" value={form.maxLength} onChange={makeUnsignedIntOnChange<typeof form>('maxLength', setForm)} disabled={viewing} width={110} />
+            <LabeledInput label="Min Strength" value={form.minStrength} onChange={makeUnsignedIntOnChange<typeof form>('minStrength', setForm)} disabled={viewing} width={110} />
+            <LabeledInput label="Max Strength" value={form.maxStrength} onChange={makeUnsignedIntOnChange<typeof form>('maxStrength', setForm)} disabled={viewing} width={110} />
+            <LabeledInput label="Min Weight" value={form.minWeight} onChange={makeUnsignedIntOnChange<typeof form>('minWeight', setForm)} disabled={viewing} width={110} />
+            <LabeledInput label="Max Weight" value={form.maxWeight} onChange={makeUnsignedIntOnChange<typeof form>('maxWeight', setForm)} disabled={viewing} width={110} />
           </div>
 
           {/* Wooden Haft */}
@@ -702,7 +702,7 @@ export default function WeaponTypeView() {
                     hideLabel
                     ariaLabel="Modifier"
                     value={c.modifier}
-                    onChange={(v) => updateCritical(i, { modifier: sanitizeInt(v) })}
+                    onChange={(v) => updateCritical(i, { modifier: sanitizeSignedInt(v) })}
                     disabled={viewing}
                     width={120}
                   />
@@ -721,11 +721,11 @@ export default function WeaponTypeView() {
           <section style={{ marginTop: 12 }}>
             <h4 style={{ margin: '8px 0' }}>Ranges</h4>
             {!viewing && <button type="button" onClick={addRange} style={{ marginBottom: 8 }}>+ Add range</button>}
-            <div style={{ display: 'grid', gridTemplateColumns: '120px 120px 140px auto', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: viewing ? '120px 120px 140px' : '120px 120px 140px auto', gap: 8 }}>
               <div style={{ fontWeight: 600 }}>Min</div>
               <div style={{ fontWeight: 600 }}>Max</div>
               <div style={{ fontWeight: 600 }}>Modifier</div>
-              <div />
+              {!viewing && <div />}
               {form.ranges.map((r, i) => (
                 <React.Fragment key={`r-${i}`}>
                   <LabeledInput
@@ -733,7 +733,7 @@ export default function WeaponTypeView() {
                     hideLabel
                     ariaLabel="Min"
                     value={r.min}
-                    onChange={(v) => updateRange(i, { min: sanitizeInt(v) })}
+                    onChange={(v) => updateRange(i, { min: sanitizeUnsignedInt(v) })}
                     disabled={viewing}
                     width={100}
                   />
@@ -742,7 +742,7 @@ export default function WeaponTypeView() {
                     hideLabel
                     ariaLabel="Max"
                     value={r.max}
-                    onChange={(v) => updateRange(i, { max: sanitizeInt(v) })}
+                    onChange={(v) => updateRange(i, { max: sanitizeUnsignedInt(v) })}
                     disabled={viewing}
                     width={100}
                   />
@@ -751,7 +751,7 @@ export default function WeaponTypeView() {
                     hideLabel
                     ariaLabel="Modifier"
                     value={r.modifier}
-                    onChange={(v) => updateRange(i, { modifier: sanitizeInt(v) })}
+                    onChange={(v) => updateRange(i, { modifier: sanitizeSignedInt(v) })}
                     disabled={viewing}
                     width={120}
                   />

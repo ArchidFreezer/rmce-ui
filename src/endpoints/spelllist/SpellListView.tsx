@@ -369,7 +369,7 @@ export default function SpellListView() {
               options={bookOptions}
               disabled={booksLoading || viewing}
               error={viewing ? undefined : errors.book}
-              helperText={booksLoading ? 'Loading Books…' : 'Select a Book ID'}
+              helperText={booksLoading ? 'Loading Books…' : undefined}
             />
 
             <LabeledSelect

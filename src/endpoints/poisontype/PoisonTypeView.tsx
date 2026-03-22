@@ -322,23 +322,6 @@ export default function PoisonTypeView() {
       );
     };
 
-    // THis would be used if we were showing the symptoms in the table.
-    // const renderSymptoms = (r: PoisonType) => {
-    //   const map = new Map(r.severitySymptoms.map(o => [o.severity, o]));
-    //   return (
-    //     <div style={{ display: 'grid', gap: 4 }}>
-    //       {MALADY_SEVERITIES.map((s) => {
-    //         const o = map.get(s);
-    //         return (
-    //           <div key={s}>
-    //             <strong>{s}</strong>: {o ? o.symptoms : '—'}
-    //           </div>
-    //         );
-    //       })}
-    //     </div>
-    //   );
-    // };
-
     return [
       { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 240 },
       { id: 'type', header: 'Type', accessor: (r) => r.type, sortType: 'string', minWidth: 160 },
@@ -361,15 +344,6 @@ export default function PoisonTypeView() {
         minWidth: 360,
         render: renderOnsets,
       },
-      // Symptoms can be very long, so we do not show them in the table and the full text in the form
-      //   {
-      //     id: 'symptoms',
-      //     header: 'Symptoms',
-      //     accessor: (r) => r.severitySymptoms.length,
-      //     sortType: 'number',
-      //     minWidth: 420,
-      //     render: renderSymptoms,
-      //   },
       {
         id: 'actions',
         header: 'Actions',
@@ -550,7 +524,6 @@ function FragmentRowEffect({
     <>
       <div style={{ alignSelf: 'center', fontWeight: 600 }}>{row.severity}</div>
       <LabeledInput
-        label="Min"
         value={row.min}
         onChange={(v) => onChange({ ...row, min: v.replace(/[^\d-]/g, '') })}
         disabled={disabled}
@@ -558,7 +531,6 @@ function FragmentRowEffect({
         error={error}
       />
       <LabeledInput
-        label="Max"
         value={row.max}
         onChange={(v) => onChange({ ...row, max: v.replace(/[^\d-]/g, '') })}
         disabled={disabled}
@@ -597,17 +569,19 @@ function FragmentRowSymptom({
 
       {/* Right column: editor/preview + toggle */}
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-          {/* <label htmlFor={id} style={{ fontWeight: 600 }}>Symptoms</label> - We don't want a label as it is clear from the table heading */}
-          <button
-            type="button"
-            onClick={() => setShowPreview((v) => !v)}
-            // Allow toggling even in view mode (useful if you want to see raw HTML)
-            aria-pressed={showPreview}
-          >
-            {disabled ? 'Raw' : showPreview ? 'Edit' : 'Preview'}
-          </button>
-        </div>
+        {/** In view mode always show preview */}
+        {!disabled && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <button
+              type="button"
+              onClick={() => setShowPreview((v) => !v)}
+              // Allow toggling even in view mode (useful if you want to see raw HTML)
+              aria-pressed={showPreview}
+            >
+              {disabled ? 'Raw' : showPreview ? 'Edit' : 'Preview'}
+            </button>
+          </div>
+        )}
 
         {showPreview ? (
           <HtmlPreview
