@@ -410,23 +410,23 @@ export default function ProfessionView() {
 
   // ---------- option maps ----------
   const bookOptions = useMemo(
-    () => books.map(b => ({ value: b.id, label: `${b.id} — ${b.name}` })),
+    () => books.map(b => ({ value: b.id, label: b.name })),
     [books]
   );
   const spellListOptions = useMemo(
-    () => spellLists.map(s => ({ value: s.id, label: `${s.id} — ${s.name}` })),
+    () => spellLists.map(s => ({ value: s.id, label: s.name })),
     [spellLists]
   );
   const skillOptions = useMemo(
-    () => skills.map(s => ({ value: s.id, label: `${s.id} — ${s.name}` })),
+    () => skills.map(s => ({ value: s.id, label: s.name })),
     [skills]
   );
   const categoryOptions = useMemo(
-    () => categories.map(c => ({ value: c.id, label: `${c.id} — ${c.name}` })),
+    () => categories.map(c => ({ value: c.id, label: c.name })),
     [categories]
   );
   const groupOptions = useMemo(
-    () => groups.map(g => ({ value: g.id, label: `${g.id} — ${g.name}` })),
+    () => groups.map(g => ({ value: g.id, label: g.name })),
     [groups]
   );
 
@@ -905,14 +905,8 @@ export default function ProfessionView() {
             placeholder="Search professions…"
             aria-label="Search professions"
           />
-          <button
-            type="button"
-            onClick={() => dtRef.current?.resetColumnWidths()}
-            title="Reset all column widths"
-            style={{ marginLeft: 'auto' }}
-          >
-            Reset column widths
-          </button>
+          <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
+          <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
         </div>
       )}
 
