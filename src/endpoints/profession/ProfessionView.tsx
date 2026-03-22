@@ -10,6 +10,7 @@ import { LabeledSelect } from '../../components/inputs/LabeledSelect';
 import { HtmlPreview } from '../../components/inputs/HtmlPreview';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
+import { CheckboxInput } from '../../components/inputs/CheckboxInput';
 
 import { fetchProfessions, upsertProfession, deleteProfession } from '../../api/profession';
 import { fetchBooks } from '../../api/book';
@@ -285,33 +286,6 @@ const sanitizeSignedInt = (s: string) => {
   else if (dash === 0) raw = '-' + raw.slice(1).replace(/-/g, '');
   return raw;
 };
-
-// ---------- local checkbox ----------
-function LabeledCheckbox({
-  label,
-  checked,
-  onChange,
-  disabled,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (val: boolean) => void;
-  disabled?: boolean | undefined;
-}) {
-  const id = React.useId();
-  return (
-    <label htmlFor={id} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, paddingTop: 6 }}>
-      <input
-        id={id}
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        disabled={disabled}
-      />
-      <span>{label}</span>
-    </label>
-  );
-}
 
 export default function ProfessionView() {
   const dtRef = useRef<DataTableHandle>(null);
@@ -1009,7 +983,7 @@ export default function ProfessionView() {
             <h4 style={{ margin: '8px 0' }}>Realms</h4>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               {realmOptions.map((opt) => (
-                <LabeledCheckbox
+                <CheckboxInput
                   key={opt.value}
                   label={opt.label}
                   checked={form.realms.includes(opt.value as Realm)}
@@ -1023,7 +997,7 @@ export default function ProfessionView() {
             <h4 style={{ margin: '16px 0 8px' }}>Stats</h4>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               {statOptions.map((opt) => (
-                <LabeledCheckbox
+                <CheckboxInput
                   key={opt.value}
                   label={opt.label}
                   checked={form.stats.includes(opt.value as Stat)}
