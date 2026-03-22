@@ -325,7 +325,7 @@ export default function DiseaseView() {
               options={diseaseTypeOptions}
               disabled={typesLoading || viewing}
               error={viewing ? undefined : errors.type}
-              helperText={typesLoading ? 'Loading Disease Types…' : 'Select a DiseaseType id'}
+              helperText={typesLoading ? 'Loading Disease Types…' : undefined}
             />
 
             <LabeledInput label="Level" type="number" value={String(form.level).trim()} disabled={viewing}

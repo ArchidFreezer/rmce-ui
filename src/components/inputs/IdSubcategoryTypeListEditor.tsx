@@ -110,31 +110,27 @@ export function IdSubcategoryTypeListEditor<TType extends string = string>({
     [rows, onChangeRows],
   );
 
+  const showActions = !viewing;
+
   return (
     <section style={{ marginTop: 12 }}>
       <h4 style={{ margin: '8px 0' }}>{title}</h4>
 
-      {!viewing && (
-        <button
-          type="button"
-          onClick={addRow}
-          style={{ marginBottom: 8 }}
-        >
-          {addButtonLabel}
-        </button>
+      {showActions && (
+        <button type="button" onClick={addRow} style={{ marginBottom: 8 }}>{addButtonLabel}</button>
       )}
 
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: `minmax(${resolvedIdColumnWidth}, 1fr) 1fr ${resolvedTypeColumnWidth} auto`,
+          gridTemplateColumns: showActions ? `minmax(${resolvedIdColumnWidth}, 1fr) 1fr ${resolvedTypeColumnWidth} auto` : `minmax(${resolvedIdColumnWidth}, 1fr) 1fr ${resolvedTypeColumnWidth}`,
           gap: 8,
         }}
       >
         <div style={{ fontWeight: 600 }}>{idColumnLabel}</div>
         <div style={{ fontWeight: 600 }}>{subcategoryColumnLabel}</div>
         <div style={{ fontWeight: 600 }}>{typeColumnLabel}</div>
-        <div />
+        {showActions && <div />}
 
         {rows.map((row, i) => (
           <React.Fragment key={`${title}-${i}`}>
@@ -167,14 +163,8 @@ export function IdSubcategoryTypeListEditor<TType extends string = string>({
               disabled={viewing}
             />
 
-            {!viewing && (
-              <button
-                type="button"
-                onClick={() => removeRowAt(i)}
-                style={{ color: '#b00020' }}
-              >
-                {removeButtonLabel}
-              </button>
+            {showActions && (
+              <button type="button" onClick={() => removeRowAt(i)} style={{ color: '#b00020' }}>{removeButtonLabel}</button>
             )}
           </React.Fragment>
         ))}

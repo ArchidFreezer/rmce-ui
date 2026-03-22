@@ -442,15 +442,16 @@ function FragmentRowSymptom({
       {/* Right column: editor/preview + toggle */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-          {/* <label htmlFor={id} style={{ fontWeight: 600 }}>Symptoms</label> - We don't want a label as it is clear from the table heading */}
-          <button
-            type="button"
-            onClick={() => setShowPreview((v) => !v)}
-            // Allow toggling even in view mode (useful if you want to see raw HTML)
-            aria-pressed={showPreview}
-          >
-            {disabled ? 'Raw' : showPreview ? 'Edit' : 'Preview'}
-          </button>
+          {!disabled && (
+            <button
+              type="button"
+              onClick={() => setShowPreview((v) => !v)}
+              // Allow toggling even in view mode (useful if you want to see raw HTML)
+              aria-pressed={showPreview}
+            >
+              {disabled ? 'Raw' : showPreview ? 'Edit' : 'Preview'}
+            </button>
+          )}
         </div>
 
         {showPreview ? (
