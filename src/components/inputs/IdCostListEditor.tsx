@@ -92,30 +92,26 @@ export function IdCostListEditor({
     [rows, onChangeRows],
   );
 
+  const showActions = !viewing;
+
   return (
     <section style={{ marginTop: 12 }}>
       <h4 style={{ margin: '8px 0' }}>{title}</h4>
 
-      {!viewing && (
-        <button
-          type="button"
-          onClick={addRow}
-          style={{ marginBottom: 8 }}
-        >
-          {addButtonLabel}
-        </button>
+      {showActions && (
+        <button type="button" onClick={addRow} style={{ marginBottom: 8 }}>{addButtonLabel}</button>
       )}
 
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'minmax(280px, 1fr) 160px auto',
+          gridTemplateColumns: showActions ? 'minmax(280px, 1fr) 160px auto' : 'minmax(280px, 1fr) 160px',
           gap: 8,
         }}
       >
         <div style={{ fontWeight: 600 }}>{categoryColumnLabel}</div>
         <div style={{ fontWeight: 600 }}>{costColumnLabel}</div>
-        <div />
+        {showActions && <div />}
 
         {rows.map((row, i) => (
           <React.Fragment key={`${title}-${i}`}>
@@ -137,17 +133,10 @@ export function IdCostListEditor({
               onChange={(v) => updateRowAt(i, { cost: sanitizeCost(v) })}
               disabled={viewing}
               width={resolvedCostWidth}
-              helperText="e.g. 11 or 3:3:3"
             />
 
-            {!viewing && (
-              <button
-                type="button"
-                onClick={() => removeRowAt(i)}
-                style={{ color: '#b00020' }}
-              >
-                {removeButtonLabel}
-              </button>
+            {showActions && (
+              <button type="button" onClick={() => removeRowAt(i)} style={{ color: '#b00020' }}>{removeButtonLabel}</button>
             )}
           </React.Fragment>
         ))}

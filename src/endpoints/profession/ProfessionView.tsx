@@ -1074,7 +1074,7 @@ export default function ProfessionView() {
             error={errors.skillSubcategoryDevelopmentTypeChoices}
             createEmptyOption={() => ''}
             renderOptionEditor={({ option, setOption, removeOption, viewing }) => (
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) 1fr auto', gap: 8, }} >
+              <div style={{ display: 'grid', gridTemplateColumns: viewing ? 'minmax(280px, 1fr) 1fr' : 'minmax(280px, 1fr) 1fr auto', gap: 8, }} >
                 <LabeledSelect label="Skill" hideLabel ariaLabel="Skill" value={option} onChange={(v) => setOption(v)} options={skillOptions} disabled={skillsLoading || viewing} />
                 {!viewing && (<button type="button" onClick={removeOption} style={{ color: '#b00020' }}>Remove</button>)}
               </div>
@@ -1093,7 +1093,7 @@ export default function ProfessionView() {
             error={errors.skillDevelopmentTypeChoices}
             createEmptyOption={() => ({ id: '', subcategory: '' })}
             renderOptionEditor={({ option, setOption, removeOption, viewing }) => (
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) 1fr auto', gap: 8, }} >
+              <div style={{ display: 'grid', gridTemplateColumns: viewing ? 'minmax(280px, 1fr) 1fr' : 'minmax(280px, 1fr) 1fr auto', gap: 8, }} >
                 <LabeledSelect label="Skill" hideLabel ariaLabel="Skill" value={option.id} onChange={(v) => setOption({ id: v, subcategory: option.subcategory, })} options={skillOptions} disabled={skillsLoading || viewing} />
                 <LabeledInput label="Subcategory" hideLabel ariaLabel="Subcategory" value={option.subcategory ?? ''} onChange={(v) => setOption({ id: option.id, subcategory: v || undefined, })} disabled={viewing} />
                 {!viewing && (<button type="button" onClick={removeOption} style={{ color: '#b00020' }}>Remove</button>)}
@@ -1113,7 +1113,7 @@ export default function ProfessionView() {
             error={errors.skillCategorySkillDevelopmentTypeChoices}
             createEmptyOption={() => ''}
             renderOptionEditor={({ option, setOption, removeOption, viewing }) => (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: viewing ? '1fr' : '1fr auto', gap: 8 }}>
                 <LabeledSelect label="Category" hideLabel ariaLabel="Category" value={option} onChange={(v) => setOption(v)} options={categoryOptions} disabled={categoriesLoading || viewing} />
                 {!viewing && (<button type="button" onClick={removeOption} style={{ color: '#b00020' }}>Remove</button>)}
               </div>
@@ -1131,7 +1131,7 @@ export default function ProfessionView() {
             error={errors.skillGroupSkillDevelopmentTypeChoices}
             createEmptyOption={() => ''}
             renderOptionEditor={({ option, setOption, removeOption, viewing }) => (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }} >
+              <div style={{ display: 'grid', gridTemplateColumns: viewing ? '1fr' : '1fr auto', gap: 8 }} >
                 <LabeledSelect label="Group" hideLabel ariaLabel="Group" value={option} onChange={(v) => setOption(v)} options={groupOptions} disabled={groupsLoading || viewing} />
                 {!viewing && (<button type="button" onClick={removeOption} style={{ color: '#b00020' }}>Remove</button>)}
               </div>
