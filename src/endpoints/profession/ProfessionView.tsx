@@ -14,6 +14,7 @@ import { CheckboxInput } from '../../components/inputs/CheckboxInput';
 import { IdValueListEditor } from '../../components/inputs/IdValueListEditor';
 import { IdTypeListEditor } from '../../components/inputs/IdTypeListEditor';
 import { IdSubcategoryValueListEditor } from '../../components/inputs/IdSubcategoryValueListEditor';
+import { IdSubcategoryTypeListEditor } from '../../components/inputs/IdSubcategoryTypeListEditor';
 
 import { fetchProfessions, upsertProfession, deleteProfession } from '../../api/profession';
 import { fetchBooks } from '../../api/book';
@@ -735,21 +736,6 @@ export default function ProfessionView() {
   if (error) return <div style={{ color: 'crimson' }}>Error: {error}</div>;
 
   // ---------- reusable updaters (guard + narrow + full-object writes) ----------
-  const updateSkillDevTypeAt = (index: number, patch: Partial<SkillDevTypeVM>) => {
-    setForm((s) => {
-      const copy = s.skillDevelopmentTypes.slice();
-      if (index < 0 || index >= copy.length) return s;
-      const current = copy[index];
-      if (!current) return s;
-      copy[index] = {
-        id: patch.id ?? current.id,
-        subcategory: patch.subcategory !== undefined ? patch.subcategory : current.subcategory,
-        value: patch.value ?? current.value,
-      };
-      return { ...s, skillDevelopmentTypes: copy };
-    });
-  };
-
   const updateSpellListChoiceAt = (index: number, patch: Partial<SpellListChoiceVM>) => {
     setForm((s) => {
       const copy = s.baseSpellListChoices.slice();
@@ -1109,70 +1095,18 @@ export default function ProfessionView() {
           />
 
           {/* Skill Development Types */}
-          <section style={{ marginTop: 12 }}>
-            <h4 style={{ margin: '8px 0' }}>Skill Development Types</h4>
-            {!viewing && (
-              <button
-                type="button"
-                onClick={() => setForm((s) => ({
-                  ...s,
-                  skillDevelopmentTypes: [...s.skillDevelopmentTypes, { id: '', subcategory: '', value: '' }],
-                }))}
-                style={{ marginBottom: 8 }}
-              >
-                + Add skill development type
-              </button>
-            )}
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) 1fr 220px auto', gap: 8 }}>
-              <div style={{ fontWeight: 600 }}>Skill</div>
-              <div style={{ fontWeight: 600 }}>Subcategory (optional)</div>
-              <div style={{ fontWeight: 600 }}>Type</div>
-              <div />
-              {form.skillDevelopmentTypes.map((r, i) => (
-                <React.Fragment key={`sdt-${i}`}>
-                  <LabeledSelect
-                    label="Skill"
-                    hideLabel
-                    value={r.id}
-                    onChange={(v) => updateSkillDevTypeAt(i, { id: v })}
-                    options={skillOptions}
-                    disabled={skillsLoading || viewing}
-                  />
-                  <LabeledInput
-                    label="Subcategory"
-                    hideLabel
-                    ariaLabel="Subcategory"
-                    value={r.subcategory ?? ''}
-                    onChange={(v) => updateSkillDevTypeAt(i, { subcategory: v || undefined })}
-                    disabled={viewing}
-                  />
-                  <LabeledSelect
-                    label="Type"
-                    hideLabel
-                    value={r.value}
-                    onChange={(v) => updateSkillDevTypeAt(i, { value: v as SkillDevelopmentType })}
-                    options={developmentTypeOptions}
-                    disabled={viewing}
-                  />
-                  {!viewing && (
-                    <button
-                      type="button"
-                      onClick={() => setForm((s) => {
-                        const copy = s.skillDevelopmentTypes.slice();
-                        if (i < 0 || i >= copy.length) return s;
-                        copy.splice(i, 1);
-                        return { ...s, skillDevelopmentTypes: copy };
-                      })}
-                      style={{ color: '#b00020' }}
-                    >
-                      Remove
-                    </button>
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
-            {errors.skillDevelopmentTypes && <div style={{ color: '#b00020', marginTop: 6 }}>{errors.skillDevelopmentTypes}</div>}
-          </section>
+          <IdSubcategoryTypeListEditor<SkillDevelopmentType>
+            title="Skill Development Types"
+            rows={form.skillDevelopmentTypes}
+            onChangeRows={(next) =>
+              setForm((s) => ({ ...s, skillDevelopmentTypes: next }))
+            }
+            idOptions={skillOptions}
+            typeOptions={developmentTypeOptions}
+            loading={skillsLoading}
+            viewing={viewing}
+            error={errors.skillDevelopmentTypes}
+          />
 
           {/* Category / Group Skill Development Types */}
           <IdTypeListEditor<SkillDevelopmentType>
