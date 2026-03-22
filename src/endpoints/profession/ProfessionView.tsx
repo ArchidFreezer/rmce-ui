@@ -13,6 +13,7 @@ import { useConfirm } from '../../components/ConfirmDialog';
 import { CheckboxInput } from '../../components/inputs/CheckboxInput';
 import { IdValueListEditor } from '../../components/inputs/IdValueListEditor';
 import { IdTypeListEditor } from '../../components/inputs/IdTypeListEditor';
+import { IdSubcategoryValueListEditor } from '../../components/inputs/IdSubcategoryValueListEditor';
 
 import { fetchProfessions, upsertProfession, deleteProfession } from '../../api/profession';
 import { fetchBooks } from '../../api/book';
@@ -734,21 +735,6 @@ export default function ProfessionView() {
   if (error) return <div style={{ color: 'crimson' }}>Error: {error}</div>;
 
   // ---------- reusable updaters (guard + narrow + full-object writes) ----------
-  const updateSkillBonusAt = (index: number, patch: Partial<SkillBonusVM>) => {
-    setForm((s) => {
-      const copy = s.skillBonuses.slice();
-      if (index < 0 || index >= copy.length) return s;
-      const current = copy[index];
-      if (!current) return s;
-      copy[index] = {
-        id: patch.id ?? current.id,
-        subcategory: patch.subcategory !== undefined ? patch.subcategory : current.subcategory,
-        value: patch.value ?? current.value,
-      };
-      return { ...s, skillBonuses: copy };
-    });
-  };
-
   const updateSkillDevTypeAt = (index: number, patch: Partial<SkillDevTypeVM>) => {
     setForm((s) => {
       const copy = s.skillDevelopmentTypes.slice();
@@ -761,24 +747,6 @@ export default function ProfessionView() {
         value: patch.value ?? current.value,
       };
       return { ...s, skillDevelopmentTypes: copy };
-    });
-  };
-
-  const updateIdDevTypeAt = (
-    key: 'skillCategorySkillDevelopmentTypes' | 'skillGroupSkillDevelopmentTypes',
-    index: number,
-    patch: Partial<IdDevTypeVM>
-  ) => {
-    setForm((s) => {
-      const copy = s[key].slice();
-      if (index < 0 || index >= copy.length) return s;
-      const current = copy[index];
-      if (!current) return s;
-      copy[index] = {
-        id: patch.id ?? current.id,
-        value: patch.value ?? current.value,
-      };
-      return { ...s, [key]: copy };
     });
   };
 
@@ -1084,71 +1052,16 @@ export default function ProfessionView() {
           </section>
 
           {/* Skill Bonuses */}
-          <section style={{ marginTop: 12 }}>
-            <h4 style={{ margin: '8px 0' }}>Skill Bonuses</h4>
-            {!viewing && (
-              <button
-                type="button"
-                onClick={() => setForm((s) => ({
-                  ...s,
-                  skillBonuses: [...s.skillBonuses, { id: '', subcategory: '', value: '' }],
-                }))}
-                style={{ marginBottom: 8 }}
-              >
-                + Add skill bonus
-              </button>
-            )}
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) 1fr 120px auto', gap: 8 }}>
-              <div style={{ fontWeight: 600 }}>Skill</div>
-              <div style={{ fontWeight: 600 }}>Subcategory (optional)</div>
-              <div style={{ fontWeight: 600 }}>Value</div>
-              <div />
-              {form.skillBonuses.map((r, i) => (
-                <React.Fragment key={`sb-${i}`}>
-                  <LabeledSelect
-                    label="Skill"
-                    hideLabel
-                    value={r.id}
-                    onChange={(v) => updateSkillBonusAt(i, { id: v })}
-                    options={skillOptions}
-                    disabled={skillsLoading || viewing}
-                  />
-                  <LabeledInput
-                    label="Subcategory"
-                    hideLabel
-                    ariaLabel="Subcategory"
-                    value={r.subcategory ?? ''}
-                    onChange={(v) => updateSkillBonusAt(i, { subcategory: v || undefined })}
-                    disabled={viewing}
-                  />
-                  <LabeledInput
-                    label="Value"
-                    hideLabel
-                    ariaLabel="Value"
-                    value={r.value}
-                    onChange={(v) => updateSkillBonusAt(i, { value: sanitizeSignedInt(v) })}
-                    disabled={viewing}
-                    width={100}
-                  />
-                  {!viewing && (
-                    <button
-                      type="button"
-                      onClick={() => setForm((s) => {
-                        const copy = s.skillBonuses.slice();
-                        if (i < 0 || i >= copy.length) return s;
-                        copy.splice(i, 1);
-                        return { ...s, skillBonuses: copy };
-                      })}
-                      style={{ color: '#b00020' }}
-                    >
-                      Remove
-                    </button>
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
-            {errors.skillBonuses && <div style={{ color: '#b00020', marginTop: 6 }}>{errors.skillBonuses}</div>}
-          </section>
+          <IdSubcategoryValueListEditor
+            title="Skill Bonuses"
+            rows={form.skillBonuses}
+            onChangeRows={(next) => setForm((s) => ({ ...s, skillBonuses: next }))}
+            idOptions={skillOptions}
+            loading={skillsLoading}
+            viewing={viewing}
+            error={errors.skillBonuses}
+            signedValues
+          />
 
           {/* Category/Group bonus sections */}
           <IdValueListEditor
