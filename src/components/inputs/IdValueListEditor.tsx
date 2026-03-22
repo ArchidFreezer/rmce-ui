@@ -2,6 +2,8 @@ import * as React from 'react';
 import { LabeledInput } from './LabeledInput';
 import { LabeledSelect } from './LabeledSelect';
 
+import { sanitizeUnsignedInt, sanitizeSignedInt } from '../../utils/inputHelpers';
+
 export type IdValueRowVM = {
   id: string;
   value: string;
@@ -31,17 +33,6 @@ export interface IdValueListEditorProps {
   /** Width of value input */
   valueWidth?: number | string | undefined;
 }
-
-const sanitizeSignedInt = (s: string) => {
-  if (!s) return '';
-  let raw = s.replace(/[^0-9\-]/g, '');
-  const dash = raw.indexOf('-');
-  if (dash > 0) raw = raw.replace(/-/g, '');
-  else if (dash === 0) raw = '-' + raw.slice(1).replace(/-/g, '');
-  return raw;
-};
-
-const sanitizeUnsignedInt = (s: string) => s.replace(/[^\d]/g, '');
 
 export function IdValueListEditor({
   title,

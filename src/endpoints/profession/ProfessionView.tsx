@@ -57,7 +57,7 @@ import {
   type SkillDevelopmentType,
 } from '../../types/enum';
 
-import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
+import { isValidID, makeIDOnChange, isValidUnsignedInt, sanitizeUnsignedInt, isValidSignedInt } from '../../utils/inputHelpers';
 
 const prefix = 'PROFESSION_';
 
@@ -277,20 +277,8 @@ const fromVM = (vm: FormState): Profession => ({
 });
 
 // ---------- validators / sanitizers ----------
-const UNSIGNED_INT_RE = /^\d+$/;
-const SIGNED_INT_RE = /^-?\d+$/;
 // 1–3 colon-separated positive numbers, e.g. "11", "3:3:3", "10:10"
 const COST_RE = /^[1-9]\d*(?::[1-9]\d*){0,2}$/;
-
-const sanitizeUnsignedInt = (s: string) => s.replace(/[^\d]/g, '');
-const sanitizeSignedInt = (s: string) => {
-  if (!s) return '';
-  let raw = s.replace(/[^0-9\-]/g, '');
-  const dash = raw.indexOf('-');
-  if (dash > 0) raw = raw.replace(/-/g, '');
-  else if (dash === 0) raw = '-' + raw.slice(1).replace(/-/g, '');
-  return raw;
-};
 
 export default function ProfessionView() {
   const dtRef = useRef<DataTableHandle>(null);
@@ -472,7 +460,7 @@ export default function ProfessionView() {
     for (let i = 0; i < draft.baseSpellListChoices.length; i++) {
       const row = draft.baseSpellListChoices[i];
       if (!row) continue;
-      if (!UNSIGNED_INT_RE.test(row.numChoices) || Number(row.numChoices) <= 0) {
+      if (!isValidUnsignedInt(row.numChoices) || Number(row.numChoices) <= 0) {
         e.baseSpellListChoices = `BaseSpellListChoices[${i + 1}]: numChoices must be a positive integer`;
         break;
       }
@@ -487,7 +475,7 @@ export default function ProfessionView() {
       const r = draft.skillBonuses[i];
       if (!r) continue;
       if (!r.id) { e.skillBonuses = `SkillBonuses[${i + 1}]: skill id required`; break; }
-      if (!SIGNED_INT_RE.test((r.value ?? '').trim())) { e.skillBonuses = `SkillBonuses[${i + 1}]: value must be an integer`; break; }
+      if (!isValidSignedInt(r.value ?? '')) { e.skillBonuses = `SkillBonuses[${i + 1}]: value must be an integer`; break; }
     }
 
     const checkIdValue = (label: keyof typeof e, arr: IdValueVM[], entityName: string) => {
@@ -495,7 +483,7 @@ export default function ProfessionView() {
         const r = arr[i];
         if (!r) continue;
         if (!r.id) { e[label] = `${entityName}[${i + 1}]: id required`; break; }
-        if (!SIGNED_INT_RE.test((r.value ?? '').trim())) { e[label] = `${entityName}[${i + 1}]: value must be an integer`; break; }
+        if (!isValidSignedInt(r.value ?? '')) { e[label] = `${entityName}[${i + 1}]: value must be an integer`; break; }
       }
     };
     checkIdValue('skillCategoryProfessionBonuses', draft.skillCategoryProfessionBonuses, 'SkillCategoryProfessionBonuses');
@@ -528,7 +516,7 @@ export default function ProfessionView() {
       for (let i = 0; i < arr.length; i++) {
         const r = arr[i];
         if (!r) continue;
-        if (!UNSIGNED_INT_RE.test(r.numChoices) || Number(r.numChoices) <= 0) {
+        if (!isValidUnsignedInt(r.numChoices) || Number(r.numChoices) <= 0) {
           e[label] = `${entityName}[${i + 1}]: numChoices must be a positive integer`; break;
         }
         if (!r.type) { e[label] = `${entityName}[${i + 1}]: type required`; break; }
@@ -748,55 +736,6 @@ export default function ProfessionView() {
         options: patch.options ?? current.options.slice(),
       };
       return { ...s, baseSpellListChoices: copy };
-    });
-  };
-
-  const updateSkillSubcategoryChoiceAt = (index: number, patch: Partial<SkillSubcategoryChoiceVM>) => {
-    setForm((s) => {
-      const copy = s.skillSubcategoryDevelopmentTypeChoices.slice();
-      if (index < 0 || index >= copy.length) return s;
-      const current = copy[index];
-      if (!current) return s;
-      copy[index] = {
-        numChoices: patch.numChoices ?? current.numChoices,
-        type: patch.type ?? current.type,
-        options: patch.options ?? current.options.slice(),
-      };
-      return { ...s, skillSubcategoryDevelopmentTypeChoices: copy };
-    });
-  };
-
-  const updateSkillDevChoiceAt = (index: number, patch: Partial<SkillDevChoiceVM>) => {
-    setForm((s) => {
-      const copy = s.skillDevelopmentTypeChoices.slice();
-      if (index < 0 || index >= copy.length) return s;
-      const current = copy[index];
-      if (!current) return s;
-      copy[index] = {
-        numChoices: patch.numChoices ?? current.numChoices,
-        type: patch.type ?? current.type,
-        options: patch.options ?? current.options.slice(),
-      };
-      return { ...s, skillDevelopmentTypeChoices: copy };
-    });
-  };
-
-  const updateIdChoiceAt = (
-    key: 'skillCategorySkillDevelopmentTypeChoices' | 'skillGroupSkillDevelopmentTypeChoices',
-    index: number,
-    patch: Partial<IdChoiceVM>
-  ) => {
-    setForm((s) => {
-      const copy = s[key].slice();
-      if (index < 0 || index >= copy.length) return s;
-      const current = copy[index];
-      if (!current) return s;
-      copy[index] = {
-        numChoices: patch.numChoices ?? current.numChoices,
-        type: patch.type ?? current.type,
-        options: patch.options ?? current.options.slice(),
-      };
-      return { ...s, [key]: copy };
     });
   };
 
@@ -1148,27 +1087,9 @@ export default function ProfessionView() {
             error={errors.skillSubcategoryDevelopmentTypeChoices}
             createEmptyOption={() => ''}
             renderOptionEditor={({ option, setOption, removeOption, viewing }) => (
-              <div
-                style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}
-              >
-                <LabeledSelect
-                  label="Skill"
-                  hideLabel
-                  ariaLabel="Skill"
-                  value={option}
-                  onChange={(v) => setOption(v)}
-                  options={skillOptions}
-                  disabled={skillsLoading || viewing}
-                />
-                {!viewing && (
-                  <button
-                    type="button"
-                    onClick={removeOption}
-                    style={{ color: '#b00020' }}
-                  >
-                    Remove
-                  </button>
-                )}
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) 1fr auto', gap: 8, }} >
+                <LabeledSelect label="Skill" hideLabel ariaLabel="Skill" value={option} onChange={(v) => setOption(v)} options={skillOptions} disabled={skillsLoading || viewing} />
+                {!viewing && (<button type="button" onClick={removeOption} style={{ color: '#b00020' }}>Remove</button>)}
               </div>
             )}
           />
@@ -1185,51 +1106,10 @@ export default function ProfessionView() {
             error={errors.skillDevelopmentTypeChoices}
             createEmptyOption={() => ({ id: '', subcategory: '' })}
             renderOptionEditor={({ option, setOption, removeOption, viewing }) => (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'minmax(280px, 1fr) 1fr auto',
-                  gap: 8,
-                }}
-              >
-                <LabeledSelect
-                  label="Skill"
-                  hideLabel
-                  ariaLabel="Skill"
-                  value={option.id}
-                  onChange={(v) =>
-                    setOption({
-                      id: v,
-                      subcategory: option.subcategory,
-                    })
-                  }
-                  options={skillOptions}
-                  disabled={skillsLoading || viewing}
-                />
-
-                <LabeledInput
-                  label="Subcategory"
-                  hideLabel
-                  ariaLabel="Subcategory"
-                  value={option.subcategory ?? ''}
-                  onChange={(v) =>
-                    setOption({
-                      id: option.id,
-                      subcategory: v || undefined,
-                    })
-                  }
-                  disabled={viewing}
-                />
-
-                {!viewing && (
-                  <button
-                    type="button"
-                    onClick={removeOption}
-                    style={{ color: '#b00020' }}
-                  >
-                    Remove
-                  </button>
-                )}
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) 1fr auto', gap: 8, }} >
+                <LabeledSelect label="Skill" hideLabel ariaLabel="Skill" value={option.id} onChange={(v) => setOption({ id: v, subcategory: option.subcategory, })} options={skillOptions} disabled={skillsLoading || viewing} />
+                <LabeledInput label="Subcategory" hideLabel ariaLabel="Subcategory" value={option.subcategory ?? ''} onChange={(v) => setOption({ id: option.id, subcategory: v || undefined, })} disabled={viewing} />
+                {!viewing && (<button type="button" onClick={removeOption} style={{ color: '#b00020' }}>Remove</button>)}
               </div>
             )}
           />
@@ -1246,27 +1126,9 @@ export default function ProfessionView() {
             error={errors.skillCategorySkillDevelopmentTypeChoices}
             createEmptyOption={() => ''}
             renderOptionEditor={({ option, setOption, removeOption, viewing }) => (
-              <div
-                style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}
-              >
-                <LabeledSelect
-                  label="Category"
-                  hideLabel
-                  ariaLabel="Category"
-                  value={option}
-                  onChange={(v) => setOption(v)}
-                  options={categoryOptions}
-                  disabled={categoriesLoading || viewing}
-                />
-                {!viewing && (
-                  <button
-                    type="button"
-                    onClick={removeOption}
-                    style={{ color: '#b00020' }}
-                  >
-                    Remove
-                  </button>
-                )}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
+                <LabeledSelect label="Category" hideLabel ariaLabel="Category" value={option} onChange={(v) => setOption(v)} options={categoryOptions} disabled={categoriesLoading || viewing} />
+                {!viewing && (<button type="button" onClick={removeOption} style={{ color: '#b00020' }}>Remove</button>)}
               </div>
             )}
           />
@@ -1282,27 +1144,9 @@ export default function ProfessionView() {
             error={errors.skillGroupSkillDevelopmentTypeChoices}
             createEmptyOption={() => ''}
             renderOptionEditor={({ option, setOption, removeOption, viewing }) => (
-              <div
-                style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}
-              >
-                <LabeledSelect
-                  label="Group"
-                  hideLabel
-                  ariaLabel="Group"
-                  value={option}
-                  onChange={(v) => setOption(v)}
-                  options={groupOptions}
-                  disabled={groupsLoading || viewing}
-                />
-                {!viewing && (
-                  <button
-                    type="button"
-                    onClick={removeOption}
-                    style={{ color: '#b00020' }}
-                  >
-                    Remove
-                  </button>
-                )}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }} >
+                <LabeledSelect label="Group" hideLabel ariaLabel="Group" value={option} onChange={(v) => setOption(v)} options={groupOptions} disabled={groupsLoading || viewing} />
+                {!viewing && (<button type="button" onClick={removeOption} style={{ color: '#b00020' }}>Remove</button>)}
               </div>
             )}
           />

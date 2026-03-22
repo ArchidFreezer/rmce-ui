@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { LabeledInput } from './LabeledInput';
 
-const sanitizeUnsignedInt = (s: string): string => s.replace(/[^\d]/g, '');
+import { sanitizeUnsignedInt } from '../../utils/inputHelpers';
 
 export function ChoiceListEditor<TType extends string = string, TOption = string>({
   title,
