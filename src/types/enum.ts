@@ -73,3 +73,11 @@ export const SKILL_ACTION_TYPES: ReadonlyArray<SkillActionType> = ['Moving', 'OB
 /** Enum for Critical Types */
 export type CriticalType = 'Brawling' | 'Grapple' | 'Impact' | 'Krush' | 'Martial Arts Strikes' | 'Martial Arts Sweeps' | 'Puncture' | 'Slash' | 'Subdual' | 'Tiny' | 'Unbalance' | 'Aether' | 'Cold' | 'Electrical' | 'Heat' | 'Nether';
 export const CRITICAL_TYPES: ReadonlyArray<CriticalType> = ['Brawling', 'Grapple', 'Impact', 'Krush', 'Martial Arts Strikes', 'Martial Arts Sweeps', 'Puncture', 'Slash', 'Subdual', 'Tiny', 'Unbalance', 'Aether', 'Cold', 'Electrical', 'Heat', 'Nether'] as const;
+
+/** Enum for Spell User Types */
+export type SpellUserType = 'Pure' | 'Hybrid' | 'Semi' | 'Chaotic' | 'None';
+export const SPELL_USER_TYPES: ReadonlyArray<SpellUserType> = ['Pure', 'Hybrid', 'Semi', 'Chaotic', 'None'] as const;
+
+/** Enum for skill development type */
+export type SkillDevelopmentType = 'Everyman' | 'Occupational' | 'Restricted' | 'Standard';
+export const SKILL_DEVELOPMENT_TYPES: ReadonlyArray<SkillDevelopmentType> = ['Everyman', 'Occupational', 'Restricted', 'Standard'] as const;

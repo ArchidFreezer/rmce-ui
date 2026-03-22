@@ -9,6 +9,7 @@ export interface LabeledSelectOption {
 export interface LabeledSelectProps {
   label: string;
   hideLabel?: boolean | undefined;
+  ariaLabel?: string | undefined;
   value: string;
   onChange: (val: string) => void;
 
@@ -28,6 +29,7 @@ export function LabeledSelect({
   label,
   value,
   hideLabel = false,
+  ariaLabel,
   onChange,
   options,
   disabled = false,
@@ -43,6 +45,10 @@ export function LabeledSelect({
   const errorId = error ? `${selectId}-error` : undefined;
   const helperId = helperText ? `${selectId}-help` : undefined;
   const describedBy = [errorId, helperId].filter(Boolean).join(' ') || undefined;
+  // Provide accessible name if label is not visible
+  const computedAriaLabel =
+    (!label || hideLabel) ? (ariaLabel ?? label ?? undefined) : undefined;
+
 
   // Normalize options → array of { label, value, disabled? }
   const norm =
@@ -61,6 +67,7 @@ export function LabeledSelect({
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
         required={required}
+        aria-label={computedAriaLabel}
         aria-invalid={!!error}
         aria-describedby={describedBy}
         style={{
