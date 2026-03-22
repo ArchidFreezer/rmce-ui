@@ -15,6 +15,7 @@ import { IdValueListEditor } from '../../components/inputs/IdValueListEditor';
 import { IdTypeListEditor } from '../../components/inputs/IdTypeListEditor';
 import { IdSubcategoryValueListEditor } from '../../components/inputs/IdSubcategoryValueListEditor';
 import { IdSubcategoryTypeListEditor } from '../../components/inputs/IdSubcategoryTypeListEditor';
+import { ChoiceListEditor } from '../../components/inputs/ChoiceListEditor';
 
 import { fetchProfessions, upsertProfession, deleteProfession } from '../../api/profession';
 import { fetchBooks } from '../../api/book';
@@ -1136,333 +1137,175 @@ export default function ProfessionView() {
           />
 
           {/* Skill Subcategory Development Type Choices */}
-          <section style={{ marginTop: 12 }}>
-            <h4 style={{ margin: '8px 0' }}>Skill Subcategory Development Type Choices</h4>
-            {!viewing && (
-              <button
-                type="button"
-                onClick={() => setForm((s) => ({
-                  ...s,
-                  skillSubcategoryDevelopmentTypeChoices: [
-                    ...s.skillSubcategoryDevelopmentTypeChoices,
-                    { numChoices: '', type: '', options: [] },
-                  ],
-                }))}
-                style={{ marginBottom: 8 }}
+          <ChoiceListEditor<SkillDevelopmentType, string>
+            title="Skill Subcategory Development Type Choices"
+            rows={form.skillSubcategoryDevelopmentTypeChoices}
+            onChangeRows={(next) =>
+              setForm((s) => ({ ...s, skillSubcategoryDevelopmentTypeChoices: next }))
+            }
+            typeOptions={developmentTypeOptions}
+            viewing={viewing}
+            error={errors.skillSubcategoryDevelopmentTypeChoices}
+            createEmptyOption={() => ''}
+            renderOptionEditor={({ option, setOption, removeOption, viewing }) => (
+              <div
+                style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}
               >
-                + Add choice row
-              </button>
-            )}
-            {form.skillSubcategoryDevelopmentTypeChoices.map((row, i) => (
-              <div key={`ssdtc-${i}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 8, marginBottom: 8 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '140px 220px', gap: 8, marginBottom: 8 }}>
-                  <LabeledInput
-                    label="Num Choices"
-                    value={row.numChoices}
-                    onChange={(v) => updateSkillSubcategoryChoiceAt(i, { numChoices: sanitizeUnsignedInt(v) })}
-                    disabled={viewing}
-                    width={120}
-                  />
-                  <LabeledSelect
-                    label="Type"
-                    value={row.type}
-                    onChange={(v) => updateSkillSubcategoryChoiceAt(i, { type: v as SkillDevelopmentType })}
-                    options={developmentTypeOptions}
-                    disabled={viewing}
-                  />
-                </div>
+                <LabeledSelect
+                  label="Skill"
+                  hideLabel
+                  ariaLabel="Skill"
+                  value={option}
+                  onChange={(v) => setOption(v)}
+                  options={skillOptions}
+                  disabled={skillsLoading || viewing}
+                />
                 {!viewing && (
                   <button
                     type="button"
-                    onClick={() => updateSkillSubcategoryChoiceAt(i, { options: [...row.options, ''] })}
-                    style={{ marginBottom: 8 }}
-                  >
-                    + Add skill option
-                  </button>
-                )}
-                {row.options.map((opt, oi) => (
-                  <div key={`ssdtc-${i}-${oi}`} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginBottom: 8 }}>
-                    <LabeledSelect
-                      label="Skill"
-                      hideLabel
-                      value={opt}
-                      onChange={(v) => {
-                        const nextOpts = row.options.slice();
-                        if (oi < 0 || oi >= nextOpts.length) return;
-                        nextOpts[oi] = v;
-                        updateSkillSubcategoryChoiceAt(i, { options: nextOpts });
-                      }}
-                      options={skillOptions}
-                      disabled={skillsLoading || viewing}
-                    />
-                    {!viewing && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const nextOpts = row.options.slice();
-                          if (oi < 0 || oi >= nextOpts.length) return;
-                          nextOpts.splice(oi, 1);
-                          updateSkillSubcategoryChoiceAt(i, { options: nextOpts });
-                        }}
-                        style={{ color: '#b00020' }}
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                ))}
-                {!viewing && (
-                  <button
-                    type="button"
-                    onClick={() => setForm((s) => {
-                      const copy = s.skillSubcategoryDevelopmentTypeChoices.slice();
-                      if (i < 0 || i >= copy.length) return s;
-                      copy.splice(i, 1);
-                      return { ...s, skillSubcategoryDevelopmentTypeChoices: copy };
-                    })}
+                    onClick={removeOption}
                     style={{ color: '#b00020' }}
                   >
-                    Remove row
+                    Remove
                   </button>
                 )}
               </div>
-            ))}
-            {errors.skillSubcategoryDevelopmentTypeChoices && <div style={{ color: '#b00020', marginTop: 6 }}>{errors.skillSubcategoryDevelopmentTypeChoices}</div>}
-          </section>
+            )}
+          />
 
           {/* Skill Development Type Choices */}
-          <section style={{ marginTop: 12 }}>
-            <h4 style={{ margin: '8px 0' }}>Skill Development Type Choices</h4>
-            {!viewing && (
-              <button
-                type="button"
-                onClick={() => setForm((s) => ({
-                  ...s,
-                  skillDevelopmentTypeChoices: [
-                    ...s.skillDevelopmentTypeChoices,
-                    { numChoices: '', type: '', options: [] },
-                  ],
-                }))}
-                style={{ marginBottom: 8 }}
+          <ChoiceListEditor<SkillDevelopmentType, { id: string; subcategory?: string | undefined }>
+            title="Skill Development Type Choices"
+            rows={form.skillDevelopmentTypeChoices}
+            onChangeRows={(next) =>
+              setForm((s) => ({ ...s, skillDevelopmentTypeChoices: next }))
+            }
+            typeOptions={developmentTypeOptions}
+            viewing={viewing}
+            error={errors.skillDevelopmentTypeChoices}
+            createEmptyOption={() => ({ id: '', subcategory: '' })}
+            renderOptionEditor={({ option, setOption, removeOption, viewing }) => (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'minmax(280px, 1fr) 1fr auto',
+                  gap: 8,
+                }}
               >
-                + Add choice row
-              </button>
-            )}
+                <LabeledSelect
+                  label="Skill"
+                  hideLabel
+                  ariaLabel="Skill"
+                  value={option.id}
+                  onChange={(v) =>
+                    setOption({
+                      id: v,
+                      subcategory: option.subcategory,
+                    })
+                  }
+                  options={skillOptions}
+                  disabled={skillsLoading || viewing}
+                />
 
-            {form.skillDevelopmentTypeChoices.map((row, i) => (
-              <div key={`sdtc-${i}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 8, marginBottom: 8 }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '140px 220px', gap: 8, marginBottom: 8 }}>
-                  <LabeledInput
-                    label="Num Choices"
-                    value={row.numChoices}
-                    onChange={(v) => updateSkillDevChoiceAt(i, { numChoices: sanitizeUnsignedInt(v) })}
-                    disabled={viewing}
-                    width={120}
-                  />
-                  <LabeledSelect
-                    label="Type"
-                    value={row.type}
-                    onChange={(v) => updateSkillDevChoiceAt(i, { type: v as SkillDevelopmentType })}
-                    options={developmentTypeOptions}
-                    disabled={viewing}
-                  />
-                </div>
-
-                {!viewing && (
-                  <button
-                    type="button"
-                    onClick={() => updateSkillDevChoiceAt(i, { options: [...row.options, { id: '', subcategory: '' }] })}
-                    style={{ marginBottom: 8 }}
-                  >
-                    + Add skill option
-                  </button>
-                )}
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 1fr) 1fr auto', gap: 8 }}>
-                  <div style={{ fontWeight: 600 }}>Skill</div>
-                  <div style={{ fontWeight: 600 }}>Subcategory (optional)</div>
-                  <div />
-                  {row.options.map((opt, oi) => (
-                    <React.Fragment key={`sdtc-${i}-${oi}`}>
-                      <LabeledSelect
-                        label="Skill"
-                        hideLabel
-                        value={opt.id}
-                        onChange={(v) => {
-                          const nextOpts = row.options.slice();
-                          if (oi < 0 || oi >= nextOpts.length) return;
-                          const current = nextOpts[oi];
-                          if (!current) return;
-                          nextOpts[oi] = { id: v, subcategory: current.subcategory };
-                          updateSkillDevChoiceAt(i, { options: nextOpts });
-                        }}
-                        options={skillOptions}
-                        disabled={skillsLoading || viewing}
-                      />
-                      <LabeledInput
-                        label="Subcategory"
-                        hideLabel
-                        ariaLabel="Subcategory"
-                        value={opt.subcategory ?? ''}
-                        onChange={(v) => {
-                          const nextOpts = row.options.slice();
-                          if (oi < 0 || oi >= nextOpts.length) return;
-                          const current = nextOpts[oi];
-                          if (!current) return;
-                          nextOpts[oi] = { id: current.id, subcategory: v || undefined };
-                          updateSkillDevChoiceAt(i, { options: nextOpts });
-                        }}
-                        disabled={viewing}
-                      />
-                      {!viewing && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const nextOpts = row.options.slice();
-                            if (oi < 0 || oi >= nextOpts.length) return;
-                            nextOpts.splice(oi, 1);
-                            updateSkillDevChoiceAt(i, { options: nextOpts });
-                          }}
-                          style={{ color: '#b00020' }}
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </div>
+                <LabeledInput
+                  label="Subcategory"
+                  hideLabel
+                  ariaLabel="Subcategory"
+                  value={option.subcategory ?? ''}
+                  onChange={(v) =>
+                    setOption({
+                      id: option.id,
+                      subcategory: v || undefined,
+                    })
+                  }
+                  disabled={viewing}
+                />
 
                 {!viewing && (
                   <button
                     type="button"
-                    onClick={() => setForm((s) => {
-                      const copy = s.skillDevelopmentTypeChoices.slice();
-                      if (i < 0 || i >= copy.length) return s;
-                      copy.splice(i, 1);
-                      return { ...s, skillDevelopmentTypeChoices: copy };
-                    })}
-                    style={{ color: '#b00020', marginTop: 8 }}
+                    onClick={removeOption}
+                    style={{ color: '#b00020' }}
                   >
-                    Remove row
+                    Remove
                   </button>
                 )}
               </div>
-            ))}
-            {errors.skillDevelopmentTypeChoices && <div style={{ color: '#b00020', marginTop: 6 }}>{errors.skillDevelopmentTypeChoices}</div>}
-          </section>
+            )}
+          />
 
           {/* Category / Group choice sections */}
-          {[
-            {
-              title: 'Skill Category Skill Development Type Choices',
-              key: 'skillCategorySkillDevelopmentTypeChoices' as const,
-              options: categoryOptions,
-              loading: categoriesLoading,
-              error: errors.skillCategorySkillDevelopmentTypeChoices,
-            },
-            {
-              title: 'Skill Group Skill Development Type Choices',
-              key: 'skillGroupSkillDevelopmentTypeChoices' as const,
-              options: groupOptions,
-              loading: groupsLoading,
-              error: errors.skillGroupSkillDevelopmentTypeChoices,
-            },
-          ].map(({ title, key, options, loading, error }) => (
-            <section key={key} style={{ marginTop: 12 }}>
-              <h4 style={{ margin: '8px 0' }}>{title}</h4>
-              {!viewing && (
-                <button
-                  type="button"
-                  onClick={() => setForm((s) => ({
-                    ...s,
-                    [key]: [...s[key], { numChoices: '', type: '', options: [] }],
-                  }))}
-                  style={{ marginBottom: 8 }}
-                >
-                  + Add choice row
-                </button>
-              )}
+          <ChoiceListEditor<SkillDevelopmentType, string>
+            title="Skill Category Skill Development Type Choices"
+            rows={form.skillCategorySkillDevelopmentTypeChoices}
+            onChangeRows={(next) =>
+              setForm((s) => ({ ...s, skillCategorySkillDevelopmentTypeChoices: next }))
+            }
+            typeOptions={developmentTypeOptions}
+            viewing={viewing}
+            error={errors.skillCategorySkillDevelopmentTypeChoices}
+            createEmptyOption={() => ''}
+            renderOptionEditor={({ option, setOption, removeOption, viewing }) => (
+              <div
+                style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}
+              >
+                <LabeledSelect
+                  label="Category"
+                  hideLabel
+                  ariaLabel="Category"
+                  value={option}
+                  onChange={(v) => setOption(v)}
+                  options={categoryOptions}
+                  disabled={categoriesLoading || viewing}
+                />
+                {!viewing && (
+                  <button
+                    type="button"
+                    onClick={removeOption}
+                    style={{ color: '#b00020' }}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            )}
+          />
 
-              {form[key].map((row, i) => (
-                <div key={`${key}-${i}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 8, marginBottom: 8 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '140px 220px', gap: 8, marginBottom: 8 }}>
-                    <LabeledInput
-                      label="Num Choices"
-                      value={row.numChoices}
-                      onChange={(v) => updateIdChoiceAt(key, i, { numChoices: sanitizeUnsignedInt(v) })}
-                      disabled={viewing}
-                      width={120}
-                    />
-                    <LabeledSelect
-                      label="Type"
-                      value={row.type}
-                      onChange={(v) => updateIdChoiceAt(key, i, { type: v as SkillDevelopmentType })}
-                      options={developmentTypeOptions}
-                      disabled={viewing}
-                    />
-                  </div>
-
-                  {!viewing && (
-                    <button
-                      type="button"
-                      onClick={() => updateIdChoiceAt(key, i, { options: [...row.options, ''] })}
-                      style={{ marginBottom: 8 }}
-                    >
-                      + Add option
-                    </button>
-                  )}
-
-                  {row.options.map((opt, oi) => (
-                    <div key={`${key}-${i}-${oi}`} style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginBottom: 8 }}>
-                      <LabeledSelect
-                        label="Option"
-                        hideLabel
-                        value={opt}
-                        onChange={(v) => {
-                          const nextOpts = row.options.slice();
-                          if (oi < 0 || oi >= nextOpts.length) return;
-                          nextOpts[oi] = v;
-                          updateIdChoiceAt(key, i, { options: nextOpts });
-                        }}
-                        options={options}
-                        disabled={loading || viewing}
-                      />
-                      {!viewing && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const nextOpts = row.options.slice();
-                            if (oi < 0 || oi >= nextOpts.length) return;
-                            nextOpts.splice(oi, 1);
-                            updateIdChoiceAt(key, i, { options: nextOpts });
-                          }}
-                          style={{ color: '#b00020' }}
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                  ))}
-
-                  {!viewing && (
-                    <button
-                      type="button"
-                      onClick={() => setForm((s) => {
-                        const copy = s[key].slice();
-                        if (i < 0 || i >= copy.length) return s;
-                        copy.splice(i, 1);
-                        return { ...s, [key]: copy };
-                      })}
-                      style={{ color: '#b00020' }}
-                    >
-                      Remove row
-                    </button>
-                  )}
-                </div>
-              ))}
-              {error && <div style={{ color: '#b00020', marginTop: 6 }}>{error}</div>}
-            </section>
-          ))}
+          <ChoiceListEditor<SkillDevelopmentType, string>
+            title="Skill Group Skill Development Type Choices"
+            rows={form.skillGroupSkillDevelopmentTypeChoices}
+            onChangeRows={(next) =>
+              setForm((s) => ({ ...s, skillGroupSkillDevelopmentTypeChoices: next }))
+            }
+            typeOptions={developmentTypeOptions}
+            viewing={viewing}
+            error={errors.skillGroupSkillDevelopmentTypeChoices}
+            createEmptyOption={() => ''}
+            renderOptionEditor={({ option, setOption, removeOption, viewing }) => (
+              <div
+                style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}
+              >
+                <LabeledSelect
+                  label="Group"
+                  hideLabel
+                  ariaLabel="Group"
+                  value={option}
+                  onChange={(v) => setOption(v)}
+                  options={groupOptions}
+                  disabled={groupsLoading || viewing}
+                />
+                {!viewing && (
+                  <button
+                    type="button"
+                    onClick={removeOption}
+                    style={{ color: '#b00020' }}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            )}
+          />
 
           {/* Skill Category Costs */}
           <section style={{ marginTop: 12 }}>
