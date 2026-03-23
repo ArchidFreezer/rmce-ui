@@ -4,16 +4,16 @@ import { LabeledSelect } from './LabeledSelect';
 
 import { sanitizeUnsignedInt, sanitizeSignedInt } from '../../utils/inputHelpers';
 
-export type IdSubcategoryValueRowVM = {
+export type SkillValueRowVM = {
   id: string;
   subcategory?: string | undefined;
   value: string;
 };
 
-export interface IdSubcategoryValueListEditorProps {
+export interface SkillValueListEditorProps {
   title: string;
-  rows: IdSubcategoryValueRowVM[];
-  onChangeRows: (next: IdSubcategoryValueRowVM[]) => void;
+  rows: SkillValueRowVM[];
+  onChangeRows: (next: SkillValueRowVM[]) => void;
 
   /** Options for the ID column */
   idOptions: Array<{ value: string; label: string }>;
@@ -38,7 +38,7 @@ export interface IdSubcategoryValueListEditorProps {
   valueWidth?: number | string | undefined;
 }
 
-export function IdSubcategoryValueListEditor({
+export function SkillValueListEditor({
   title,
   rows,
   onChangeRows,
@@ -53,18 +53,18 @@ export function IdSubcategoryValueListEditor({
   removeButtonLabel = 'Remove',
   signedValues = true,
   valueWidth = 100,
-}: IdSubcategoryValueListEditorProps) {
+}: SkillValueListEditorProps) {
   const sanitize = signedValues ? sanitizeSignedInt : sanitizeUnsignedInt;
 
   const updateRowAt = React.useCallback(
-    (index: number, patch: Partial<IdSubcategoryValueRowVM>) => {
+    (index: number, patch: Partial<SkillValueRowVM>) => {
       const copy = rows.slice();
 
       if (index < 0 || index >= copy.length) return;
       const current = copy[index];
       if (!current) return;
 
-      const nextRow: IdSubcategoryValueRowVM = {
+      const nextRow: SkillValueRowVM = {
         id: patch.id ?? current.id,
         value: patch.value ?? current.value,
         subcategory: Object.prototype.hasOwnProperty.call(patch, 'subcategory')
@@ -79,7 +79,7 @@ export function IdSubcategoryValueListEditor({
   );
 
   const addRow = React.useCallback(() => {
-    const next: IdSubcategoryValueRowVM[] = [
+    const next: SkillValueRowVM[] = [
       ...rows,
       {
         id: '',

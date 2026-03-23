@@ -34,7 +34,7 @@ import {
 } from '../../types/enum';
 
 import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
-import { IdSubcategoryValueListEditor } from '../../components/inputs/IdSubcategoryValueListEditor';
+import { IdSubcategoryValueListEditor } from '../../components/inputs/SkillValueListEditor';
 import { IdValueListEditor } from '../../components/inputs/IdValueListEditor';
 
 const prefix = 'CULTURETYPE_';

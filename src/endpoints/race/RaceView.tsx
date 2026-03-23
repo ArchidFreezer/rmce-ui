@@ -10,7 +10,7 @@ import { LabeledInput } from '../../components/inputs/LabeledInput';
 import { LabeledSelect } from '../../components/inputs/LabeledSelect';
 import { HtmlPreview } from '../../components/inputs/HtmlPreview';
 import { IdValueListEditor } from '../../components/inputs/IdValueListEditor';
-import { IdSubcategoryValueListEditor } from '../../components/inputs/IdSubcategoryValueListEditor';
+import { SkillValueListEditor } from '../../components/inputs/SkillValueListEditor';
 import { ChoiceListEditor } from '../../components/inputs/ChoiceListEditor';
 import { LanguageRankListEditor } from '../../components/inputs/LanguageRankListEditor';
 import { SkillListEditor } from '../../components/inputs/SkillListEditor';
@@ -1019,7 +1019,7 @@ export default function RaceView() {
           ))}
 
           {/* Skill bonuses */}
-          <IdSubcategoryValueListEditor
+          <SkillValueListEditor
             title="Skill Bonuses"
             rows={form.skillBonuses}
             onChangeRows={(next) => setForm((s) => ({ ...s, skillBonuses: next }))}
