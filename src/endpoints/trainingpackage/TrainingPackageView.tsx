@@ -48,6 +48,7 @@ import { isValidID, makeIDOnChange, isValidUnsignedInt, isValidSignedInt } from 
 import { IdMultiSkillRankEditor } from '../../components/inputs/IdMultiSkillRankEditor';
 import { LanguageChoiceEditor } from '../../components/inputs/LanguageChoiceEditor';
 import { SpellListCategoryRankEditor } from '../../components/inputs/SpellListCategoryRankEditor';
+import { SpellListRankEditor } from '../../components/inputs/SpellListRankEditor';
 
 const prefix = 'TRAININGPACKAGE_';
 
@@ -1164,33 +1165,6 @@ export default function TrainingPackagesView() {
             />
           </div>
 
-          {/* Flavour Text */}
-          <section style={{ marginTop: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <h4 style={{ margin: '8px 0' }}>Flavour Text</h4>
-              <button type="button" onClick={() => setPreviewFlavourText((p) => !p)}>
-                {previewFlavourText ? 'Edit' : 'Preview'}
-              </button>
-            </div>
-            {previewFlavourText ? (
-              <HtmlPreview
-                html={form.flavourText}
-                emptyHint="No flavour text"
-                className="preview-html"
-                style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
-              />
-            ) : (
-              <label style={{ display: 'grid', gap: 6 }}>
-                <textarea
-                  value={form.flavourText}
-                  onChange={(e) => setForm((s) => ({ ...s, flavourText: e.target.value }))}
-                  disabled={viewing}
-                  rows={5}
-                />
-              </label>
-            )}
-          </section>
-
           {/* Description */}
           <section style={{ marginTop: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1218,6 +1192,35 @@ export default function TrainingPackagesView() {
             )}
           </section>
 
+          {/* Flavour Text */}
+          <section style={{ marginTop: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h4 style={{ margin: '8px 0' }}>Flavour Text</h4>
+              <button type="button" onClick={() => setPreviewFlavourText((p) => !p)}>
+                {previewFlavourText ? 'Edit' : 'Preview'}
+              </button>
+            </div>
+            {previewFlavourText ? (
+              <HtmlPreview
+                html={form.flavourText}
+                emptyHint="No flavour text"
+                className="preview-html"
+                style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
+              />
+            ) : (
+              <label style={{ display: 'grid', gap: 6 }}>
+                <textarea
+                  value={form.flavourText}
+                  onChange={(e) => setForm((s) => ({ ...s, flavourText: e.target.value }))}
+                  disabled={viewing}
+                  rows={5}
+                />
+              </label>
+            )}
+          </section>
+
+          {/* Notes */}
+
           {/* Races */}
           <IdListEditor
             title="Allowed Races"
@@ -1226,6 +1229,22 @@ export default function TrainingPackagesView() {
             options={raceOptions}
             viewing={viewing}
           />
+
+          {/* Qualifiers */}
+
+          {/* Lifestyle */}
+
+          {/* Timing */}
+
+          {/* Starting money modifier */}
+
+          {/* Specials */}
+
+          {/* Stat gains */}
+
+          {/* Realm stat gains */}
+
+          {/* Stat gain choices */}
 
           {/* Skill Ranks */}
           <SkillValueListEditor
@@ -1236,9 +1255,13 @@ export default function TrainingPackagesView() {
             viewing={viewing}
           />
 
+          {/* Skill Rank Choices */}
+
+          {/* Category Ranks */}
+
           {/* Category Multi‑Skill Rank Choices */}
           <IdMultiSkillRankEditor
-            title="Category Multi‑Skill Rank Choices"
+            title="Category Multi-Skill Rank Choices"
             rows={form.categoryMultiSkillRankChoices}
             onChangeRows={(next) =>
               setForm((s) => ({ ...s, categoryMultiSkillRankChoices: next }))
@@ -1252,7 +1275,7 @@ export default function TrainingPackagesView() {
 
           {/* Group Multi‑Skill Rank Choices */}
           <IdMultiSkillRankEditor
-            title="Group Multi‑Skill Rank Choices"
+            title="Group Multi-Skill Rank Choices"
             rows={form.groupMultiSkillRankChoices}
             onChangeRows={(next) =>
               setForm((s) => ({ ...s, groupMultiSkillRankChoices: next }))
@@ -1262,6 +1285,21 @@ export default function TrainingPackagesView() {
             viewing={viewing}
             error={errors.groupMultiSkillRankChoices}
             idColumnLabel="Group"
+          />
+
+          {/* Group Category & Skill Rank Choices */}
+
+          {/* Spell List Ranks */}
+          <SpellListRankEditor
+            title="Spell List Ranks"
+            rows={form.spellListRanks}
+            onChangeRows={(next) =>
+              setForm((s) => ({ ...s, spellListRanks: next }))
+            }
+            categoryOptions={categoryOptions}
+            spellListOptions={spellListOptions}
+            viewing={viewing}
+            error={errors.spellListRanks}
           />
 
           {/* Spell List Category Rank Choices */}
@@ -1294,6 +1332,15 @@ export default function TrainingPackagesView() {
             rows={form.lifestyleCategories}
             onChangeRows={(next) => setForm((s) => ({ ...s, lifestyleCategories: next }))}
             options={categoryOptions}
+            viewing={viewing}
+          />
+
+          {/* Lifestyle Groups */}
+          <IdListEditor
+            title="Lifestyle Groups"
+            rows={form.lifestyleGroups}
+            onChangeRows={(next) => setForm((s) => ({ ...s, lifestyleGroups: next }))}
+            options={groupOptions}
             viewing={viewing}
           />
 
@@ -1331,15 +1378,6 @@ export default function TrainingPackagesView() {
                 {!viewing && <button onClick={removeOption}>Remove</button>}
               </div>
             )}
-          />
-
-          {/* Lifestyle Groups */}
-          <IdListEditor
-            title="Lifestyle Groups"
-            rows={form.lifestyleGroups}
-            onChangeRows={(next) => setForm((s) => ({ ...s, lifestyleGroups: next }))}
-            options={groupOptions}
-            viewing={viewing}
           />
 
           {/* Language Choices */}

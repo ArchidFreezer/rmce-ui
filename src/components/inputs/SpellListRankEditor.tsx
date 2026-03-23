@@ -2,24 +2,32 @@ import * as React from 'react';
 import { LabeledInput } from './LabeledInput';
 import { LabeledSelect } from './LabeledSelect';
 
-export type SpellListCategoryRankRowVM<TCategoryId extends string = string> = {
-  value: string;        // ranks
-  numChoices: string;   // number of choices
-  options: TCategoryId[];
+export type SpellListRankRowVM<
+  TCategoryId extends string = string,
+  TSpellListId extends string = string
+> = {
+  optionalCategory?: TCategoryId | undefined;
+  value: string;
+  numChoices: string;
+  options: TSpellListId[];
 };
 
-export interface SpellListCategoryRankEditorProps<
-  TCategoryId extends string = string
+export interface SpellListRankEditorProps<
+  TCategoryId extends string = string,
+  TSpellListId extends string = string
 > {
   title: string;
-  rows: SpellListCategoryRankRowVM<TCategoryId>[];
-  onChangeRows: (next: SpellListCategoryRankRowVM<TCategoryId>[]) => void;
+  rows: SpellListRankRowVM<TCategoryId, TSpellListId>[];
+  onChangeRows: (
+    next: SpellListRankRowVM<TCategoryId, TSpellListId>[],
+  ) => void;
 
   categoryOptions: Array<{ value: TCategoryId; label: string }>;
+  spellListOptions: Array<{ value: TSpellListId; label: string }>;
 
   viewing?: boolean | undefined;
-  showWhenEmpty?: boolean | undefined;
   loading?: boolean | undefined;
+  showWhenEmpty?: boolean | undefined;
   error?: string | undefined;
 
   addRowLabel?: string | undefined;
@@ -28,26 +36,28 @@ export interface SpellListCategoryRankEditorProps<
 
 const sanitizeUnsignedInt = (s: string) => s.replace(/[^\d]/g, '');
 
-export function SpellListCategoryRankEditor<
-  TCategoryId extends string = string
+export function SpellListRankEditor<
+  TCategoryId extends string = string,
+  TSpellListId extends string = string
 >({
   title,
   rows,
   onChangeRows,
   categoryOptions,
+  spellListOptions,
   viewing,
   showWhenEmpty = false,
   loading,
   error,
-  addRowLabel = '+ Add category rank choice',
+  addRowLabel = '+ Add spell list rank',
   removeRowLabel = 'Remove',
-}: SpellListCategoryRankEditorProps<TCategoryId>) {
+}: SpellListRankEditorProps<TCategoryId, TSpellListId>) {
   const showActions = !viewing;
 
   const updateRowAt = React.useCallback(
     (
       index: number,
-      patch: Partial<SpellListCategoryRankRowVM<TCategoryId>>,
+      patch: Partial<SpellListRankRowVM<TCategoryId, TSpellListId>>,
     ) => {
       const copy = rows.slice();
       if (index < 0 || index >= copy.length) return;
@@ -55,6 +65,10 @@ export function SpellListCategoryRankEditor<
       if (!current) return;
 
       copy[index] = {
+        optionalCategory:
+          Object.prototype.hasOwnProperty.call(patch, 'optionalCategory')
+            ? patch.optionalCategory
+            : current.optionalCategory,
         value: patch.value ?? current.value,
         numChoices: patch.numChoices ?? current.numChoices,
         options: patch.options ?? current.options.slice(),
@@ -68,7 +82,12 @@ export function SpellListCategoryRankEditor<
   const addRow = React.useCallback(() => {
     onChangeRows([
       ...rows,
-      { value: '', numChoices: '', options: [] },
+      {
+        optionalCategory: undefined,
+        value: '',
+        numChoices: '',
+        options: [],
+      },
     ]);
   }, [rows, onChangeRows]);
 
@@ -86,7 +105,7 @@ export function SpellListCategoryRankEditor<
 
     copy[rowIndex] = {
       ...row,
-      options: [...row.options, '' as TCategoryId],
+      options: [...row.options, '' as TSpellListId],
     };
 
     onChangeRows(copy);
@@ -95,7 +114,7 @@ export function SpellListCategoryRankEditor<
   const updateOptionAt = (
     rowIndex: number,
     optionIndex: number,
-    value: TCategoryId,
+    value: TSpellListId,
   ) => {
     const copy = rows.slice();
     const row = copy[rowIndex];
@@ -147,16 +166,29 @@ export function SpellListCategoryRankEditor<
             marginBottom: 8,
           }}
         >
+          {/* Header fields */}
           <div
             style={{
               display: 'grid',
               gridTemplateColumns: showActions
-                ? '120px 120px auto'
-                : '120px 120px',
+                ? 'minmax(280px,1fr) 120px 120px auto'
+                : 'minmax(280px,1fr) 120px 120px',
               gap: 8,
               marginBottom: 8,
             }}
           >
+            <LabeledSelect
+              label="Optional Category"
+              value={row.optionalCategory ?? ''}
+              options={categoryOptions}
+              disabled={loading || viewing}
+              onChange={(v) =>
+                updateRowAt(rowIndex, {
+                  optionalCategory: v as TCategoryId || undefined,
+                })
+              }
+            />
+
             <LabeledInput
               label="Ranks"
               value={row.value}
@@ -192,13 +224,14 @@ export function SpellListCategoryRankEditor<
             )}
           </div>
 
+          {/* Spell list options */}
           {!viewing && (
             <button
               type="button"
               onClick={() => addOptionAt(rowIndex)}
               style={{ marginBottom: 8 }}
             >
-              + Add category
+              + Add spell list
             </button>
           )}
 
@@ -212,13 +245,14 @@ export function SpellListCategoryRankEditor<
             {row.options.map((opt, optIndex) => (
               <React.Fragment key={`${rowIndex}-${optIndex}`}>
                 <LabeledSelect
-                  label="Category"
+                  label="Spell List"
                   hideLabel
+                  ariaLabel="Spell List"
                   value={opt}
-                  options={categoryOptions}
+                  options={spellListOptions}
                   disabled={loading || viewing}
                   onChange={(v) =>
-                    updateOptionAt(rowIndex, optIndex, v as TCategoryId)
+                    updateOptionAt(rowIndex, optIndex, v as TSpellListId)
                   }
                 />
 
