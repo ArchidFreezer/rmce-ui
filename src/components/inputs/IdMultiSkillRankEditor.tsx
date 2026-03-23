@@ -18,6 +18,7 @@ export interface IdMultiSkillRankEditorProps<TId extends string = string> {
 
   loading?: boolean | undefined;
   viewing?: boolean | undefined;
+  showWhenEmpty?: boolean | undefined;
   error?: string | undefined;
 
   /** Optional labels */
@@ -42,6 +43,8 @@ export function IdMultiSkillRankEditor<TId extends string = string>({
   idOptions,
   loading,
   viewing,
+  showWhenEmpty = false,
+
   error,
   idColumnLabel = 'ID',
   valueColumnLabel = 'Ranks',
@@ -97,6 +100,9 @@ export function IdMultiSkillRankEditor<TId extends string = string>({
     [rows, onChangeRows],
   );
 
+  const showComponent = viewing ? rows.length > 0 || showWhenEmpty : true;
+  if (!showComponent) return null;
+
   return (
     <section style={{ marginTop: 12 }}>
       <h4 style={{ margin: '8px 0' }}>{title}</h4>
@@ -110,14 +116,14 @@ export function IdMultiSkillRankEditor<TId extends string = string>({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: showActions ? `minmax(${resolvedIdWidth}, 1fr) 160px auto` : `minmax(${resolvedIdWidth}, 1fr) 160px`,
+          gridTemplateColumns: showActions ? `minmax(${resolvedIdWidth}, 1fr) 160px 160px auto` : `minmax(${resolvedIdWidth}, 1fr) 160px 160px`,
           gap: 8,
         }}
       >
         <div style={{ fontWeight: 600 }}>{idColumnLabel}</div>
         <div style={{ fontWeight: 600 }}>{valueColumnLabel}</div>
         <div style={{ fontWeight: 600 }}>{numChoicesColumnLabel}</div>
-        {showActions && <div />}
+        {/* {showActions && <div />} */}
 
         {rows.map((row, i) => (
           <React.Fragment key={`${title}-${i}`}>

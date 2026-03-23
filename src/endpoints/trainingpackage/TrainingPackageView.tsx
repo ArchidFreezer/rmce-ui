@@ -11,7 +11,6 @@ import { LabeledSelect } from '../../components/inputs/LabeledSelect';
 import { HtmlPreview } from '../../components/inputs/HtmlPreview';
 
 import { IdListEditor } from '../../components/inputs/IdListEditor';
-import { IdValueListEditor } from '../../components/inputs/IdValueListEditor';
 import { SkillListEditor } from '../../components/inputs/SkillListEditor';
 import { SkillValueListEditor } from '../../components/inputs/SkillValueListEditor';
 import { ChoiceListEditor } from '../../components/inputs/ChoiceListEditor';
@@ -26,7 +25,7 @@ import {
 } from '../../api/trainingpackage';
 
 import { fetchBooks } from '../../api/book';
-import { deleteRace, fetchRaces } from '../../api/race';
+import { fetchRaces } from '../../api/race';
 import { fetchSkills } from '../../api/skill';
 import { fetchSkillcategories } from '../../api/skillcategory';
 import { fetchSkillgroups } from '../../api/skillgroup';
@@ -47,6 +46,8 @@ import {
 } from '../../types/enum';
 import { isValidID, makeIDOnChange, isValidUnsignedInt, isValidSignedInt } from '../../utils/inputHelpers';
 import { IdMultiSkillRankEditor } from '../../components/inputs/IdMultiSkillRankEditor';
+import { LanguageChoiceEditor } from '../../components/inputs/LanguageChoiceEditor';
+import { SpellListCategoryRankEditor } from '../../components/inputs/SpellListCategoryRankEditor';
 
 const prefix = 'TRAININGPACKAGE_';
 
@@ -514,6 +515,7 @@ export default function TrainingPackagesView() {
   const [viewing, setViewing] = useState(false);
   const [form, setForm] = useState<FormState>(emptyVM());
 
+  const [previewFlavourText, setPreviewFlavourText] = useState(false);
   const [previewDescription, setPreviewDescription] = useState(false);
 
   const toast = useToast();
@@ -1162,20 +1164,57 @@ export default function TrainingPackagesView() {
             />
           </div>
 
-          {/* Description */}
-          <section>
-            <h4>Description</h4>
-            <button onClick={() => setPreviewDescription((p) => !p)}>
-              {previewDescription ? 'Edit' : 'Preview'}
-            </button>
-            {previewDescription ? (
-              <HtmlPreview html={form.description} />
-            ) : (
-              <textarea
-                value={form.description}
-                onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))}
-                disabled={viewing}
+          {/* Flavour Text */}
+          <section style={{ marginTop: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h4 style={{ margin: '8px 0' }}>Flavour Text</h4>
+              <button type="button" onClick={() => setPreviewFlavourText((p) => !p)}>
+                {previewFlavourText ? 'Edit' : 'Preview'}
+              </button>
+            </div>
+            {previewFlavourText ? (
+              <HtmlPreview
+                html={form.flavourText}
+                emptyHint="No flavour text"
+                className="preview-html"
+                style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
               />
+            ) : (
+              <label style={{ display: 'grid', gap: 6 }}>
+                <textarea
+                  value={form.flavourText}
+                  onChange={(e) => setForm((s) => ({ ...s, flavourText: e.target.value }))}
+                  disabled={viewing}
+                  rows={5}
+                />
+              </label>
+            )}
+          </section>
+
+          {/* Description */}
+          <section style={{ marginTop: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h4 style={{ margin: '8px 0' }}>Description</h4>
+              <button type="button" onClick={() => setPreviewDescription((p) => !p)}>
+                {previewDescription ? 'Edit' : 'Preview'}
+              </button>
+            </div>
+            {previewDescription ? (
+              <HtmlPreview
+                html={form.description}
+                emptyHint="No description"
+                className="preview-html"
+                style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
+              />
+            ) : (
+              <label style={{ display: 'grid', gap: 6 }}>
+                <textarea
+                  value={form.description}
+                  onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))}
+                  disabled={viewing}
+                  rows={5}
+                />
+              </label>
             )}
           </section>
 
@@ -1226,55 +1265,18 @@ export default function TrainingPackagesView() {
           />
 
           {/* Spell List Category Rank Choices */}
-          <ChoiceListEditor<string, string>
+          <SpellListCategoryRankEditor
             title="Spell List Category Rank Choices"
-            rows={form.spellListCategoryRankChoices.map((r) => ({
-              numChoices: r.numChoices,
-              type: r.value,
-              options: r.options,
-            }))}
+            rows={form.spellListCategoryRankChoices}
             onChangeRows={(next) =>
               setForm((s) => ({
                 ...s,
-                spellListCategoryRankChoices: next.map((r) => ({
-                  numChoices: r.numChoices,
-                  value: r.type,
-                  options: r.options,
-                })),
+                spellListCategoryRankChoices: next,
               }))
             }
-            typeOptions={[
-              { value: '1', label: '1 rank' },
-              { value: '2', label: '2 ranks' },
-              { value: '3', label: '3 ranks' },
-            ]}
-            createEmptyOption={() => ''}
+            categoryOptions={categoryOptions}
             viewing={viewing}
             error={errors.spellListCategoryRankChoices}
-            renderOptionEditor={({ option, setOption, removeOption, viewing }) => (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: viewing ? '1fr' : '1fr auto',
-                  gap: 8,
-                }}
-              >
-                <LabeledSelect
-                  label="Category"
-                  hideLabel
-                  ariaLabel="Category"
-                  value={option}
-                  options={categoryOptions}
-                  disabled={viewing}
-                  onChange={setOption}
-                />
-                {!viewing && (
-                  <button type="button" onClick={removeOption}>
-                    Remove
-                  </button>
-                )}
-              </div>
-            )}
           />
 
           {/* Lifestyle Skills */}
@@ -1341,42 +1343,15 @@ export default function TrainingPackagesView() {
           />
 
           {/* Language Choices */}
-          <ChoiceListEditor<string, string>
+          <LanguageChoiceEditor
             title="Language Choices"
-            rows={form.languageChoices.map((r) => ({
-              numChoices: r.numChoices,
-              type: r.value,
-              options: r.options,
-            }))}
+            rows={form.languageChoices}
             onChangeRows={(next) =>
-              setForm((s) => ({
-                ...s,
-                languageChoices: next.map((r) => ({
-                  numChoices: r.numChoices,
-                  value: r.type,
-                  options: r.options,
-                })),
-              }))
+              setForm((s) => ({ ...s, languageChoices: next }))
             }
-            typeOptions={[
-              { value: '1', label: '1 rank' },
-              { value: '2', label: '2 ranks' },
-            ]}
-            createEmptyOption={() => ''}
+            languageOptions={languageOptions}
             viewing={viewing}
-            renderOptionEditor={({ option, setOption, removeOption, viewing }) => (
-              <div style={{ display: 'grid', gridTemplateColumns: viewing ? '1fr' : '1fr auto', gap: 8 }}>
-                <LabeledSelect
-                  label="Language"
-                  hideLabel
-                  value={option}
-                  onChange={(v) => setOption(v)}
-                  options={languageOptions}
-                  disabled={viewing}
-                />
-                {!viewing && <button onClick={removeOption}>Remove</button>}
-              </div>
-            )}
+            error={errors.languageChoices}
           />
 
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
