@@ -12,6 +12,7 @@ import { HtmlPreview } from '../../components/inputs/HtmlPreview';
 import { IdValueListEditor } from '../../components/inputs/IdValueListEditor';
 import { IdSubcategoryValueListEditor } from '../../components/inputs/IdSubcategoryValueListEditor';
 import { ChoiceListEditor } from '../../components/inputs/ChoiceListEditor';
+import { LanguageRankListEditor } from '../../components/inputs/LanguageRankListEditor';
 
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -899,133 +900,31 @@ export default function RaceView() {
           </section>
 
           {/* Language editors */}
-          {[
-            { title: 'Starting Languages', key: 'startingLanguages' as const, error: errors.startingLanguages },
-            { title: 'Adolescent Languages', key: 'adolescentLanguages' as const, error: errors.adolescentLanguages },
-          ].map(({ title, key, error }) => (
-            <section key={key} style={{ marginTop: 12 }}>
-              <h4 style={{ margin: '8px 0' }}>{title}</h4>
-              {!viewing && (
-                <button
-                  type="button"
-                  onClick={() => setForm((s) => ({
-                    ...s,
-                    [key]: [...s[key], { language: '', spoken: '', written: '', somatic: '' }],
-                  }))}
-                  style={{ marginBottom: 8 }}
-                >
-                  + Add language
-                </button>
-              )}
+          <LanguageRankListEditor
+            title="Starting Languages"
+            rows={form.startingLanguages}
+            onChangeRows={(next) =>
+              setForm((s) => ({ ...s, startingLanguages: next }))
+            }
+            languageOptions={languageOptions}
+            loading={languagesLoading}
+            viewing={viewing}
+            error={errors.startingLanguages}
+            showSomatic
+          />
 
-              <div style={{ display: 'grid', gridTemplateColumns: viewing ? 'minmax(260px,1fr) 100px 100px 100px' : 'minmax(260px,1fr) 100px 100px 100px auto', gap: 8 }}>
-                <div style={{ fontWeight: 600 }}>Language</div>
-                <div style={{ fontWeight: 600 }}>Spoken</div>
-                <div style={{ fontWeight: 600 }}>Written</div>
-                <div style={{ fontWeight: 600 }}>Somatic</div>
-                {!viewing && <div />}
-
-                {form[key].map((row, i) => (
-                  <React.Fragment key={`${key}-${i}`}>
-                    <LabeledSelect
-                      label="Language"
-                      hideLabel
-                      ariaLabel="Language"
-                      value={row.language}
-                      onChange={(v) =>
-                        setForm((s) => {
-                          const copy = s[key].slice();
-                          if (i < 0 || i >= copy.length) return s;
-                          const current = copy[i];
-                          if (!current) return s;
-                          copy[i] = { ...current, language: v };
-                          return { ...s, [key]: copy };
-                        })
-                      }
-                      options={languageOptions}
-                      disabled={languagesLoading || viewing}
-                    />
-
-                    <LabeledInput
-                      label="Spoken"
-                      hideLabel
-                      ariaLabel="Spoken"
-                      value={row.spoken}
-                      onChange={(v) =>
-                        setForm((s) => {
-                          const copy = s[key].slice();
-                          if (i < 0 || i >= copy.length) return s;
-                          const current = copy[i];
-                          if (!current) return s;
-                          copy[i] = { ...current, spoken: sanitizeUnsignedInt(v) };
-                          return { ...s, [key]: copy };
-                        })
-                      }
-                      disabled={viewing}
-                      width={90}
-                    />
-
-                    <LabeledInput
-                      label="Written"
-                      hideLabel
-                      ariaLabel="Written"
-                      value={row.written}
-                      onChange={(v) =>
-                        setForm((s) => {
-                          const copy = s[key].slice();
-                          if (i < 0 || i >= copy.length) return s;
-                          const current = copy[i];
-                          if (!current) return s;
-                          copy[i] = { ...current, written: sanitizeUnsignedInt(v) };
-                          return { ...s, [key]: copy };
-                        })
-                      }
-                      disabled={viewing}
-                      width={90}
-                    />
-
-                    <LabeledInput
-                      label="Somatic"
-                      hideLabel
-                      ariaLabel="Somatic"
-                      value={row.somatic ?? ''}
-                      onChange={(v) =>
-                        setForm((s) => {
-                          const copy = s[key].slice();
-                          if (i < 0 || i >= copy.length) return s;
-                          const current = copy[i];
-                          if (!current) return s;
-                          copy[i] = { ...current, somatic: sanitizeUnsignedInt(v) };
-                          return { ...s, [key]: copy };
-                        })
-                      }
-                      disabled={viewing}
-                      width={90}
-                    />
-
-                    {!viewing && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setForm((s) => {
-                            const copy = s[key].slice();
-                            if (i < 0 || i >= copy.length) return s;
-                            copy.splice(i, 1);
-                            return { ...s, [key]: copy };
-                          })
-                        }
-                        style={{ color: '#b00020' }}
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </React.Fragment>
-                ))}
-              </div>
-
-              {error && <div style={{ color: '#b00020', marginTop: 6 }}>{error}</div>}
-            </section>
-          ))}
+          <LanguageRankListEditor
+            title="Adolescent Languages"
+            rows={form.adolescentLanguages}
+            onChangeRows={(next) =>
+              setForm((s) => ({ ...s, adolescentLanguages: next }))
+            }
+            languageOptions={languageOptions}
+            loading={languagesLoading}
+            viewing={viewing}
+            error={errors.adolescentLanguages}
+            showSomatic
+          />
 
           {/* Stat bonuses */}
           <IdValueListEditor
