@@ -623,7 +623,7 @@ export default function RaceView() {
     setEditingId(null);
     const vm = toVM(row);
     vm.id = prefix;
-    vm.name = vm.name ? `${vm.name} (Copy)` : vm.name;
+    vm.name += ' (Copy)';
     setForm(vm);
     setErrors({});
     setShowForm(true);
@@ -765,14 +765,10 @@ export default function RaceView() {
             placeholder="Search races…"
             aria-label="Search races"
           />
-          <button
-            type="button"
-            onClick={() => dtRef.current?.resetColumnWidths()}
-            title="Reset all column widths"
-            style={{ marginLeft: 'auto' }}
-          >
-            Reset column widths
-          </button>
+
+          {/* Reset and auto-fit column widths */}
+          <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
+          <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
         </div>
       )}
 
