@@ -14,6 +14,7 @@ import { SkillValueListEditor } from '../../components/inputs/SkillValueListEdit
 import { ChoiceListEditor } from '../../components/inputs/ChoiceListEditor';
 import { LanguageRankListEditor } from '../../components/inputs/LanguageRankListEditor';
 import { SkillListEditor } from '../../components/inputs/SkillListEditor';
+import { CheckboxInput } from '../../components/inputs/CheckboxInput';
 
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -315,32 +316,6 @@ const fromVM = (vm: FormState): Race => ({
     options: r.options.slice(),
   })),
 });
-
-function LabeledCheckbox({
-  label,
-  checked,
-  onChange,
-  disabled,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (val: boolean) => void;
-  disabled?: boolean | undefined;
-}) {
-  const id = React.useId();
-  return (
-    <label htmlFor={id} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, paddingTop: 6 }}>
-      <input
-        id={id}
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        disabled={disabled}
-      />
-      <span>{label}</span>
-    </label>
-  );
-}
 
 export default function RaceView() {
   const dtRef = useRef<DataTableHandle>(null);
@@ -815,7 +790,7 @@ export default function RaceView() {
               error={viewing ? undefined : errors.book}
             />
 
-            <LabeledCheckbox
+            <CheckboxInput
               label="High Culture"
               checked={form.highCulture}
               onChange={(c) => setForm((s) => ({ ...s, highCulture: c }))}
