@@ -81,3 +81,11 @@ export const SPELL_USER_TYPES: ReadonlyArray<SpellUserType> = ['Pure', 'Hybrid',
 /** Enum for skill development type */
 export type SkillDevelopmentType = 'Everyman' | 'Occupational' | 'Restricted' | 'Standard';
 export const SKILL_DEVELOPMENT_TYPES: ReadonlyArray<SkillDevelopmentType> = ['Everyman', 'Occupational', 'Restricted', 'Standard'] as const;
+
+/** Enum for CreatureSize */
+export type CreatureSize = 'Tiny' | 'Small' | 'Medium' | 'Large' | 'Huge';
+export const CREATURE_SIZES: ReadonlyArray<CreatureSize> = ['Tiny', 'Small', 'Medium', 'Large', 'Huge'] as const;
+
+/** Enum for CriticalTableType */
+export type CriticalTableType = 'Normal' | 'Large Creature Physical' | 'Huge Creature Physical' | 'Large Creature Spell' | 'Huge Creature Spell';
+export const CRITICAL_TABLE_TYPES: ReadonlyArray<CriticalTableType> = ['Normal', 'Large Creature Physical', 'Huge Creature Physical', 'Large Creature Spell', 'Huge Creature Spell'] as const;

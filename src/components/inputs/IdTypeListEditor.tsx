@@ -1,18 +1,21 @@
 import * as React from 'react';
 import { LabeledSelect } from './LabeledSelect';
 
-export type IdTypeRowVM<TType extends string = string> = {
-  id: string;
+export type IdTypeRowVM<TId extends string = string, TType extends string = string> = {
+  id: TId | '';
   value: TType | '';
 };
 
-export interface IdTypeListEditorProps<TType extends string = string> {
+export interface IdTypeListEditorProps<
+  TId extends string = string,
+  TType extends string = string
+> {
   title: string;
-  rows: IdTypeRowVM<TType>[];
-  onChangeRows: (next: IdTypeRowVM<TType>[]) => void;
+  rows: IdTypeRowVM<TId, TType>[];
+  onChangeRows: (next: IdTypeRowVM<TId, TType>[]) => void;
 
   /** Options for the ID column */
-  idOptions: Array<{ value: string; label: string }>;
+  idOptions: Array<{ value: TId; label: string }>;
 
   /** Options for the Type column */
   typeOptions: Array<{ value: TType; label: string }>;
@@ -29,12 +32,15 @@ export interface IdTypeListEditorProps<TType extends string = string> {
   addButtonLabel?: string | undefined;
   removeButtonLabel?: string | undefined;
 
-  /** Optional width overrides */
+  /** Optional layout widths */
   idColumnMinWidth?: number | string | undefined;
   typeColumnWidth?: number | string | undefined;
 }
 
-export function IdTypeListEditor<TType extends string = string>({
+export function IdTypeListEditor<
+  TId extends string = string,
+  TType extends string = string
+>({
   title,
   rows,
   onChangeRows,
@@ -49,30 +55,48 @@ export function IdTypeListEditor<TType extends string = string>({
   removeButtonLabel = 'Remove',
   idColumnMinWidth = 280,
   typeColumnWidth = 220,
-}: IdTypeListEditorProps<TType>) {
+}: IdTypeListEditorProps<TId, TType>) {
+  const showActions = !viewing;
+
   const resolvedIdColumnWidth =
-    typeof idColumnMinWidth === 'number' ? `${idColumnMinWidth}px` : idColumnMinWidth;
+    typeof idColumnMinWidth === 'number'
+      ? `${idColumnMinWidth}px`
+      : idColumnMinWidth;
 
   const resolvedTypeColumnWidth =
-    typeof typeColumnWidth === 'number' ? `${typeColumnWidth}px` : typeColumnWidth;
+    typeof typeColumnWidth === 'number'
+      ? `${typeColumnWidth}px`
+      : typeColumnWidth;
 
   const updateRowAt = React.useCallback(
-    (index: number, patch: Partial<IdTypeRowVM<TType>>) => {
+    (index: number, patch: Partial<IdTypeRowVM<TId, TType>>) => {
       const copy = rows.slice();
 
       if (index < 0 || index >= copy.length) return;
       const current = copy[index];
       if (!current) return;
 
-      copy[index] = {
+      const nextRow: IdTypeRowVM<TId, TType> = {
         id: patch.id ?? current.id,
         value: patch.value ?? current.value,
       };
 
+      copy[index] = nextRow;
       onChangeRows(copy);
     },
     [rows, onChangeRows],
   );
+
+  const addRow = React.useCallback(() => {
+    const next: IdTypeRowVM<TId, TType>[] = [
+      ...rows,
+      {
+        id: '',
+        value: '',
+      },
+    ];
+    onChangeRows(next);
+  }, [rows, onChangeRows]);
 
   const removeRowAt = React.useCallback(
     (index: number) => {
@@ -86,19 +110,18 @@ export function IdTypeListEditor<TType extends string = string>({
     [rows, onChangeRows],
   );
 
-  const addRow = React.useCallback(() => {
-    const next: IdTypeRowVM<TType>[] = [...rows, { id: '', value: '' }];
-    onChangeRows(next);
-  }, [rows, onChangeRows]);
-
-  const showActions = !loading && !viewing;
-
   return (
     <section style={{ marginTop: 12 }}>
       <h4 style={{ margin: '8px 0' }}>{title}</h4>
 
-      {showActions && (
-        <button type="button" onClick={addRow} style={{ marginBottom: 8 }}>{addButtonLabel}</button>
+      {!viewing && (
+        <button
+          type="button"
+          onClick={addRow}
+          style={{ marginBottom: 8 }}
+        >
+          {addButtonLabel}
+        </button>
       )}
 
       <div
@@ -107,7 +130,6 @@ export function IdTypeListEditor<TType extends string = string>({
           gridTemplateColumns: showActions
             ? `minmax(${resolvedIdColumnWidth}, 1fr) ${resolvedTypeColumnWidth} auto`
             : `minmax(${resolvedIdColumnWidth}, 1fr) ${resolvedTypeColumnWidth}`,
-
           gap: 8,
         }}
       >
@@ -122,7 +144,7 @@ export function IdTypeListEditor<TType extends string = string>({
               hideLabel
               ariaLabel={idColumnLabel}
               value={row.id}
-              onChange={(v) => updateRowAt(i, { id: v })}
+              onChange={(v) => updateRowAt(i, { id: v as TId })}
               options={idOptions}
               disabled={loading || viewing}
             />
@@ -134,13 +156,18 @@ export function IdTypeListEditor<TType extends string = string>({
               value={row.value}
               onChange={(v) => updateRowAt(i, { value: v as TType })}
               options={typeOptions}
-              disabled={loading || viewing}
+              disabled={viewing}
             />
 
             {showActions && (
-              <button type="button" onClick={() => removeRowAt(i)} style={{ color: '#b00020' }} > {removeButtonLabel}</button>
+              <button
+                type="button"
+                onClick={() => removeRowAt(i)}
+                style={{ color: '#b00020' }}
+              >
+                {removeButtonLabel}
+              </button>
             )}
-
           </React.Fragment>
         ))}
       </div>
