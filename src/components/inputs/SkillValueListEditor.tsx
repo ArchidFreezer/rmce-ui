@@ -20,6 +20,9 @@ export interface SkillValueListEditorProps {
 
   loading?: boolean | undefined;
   viewing?: boolean | undefined;
+  /** Whether to show the component when viewing if there are no rows */
+  showWhenEmpty?: boolean | undefined;
+
   error?: string | undefined;
 
   /** Optional labels */
@@ -57,6 +60,7 @@ export function SkillValueListEditor({
   idOptions,
   loading,
   viewing,
+  showWhenEmpty = false,
   error,
   idColumnLabel = 'ID',
   subcategoryColumnLabel = 'Subcategory',
@@ -115,6 +119,9 @@ export function SkillValueListEditor({
   );
 
   const showActions = !viewing;
+
+  const showComponent = viewing ? rows.length > 0 || showWhenEmpty : true;
+  if (!showComponent) return null;
 
   return (
     <section style={{ marginTop: 12 }}>

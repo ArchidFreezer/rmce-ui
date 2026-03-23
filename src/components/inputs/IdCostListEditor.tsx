@@ -17,6 +17,9 @@ export interface IdCostListEditorProps {
 
   loading?: boolean | undefined;
   viewing?: boolean | undefined;
+  /** Whether to show the component when viewing if there are no rows */
+  showWhenEmpty?: boolean | undefined;
+
   error?: string | undefined;
 
   /** Optional labels */
@@ -40,6 +43,7 @@ export function IdCostListEditor({
   categoryOptions,
   loading,
   viewing,
+  showWhenEmpty = false,
   error,
   categoryColumnLabel = 'Category',
   costColumnLabel = 'Cost',
@@ -93,6 +97,9 @@ export function IdCostListEditor({
   );
 
   const showActions = !viewing;
+
+  const showComponent = viewing ? rows.length > 0 || showWhenEmpty : true;
+  if (!showComponent) return null;
 
   return (
     <section style={{ marginTop: 12 }}>
