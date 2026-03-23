@@ -43,6 +43,7 @@ import {
 } from '../../types/enum';
 
 import { isValidID, makeIDOnChange, isValidUnsignedInt, makeUnsignedIntOnChange, sanitizeUnsignedInt, isValidSignedInt, makeSignedIntOnChange, sanitizeSignedFloat, makeSignedFloatOnChange } from '../../utils/inputHelpers';
+import { IdListEditor } from '../../components/inputs/IdListEditor';
 
 const prefix = 'RACE_';
 
@@ -935,63 +936,27 @@ export default function RaceView() {
             error={errors.restrictedSkills}
           />
 
-          {/* Everyman / Restricted categories */}
-          {[
-            { title: 'Everyman Categories', key: 'everymanCategories' as const },
-            { title: 'Restricted Categories', key: 'restrictedCategories' as const },
-          ].map(({ title, key }) => (
-            <section key={key} style={{ marginTop: 12 }}>
-              <h4 style={{ margin: '8px 0' }}>{title}</h4>
-              {!viewing && (
-                <button
-                  type="button"
-                  onClick={() => setForm((s) => ({ ...s, [key]: [...s[key], ''] }))}
-                  style={{ marginBottom: 8 }}
-                >
-                  + Add category
-                </button>
-              )}
+          {/* Everyman categories */}
+          <IdListEditor
+            title="Everyman Categories"
+            rows={form.everymanCategories}
+            onChangeRows={(next) => setForm((s) => ({ ...s, everymanCategories: next }))}
+            options={categoryOptions}
+            loading={categoriesLoading}
+            viewing={viewing}
+            columnLabel="Category"
+          />
 
-              <div style={{ display: 'grid', gridTemplateColumns: viewing ? '1fr' : '1fr auto', gap: 8 }}>
-                {form[key].map((id, i) => (
-                  <React.Fragment key={`${key}-${i}`}>
-                    <LabeledSelect
-                      label="Category"
-                      hideLabel
-                      ariaLabel="Category"
-                      value={id}
-                      onChange={(v) =>
-                        setForm((s) => {
-                          const copy = s[key].slice();
-                          if (i < 0 || i >= copy.length) return s;
-                          copy[i] = v;
-                          return { ...s, [key]: copy };
-                        })
-                      }
-                      options={categoryOptions}
-                      disabled={categoriesLoading || viewing}
-                    />
-                    {!viewing && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setForm((s) => {
-                            const copy = s[key].slice();
-                            if (i < 0 || i >= copy.length) return s;
-                            copy.splice(i, 1);
-                            return { ...s, [key]: copy };
-                          })
-                        }
-                        style={{ color: '#b00020' }}
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </React.Fragment>
-                ))}
-              </div>
-            </section>
-          ))}
+          {/* Restricted categories */}
+          <IdListEditor
+            title="Restricted Categories"
+            rows={form.restrictedCategories}
+            onChangeRows={(next) => setForm((s) => ({ ...s, restrictedCategories: next }))}
+            options={categoryOptions}
+            loading={categoriesLoading}
+            viewing={viewing}
+            columnLabel="Category"
+          />
 
           {/* Skill bonuses */}
           <SkillValueListEditor

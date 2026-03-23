@@ -34,8 +34,9 @@ import {
 } from '../../types/enum';
 
 import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
-import { IdSubcategoryValueListEditor } from '../../components/inputs/SkillValueListEditor';
+import { SkillValueListEditor } from '../../components/inputs/SkillValueListEditor';
 import { IdValueListEditor } from '../../components/inputs/IdValueListEditor';
+import { IdListEditor } from '../../components/inputs/IdListEditor';
 
 const prefix = 'CULTURETYPE_';
 
@@ -627,61 +628,29 @@ export default function CultureTypeView() {
 
           {/* Preferred Armours / Weapons */}
           <section style={{ marginTop: 12 }}>
-            <h4 style={{ margin: '8px 0' }}>Preferred Armours</h4>
-            {!viewing && (
-              <button type="button" onClick={() => addIdTo('preferredArmours', '')} style={{ marginBottom: 8 }}>
-                + Add armour
-              </button>
-            )}
-            <div style={{ display: 'grid', gridTemplateColumns: 'auto auto auto auto', gap: 8 }}>
-              {form.preferredArmours.map((id, i) => (
-                <React.Fragment key={`pa-${i}`}>
-                  <LabeledSelect
-                    label="Armour"
-                    hideLabel
-                    value={id}
-                    onChange={(v) => updateIndexOf('preferredArmours', i, v)}
-                    options={armourOptions}
-                    disabled={armourLoading || viewing}
-                  />
-                  {!viewing && (
-                    <button type="button" onClick={() => removeIndexFrom('preferredArmours', i)} style={{ color: '#b00020' }}>
-                      Remove
-                    </button>
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
+            <IdListEditor
+              title="Preferred Armours"
+              rows={form.preferredArmours}
+              onChangeRows={(next) => setForm((s) => ({ ...s, preferredArmours: next }))}
+              options={armourOptions}
+              loading={armourLoading}
+              viewing={viewing}
+              columnLabel="Armour"
+            />
 
-            <h4 style={{ margin: '16px 0 8px' }}>Preferred Weapons</h4>
-            {!viewing && (
-              <button type="button" onClick={() => addIdTo('preferredWeapons', '')} style={{ marginBottom: 8 }}>
-                + Add weapon
-              </button>
-            )}
-            <div style={{ display: 'grid', gridTemplateColumns: 'auto auto auto auto', gap: 8 }}>
-              {form.preferredWeapons.map((id, i) => (
-                <React.Fragment key={`pw-${i}`}>
-                  <LabeledSelect
-                    label="Weapon"
-                    hideLabel
-                    value={id}
-                    onChange={(v) => updateIndexOf('preferredWeapons', i, v)}
-                    options={weaponOptions}
-                    disabled={weaponLoading || viewing}
-                  />
-                  {!viewing && (
-                    <button type="button" onClick={() => removeIndexFrom('preferredWeapons', i)} style={{ color: '#b00020' }}>
-                      Remove
-                    </button>
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
+            <IdListEditor
+              title="Preferred Weapons"
+              rows={form.preferredWeapons}
+              onChangeRows={(next) => setForm((s) => ({ ...s, preferredWeapons: next }))}
+              options={weaponOptions}
+              loading={weaponLoading}
+              viewing={viewing}
+              columnLabel="Weapon"
+            />
           </section>
 
           {/* Skill Ranks */}
-          <IdSubcategoryValueListEditor
+          <SkillValueListEditor
             title="Skill Ranks"
             rows={form.skillRanks}
             onChangeRows={(next) => setForm((s) => ({ ...s, skillRanks: next }))}
@@ -723,29 +692,15 @@ export default function CultureTypeView() {
             <div style={{ marginTop: 6, display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
               {/* Climates */}
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  <strong>Required Climates</strong>
-                  {!viewing && <button type="button" onClick={() => addIdTo('requiredClimates', '')}>+ Add</button>}
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
-                  {form.requiredClimates.map((id, i) => (
-                    <React.Fragment key={`rc-${i}`}>
-                      <LabeledSelect
-                        label="Climate"
-                        hideLabel
-                        value={id}
-                        onChange={(v) => updateIndexOf('requiredClimates', i, v)}
-                        options={climateOptions}
-                        disabled={climateLoading || viewing}
-                      />
-                      {!viewing && (
-                        <button type="button" onClick={() => removeIndexFrom('requiredClimates', i)} style={{ color: '#b00020' }}>
-                          Remove
-                        </button>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </div>
+                <IdListEditor
+                  title="Required Climates"
+                  rows={form.requiredClimates}
+                  onChangeRows={(next) => setForm((s) => ({ ...s, requiredClimates: next }))}
+                  options={climateOptions}
+                  loading={climateLoading}
+                  viewing={viewing}
+                  columnLabel="Climate"
+                />
               </div>
 
               {/* Features/Terrains/Vegetations/Water */}
