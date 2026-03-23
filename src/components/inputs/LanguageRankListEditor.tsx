@@ -1,21 +1,22 @@
 import * as React from 'react';
 import { LabeledInput } from './LabeledInput';
 import { LabeledSelect } from './LabeledSelect';
+import { sanitizeUnsignedInt } from '../../utils/inputHelpers';
 
-export type LanguageRankRowVM<TLanguageId extends string = string> = {
-  language: TLanguageId | '';
+export type LanguageRankRowVM = {
+  language: string | '';
   spoken: string;
   written: string;
   somatic?: string | undefined;
 };
 
-export interface LanguageRankListEditorProps<TLanguageId extends string = string> {
+export interface LanguageRankListEditorProps {
   title: string;
-  rows: LanguageRankRowVM<TLanguageId>[];
-  onChangeRows: (next: LanguageRankRowVM<TLanguageId>[]) => void;
+  rows: LanguageRankRowVM[];
+  onChangeRows: (next: LanguageRankRowVM[]) => void;
 
   /** Options for the language selector */
-  languageOptions: Array<{ value: TLanguageId; label: string }>;
+  languageOptions: Array<{ value: string; label: string }>;
 
   loading?: boolean | undefined;
   viewing?: boolean | undefined;
@@ -40,9 +41,8 @@ export interface LanguageRankListEditorProps<TLanguageId extends string = string
   somaticWidth?: number | string | undefined;
 }
 
-const sanitizeUnsignedInt = (s: string): string => s.replace(/[^\d]/g, '');
 
-export function LanguageRankListEditor<TLanguageId extends string = string>({
+export function LanguageRankListEditor({
   title,
   rows,
   onChangeRows,
@@ -60,7 +60,7 @@ export function LanguageRankListEditor<TLanguageId extends string = string>({
   spokenWidth = 100,
   writtenWidth = 100,
   somaticWidth = 100,
-}: LanguageRankListEditorProps<TLanguageId>) {
+}: LanguageRankListEditorProps) {
   const showActions = !viewing;
 
   const resolvedSpokenWidth =
@@ -73,14 +73,14 @@ export function LanguageRankListEditor<TLanguageId extends string = string>({
     typeof somaticWidth === 'number' ? `${somaticWidth}px` : somaticWidth;
 
   const updateRowAt = React.useCallback(
-    (index: number, patch: Partial<LanguageRankRowVM<TLanguageId>>) => {
+    (index: number, patch: Partial<LanguageRankRowVM>) => {
       const copy = rows.slice();
 
       if (index < 0 || index >= copy.length) return;
       const current = copy[index];
       if (!current) return;
 
-      const nextRow: LanguageRankRowVM<TLanguageId> = {
+      const nextRow: LanguageRankRowVM = {
         language: patch.language ?? current.language,
         spoken: patch.spoken ?? current.spoken,
         written: patch.written ?? current.written,
@@ -96,7 +96,7 @@ export function LanguageRankListEditor<TLanguageId extends string = string>({
   );
 
   const addRow = React.useCallback(() => {
-    const next: LanguageRankRowVM<TLanguageId>[] = [
+    const next: LanguageRankRowVM[] = [
       ...rows,
       {
         language: '',
@@ -172,7 +172,7 @@ export function LanguageRankListEditor<TLanguageId extends string = string>({
               hideLabel
               ariaLabel={languageColumnLabel}
               value={row.language}
-              onChange={(v) => updateRowAt(i, { language: v as TLanguageId })}
+              onChange={(v) => updateRowAt(i, { language: v })}
               options={languageOptions}
               disabled={loading || viewing}
             />

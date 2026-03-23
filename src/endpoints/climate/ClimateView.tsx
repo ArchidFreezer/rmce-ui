@@ -320,9 +320,7 @@ export default function ClimateView() {
               disabled={viewing}
               error={errors.temperature}
             />
-            <div style={{ alignSelf: 'end', color: 'var(--muted)', fontSize: 12 }}>
-              Allowed: {TEMPERATURES.join(', ')}
-            </div>
+            <div />
 
             <CheckboxGroup<Precipitation>
               label="Precipitations"

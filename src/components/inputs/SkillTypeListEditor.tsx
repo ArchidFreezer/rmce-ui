@@ -2,16 +2,16 @@ import * as React from 'react';
 import { LabeledInput } from './LabeledInput';
 import { LabeledSelect } from './LabeledSelect';
 
-export type IdSubcategoryTypeRowVM<TType extends string = string> = {
+export type SkillTypeRowVM<TType extends string = string> = {
   id: string;
   subcategory?: string | undefined;
   value: TType | '';
 };
 
-export interface IdSubcategoryTypeListEditorProps<TType extends string = string> {
+export interface SkillTypeListEditorProps<TType extends string = string> {
   title: string;
-  rows: IdSubcategoryTypeRowVM<TType>[];
-  onChangeRows: (next: IdSubcategoryTypeRowVM<TType>[]) => void;
+  rows: SkillTypeRowVM<TType>[];
+  onChangeRows: (next: SkillTypeRowVM<TType>[]) => void;
 
   /** Options for the ID column */
   idOptions: Array<{ value: string; label: string }>;
@@ -37,7 +37,17 @@ export interface IdSubcategoryTypeListEditorProps<TType extends string = string>
   typeColumnWidth?: number | string | undefined;
 }
 
-export function IdSubcategoryTypeListEditor<TType extends string = string>({
+/**
+ * SkillTypeListEditor component
+ * 
+ * Renders a list of rows, each containing a Skill selected from a dropdown and an associated type selected from another dropdown.
+ * The component supports loading and viewing states, and displays error messages when provided.
+ * 
+ * Allows adding and removing rows, and supports loading and viewing states.
+ * @param param0  Props for the SkillTypeListEditor component
+ * @returns JSX.Element
+ */
+export function SkillTypeListEditor<TType extends string = string>({
   title,
   rows,
   onChangeRows,
@@ -53,7 +63,7 @@ export function IdSubcategoryTypeListEditor<TType extends string = string>({
   removeButtonLabel = 'Remove',
   idColumnMinWidth = 280,
   typeColumnWidth = 220,
-}: IdSubcategoryTypeListEditorProps<TType>) {
+}: SkillTypeListEditorProps<TType>) {
   const resolvedIdColumnWidth =
     typeof idColumnMinWidth === 'number'
       ? `${idColumnMinWidth}px`
@@ -65,14 +75,14 @@ export function IdSubcategoryTypeListEditor<TType extends string = string>({
       : typeColumnWidth;
 
   const updateRowAt = React.useCallback(
-    (index: number, patch: Partial<IdSubcategoryTypeRowVM<TType>>) => {
+    (index: number, patch: Partial<SkillTypeRowVM<TType>>) => {
       const copy = rows.slice();
 
       if (index < 0 || index >= copy.length) return;
       const current = copy[index];
       if (!current) return;
 
-      const nextRow: IdSubcategoryTypeRowVM<TType> = {
+      const nextRow: SkillTypeRowVM<TType> = {
         id: patch.id ?? current.id,
         value: patch.value ?? current.value,
         subcategory: Object.prototype.hasOwnProperty.call(patch, 'subcategory')
@@ -87,7 +97,7 @@ export function IdSubcategoryTypeListEditor<TType extends string = string>({
   );
 
   const addRow = React.useCallback(() => {
-    const next: IdSubcategoryTypeRowVM<TType>[] = [
+    const next: SkillTypeRowVM<TType>[] = [
       ...rows,
       {
         id: '',

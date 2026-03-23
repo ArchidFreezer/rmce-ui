@@ -2,18 +2,19 @@ import * as React from 'react';
 import { LabeledInput } from './LabeledInput';
 import { LabeledSelect } from './LabeledSelect';
 
-export type SkillRowVM<TId extends string = string> = {
-  id: TId | '';
+export type SkillRowVM = {
+  id: string;
   subcategory?: string | undefined;
 };
 
-export interface SkillListEditorProps<TId extends string = string> {
+export interface SkillListEditorProps {
+
   title: string;
-  rows: SkillRowVM<TId>[];
-  onChangeRows: (next: SkillRowVM<TId>[]) => void;
+  rows: SkillRowVM[];
+  onChangeRows: (next: SkillRowVM[]) => void;
 
   /** Options for the ID selector */
-  idOptions: Array<{ value: TId; label: string }>;
+  idOptions: Array<{ value: string; label: string }>;
 
   loading?: boolean | undefined;
   viewing?: boolean | undefined;
@@ -31,7 +32,17 @@ export interface SkillListEditorProps<TId extends string = string> {
   idColumnMinWidth?: number | string | undefined;
 }
 
-export function SkillListEditor<TId extends string = string>({
+/**
+ * SkillListEditor component
+ * 
+ * Renders a list of rows, each containing a Skill selected from a dropdown and an optional subcategory input.
+ * The component supports loading and viewing states, and displays error messages when provided.
+ * 
+ * Allows adding and removing rows, and supports loading and viewing states.
+ * @param param0  Props for the SkillListEditor component
+ * @returns JSX.Element
+ */
+export function SkillListEditor({
   title,
   rows,
   onChangeRows,
@@ -44,7 +55,7 @@ export function SkillListEditor<TId extends string = string>({
   addButtonLabel = '+ Add row',
   removeButtonLabel = 'Remove',
   idColumnMinWidth = 280,
-}: SkillListEditorProps<TId>) {
+}: SkillListEditorProps) {
   const showActions = !viewing;
 
   const resolvedIdColumnWidth =
@@ -53,14 +64,14 @@ export function SkillListEditor<TId extends string = string>({
       : idColumnMinWidth;
 
   const updateRowAt = React.useCallback(
-    (index: number, patch: Partial<SkillRowVM<TId>>) => {
+    (index: number, patch: Partial<SkillRowVM>) => {
       const copy = rows.slice();
 
       if (index < 0 || index >= copy.length) return;
       const current = copy[index];
       if (!current) return;
 
-      const nextRow: SkillRowVM<TId> = {
+      const nextRow: SkillRowVM = {
         id: patch.id ?? current.id,
         subcategory: Object.prototype.hasOwnProperty.call(patch, 'subcategory')
           ? patch.subcategory
@@ -73,7 +84,7 @@ export function SkillListEditor<TId extends string = string>({
   );
 
   const addRow = React.useCallback(() => {
-    const next: SkillRowVM<TId>[] = [
+    const next: SkillRowVM[] = [
       ...rows,
       {
         id: '',
@@ -129,7 +140,7 @@ export function SkillListEditor<TId extends string = string>({
               hideLabel
               ariaLabel={idColumnLabel}
               value={row.id}
-              onChange={(v) => updateRowAt(i, { id: v as TId })}
+              onChange={(v) => updateRowAt(i, { id: v })}
               options={idOptions}
               disabled={loading || viewing}
             />

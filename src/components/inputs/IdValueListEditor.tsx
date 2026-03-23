@@ -34,6 +34,18 @@ export interface IdValueListEditorProps<TId extends string = string> {
   valueWidth?: number | string | undefined;
 }
 
+/**
+ * IdValueListEditor component
+ * 
+ * Renders a list of rows, each containing an ID selected from a dropdown and an associated value input.
+ * The value input is sanitized to allow only integers, with an option for signed or unsigned values.
+ * The component supports loading and viewing states, and displays error messages when provided.
+ * 
+ * Allows adding and removing rows, and supports loading and viewing states.
+ * 
+ * @param param0 Props for the IdValueListEditor component
+ * @returns JSX.Element
+ */
 export function IdValueListEditor<TId extends string = string>({
   title,
   rows,

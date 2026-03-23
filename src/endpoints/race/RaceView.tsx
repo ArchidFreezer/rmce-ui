@@ -10,10 +10,11 @@ import { LabeledInput } from '../../components/inputs/LabeledInput';
 import { LabeledSelect } from '../../components/inputs/LabeledSelect';
 import { HtmlPreview } from '../../components/inputs/HtmlPreview';
 import { IdValueListEditor } from '../../components/inputs/IdValueListEditor';
-import { IdSubcategoryValueListEditor } from '../../components/inputs/IdSubcategoryValueListEditor';
+import { SkillValueListEditor } from '../../components/inputs/SkillValueListEditor';
 import { ChoiceListEditor } from '../../components/inputs/ChoiceListEditor';
 import { LanguageRankListEditor } from '../../components/inputs/LanguageRankListEditor';
 import { SkillListEditor } from '../../components/inputs/SkillListEditor';
+import { CheckboxInput } from '../../components/inputs/CheckboxInput';
 
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -42,6 +43,7 @@ import {
 } from '../../types/enum';
 
 import { isValidID, makeIDOnChange, isValidUnsignedInt, makeUnsignedIntOnChange, sanitizeUnsignedInt, isValidSignedInt, makeSignedIntOnChange, sanitizeSignedFloat, makeSignedFloatOnChange } from '../../utils/inputHelpers';
+import { IdListEditor } from '../../components/inputs/IdListEditor';
 
 const prefix = 'RACE_';
 
@@ -315,32 +317,6 @@ const fromVM = (vm: FormState): Race => ({
     options: r.options.slice(),
   })),
 });
-
-function LabeledCheckbox({
-  label,
-  checked,
-  onChange,
-  disabled,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (val: boolean) => void;
-  disabled?: boolean | undefined;
-}) {
-  const id = React.useId();
-  return (
-    <label htmlFor={id} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, paddingTop: 6 }}>
-      <input
-        id={id}
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        disabled={disabled}
-      />
-      <span>{label}</span>
-    </label>
-  );
-}
 
 export default function RaceView() {
   const dtRef = useRef<DataTableHandle>(null);
@@ -815,7 +791,7 @@ export default function RaceView() {
               error={viewing ? undefined : errors.book}
             />
 
-            <LabeledCheckbox
+            <CheckboxInput
               label="High Culture"
               checked={form.highCulture}
               onChange={(c) => setForm((s) => ({ ...s, highCulture: c }))}
@@ -960,66 +936,30 @@ export default function RaceView() {
             error={errors.restrictedSkills}
           />
 
-          {/* Everyman / Restricted categories */}
-          {[
-            { title: 'Everyman Categories', key: 'everymanCategories' as const },
-            { title: 'Restricted Categories', key: 'restrictedCategories' as const },
-          ].map(({ title, key }) => (
-            <section key={key} style={{ marginTop: 12 }}>
-              <h4 style={{ margin: '8px 0' }}>{title}</h4>
-              {!viewing && (
-                <button
-                  type="button"
-                  onClick={() => setForm((s) => ({ ...s, [key]: [...s[key], ''] }))}
-                  style={{ marginBottom: 8 }}
-                >
-                  + Add category
-                </button>
-              )}
+          {/* Everyman categories */}
+          <IdListEditor
+            title="Everyman Categories"
+            rows={form.everymanCategories}
+            onChangeRows={(next) => setForm((s) => ({ ...s, everymanCategories: next }))}
+            options={categoryOptions}
+            loading={categoriesLoading}
+            viewing={viewing}
+            columnLabel="Category"
+          />
 
-              <div style={{ display: 'grid', gridTemplateColumns: viewing ? '1fr' : '1fr auto', gap: 8 }}>
-                {form[key].map((id, i) => (
-                  <React.Fragment key={`${key}-${i}`}>
-                    <LabeledSelect
-                      label="Category"
-                      hideLabel
-                      ariaLabel="Category"
-                      value={id}
-                      onChange={(v) =>
-                        setForm((s) => {
-                          const copy = s[key].slice();
-                          if (i < 0 || i >= copy.length) return s;
-                          copy[i] = v;
-                          return { ...s, [key]: copy };
-                        })
-                      }
-                      options={categoryOptions}
-                      disabled={categoriesLoading || viewing}
-                    />
-                    {!viewing && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setForm((s) => {
-                            const copy = s[key].slice();
-                            if (i < 0 || i >= copy.length) return s;
-                            copy.splice(i, 1);
-                            return { ...s, [key]: copy };
-                          })
-                        }
-                        style={{ color: '#b00020' }}
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </React.Fragment>
-                ))}
-              </div>
-            </section>
-          ))}
+          {/* Restricted categories */}
+          <IdListEditor
+            title="Restricted Categories"
+            rows={form.restrictedCategories}
+            onChangeRows={(next) => setForm((s) => ({ ...s, restrictedCategories: next }))}
+            options={categoryOptions}
+            loading={categoriesLoading}
+            viewing={viewing}
+            columnLabel="Category"
+          />
 
           {/* Skill bonuses */}
-          <IdSubcategoryValueListEditor
+          <SkillValueListEditor
             title="Skill Bonuses"
             rows={form.skillBonuses}
             onChangeRows={(next) => setForm((s) => ({ ...s, skillBonuses: next }))}

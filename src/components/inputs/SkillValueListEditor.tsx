@@ -4,16 +4,16 @@ import { LabeledSelect } from './LabeledSelect';
 
 import { sanitizeUnsignedInt, sanitizeSignedInt } from '../../utils/inputHelpers';
 
-export type IdSubcategoryValueRowVM = {
+export type SkillValueRowVM = {
   id: string;
   subcategory?: string | undefined;
   value: string;
 };
 
-export interface IdSubcategoryValueListEditorProps {
+export interface SkillValueListEditorProps {
   title: string;
-  rows: IdSubcategoryValueRowVM[];
-  onChangeRows: (next: IdSubcategoryValueRowVM[]) => void;
+  rows: SkillValueRowVM[];
+  onChangeRows: (next: SkillValueRowVM[]) => void;
 
   /** Options for the ID column */
   idOptions: Array<{ value: string; label: string }>;
@@ -38,7 +38,19 @@ export interface IdSubcategoryValueListEditorProps {
   valueWidth?: number | string | undefined;
 }
 
-export function IdSubcategoryValueListEditor({
+/**
+ * SkillValueListEditor component
+ * 
+ * Renders a list of rows, each containing a Skill selected from a dropdown and an associated value input.
+ * The value input is sanitized to allow only integers, with an option for signed or unsigned values.
+ * The component supports loading and viewing states, and displays error messages when provided.
+ * 
+ * Allows adding and removing rows, and supports loading and viewing states.
+ * 
+ * @param param0  Props for the SkillValueListEditor component
+ * @returns JSX.Element
+ */
+export function SkillValueListEditor({
   title,
   rows,
   onChangeRows,
@@ -53,18 +65,18 @@ export function IdSubcategoryValueListEditor({
   removeButtonLabel = 'Remove',
   signedValues = true,
   valueWidth = 100,
-}: IdSubcategoryValueListEditorProps) {
+}: SkillValueListEditorProps) {
   const sanitize = signedValues ? sanitizeSignedInt : sanitizeUnsignedInt;
 
   const updateRowAt = React.useCallback(
-    (index: number, patch: Partial<IdSubcategoryValueRowVM>) => {
+    (index: number, patch: Partial<SkillValueRowVM>) => {
       const copy = rows.slice();
 
       if (index < 0 || index >= copy.length) return;
       const current = copy[index];
       if (!current) return;
 
-      const nextRow: IdSubcategoryValueRowVM = {
+      const nextRow: SkillValueRowVM = {
         id: patch.id ?? current.id,
         value: patch.value ?? current.value,
         subcategory: Object.prototype.hasOwnProperty.call(patch, 'subcategory')
@@ -79,7 +91,7 @@ export function IdSubcategoryValueListEditor({
   );
 
   const addRow = React.useCallback(() => {
-    const next: IdSubcategoryValueRowVM[] = [
+    const next: SkillValueRowVM[] = [
       ...rows,
       {
         id: '',
