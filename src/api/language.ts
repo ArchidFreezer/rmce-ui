@@ -19,7 +19,7 @@ export async function fetchLanguages(): Promise<Language[]> {
     baseLanguage: x.baseLanguage != null ? asString(x.baseLanguage) : undefined,
     isSpoken: asBool((x as any).isSpoken),
     isWritten: asBool((x as any).isWritten),
-    isSomantic: asBool((x as any).isSomantic),
+    isSomatic: asBool((x as any).isSomatic),
   }));
 }
 

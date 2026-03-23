@@ -10,9 +10,16 @@ export interface Language {
   baseLanguage?: string | undefined;
   isSpoken: boolean;
   isWritten: boolean;
-  isSomantic: boolean;
+  isSomatic: boolean;
 }
 
 export interface LanguagesPayload {
   languages: Language[];
+}
+
+export interface LanguageRank {
+  language: string;               // Language.id
+  spoken: number;
+  written: number;
+  somatic?: number | undefined;  // keeping backend spelling
 }

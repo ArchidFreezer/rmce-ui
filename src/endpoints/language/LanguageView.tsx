@@ -22,7 +22,7 @@ type FormState = {
   baseLanguage?: string | undefined;
   isSpoken: boolean;
   isWritten: boolean;
-  isSomantic: boolean;
+  isSomatic: boolean;
 };
 
 const emptyVM = (): FormState => ({
@@ -32,7 +32,7 @@ const emptyVM = (): FormState => ({
   baseLanguage: '',
   isSpoken: false,
   isWritten: false,
-  isSomantic: false,
+  isSomatic: false,
 });
 
 const toVM = (x: Language): FormState => ({
@@ -42,7 +42,7 @@ const toVM = (x: Language): FormState => ({
   baseLanguage: x.baseLanguage ?? '',
   isSpoken: x.isSpoken,
   isWritten: x.isWritten,
-  isSomantic: x.isSomantic,
+  isSomatic: x.isSomatic,
 });
 
 const fromVM = (vm: FormState): Language => ({
@@ -52,7 +52,7 @@ const fromVM = (vm: FormState): Language => ({
   baseLanguage: vm.baseLanguage?.trim() ? vm.baseLanguage.trim() : undefined,
   isSpoken: !!vm.isSpoken,
   isWritten: !!vm.isWritten,
-  isSomantic: !!vm.isSomantic,
+  isSomatic: !!vm.isSomatic,
 });
 
 export default function LanguagesView() {
@@ -60,8 +60,8 @@ export default function LanguagesView() {
   const [rows, setRows] = useState<Language[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [errors, setErrors] = useState<{ id?: string | undefined; name?: string | undefined; category?: string | undefined; baseLanguage?: string | undefined; }>({});
-  const hasErrors = Boolean(errors.id || errors.name || errors.category || errors.baseLanguage);
+  const [errors, setErrors] = useState<{ id?: string | undefined; name?: string | undefined; category?: string | undefined; baseLanguage?: string | undefined; isSpoken?: string | undefined; isWritten?: string | undefined; isSomatic?: string | undefined; }>({});
+  const hasErrors = Boolean(errors.id || errors.name || errors.category || errors.baseLanguage || errors.isSpoken || errors.isWritten || errors.isSomatic);
 
   const [categories, setCategories] = useState<LanguageCategory[]>([]);
   const [catLoading, setCatLoading] = useState(true);
@@ -294,12 +294,12 @@ export default function LanguagesView() {
       render: (r) => (r.isWritten ? 'Yes' : 'No'),
     },
     {
-      id: 'isSomantic',
-      header: 'somantic',
-      accessor: (r) => Number(r.isSomantic),
+      id: 'isSomatic',
+      header: 'somatic',
+      accessor: (r) => Number(r.isSomatic),
       sortType: 'number',
       minWidth: 100,
-      render: (r) => (r.isSomantic ? 'Yes' : 'No'),
+      render: (r) => (r.isSomatic ? 'Yes' : 'No'),
     },
     {
       id: 'actions',
@@ -326,7 +326,7 @@ export default function LanguagesView() {
       r.baseLanguage ?? '',
       r.isSpoken ? 'yes' : 'no',
       r.isWritten ? 'yes' : 'no',
-      r.isSomantic ? 'yes' : 'no',
+      r.isSomatic ? 'yes' : 'no',
     ].some((v) => String(v ?? '').toLowerCase().includes(s));
   };
 
@@ -387,7 +387,7 @@ export default function LanguagesView() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
               <CheckboxInput label="Spoken" checked={form.isSpoken} onChange={(c) => setForm((s) => ({ ...s, isSpoken: c }))} disabled={viewing} />
               <CheckboxInput label="Written" checked={form.isWritten} onChange={(c) => setForm((s) => ({ ...s, isWritten: c }))} disabled={viewing} />
-              <CheckboxInput label="Somantic" checked={form.isSomantic} onChange={(c) => setForm((s) => ({ ...s, isSomantic: c }))} disabled={viewing} />
+              <CheckboxInput label="Somatic" checked={form.isSomatic} onChange={(c) => setForm((s) => ({ ...s, isSomatic: c }))} disabled={viewing} />
             </div>
           </div>
 
