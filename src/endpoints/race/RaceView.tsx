@@ -463,6 +463,12 @@ export default function RaceView() {
     [books],
   );
 
+  const bookNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const b of books) m.set(b.id, b.name);
+    return m;
+  }, [books]);
+
   const progressionOptions = useMemo(
     () => progressions.map((p) => ({ value: p.id, label: p.name })),
     [progressions],
@@ -707,7 +713,17 @@ export default function RaceView() {
   const columns: ColumnDef<Race>[] = useMemo(() => [
     { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 260 },
     { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
-    { id: 'book', header: 'Book', accessor: (r) => r.book, sortType: 'string', minWidth: 180 },
+    {
+      id: 'book',
+      header: 'Book',
+      accessor: r => bookNameById.get(r.book) ?? r.book,
+      sortType: 'string',
+      minWidth: 180,
+      render: r => {
+        const label = bookNameById.get(r.book);
+        return label ? label : r.book;
+      },
+    },
     { id: 'size', header: 'Size', accessor: (r) => r.creatureSize, sortType: 'string', minWidth: 120 },
     { id: 'criticalTable', header: 'Critical Table', accessor: (r) => r.criticalTable, sortType: 'string', minWidth: 140 },
     {
