@@ -742,7 +742,7 @@ export default function RaceView() {
         </>
       ),
     },
-  ], []);
+  ], [bookNameById]);
 
   const globalFilter = (r: Race, q: string) => {
     const s = q.toLowerCase();
