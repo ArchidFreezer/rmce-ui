@@ -184,15 +184,17 @@ export function ChoiceListEditor<TType extends string = string, TOption = string
               width={resolvedNumChoicesWidth}
             />
 
-            <LabeledSelect
-              label={typeLabel}
-              value={row.type}
-              onChange={(v) =>
-                updateRowAt(rowIndex, { type: v as TType })
-              }
-              options={typeOptions}
-              disabled={viewing}
-            />
+            {typeOptions.length > 0 && (
+              <LabeledSelect
+                label={typeLabel}
+                value={row.type}
+                onChange={(v) =>
+                  updateRowAt(rowIndex, { type: v as TType })
+                }
+                options={typeOptions}
+                disabled={viewing}
+              />
+            )}
           </div>
 
           <div style={{ marginTop: 8 }}>

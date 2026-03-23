@@ -1036,7 +1036,7 @@ export default function ProfessionView() {
           />
 
           {/* Category / Group Skill Development Types */}
-          <IdTypeListEditor<SkillDevelopmentType>
+          <IdTypeListEditor<string, SkillDevelopmentType>
             title="Skill Category Skill Development Types"
             rows={form.skillCategorySkillDevelopmentTypes}
             onChangeRows={(next) =>
@@ -1049,7 +1049,7 @@ export default function ProfessionView() {
             error={errors.skillCategorySkillDevelopmentTypes}
           />
 
-          <IdTypeListEditor<SkillDevelopmentType>
+          <IdTypeListEditor<string, SkillDevelopmentType>
             title="Skill Group Skill Development Types"
             rows={form.skillGroupSkillDevelopmentTypes}
             onChangeRows={(next) =>

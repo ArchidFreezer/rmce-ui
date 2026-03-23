@@ -1,24 +1,19 @@
 import * as React from 'react';
+import { LabeledInput } from './LabeledInput';
 import { LabeledSelect } from './LabeledSelect';
 
-export type IdTypeRowVM<TId extends string = string, TType extends string = string> = {
+export type SkillRowVM<TId extends string = string> = {
   id: TId | '';
-  value: TType | '';
+  subcategory?: string | undefined;
 };
 
-export interface IdTypeListEditorProps<
-  TId extends string = string,
-  TType extends string = string
-> {
+export interface SkillListEditorProps<TId extends string = string> {
   title: string;
-  rows: IdTypeRowVM<TId, TType>[];
-  onChangeRows: (next: IdTypeRowVM<TId, TType>[]) => void;
+  rows: SkillRowVM<TId>[];
+  onChangeRows: (next: SkillRowVM<TId>[]) => void;
 
-  /** Options for the ID column */
+  /** Options for the ID selector */
   idOptions: Array<{ value: TId; label: string }>;
-
-  /** Options for the Type column */
-  typeOptions: Array<{ value: TType; label: string }>;
 
   loading?: boolean | undefined;
   viewing?: boolean | undefined;
@@ -26,36 +21,30 @@ export interface IdTypeListEditorProps<
 
   /** Optional labels */
   idColumnLabel?: string | undefined;
-  typeColumnLabel?: string | undefined;
+  subcategoryColumnLabel?: string | undefined;
 
   /** Optional button labels */
   addButtonLabel?: string | undefined;
   removeButtonLabel?: string | undefined;
 
-  /** Optional layout widths */
+  /** Optional width/layout overrides */
   idColumnMinWidth?: number | string | undefined;
-  typeColumnWidth?: number | string | undefined;
 }
 
-export function IdTypeListEditor<
-  TId extends string = string,
-  TType extends string = string
->({
+export function SkillListEditor<TId extends string = string>({
   title,
   rows,
   onChangeRows,
   idOptions,
-  typeOptions,
   loading,
   viewing,
   error,
   idColumnLabel = 'ID',
-  typeColumnLabel = 'Type',
+  subcategoryColumnLabel = 'Subcategory',
   addButtonLabel = '+ Add row',
   removeButtonLabel = 'Remove',
   idColumnMinWidth = 280,
-  typeColumnWidth = 220,
-}: IdTypeListEditorProps<TId, TType>) {
+}: SkillListEditorProps<TId>) {
   const showActions = !viewing;
 
   const resolvedIdColumnWidth =
@@ -63,36 +52,32 @@ export function IdTypeListEditor<
       ? `${idColumnMinWidth}px`
       : idColumnMinWidth;
 
-  const resolvedTypeColumnWidth =
-    typeof typeColumnWidth === 'number'
-      ? `${typeColumnWidth}px`
-      : typeColumnWidth;
-
   const updateRowAt = React.useCallback(
-    (index: number, patch: Partial<IdTypeRowVM<TId, TType>>) => {
+    (index: number, patch: Partial<SkillRowVM<TId>>) => {
       const copy = rows.slice();
 
       if (index < 0 || index >= copy.length) return;
       const current = copy[index];
       if (!current) return;
 
-      const nextRow: IdTypeRowVM<TId, TType> = {
+      const nextRow: SkillRowVM<TId> = {
         id: patch.id ?? current.id,
-        value: patch.value ?? current.value,
+        subcategory: Object.prototype.hasOwnProperty.call(patch, 'subcategory')
+          ? patch.subcategory
+          : current.subcategory,
       };
 
-      copy[index] = nextRow;
       onChangeRows(copy);
     },
     [rows, onChangeRows],
   );
 
   const addRow = React.useCallback(() => {
-    const next: IdTypeRowVM<TId, TType>[] = [
+    const next: SkillRowVM<TId>[] = [
       ...rows,
       {
         id: '',
-        value: '',
+        subcategory: '',
       },
     ];
     onChangeRows(next);
@@ -128,13 +113,13 @@ export function IdTypeListEditor<
         style={{
           display: 'grid',
           gridTemplateColumns: showActions
-            ? `minmax(${resolvedIdColumnWidth}, 1fr) ${resolvedTypeColumnWidth} auto`
-            : `minmax(${resolvedIdColumnWidth}, 1fr) ${resolvedTypeColumnWidth}`,
+            ? `minmax(${resolvedIdColumnWidth}, 1fr) 1fr auto`
+            : `minmax(${resolvedIdColumnWidth}, 1fr) 1fr`,
           gap: 8,
         }}
       >
         <div style={{ fontWeight: 600 }}>{idColumnLabel}</div>
-        <div style={{ fontWeight: 600 }}>{typeColumnLabel}</div>
+        <div style={{ fontWeight: 600 }}>{subcategoryColumnLabel}</div>
         {showActions && <div />}
 
         {rows.map((row, i) => (
@@ -149,13 +134,12 @@ export function IdTypeListEditor<
               disabled={loading || viewing}
             />
 
-            <LabeledSelect
-              label={typeColumnLabel}
+            <LabeledInput
+              label={subcategoryColumnLabel}
               hideLabel
-              ariaLabel={typeColumnLabel}
-              value={row.value}
-              onChange={(v) => updateRowAt(i, { value: v as TType })}
-              options={typeOptions}
+              ariaLabel={subcategoryColumnLabel}
+              value={row.subcategory ?? ''}
+              onChange={(v) => updateRowAt(i, { subcategory: v })}
               disabled={viewing}
             />
 

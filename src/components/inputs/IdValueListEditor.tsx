@@ -4,17 +4,18 @@ import { LabeledSelect } from './LabeledSelect';
 
 import { sanitizeUnsignedInt, sanitizeSignedInt } from '../../utils/inputHelpers';
 
-export type IdValueRowVM = {
-  id: string;
+export type IdValueRowVM<TId extends string = string> = {
+  id: TId | '';
   value: string;
 };
 
-export interface IdValueListEditorProps {
+export interface IdValueListEditorProps<TId extends string = string> {
   title: string;
-  rows: IdValueRowVM[];
-  onChangeRows: (next: IdValueRowVM[]) => void;
+  rows: IdValueRowVM<TId>[];
+  onChangeRows: (next: IdValueRowVM<TId>[]) => void;
 
-  options: Array<{ value: string; label: string }>;
+  options: Array<{ value: TId; label: string }>;
+
   loading?: boolean | undefined;
   viewing?: boolean | undefined;
   error?: string | undefined;
@@ -29,12 +30,11 @@ export interface IdValueListEditorProps {
 
   /** Use signed integers? default true */
   signedValues?: boolean | undefined;
-
   /** Width of value input */
   valueWidth?: number | string | undefined;
 }
 
-export function IdValueListEditor({
+export function IdValueListEditor<TId extends string = string>({
   title,
   rows,
   onChangeRows,
@@ -48,12 +48,13 @@ export function IdValueListEditor({
   removeButtonLabel = 'Remove',
   signedValues = true,
   valueWidth = 100,
-}: IdValueListEditorProps) {
+}: IdValueListEditorProps<TId>) {
   const sanitize = signedValues ? sanitizeSignedInt : sanitizeUnsignedInt;
 
   const updateRowAt = React.useCallback(
-    (index: number, patch: Partial<IdValueRowVM>) => {
+    (index: number, patch: Partial<IdValueRowVM<TId>>) => {
       const copy = rows.slice();
+
       if (index < 0 || index >= copy.length) return;
       const current = copy[index];
       if (!current) return;
@@ -71,19 +72,21 @@ export function IdValueListEditor({
   const removeRowAt = React.useCallback(
     (index: number) => {
       const copy = rows.slice();
+
       if (index < 0 || index >= copy.length) return;
       copy.splice(index, 1);
+
       onChangeRows(copy);
     },
     [rows, onChangeRows],
   );
 
   const addRow = React.useCallback(() => {
-    onChangeRows([...rows, { id: '', value: '' }]);
+    const next: IdValueRowVM<TId>[] = [...rows, { id: '', value: '' }];
+    onChangeRows(next);
   }, [rows, onChangeRows]);
 
   const showActions = !viewing;
-
   return (
     <section style={{ marginTop: 12 }}>
       <h4 style={{ margin: '8px 0' }}>{title}</h4>
@@ -112,7 +115,7 @@ export function IdValueListEditor({
               hideLabel
               ariaLabel={idColumnLabel}
               value={row.id}
-              onChange={(v) => updateRowAt(i, { id: v })}
+              onChange={(v) => updateRowAt(i, { id: v as TId })}
               options={options}
               disabled={loading || viewing}
             />
