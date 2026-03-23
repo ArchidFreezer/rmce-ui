@@ -46,6 +46,7 @@ import {
   type Stat,
 } from '../../types/enum';
 import { isValidID, makeIDOnChange, isValidUnsignedInt, isValidSignedInt } from '../../utils/inputHelpers';
+import { IdMultiSkillRankEditor } from '../../components/inputs/IdMultiSkillRankEditor';
 
 const prefix = 'TRAININGPACKAGE_';
 
@@ -1197,213 +1198,32 @@ export default function TrainingPackagesView() {
           />
 
           {/* Category Multi‑Skill Rank Choices */}
-          <section style={{ marginTop: 12 }}>
-            <h4>Category Multi‑Skill Rank Choices</h4>
-
-            {!viewing && (
-              <button
-                type="button"
-                onClick={() =>
-                  setForm((s) => ({
-                    ...s,
-                    categoryMultiSkillRankChoices: [
-                      ...s.categoryMultiSkillRankChoices,
-                      { id: '', value: '', numChoices: '' },
-                    ],
-                  }))
-                }
-              >
-                + Add category choice
-              </button>
-            )}
-
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: viewing
-                  ? 'minmax(280px,1fr) 120px 120px'
-                  : 'minmax(280px,1fr) 120px 120px auto',
-                gap: 8,
-              }}
-            >
-              <div><strong>Category</strong></div>
-              <div><strong>Ranks</strong></div>
-              <div><strong># Choices</strong></div>
-              {!viewing && <div />}
-
-              {form.categoryMultiSkillRankChoices.map((r, i) => (
-                <React.Fragment key={`cmsrc-${i}`}>
-                  <LabeledSelect
-                    label="Category"
-                    hideLabel
-                    value={r.id}
-                    options={categoryOptions}
-                    disabled={viewing}
-                    onChange={(v) =>
-                      setForm((s) => {
-                        const copy = s.categoryMultiSkillRankChoices.slice();
-                        if (!copy[i]) return s;
-                        copy[i] = { ...copy[i], id: v };
-                        return { ...s, categoryMultiSkillRankChoices: copy };
-                      })
-                    }
-                  />
-
-                  <LabeledInput
-                    label="Ranks"
-                    hideLabel
-                    value={r.value}
-                    disabled={viewing}
-                    onChange={(v) =>
-                      setForm((s) => {
-                        const copy = s.categoryMultiSkillRankChoices.slice();
-                        if (!copy[i]) return s;
-                        copy[i] = { ...copy[i], value: v.replace(/[^\d]/g, '') };
-                        return { ...s, categoryMultiSkillRankChoices: copy };
-                      })
-                    }
-                  />
-
-                  <LabeledInput
-                    label="Choices"
-                    hideLabel
-                    value={r.numChoices}
-                    disabled={viewing}
-                    onChange={(v) =>
-                      setForm((s) => {
-                        const copy = s.categoryMultiSkillRankChoices.slice();
-                        if (!copy[i]) return s;
-                        copy[i] = { ...copy[i], numChoices: v.replace(/[^\d]/g, '') };
-                        return { ...s, categoryMultiSkillRankChoices: copy };
-                      })
-                    }
-                  />
-
-                  {!viewing && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setForm((s) => {
-                          const copy = s.categoryMultiSkillRankChoices.slice();
-                          copy.splice(i, 1);
-                          return { ...s, categoryMultiSkillRankChoices: copy };
-                        })
-                      }
-                    >
-                      Remove
-                    </button>
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
-
-            {errors.categoryMultiSkillRankChoices && (
-              <div className="error">{errors.categoryMultiSkillRankChoices}</div>
-            )}
-          </section>
+          <IdMultiSkillRankEditor
+            title="Category Multi‑Skill Rank Choices"
+            rows={form.categoryMultiSkillRankChoices}
+            onChangeRows={(next) =>
+              setForm((s) => ({ ...s, categoryMultiSkillRankChoices: next }))
+            }
+            idOptions={categoryOptions}
+            loading={loading}
+            viewing={viewing}
+            error={errors.categoryMultiSkillRankChoices}
+            idColumnLabel="Category"
+          />
 
           {/* Group Multi‑Skill Rank Choices */}
-          <section style={{ marginTop: 12 }}>
-            <h4>Group Multi‑Skill Rank Choices</h4>
-
-            {!viewing && (
-              <button
-                type="button"
-                onClick={() =>
-                  setForm((s) => ({
-                    ...s,
-                    groupMultiSkillRankChoices: [
-                      ...s.groupMultiSkillRankChoices,
-                      { id: '', value: '', numChoices: '' },
-                    ],
-                  }))
-                }
-              >
-                + Add group choice
-              </button>
-            )}
-
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: viewing
-                  ? 'minmax(280px,1fr) 120px 120px'
-                  : 'minmax(280px,1fr) 120px 120px auto',
-                gap: 8,
-              }}
-            >
-              <div><strong>Group</strong></div>
-              <div><strong>Ranks</strong></div>
-              <div><strong># Choices</strong></div>
-              {!viewing && <div />}
-
-              {form.groupMultiSkillRankChoices.map((r, i) => (
-                <React.Fragment key={`gmsrc-${i}`}>
-                  <LabeledSelect
-                    label="Group"
-                    hideLabel
-                    value={r.id}
-                    options={groupOptions}
-                    disabled={viewing}
-                    onChange={(v) =>
-                      setForm((s) => {
-                        const copy = s.groupMultiSkillRankChoices.slice();
-                        if (!copy[i]) return s;
-                        copy[i] = { ...copy[i], id: v };
-                        return { ...s, groupMultiSkillRankChoices: copy };
-                      })
-                    }
-                  />
-
-                  <LabeledInput
-                    label="Ranks"
-                    hideLabel
-                    value={r.value}
-                    disabled={viewing}
-                    onChange={(v) =>
-                      setForm((s) => {
-                        const copy = s.groupMultiSkillRankChoices.slice();
-                        if (!copy[i]) return s;
-                        copy[i] = { ...copy[i], value: v.replace(/[^\d]/g, '') };
-                        return { ...s, groupMultiSkillRankChoices: copy };
-                      })
-                    }
-                  />
-
-                  <LabeledInput
-                    label="# Choices"
-                    hideLabel
-                    value={r.numChoices}
-                    disabled={viewing}
-                    onChange={(v) =>
-                      setForm((s) => {
-                        const copy = s.groupMultiSkillRankChoices.slice();
-                        if (!copy[i]) return s;
-                        copy[i] = { ...copy[i], numChoices: v.replace(/[^\d]/g, '') };
-                        return { ...s, groupMultiSkillRankChoices: copy };
-                      })
-                    }
-                  />
-
-                  {!viewing && (
-                    <button onClick={() => {
-                      setForm((s) => {
-                        const copy = s.groupMultiSkillRankChoices.slice();
-                        copy.splice(i, 1);
-                        return { ...s, groupMultiSkillRankChoices: copy };
-                      });
-                    }}>
-                      Remove
-                    </button>
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
-
-            {errors.groupMultiSkillRankChoices && (
-              <div className="error">{errors.groupMultiSkillRankChoices}</div>
-            )}
-          </section>
+          <IdMultiSkillRankEditor
+            title="Group Multi‑Skill Rank Choices"
+            rows={form.groupMultiSkillRankChoices}
+            onChangeRows={(next) =>
+              setForm((s) => ({ ...s, groupMultiSkillRankChoices: next }))
+            }
+            idOptions={groupOptions}
+            loading={loading}
+            viewing={viewing}
+            error={errors.groupMultiSkillRankChoices}
+            idColumnLabel="Group"
+          />
 
           {/* Spell List Category Rank Choices */}
           <ChoiceListEditor<string, string>
