@@ -9,6 +9,7 @@ export function ChoiceListEditor<TType extends string = string, TOption = string
   onChangeRows,
   typeOptions,
   viewing,
+  showWhenEmpty = false,
   error,
   createEmptyOption,
   createEmptyRow,
@@ -142,6 +143,10 @@ export function ChoiceListEditor<TType extends string = string, TOption = string
     [rows, onChangeRows],
   );
 
+  // If we're in viewing mode, only show the component if there are rows or if showWhenEmpty is true
+  const showComponent = viewing ? rows.length > 0 || showWhenEmpty : true;
+  if (!showComponent) return null;
+
   return (
     <section style={{ marginTop: 12 }}>
       <h4 style={{ margin: '8px 0' }}>{title}</h4>
@@ -266,6 +271,9 @@ export interface ChoiceListEditorProps<TType extends string = string, TOption = 
 
   /** Whether the form is in view-only mode */
   viewing?: boolean | undefined;
+
+  /** Whether to show the component when viewing if there are no rows */
+  showWhenEmpty?: boolean | undefined;
 
   /** Validation error for the whole section */
   error?: string | undefined;

@@ -22,6 +22,9 @@ export interface IdTypeListEditorProps<
 
   loading?: boolean | undefined;
   viewing?: boolean | undefined;
+  /** Whether to show the component when viewing if there are no rows */
+  showWhenEmpty?: boolean | undefined;
+
   error?: string | undefined;
 
   /** Optional labels */
@@ -58,6 +61,7 @@ export function IdTypeListEditor<
   typeOptions,
   loading,
   viewing,
+  showWhenEmpty = false,
   error,
   idColumnLabel = 'ID',
   typeColumnLabel = 'Type',
@@ -119,6 +123,9 @@ export function IdTypeListEditor<
     },
     [rows, onChangeRows],
   );
+
+  const showComponent = viewing ? rows.length > 0 || showWhenEmpty : true;
+  if (!showComponent) return null;
 
   return (
     <section style={{ marginTop: 12 }}>
