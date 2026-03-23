@@ -14,7 +14,7 @@ import { CheckboxInput } from '../../components/inputs/CheckboxInput';
 import { IdValueListEditor } from '../../components/inputs/IdValueListEditor';
 import { IdTypeListEditor } from '../../components/inputs/IdTypeListEditor';
 import { IdSubcategoryValueListEditor } from '../../components/inputs/IdSubcategoryValueListEditor';
-import { IdSubcategoryTypeListEditor } from '../../components/inputs/IdSubcategoryTypeListEditor';
+import { SkillTypeListEditor } from '../../components/inputs/SkillTypeListEditor';
 import { ChoiceListEditor } from '../../components/inputs/ChoiceListEditor';
 import { IdCostListEditor } from '../../components/inputs/IdCostListEditor';
 
@@ -1022,7 +1022,7 @@ export default function ProfessionView() {
           />
 
           {/* Skill Development Types */}
-          <IdSubcategoryTypeListEditor<SkillDevelopmentType>
+          <SkillTypeListEditor<SkillDevelopmentType>
             title="Skill Development Types"
             rows={form.skillDevelopmentTypes}
             onChangeRows={(next) =>
