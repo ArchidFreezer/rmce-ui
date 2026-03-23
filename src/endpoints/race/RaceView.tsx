@@ -906,7 +906,7 @@ export default function RaceView() {
                 </button>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px,1fr) 100px 100px 100px auto', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: viewing ? 'minmax(260px,1fr) 100px 100px 100px' : 'minmax(260px,1fr) 100px 100px 100px auto', gap: 8 }}>
                 <div style={{ fontWeight: 600 }}>Language</div>
                 <div style={{ fontWeight: 600 }}>Spoken</div>
                 <div style={{ fontWeight: 600 }}>Written</div>
@@ -1046,7 +1046,7 @@ export default function RaceView() {
                 </button>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px,1fr) 1fr auto', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: viewing ? 'minmax(280px,1fr) 1fr' : 'minmax(280px,1fr) 1fr auto', gap: 8 }}>
                 <div style={{ fontWeight: 600 }}>Skill</div>
                 <div style={{ fontWeight: 600 }}>Subcategory (optional)</div>
                 {!viewing && <div />}
@@ -1129,7 +1129,7 @@ export default function RaceView() {
                 </button>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: viewing ? '1fr' : '1fr auto', gap: 8 }}>
                 {form[key].map((id, i) => (
                   <React.Fragment key={`${key}-${i}`}>
                     <LabeledSelect
@@ -1211,7 +1211,7 @@ export default function RaceView() {
             typeLabel="Unused"
             optionSectionLabel="Categories"
             renderOptionEditor={({ option, setOption, removeOption, viewing }) => (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: viewing ? '1fr' : '1fr auto', gap: 8 }}>
                 <LabeledSelect
                   label="Category"
                   hideLabel
