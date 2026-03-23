@@ -687,55 +687,55 @@ export default function CultureTypeView() {
 
           {/* Requirements */}
           <section style={{ marginTop: 12 }}>
-            <h4 style={{ margin: '8px 0' }}>Requirements</h4>
-
             <div style={{ marginTop: 6, display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
               {/* Climates */}
-              <div>
-                <IdListEditor
-                  title="Required Climates"
-                  rows={form.requiredClimates}
-                  onChangeRows={(next) => setForm((s) => ({ ...s, requiredClimates: next }))}
-                  options={climateOptions}
-                  loading={climateLoading}
-                  viewing={viewing}
-                  columnLabel="Climate"
-                />
-              </div>
+              <IdListEditor
+                title="Required Climates"
+                rows={form.requiredClimates}
+                onChangeRows={(next) => setForm((s) => ({ ...s, requiredClimates: next }))}
+                options={climateOptions}
+                loading={climateLoading}
+                viewing={viewing}
+                columnLabel="Climate"
+              />
 
               {/* Features/Terrains/Vegetations/Water */}
-              {[
-                { label: 'Required Features', key: 'requiredFeatures', options: featureOptions },
-                { label: 'Required Terrains', key: 'requiredTerrains', options: terrainOptions },
-                { label: 'Required Vegetations', key: 'requiredVegetations', options: vegetationOptions },
-                { label: 'Required Water Sources', key: 'requiredWaterSources', options: waterBodyOptions },
-              ].map(({ label, key, options }) => (
-                <div key={key}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    <strong>{label}</strong>
-                    {!viewing && <button type="button" onClick={() => addIdTo(key as keyof FormState, '')}>+ Add</button>}
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
-                    {(form[key as keyof FormState] as string[]).map((v, i) => (
-                      <React.Fragment key={`${key}-${i}`}>
-                        <LabeledSelect
-                          label={label}
-                          hideLabel
-                          value={v}
-                          onChange={(nv) => updateIndexOf(key as keyof FormState, i, nv)}
-                          options={options}
-                          disabled={viewing}
-                        />
-                        {!viewing && (
-                          <button type="button" onClick={() => removeIndexFrom(key as keyof FormState, i)} style={{ color: '#b00020' }}>
-                            Remove
-                          </button>
-                        )}
-                      </React.Fragment>
-                    ))}
-                  </div>
-                </div>
-              ))}
+              <IdListEditor<string>
+                title="Required Features"
+                rows={form.requiredFeatures}
+                onChangeRows={(next) => setForm((s) => ({ ...s, requiredFeatures: next }))}
+                options={featureOptions}
+                viewing={viewing}
+                columnLabel="Feature"
+              />
+
+              <IdListEditor<string>
+                title="Required Terrains"
+                rows={form.requiredTerrains}
+                onChangeRows={(next) => setForm((s) => ({ ...s, requiredTerrains: next }))}
+                options={terrainOptions}
+                viewing={viewing}
+                columnLabel="Terrain"
+              />
+
+              <IdListEditor<string>
+                title="Required Vegetations"
+                rows={form.requiredVegetations}
+                onChangeRows={(next) => setForm((s) => ({ ...s, requiredVegetations: next }))}
+                options={vegetationOptions}
+                viewing={viewing}
+                columnLabel="Vegetation"
+              />
+
+              <IdListEditor<string>
+                title="Required Water Sources"
+                rows={form.requiredWaterSources}
+                onChangeRows={(next) => setForm((s) => ({ ...s, requiredWaterSources: next }))}
+                options={waterBodyOptions}
+                viewing={viewing}
+                columnLabel="Water Source"
+              />
+
             </div>
           </section>
 

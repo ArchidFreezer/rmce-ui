@@ -17,6 +17,7 @@ export interface IdListEditorProps<TId extends string = string> {
 
   /** Optional labels */
   columnLabel?: string | undefined;
+  showLabels?: boolean | undefined;
 
   /** Optional button labels */
   addButtonLabel?: string | undefined;
@@ -35,6 +36,7 @@ export function IdListEditor<TId extends string = string>({
   viewing,
   error,
   columnLabel = 'Value',
+  showLabels = false,
   addButtonLabel = '+ Add row',
   removeButtonLabel = 'Remove',
   columnMinWidth = 280,
@@ -99,8 +101,7 @@ export function IdListEditor<TId extends string = string>({
           gap: 8,
         }}
       >
-        <div style={{ fontWeight: 600 }}>{columnLabel}</div>
-        {showActions && <div />}
+        {showLabels && <div style={{ fontWeight: 600 }}>{columnLabel}</div>}
 
         {rows.map((row, i) => (
           <React.Fragment key={`${title}-${i}`}>

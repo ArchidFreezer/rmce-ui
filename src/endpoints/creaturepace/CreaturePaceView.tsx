@@ -361,7 +361,6 @@ export default function CreaturePaceView() {
               options={MANOEUVRE_DIFFICULTIES}
               disabled={viewing}
               error={viewing ? undefined : errors.manoeuvreDifficulty}
-              helperText="Pick one (or type your own if your select allows it elsewhere)."
             />
           </div>
 
