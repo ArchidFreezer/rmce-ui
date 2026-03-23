@@ -13,6 +13,7 @@ import { IdValueListEditor } from '../../components/inputs/IdValueListEditor';
 import { IdSubcategoryValueListEditor } from '../../components/inputs/IdSubcategoryValueListEditor';
 import { ChoiceListEditor } from '../../components/inputs/ChoiceListEditor';
 import { LanguageRankListEditor } from '../../components/inputs/LanguageRankListEditor';
+import { SkillListEditor } from '../../components/inputs/SkillListEditor';
 
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -937,91 +938,27 @@ export default function RaceView() {
             signedValues
           />
 
-          {/* Everyman / Restricted skills */}
-          {[
-            { title: 'Everyman Skills', key: 'everymanSkills' as const, error: errors.everymanSkills },
-            { title: 'Restricted Skills', key: 'restrictedSkills' as const, error: errors.restrictedSkills },
-          ].map(({ title, key, error }) => (
-            <section key={key} style={{ marginTop: 12 }}>
-              <h4 style={{ margin: '8px 0' }}>{title}</h4>
-              {!viewing && (
-                <button
-                  type="button"
-                  onClick={() => setForm((s) => ({
-                    ...s,
-                    [key]: [...s[key], { id: '', subcategory: '' }],
-                  }))}
-                  style={{ marginBottom: 8 }}
-                >
-                  + Add skill
-                </button>
-              )}
+          {/* Everyman skills */}
+          <SkillListEditor
+            title="Everyman Skills"
+            rows={form.everymanSkills}
+            onChangeRows={(next) => setForm((s) => ({ ...s, everymanSkills: next }))}
+            idOptions={skillOptions}
+            loading={skillsLoading}
+            viewing={viewing}
+            error={errors.everymanSkills}
+          />
 
-              <div style={{ display: 'grid', gridTemplateColumns: viewing ? 'minmax(280px,1fr) 1fr' : 'minmax(280px,1fr) 1fr auto', gap: 8 }}>
-                <div style={{ fontWeight: 600 }}>Skill</div>
-                <div style={{ fontWeight: 600 }}>Subcategory (optional)</div>
-                {!viewing && <div />}
-
-                {form[key].map((row, i) => (
-                  <React.Fragment key={`${key}-${i}`}>
-                    <LabeledSelect
-                      label="Skill"
-                      hideLabel
-                      ariaLabel="Skill"
-                      value={row.id}
-                      onChange={(v) =>
-                        setForm((s) => {
-                          const copy = s[key].slice();
-                          if (i < 0 || i >= copy.length) return s;
-                          const current = copy[i];
-                          if (!current) return s;
-                          copy[i] = { id: v, subcategory: current.subcategory };
-                          return { ...s, [key]: copy };
-                        })
-                      }
-                      options={skillOptions}
-                      disabled={skillsLoading || viewing}
-                    />
-                    <LabeledInput
-                      label="Subcategory"
-                      hideLabel
-                      ariaLabel="Subcategory"
-                      value={row.subcategory ?? ''}
-                      onChange={(v) =>
-                        setForm((s) => {
-                          const copy = s[key].slice();
-                          if (i < 0 || i >= copy.length) return s;
-                          const current = copy[i];
-                          if (!current) return s;
-                          copy[i] = { id: current.id, subcategory: v || undefined };
-                          return { ...s, [key]: copy };
-                        })
-                      }
-                      disabled={viewing}
-                    />
-                    {!viewing && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setForm((s) => {
-                            const copy = s[key].slice();
-                            if (i < 0 || i >= copy.length) return s;
-                            copy.splice(i, 1);
-                            return { ...s, [key]: copy };
-                          })
-                        }
-                        style={{ color: '#b00020' }}
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </React.Fragment>
-                ))}
-              </div>
-
-              {error && <div style={{ color: '#b00020', marginTop: 6 }}>{error}</div>}
-            </section>
-          ))}
+          {/* Restricted skills */}
+          <SkillListEditor
+            title="Restricted Skills"
+            rows={form.restrictedSkills}
+            onChangeRows={(next) => setForm((s) => ({ ...s, restrictedSkills: next }))}
+            idOptions={skillOptions}
+            loading={skillsLoading}
+            viewing={viewing}
+            error={errors.restrictedSkills}
+          />
 
           {/* Everyman / Restricted categories */}
           {[
