@@ -37,6 +37,16 @@ export interface SkillTypeListEditorProps<TType extends string = string> {
   typeColumnWidth?: number | string | undefined;
 }
 
+/**
+ * SkillTypeListEditor component
+ * 
+ * Renders a list of rows, each containing a Skill selected from a dropdown and an associated type selected from another dropdown.
+ * The component supports loading and viewing states, and displays error messages when provided.
+ * 
+ * Allows adding and removing rows, and supports loading and viewing states.
+ * @param param0  Props for the SkillTypeListEditor component
+ * @returns JSX.Element
+ */
 export function SkillTypeListEditor<TType extends string = string>({
   title,
   rows,

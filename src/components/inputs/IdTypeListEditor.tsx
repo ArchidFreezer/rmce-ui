@@ -37,6 +37,16 @@ export interface IdTypeListEditorProps<
   typeColumnWidth?: number | string | undefined;
 }
 
+/**
+ * IdTypeListEditor component
+ * 
+ * Renders a list of rows, each containing an ID selected from a dropdown and an associated type selected from another dropdown.
+ * The component supports loading and viewing states, and displays error messages when provided.
+ * 
+ * Allows adding and removing rows, and supports loading and viewing states.
+ * @param param0  Props for the IdTypeListEditor component
+ * @returns JSX.Element
+ */
 export function IdTypeListEditor<
   TId extends string = string,
   TType extends string = string

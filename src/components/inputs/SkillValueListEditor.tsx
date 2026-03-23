@@ -38,6 +38,18 @@ export interface SkillValueListEditorProps {
   valueWidth?: number | string | undefined;
 }
 
+/**
+ * SkillValueListEditor component
+ * 
+ * Renders a list of rows, each containing a Skill selected from a dropdown and an associated value input.
+ * The value input is sanitized to allow only integers, with an option for signed or unsigned values.
+ * The component supports loading and viewing states, and displays error messages when provided.
+ * 
+ * Allows adding and removing rows, and supports loading and viewing states.
+ * 
+ * @param param0  Props for the SkillValueListEditor component
+ * @returns JSX.Element
+ */
 export function SkillValueListEditor({
   title,
   rows,
