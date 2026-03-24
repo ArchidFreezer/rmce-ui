@@ -6,6 +6,7 @@ import {
   fetchRaces, upsertRace, deleteRace,
   fetchSkills,
   fetchSkillcategories,
+  fetchSkillgroups,
   fetchSkillprogressiontypes,
 } from '../../api';
 
@@ -31,6 +32,7 @@ import type {
   Race, RaceSkillRef, RaceSkillBonus, RaceSkillCategoryChoice,
   Skill,
   SkillCategory,
+  SkillGroup,
   SkillProgressionType,
 } from '../../types';
 
@@ -332,12 +334,14 @@ export default function RaceView() {
   const [languages, setLanguages] = useState<Language[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [categories, setCategories] = useState<SkillCategory[]>([]);
+  const [groups, setGroups] = useState<SkillGroup[]>([]);
 
   const [booksLoading, setBooksLoading] = useState(true);
   const [progressionsLoading, setProgressionsLoading] = useState(true);
   const [languagesLoading, setLanguagesLoading] = useState(true);
   const [skillsLoading, setSkillsLoading] = useState(true);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [groupsLoading, setGroupsLoading] = useState(true);
 
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -437,6 +441,15 @@ export default function RaceView() {
     return () => { mounted = false; };
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try { const list = await fetchSkillgroups(); if (mounted) setGroups(list); }
+      finally { if (mounted) setGroupsLoading(false); }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
   // ---------- options ----------
   const bookOptions = useMemo(
     () => books.map((b) => ({ value: b.id, label: b.name })),
@@ -464,9 +477,15 @@ export default function RaceView() {
     [skills],
   );
 
+  const sgNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const sg of groups) m.set(sg.id, sg.name);
+    return m;
+  }, [groups]);
+
   const categoryOptions = useMemo(
-    () => categories.map((c) => ({ value: c.id, label: c.name })),
-    [categories],
+    () => categories.map(c => ({ value: c.id, label: `(${sgNameById.get(c.group) ?? c.group}) - ${c.name}` })),
+    [categories, sgNameById],
   );
 
   const creatureSizeOptions = useMemo(
