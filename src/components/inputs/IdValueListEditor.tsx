@@ -124,9 +124,13 @@ export function IdValueListEditor<TId extends string = string>({
           gap: 8,
         }}
       >
-        <div style={{ fontWeight: 600 }}>{idColumnLabel}</div>
-        <div style={{ fontWeight: 600 }}>{valueColumnLabel}</div>
-        {showActions && <div />}
+        {rows.length > 0 && (
+          <>
+            <div style={{ fontWeight: 600 }}>{idColumnLabel}</div>
+            <div style={{ fontWeight: 600 }}>{valueColumnLabel}</div>
+            {showActions && <div />}
+          </>
+        )}
 
         {rows.map((row, i) => (
           <React.Fragment key={`${title}-${i}`}>

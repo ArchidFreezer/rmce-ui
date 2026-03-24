@@ -21,7 +21,8 @@ import {
   SkillValueListEditor,
   SpellListCategoryRankEditor,
   SpellListRankEditor,
-  StatGainChoiceEditor
+  StatGainChoiceEditor,
+  TextNumberListEditor,
 } from '../../components/inputs';
 
 import { useToast } from '../../components/Toast';
@@ -207,6 +208,7 @@ type FormErrors = {
 
   races?: string;
   qualifiers?: string;
+  specials?: string;
 
   timeToAcquire?: string;
   startingMoneyModifierDice?: string;
@@ -1270,8 +1272,48 @@ export default function TrainingPackagesView() {
           />
 
           {/* Qualifiers */}
+          <TextNumberListEditor
+            title="Qualifiers"
+            rows={form.qualifiers.map((q) => ({
+              text: q.qualifier,
+              number: q.reduction,
+            }))}
+            onChangeRows={(next) =>
+              setForm((s) => ({
+                ...s,
+                qualifiers: next.map((r) => ({
+                  qualifier: r.text,
+                  reduction: r.number,
+                })),
+              }))
+            }
+            textLabel="Qualifier"
+            numberLabel="Reduction"
+            viewing={viewing}
+            error={errors.qualifiers}
+          />
 
           {/* Specials */}
+          <TextNumberListEditor
+            title="Specials"
+            rows={form.specials.map((s) => ({
+              text: s.value,
+              number: s.chance,
+            }))}
+            onChangeRows={(next) =>
+              setForm((s) => ({
+                ...s,
+                specials: next.map((r) => ({
+                  value: r.text,
+                  chance: r.number,
+                })),
+              }))
+            }
+            textLabel="Special"
+            numberLabel="Chance (%)"
+            viewing={viewing}
+            error={errors.specials}
+          />
 
           {/* Stat gains */}
           <h4 style={{ margin: '16px 0 8px' }}>Stat Gains</h4>
@@ -1368,6 +1410,16 @@ export default function TrainingPackagesView() {
           />
 
           {/* Group Category & Skill Rank Choices */}
+          <IdValueListEditor
+            title="Group Category & Skill Rank Choices"
+            rows={form.groupCategoryAndSkillRankChoices}
+            onChangeRows={(next) => setForm((s) => ({ ...s, groupCategoryAndSkillRankChoices: next }))}
+            options={groupOptions}
+            loading={loading}
+            viewing={viewing}
+            error={errors.groupCategoryAndSkillRankChoices}
+            signedValues
+          />
 
           {/* Spell List Ranks */}
           <SpellListRankEditor

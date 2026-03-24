@@ -138,9 +138,13 @@ export function SkillListEditor({
           gap: 8,
         }}
       >
-        <div style={{ fontWeight: 600 }}>{idColumnLabel}</div>
-        <div style={{ fontWeight: 600 }}>{subcategoryColumnLabel}</div>
-        {showActions && <div />}
+        {rows.length > 0 && (
+          <>
+            <div style={{ fontWeight: 600 }}>{idColumnLabel}</div>
+            <div style={{ fontWeight: 600 }}>{subcategoryColumnLabel}</div>
+            {showActions && <div />}
+          </>
+        )}
 
         {rows.map((row, i) => (
           <React.Fragment key={`${title}-${i}`}>

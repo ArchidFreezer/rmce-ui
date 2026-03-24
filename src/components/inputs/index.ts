@@ -10,8 +10,9 @@ export * from './LabeledInput';
 export * from './LabeledSelect';
 export * from './LanguageChoiceEditor';
 export * from './SkillListEditor';
-export * from './SkillRankChoiceEditor'
+export * from './SkillRankChoiceEditor';
 export * from './SkillValueListEditor';
 export * from './SpellListCategoryRankEditor';
 export * from './SpellListRankEditor';
 export * from './StatGainChoiceEditor';
+export * from './TextNumberListEditor';
