@@ -1,7 +1,7 @@
 // src/endpoints/poisontype/PoisontypesView.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { LabeledInput, HtmlPreview } from '../../components/inputs';
+import { LabeledInput, MarkupPreview } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 
@@ -584,8 +584,8 @@ function FragmentRowSymptom({
         )}
 
         {showPreview ? (
-          <HtmlPreview
-            html={row.symptoms}
+          <MarkupPreview
+            content={row.symptoms}
             emptyHint="No symptoms provided"
             className="preview-html"
             style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}

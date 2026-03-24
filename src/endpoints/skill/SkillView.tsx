@@ -5,7 +5,7 @@ import { LabeledSelect } from '../../components/inputs/LabeledSelect';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { CheckboxInput } from '../../components/inputs';
-import { HtmlPreview } from '../../components/inputs/HtmlPreview';
+import { MarkupPreview } from '../../components/inputs/MarkupPreview';
 
 import { fetchSkills, upsertSkill, deleteSkill } from '../../api/skill';
 import { fetchSkillcategories } from '../../api/skillcategory';
@@ -652,9 +652,8 @@ export default function SkillView() {
               </div>
 
               {(showPreview.description || viewing) ? (
-                <HtmlPreview
-                  title={undefined}
-                  html={form.description}
+                <MarkupPreview
+                  content={form.description}
                   emptyHint="No description"
                   className="preview-html"
                   style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
@@ -686,9 +685,8 @@ export default function SkillView() {
               </div>
 
               {(showPreview.difficulties || viewing) ? (
-                <HtmlPreview
-                  title={undefined}
-                  html={form.difficultiesSummary}
+                <MarkupPreview
+                  content={form.difficultiesSummary}
                   emptyHint="No difficulties summary"
                   className="preview-html"
                   style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
@@ -720,9 +718,8 @@ export default function SkillView() {
               </div>
 
               {(showPreview.notes || viewing) ? (
-                <HtmlPreview
-                  title={undefined}
-                  html={form.notes}
+                <MarkupPreview
+                  content={form.notes}
                   emptyHint="No notes"
                   className="preview-html"
                   style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}

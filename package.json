@@ -11,12 +11,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "dompurify": "^3.3.3",
+    "marked": "^17.0.5",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@types/dompurify": "^3.0.5",
     "@types/eslint__js": "^8.42.3",
     "@types/eslint-plugin-jsx-a11y": "^6.10.1",
     "@types/node": "^25.5.0",

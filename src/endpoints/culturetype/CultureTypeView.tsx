@@ -6,8 +6,7 @@ import {
   type DataTableHandle,
 } from '../../components/DataTable';
 import { LabeledInput } from '../../components/inputs/LabeledInput';
-import { LabeledSelect } from '../../components/inputs/LabeledSelect';
-import { HtmlPreview } from '../../components/inputs/HtmlPreview';
+import { MarkupPreview } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 
@@ -534,8 +533,8 @@ export default function CultureTypeView() {
           )}
         </div>
         {p ? (
-          <HtmlPreview
-            html={String(form[key] ?? '')}
+          <MarkupPreview
+            content={String(form[key] ?? '')}
             emptyHint={`No ${label.toLowerCase()}`}
             className="preview-html"
             style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}

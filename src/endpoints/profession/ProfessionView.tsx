@@ -7,7 +7,7 @@ import {
 } from '../../components/DataTable';
 import { LabeledInput } from '../../components/inputs/LabeledInput';
 import { LabeledSelect } from '../../components/inputs/LabeledSelect';
-import { HtmlPreview } from '../../components/inputs/HtmlPreview';
+import { HtmlPreview } from '../../components/inputs/MarkupPreview';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { CheckboxInput } from '../../components/inputs/CheckboxInput';

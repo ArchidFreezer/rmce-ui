@@ -5,7 +5,7 @@ import { LabeledInput } from '../../components/inputs/LabeledInput';
 import { LabeledSelect } from '../../components/inputs/LabeledSelect';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
-import { HtmlPreview } from '../../components/inputs/HtmlPreview';
+import { MarkupPreview } from '../../components/inputs/MarkupPreview';
 
 import { fetchWeaponTypes, upsertWeaponType, deleteWeaponType } from '../../api/weapontype';
 import { fetchSkills } from '../../api/skill';                 // assume you have this
@@ -633,9 +633,8 @@ export default function WeaponTypeView() {
               </div>
 
               {(showPreview.notes || viewing) ? (
-                <HtmlPreview
-                  title={undefined}
-                  html={form.notes}
+                <MarkupPreview
+                  content={form.notes}
                   emptyHint="No notes"
                   className="preview-html"
                   style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}

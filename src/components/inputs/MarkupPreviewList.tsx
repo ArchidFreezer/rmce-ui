@@ -1,10 +1,11 @@
 import * as React from 'react';
-import { HtmlPreview } from './HtmlPreview';
+import { MarkupPreview } from './MarkupPreview';
 import { LabeledInput } from './LabeledInput';
 
-export interface HtmlPreviewListProps {
+export interface MarkupPreviewListProps {
   title: string;
   arr?: string[];
+  format?: 'html' | 'markdown';
   onChangeNotes?: (next: string[]) => void;
 
   viewing?: boolean | undefined;
@@ -15,7 +16,7 @@ export interface HtmlPreviewListProps {
   removeButtonLabel?: string | undefined;
 }
 
-export function HtmlPreviewList({
+export function MarkupPreviewList({
   title,
   arr = [],
   onChangeNotes,
@@ -24,7 +25,8 @@ export function HtmlPreviewList({
   error,
   addButtonLabel = '+ Add note',
   removeButtonLabel = 'Remove',
-}: HtmlPreviewListProps) {
+  format = 'html',
+}: MarkupPreviewListProps) {
   const editable = Boolean(onChangeNotes) && !viewing;
 
   const updateNoteAt = (index: number, value: string) => {
@@ -86,8 +88,9 @@ export function HtmlPreviewList({
               />
 
               <div style={{ marginTop: 6 }}>
-                <HtmlPreview
-                  html={item}
+                <MarkupPreview
+                  content={item}
+                  format={format}
                   emptyHint="Empty note"
                 />
               </div>
@@ -101,8 +104,9 @@ export function HtmlPreviewList({
               </button>
             </>
           ) : (
-            <HtmlPreview
-              html={item}
+            <MarkupPreview
+              content={item}
+              format={format}
               emptyHint="Empty note"
             />
           )}
