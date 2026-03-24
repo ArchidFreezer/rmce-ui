@@ -1,14 +1,15 @@
 // src/api/race.ts
 import { fetchJson, sendJson } from './client';
+
 import type {
+  LanguageRank,
   Race,
   RacesPayload,
   RaceSkillRef,
   RaceSkillBonus,
   RaceStatBonus,
   RaceSkillCategoryChoice,
-} from '../types/race';
-import type { LanguageRank } from '../types/language';
+} from '../types';
 
 const BASE = '/rmce/objects/race';
 

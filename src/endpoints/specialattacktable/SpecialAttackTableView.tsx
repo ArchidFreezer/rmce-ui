@@ -1,25 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-
-import { useToast } from '../../components/Toast';
-import { useConfirm } from '../../components/ConfirmDialog';
 
 import {
-  fetchSpecialattacktables,
-  upsertSpecialattacktable,
-  deleteSpecialattacktable,
-} from '../../api/specialattacktable';
-
-import type { SpecialAttackTable } from '../../types/specialattacktable';
-import type { AttackTableRow } from '../../types/attacktable';
+  fetchSpecialattacktables, upsertSpecialattacktable, deleteSpecialattacktable,
+} from '../../api';
 
 import {
-  AttackTableEditor,
-  type AttackTableRowVM,
+  DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
+  AttackTableEditor, type AttackTableRowVM,
   LabeledInput,
-} from '../../components/inputs';
+  useConfirm, useToast,
+} from '../../components';
 
-import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
+import type {
+  AttackTableRow,
+  SpecialAttackTable,
+} from '../../types';
+
+import {
+  isValidID, makeIDOnChange,
+} from '../../utils';
 
 const prefix = 'SPECIALATTACKTABLE_';
 

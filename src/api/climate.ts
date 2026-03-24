@@ -1,6 +1,13 @@
 import { fetchJson, sendJson } from './client';
-import type { Climate, ClimatesPayload } from '../types/climate';
-import { PRECIPITATIONS, Precipitation, TEMPERATURES, Temperature } from '../types/enum';
+
+import type { 
+  Climate, ClimatesPayload,
+ } from '../types';
+
+ import { 
+  PRECIPITATIONS, Precipitation, 
+  TEMPERATURES, Temperature,
+ } from '../types/enum';
 
 const PRECIP_ENUM: ReadonlySet<Precipitation> = new Set(PRECIPITATIONS);
 

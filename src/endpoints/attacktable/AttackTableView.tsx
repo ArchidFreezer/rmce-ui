@@ -1,13 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { useToast } from '../../components/Toast';
-import { useConfirm } from '../../components/ConfirmDialog';
 
-import { fetchAttacktables, upsertAttacktable, deleteAttacktable } from '../../api/attacktable';
-import type { AttackTable, AttackTableRow } from '../../types/attacktable';
+import {
+  fetchAttacktables, upsertAttacktable, deleteAttacktable,
+} from '../../api';
 
-import { LabeledInput, AttackTableEditor, AttackTableRowVM } from '../../components/inputs';
-import { isValidID, makeIDOnChange, isValidUnsignedInt, makeUnsignedIntOnChange } from '../../utils/inputHelpers';
+import {
+  DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
+  AttackTableEditor, AttackTableRowVM,
+  LabeledInput,
+  useConfirm, useToast,
+} from '../../components';
+
+import type {
+  AttackTable, AttackTableRow,
+} from '../../types/attacktable';
+
+import {
+  isValidID, makeIDOnChange,
+  isValidUnsignedInt, makeUnsignedIntOnChange,
+} from '../../utils';
 
 const prefix = 'ATTACKTABLE_';
 

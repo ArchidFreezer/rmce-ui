@@ -1,5 +1,8 @@
 import { fetchJson, sendJson } from './client';
-import type { SkillGroup, SkillGroupsPayload } from '../types/skillgroup';
+
+import type { 
+  SkillGroup, SkillGroupsPayload,
+ } from '../types';
 
 const BASE = '/rmce/objects/skillgroup';
 

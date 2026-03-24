@@ -1,14 +1,28 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { useToast } from '../../components/Toast';
-import { useConfirm } from '../../components/ConfirmDialog';
 
-import { fetchDiseasetypes, upsertDiseasetype, deleteDiseasetype } from '../../api/diseasetype';
-import type { DiseaseType } from '../../types/diseasetype';
-import { MALADY_SEVERITIES, MaladySeverity } from '../../types/enum';
+import {
+  fetchDiseasetypes, upsertDiseasetype, deleteDiseasetype
+} from '../../api';
 
-import { LabeledInput, MarkupPreview } from '../../components/inputs';
-import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
+import {
+  DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
+  LabeledInput,
+  MarkupPreview,
+  useConfirm, useToast,
+} from '../../components';
+
+
+import type {
+  DiseaseType,
+} from '../../types';
+
+import {
+  MALADY_SEVERITIES, MaladySeverity,
+} from '../../types/enum';
+
+import {
+  isValidID, makeIDOnChange,
+} from '../../utils/inputHelpers';
 
 const prefix = 'DISEASETYPE_';
 

@@ -1,17 +1,32 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { useToast } from '../../components/Toast';
-import { useConfirm } from '../../components/ConfirmDialog';
 
-import { fetchSpelllists, upsertSpelllist, deleteSpelllist } from '../../api/spelllist';
-import type { SpellList } from '../../types/spelllist';
-import { SPELL_TYPES, SPELL_REALMS, SpellType, Realm } from '../../types/enum';
+import {
+  fetchBooks,
+  fetchSpelllists, upsertSpelllist, deleteSpelllist,
+} from '../../api';
 
-import { fetchBooks } from '../../api/book';
-import type { Book } from '../../types/book';
+import {
+  DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
+  CheckboxGroup,
+  CheckboxInput,
+  LabeledInput,
+  LabeledSelect,
+  useConfirm, useToast,
+} from '../../components';
 
-import { LabeledInput, LabeledSelect, CheckboxGroup, CheckboxInput } from '../../components/inputs';
-import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
+import type {
+  Book,
+  SpellList,
+} from '../../types';
+
+import {
+  SPELL_TYPES, SpellType,
+  SPELL_REALMS, Realm,
+} from '../../types/enum';
+
+import {
+  isValidID, makeIDOnChange,
+} from '../../utils';
 
 const prefix = 'SPELLLIST_';
 

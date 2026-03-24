@@ -1,42 +1,19 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  DataTable,
-  DataTableSearchInput,
-  type ColumnDef,
-  type DataTableHandle,
-} from '../../components/DataTable';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { useToast } from '../../components/Toast';
-import { useConfirm } from '../../components/ConfirmDialog';
 
 import {
-  fetchTrainingPackages,
-  upsertTrainingPackage,
-  deleteTrainingPackage,
-} from '../../api/trainingpackage';
-
-import { fetchBooks } from '../../api/book';
-import { fetchRaces } from '../../api/race';
-import { fetchSkills } from '../../api/skill';
-import { fetchSkillcategories } from '../../api/skillcategory';
-import { fetchSkillgroups } from '../../api/skillgroup';
-import { fetchSpelllists } from '../../api/spelllist';
-import { fetchLanguages } from '../../api/language';
-
-import type { TrainingPackage } from '../../types/trainingpackage';
-import type { Book } from '../../types/book';
-import type { Skill } from '../../types/skill';
-import type { SkillCategory } from '../../types/skillcategory';
-import type { SkillGroup } from '../../types/skillgroup';
-import type { SpellList } from '../../types/spelllist';
-import type { Language } from '../../types/language';
+  fetchBooks,
+  fetchTrainingPackages, upsertTrainingPackage, deleteTrainingPackage,
+  fetchRaces,
+  fetchSkills,
+  fetchSkillcategories,
+  fetchSkillgroups,
+  fetchSpelllists,
+  fetchLanguages,
+} from '../../api';
 
 import {
-  STATS,
-  type Stat,
-} from '../../types/enum';
-
-import {
+  DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
   CheckboxInput,
   ChoiceListEditor,
   IdListEditor,
@@ -54,9 +31,28 @@ import {
   SpellListRankEditor,
   StatGainChoiceEditor,
   TextNumberListEditor,
-} from '../../components/inputs';
+  useConfirm, useToast,
+} from '../../components';
 
-import { isValidID, makeIDOnChange, isValidUnsignedInt, makeUnsignedIntOnChange, isValidSignedInt } from '../../utils/inputHelpers';
+import type {
+  Book,
+  Language,
+  Skill,
+  SkillCategory,
+  SkillGroup,
+  SpellList,
+  TrainingPackage,
+} from '../../types';
+
+import {
+  STATS, type Stat,
+} from '../../types/enum';
+
+import {
+  isValidID, makeIDOnChange,
+  isValidSignedInt,
+  isValidUnsignedInt, makeUnsignedIntOnChange,
+} from '../../utils';
 
 
 const prefix = 'TRAININGPACKAGE_';

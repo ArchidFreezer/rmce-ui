@@ -1,38 +1,17 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  DataTable,
-  DataTableSearchInput,
-  type ColumnDef,
-  type DataTableHandle,
-} from '../../components/DataTable';
-
-import { useToast } from '../../components/Toast';
-import { useConfirm } from '../../components/ConfirmDialog';
-
-import { fetchRaces, upsertRace, deleteRace } from '../../api/race';
-import { fetchBooks } from '../../api/book';
-import { fetchSkillprogressiontypes } from '../../api/skillprogressiontype';
-import { fetchLanguages } from '../../api/language';
-import { fetchSkills } from '../../api/skill';
-import { fetchSkillcategories } from '../../api/skillcategory';
-
-import type { Race, RaceSkillRef, RaceSkillBonus, RaceSkillCategoryChoice } from '../../types/race';
-import type { Book } from '../../types/book';
-import type { SkillProgressionType } from '../../types/skillprogressiontype';
-import type { Language, LanguageRank } from '../../types/language';
-import type { Skill } from '../../types/skill';
-import type { SkillCategory } from '../../types/skillcategory';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-  CREATURE_SIZES,
-  CRITICAL_TABLE_TYPES,
-  STATS,
-  type CreatureSize,
-  type CriticalTableType,
-  type Stat,
-} from '../../types/enum';
+  fetchBooks,
+  fetchLanguages,
+  fetchRaces, upsertRace, deleteRace,
+  fetchSkills,
+  fetchSkillcategories,
+  fetchSkillprogressiontypes,
+} from '../../api';
+
 
 import {
+  DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
   CheckboxInput,
   ChoiceListEditor,
   IdListEditor,
@@ -43,9 +22,30 @@ import {
   MarkupPreview,
   SkillListEditor,
   SkillValueListEditor,
-} from '../../components/inputs';
+  useConfirm, useToast,
+} from '../../components';
 
-import { isValidID, makeIDOnChange, isValidUnsignedInt, makeUnsignedIntOnChange, isValidSignedInt, makeSignedFloatOnChange } from '../../utils/inputHelpers';
+import type {
+  Book,
+  Language, LanguageRank,
+  Race, RaceSkillRef, RaceSkillBonus, RaceSkillCategoryChoice,
+  Skill,
+  SkillCategory,
+  SkillProgressionType,
+} from '../../types';
+
+import {
+  CREATURE_SIZES, type CreatureSize,
+  CRITICAL_TABLE_TYPES, type CriticalTableType,
+  STATS, type Stat,
+} from '../../types/enum';
+
+
+import {
+  isValidID, makeIDOnChange,
+  isValidSignedInt, makeSignedFloatOnChange,
+  isValidUnsignedInt, makeUnsignedIntOnChange,
+} from '../../utils';
 
 const prefix = 'RACE_';
 

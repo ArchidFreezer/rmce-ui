@@ -1,37 +1,43 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  DataTable,
-  DataTableSearchInput,
-  type ColumnDef,
-  type DataTableHandle,
-} from '../../components/DataTable';
-import { useToast } from '../../components/Toast';
-import { useConfirm } from '../../components/ConfirmDialog';
-
-import { fetchCulturetypes, upsertCulturetype, deleteCulturetype, asFeatureArray, asTerrainArray, asVegetationArray, asWaterBodyArray } from '../../api/culturetype';
-
-import { fetchArmourTypes } from '../../api/armourtype'; // assumes you have these
-import { fetchWeaponTypes } from '../../api/weapontype';
-import { fetchSkills } from '../../api/skill';
-import { fetchSkillcategories } from '../../api/skillcategory';
-import { fetchClimates } from '../../api/climate';
-
-import type { CultureType } from '../../types/culturetype';
-import type { ArmourType } from '../../types/armourtype';
-import type { WeaponType } from '../../types/weapontype';
-import type { Skill } from '../../types/skill';
-import type { SkillCategory } from '../../types/skillcategory';
-import type { Climate } from '../../types/climate';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-  ENVIRONMENT_FEATURES,         // string[]
-  ENVIRONMENT_TERRAINS,         // string[]
-  ENVIRONMENT_VEGETATIONS,      // string[]
-  ENVIRONMENT_WATER_BODIES,     // string[]
+  fetchArmourTypes,
+  fetchClimates,
+  fetchCulturetypes, upsertCulturetype, deleteCulturetype,
+  fetchSkills,
+  fetchSkillcategories,
+  fetchWeaponTypes,
+} from '../../api';
+
+import {
+  DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
+  IdListEditor,
+  IdValueListEditor,
+  LabeledInput,
+  MarkupPreview,
+  SkillValueListEditor,
+  useConfirm, useToast,
+} from '../../components';
+
+import type {
+  ArmourType,
+  Climate,
+  CultureType,
+  Skill,
+  SkillCategory,
+  WeaponType,
+} from '../../types';
+
+import {
+  ENVIRONMENT_FEATURES, asFeatureArray,
+  ENVIRONMENT_TERRAINS, asTerrainArray,
+  ENVIRONMENT_VEGETATIONS, asVegetationArray,
+  ENVIRONMENT_WATER_BODIES, asWaterBodyArray,
 } from '../../types/enum';
 
-import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
-import { IdListEditor, IdValueListEditor, LabeledInput, MarkupPreview, SkillValueListEditor } from '../../components/inputs';
+import {
+  isValidID, makeIDOnChange,
+} from '../../utils';
 
 const prefix = 'CULTURETYPE_';
 

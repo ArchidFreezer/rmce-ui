@@ -1,6 +1,12 @@
 import { fetchJson, sendJson } from './client';
-import type { SkillCategory, SkillCategoriesPayload } from '../types/skillcategory';
-import { STATS, type Stat } from '../types/enum';
+
+import type { 
+  SkillCategory, SkillCategoriesPayload,
+} from '../types';
+
+import { 
+  STATS, type Stat,
+ } from '../types/enum';
 
 const BASE = '/rmce/objects/skillcategory';
 

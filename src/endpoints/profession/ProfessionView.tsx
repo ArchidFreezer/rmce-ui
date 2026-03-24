@@ -1,27 +1,31 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+
 import {
-  DataTable,
-  DataTableSearchInput,
-  type ColumnDef,
-  type DataTableHandle,
-} from '../../components/DataTable';
-import { useToast } from '../../components/Toast';
-import { useConfirm } from '../../components/ConfirmDialog';
+  fetchBooks,
+  fetchProfessions, upsertProfession, deleteProfession,
+  fetchSkills,
+  fetchSkillcategories,
+  fetchSkillgroups,
+  fetchSpelllists,
+} from '../../api';
 
+import {
+  DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
+  CheckboxInput,
+  ChoiceListEditor,
+  IdCostListEditor,
+  IdTypeListEditor,
+  IdValueListEditor,
+  LabeledInput,
+  LabeledSelect,
+  MarkupPreview,
+  SkillTypeListEditor,
+  SkillValueListEditor,
+  useConfirm, useToast,
+} from '../../components';
 
-import { fetchProfessions, upsertProfession, deleteProfession } from '../../api/profession';
-import { fetchBooks } from '../../api/book';
-import { fetchSpelllists } from '../../api/spelllist';
-import { fetchSkills } from '../../api/skill';
-import { fetchSkillcategories } from '../../api/skillcategory';
-import { fetchSkillgroups } from '../../api/skillgroup';
-
-import type { Book } from '../../types/book';
-import type { SpellList } from '../../types/spelllist';
-import type { Skill } from '../../types/skill';
-import type { SkillCategory } from '../../types/skillcategory';
-import type { SkillGroup } from '../../types/skillgroup';
 import type {
+  Book,
   Profession,
   ProfessionSpellListChoice,
   ProfessionSkillBonus,
@@ -36,34 +40,24 @@ import type {
   ProfessionCategorySkillDevelopmentTypeChoice,
   ProfessionGroupSkillDevelopmentTypeChoice,
   ProfessionSkillCategoryCost,
-} from '../../types/profession';
+  Skill,
+  SkillCategory,
+  SkillGroup,
+  SpellList,
+} from '../../types';
 
 import {
-  REALMS,
-  STATS,
-  SPELL_USER_TYPES,
-  SKILL_DEVELOPMENT_TYPES,
-  type Realm,
-  type Stat,
-  type SpellUserType,
-  type SkillDevelopmentType,
+  REALMS, type Realm,
+  STATS, type Stat,
+  SPELL_USER_TYPES, type SpellUserType,
+  SKILL_DEVELOPMENT_TYPES, type SkillDevelopmentType,
 } from '../../types/enum';
 
 import {
-  CheckboxInput,
-  ChoiceListEditor,
-  IdCostListEditor,
-  IdTypeListEditor,
-  IdValueListEditor,
-  LabeledInput,
-  LabeledSelect,
-  MarkupPreview,
-  SkillTypeListEditor,
-  SkillValueListEditor,
-} from '../../components/inputs';
-
-
-import { isValidID, makeIDOnChange, isValidUnsignedInt, sanitizeUnsignedInt, isValidSignedInt } from '../../utils/inputHelpers';
+  isValidID, makeIDOnChange,
+  isValidUnsignedInt, sanitizeUnsignedInt,
+  isValidSignedInt,
+} from '../../utils';
 
 const prefix = 'PROFESSION_';
 

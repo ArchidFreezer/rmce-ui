@@ -1,60 +1,20 @@
 // src/api/culturetype.ts
 import { fetchJson, sendJson } from './client';
-import type { CultureType, CultureTypesPayload } from '../types/culturetype';
-import type { SkillRankValue, CategoryRankValue } from '../types/skillmodifier';
-import { 
-  ENVIRONMENT_FEATURES, type EnvironmentFeature, 
-  ENVIRONMENT_TERRAINS, type EnvironmentTerrain, 
-  ENVIRONMENT_VEGETATIONS, type EnvironmentVegetation, 
-  ENVIRONMENT_WATER_BODIES, type EnvironmentWaterBody 
-} from '../types/enum';
+
+import type { 
+  CategoryRankValue,
+  CultureType, CultureTypesPayload,
+  SkillRankValue,
+ } from '../types';
+
+ import { 
+  asFeatureArray, 
+  asTerrainArray, 
+  asVegetationArray, 
+  asWaterBodyArray,
+ } from '../types/enum';
 
 const BASE = '/rmce/objects/culturetype';
-
-/** Preserve order & duplicates but filter to known EnvironmentFeature values */
-const FEATURE_SET = new Set<EnvironmentFeature>(ENVIRONMENT_FEATURES);
-export function asFeatureArray(v: unknown): EnvironmentFeature[] {
-  if (!Array.isArray(v)) return [];
-  const out: EnvironmentFeature[] = [];
-  for (const x of v) {
-    const s = String(x) as EnvironmentFeature;
-    if (FEATURE_SET.has(s)) out.push(s);
-  }
-  return out;
-}
-
-const TERRAIN_SET = new Set<EnvironmentTerrain>(ENVIRONMENT_TERRAINS);
-export function asTerrainArray(v: unknown): EnvironmentTerrain[] {
-  if (!Array.isArray(v)) return [];
-  const out: EnvironmentTerrain[] = [];
-  for (const x of v) {
-    const s = String(x) as EnvironmentTerrain;
-    if (TERRAIN_SET.has(s)) out.push(s);
-  }
-  return out;
-}
-
-const VEGETATION_SET = new Set<EnvironmentVegetation>(ENVIRONMENT_VEGETATIONS);
-export function asVegetationArray(v: unknown): EnvironmentVegetation[] {
-  if (!Array.isArray(v)) return [];
-  const out: EnvironmentVegetation[] = [];
-  for (const x of v) {
-    const s = String(x) as EnvironmentVegetation;
-    if (VEGETATION_SET.has(s)) out.push(s);
-  }
-  return out;
-}
-
-const WATER_BODY_SET = new Set<EnvironmentWaterBody>(ENVIRONMENT_WATER_BODIES);
-export function asWaterBodyArray(v: unknown): EnvironmentWaterBody[] {
-  if (!Array.isArray(v)) return [];
-  const out: EnvironmentWaterBody[] = [];
-  for (const x of v) {
-    const s = String(x) as EnvironmentWaterBody;
-    if (WATER_BODY_SET.has(s)) out.push(s);
-  }
-  return out;
-}
 
 // Coercion helpers
 const asString = (v: unknown) => String(v ?? '');

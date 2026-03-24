@@ -1,13 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { useToast } from '../../components/Toast';
-import { useConfirm } from '../../components/ConfirmDialog';
 
-import { fetchSkillgroups, upsertSkillgroup, deleteSkillgroup } from '../../api/skillgroup';
-import type { SkillGroup } from '../../types/skillgroup';
+import {
+  fetchSkillgroups, upsertSkillgroup, deleteSkillgroup,
+} from '../../api';
 
-import { LabeledInput } from '../../components/inputs';
-import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
+import {
+  DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
+  LabeledInput,
+  useConfirm, useToast,
+} from '../../components';
+
+import type {
+  SkillGroup,
+} from '../../types';
+
+import {
+  isValidID, makeIDOnChange,
+} from '../../utils';
 
 const prefix = 'SKILLGROUP_';
 

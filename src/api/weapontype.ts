@@ -1,11 +1,12 @@
 // src/api/weapontype.ts
 import { fetchJson, sendJson } from './client';
+
 import type {
   WeaponType,
   WeaponTypesPayload,
   WeaponTypeRange,
   WeaponTypeCritical,
-} from '../types/weapontype';
+} from '../types';
 
 /**
  * REST base for WeaponType

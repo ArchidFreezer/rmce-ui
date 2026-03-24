@@ -1,20 +1,32 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { useToast } from '../../components/Toast';
-import { useConfirm } from '../../components/ConfirmDialog';
 
+import {
+  fetchSkillcategories, upsertSkillcategory, deleteSkillcategory,
+  fetchSkillgroups,
+  fetchSkillprogressiontypes,
+} from '../../api';
 
-import { fetchSkillcategories, upsertSkillcategory, deleteSkillcategory } from '../../api/skillcategory';
-import { fetchSkillprogressiontypes } from '../../api/skillprogressiontype';
-import { fetchSkillgroups } from '../../api/skillgroup';
+import {
+  DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
+  CheckboxInput,
+  LabeledInput,
+  LabeledSelect,
+  useConfirm, useToast,
+} from '../../components';
 
-import type { SkillCategory } from '../../types/skillcategory';
-import type { SkillProgressionType } from '../../types/skillprogressiontype';
-import type { SkillGroup } from '../../types/skillgroup';
-import { STATS, type Stat } from '../../types/enum';
+import type {
+  SkillCategory,
+  SkillProgressionType,
+  SkillGroup,
+} from '../../types';
 
-import { LabeledInput, LabeledSelect, CheckboxInput } from '../../components/inputs';
-import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
+import {
+  STATS, type Stat,
+} from '../../types/enum';
+
+import {
+  isValidID, makeIDOnChange,
+} from '../../utils';
 
 const prefix = 'SKILLCATEGORY_';
 

@@ -1,5 +1,6 @@
 // src/api/profession.ts
 import { fetchJson, sendJson } from './client';
+
 import type {
   Profession,
   ProfessionsPayload,
@@ -16,7 +17,7 @@ import type {
   ProfessionCategorySkillDevelopmentTypeChoice,
   ProfessionGroupSkillDevelopmentTypeChoice,
   ProfessionSkillCategoryCost,
-} from '../types/profession';
+} from '../types';
 
 const BASE = '/rmce/objects/profession';
 

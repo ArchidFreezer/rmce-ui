@@ -1,15 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { useToast } from '../../components/Toast';
-import { useConfirm } from '../../components/ConfirmDialog';
 
-import { fetchLanguages, upsertLanguage, deleteLanguage } from '../../api/language';
-import { fetchLanguagecategories } from '../../api/languagecategory';
-import type { Language } from '../../types/language';
-import type { LanguageCategory } from '../../types/languagecategory';
+import {
+  fetchLanguages, upsertLanguage, deleteLanguage,
+  fetchLanguagecategories,
+} from '../../api';
 
-import { CheckboxInput, LabeledInput, LabeledSelect } from '../../components/inputs';
-import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
+import {
+  DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
+  CheckboxInput,
+  LabeledInput,
+  LabeledSelect,
+  useConfirm, useToast,
+} from '../../components';
+
+import type {
+  Language,
+  LanguageCategory,
+} from '../../types';
+
+import {
+  isValidID, makeIDOnChange,
+} from '../../utils';
 
 const prefix = 'LANGUAGE_';
 

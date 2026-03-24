@@ -1,6 +1,9 @@
 import { fetchJson, sendJson } from './client';
-import type { AttackTableRow } from '../types/attacktable';
-import type { SpecialAttackTable, SpecialAttackTablesPayload } from '../types/specialattacktable';
+
+import type { 
+  AttackTableRow,
+  SpecialAttackTable, SpecialAttackTablesPayload,
+ } from '../types';
 
 const BASE = '/rmce/objects/specialattacktable';
 

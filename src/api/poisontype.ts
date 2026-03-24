@@ -1,12 +1,13 @@
 // src/api/poisontype.ts
 import { fetchJson, sendJson } from './client';
+
 import type {
-  PoisonType,
-  PoisonTypesPayload,
-  PoisonTypeEffectOnset,
-  PoisonTypeSymptom,
-} from '../types/poisontype';
-import { MALADY_SEVERITIES, MaladySeverity } from '../types/enum';
+  PoisonType,  PoisonTypesPayload,  PoisonTypeEffectOnset,  PoisonTypeSymptom,
+} from '../types';
+
+import { 
+  MALADY_SEVERITIES, MaladySeverity,
+ } from '../types/enum';
 
 const BASE = '/rmce/objects/poisontype';
 
