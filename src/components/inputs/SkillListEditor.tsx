@@ -82,6 +82,8 @@ export function SkillListEditor({
           : current.subcategory,
       };
 
+      copy[index] = nextRow;
+
       onChangeRows(copy);
     },
     [rows, onChangeRows],

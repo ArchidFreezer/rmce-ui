@@ -123,7 +123,7 @@ export function IdMultiSkillRankEditor<TId extends string = string>({
         <div style={{ fontWeight: 600 }}>{idColumnLabel}</div>
         <div style={{ fontWeight: 600 }}>{valueColumnLabel}</div>
         <div style={{ fontWeight: 600 }}>{numChoicesColumnLabel}</div>
-        {/* {showActions && <div />} */}
+        {showActions && <div />}
 
         {rows.map((row, i) => (
           <React.Fragment key={`${title}-${i}`}>

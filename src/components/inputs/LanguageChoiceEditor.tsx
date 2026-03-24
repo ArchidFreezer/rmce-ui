@@ -169,7 +169,7 @@ export function LanguageChoiceEditor<TLanguageId extends string = string>({
             style={{
               display: 'grid',
               gridTemplateColumns: showActions
-                ? '120px 120px auto'
+                ? '120px 120px 120px'
                 : '120px 120px',
               gap: 8,
               marginBottom: 8,

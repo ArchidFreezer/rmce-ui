@@ -171,24 +171,12 @@ export function SpellListRankEditor<
             style={{
               display: 'grid',
               gridTemplateColumns: showActions
-                ? 'minmax(280px,1fr) 120px 120px auto'
-                : 'minmax(280px,1fr) 120px 120px',
+                ? '120px 120px minmax(280px,1fr) 120px'
+                : '120px 120px minmax(280px,1fr)',
               gap: 8,
               marginBottom: 8,
             }}
           >
-            <LabeledSelect
-              label="Optional Category"
-              value={row.optionalCategory ?? ''}
-              options={categoryOptions}
-              disabled={loading || viewing}
-              onChange={(v) =>
-                updateRowAt(rowIndex, {
-                  optionalCategory: v as TCategoryId || undefined,
-                })
-              }
-            />
-
             <LabeledInput
               label="Ranks"
               value={row.value}
@@ -209,6 +197,18 @@ export function SpellListRankEditor<
               onChange={(v) =>
                 updateRowAt(rowIndex, {
                   numChoices: sanitizeUnsignedInt(v),
+                })
+              }
+            />
+
+            <LabeledSelect
+              label="Optional Category"
+              value={row.optionalCategory ?? ''}
+              options={categoryOptions}
+              disabled={loading || viewing}
+              onChange={(v) =>
+                updateRowAt(rowIndex, {
+                  optionalCategory: v as TCategoryId || undefined,
                 })
               }
             />

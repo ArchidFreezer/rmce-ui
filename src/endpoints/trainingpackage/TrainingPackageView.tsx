@@ -566,7 +566,7 @@ export default function TrainingPackagesView() {
   /* ------------------------------------------------------------------ */
 
   const bookOptions = useMemo(
-    () => books.map((b) => ({ value: b.id, label: `${b.id} — ${b.name}` })),
+    () => books.map((b) => ({ value: b.id, label: b.name })),
     [books],
   );
 
@@ -623,11 +623,9 @@ export default function TrainingPackagesView() {
     const id = draft.id.trim();
     const name = draft.name.trim();
 
-    if (!id) {
-      e.id = 'ID is required';
-    } else if (!isValidID(id, prefix)) {
-      e.id = `ID must start with "${prefix}"`;
-    }
+    if (!id) e.id = 'ID is required';
+    else if (!editingId && rows.some(r => r.id === id)) e.id = `ID "${id}" already exists`;
+    else if (!isValidID(id, prefix)) e.id = `ID must start with "${prefix}" and contain additional characters`;
 
     if (!name) {
       e.name = 'Name is required';
@@ -1168,6 +1166,7 @@ export default function TrainingPackagesView() {
               value={form.id}
               onChange={makeIDOnChange<typeof form>('id', setForm, prefix)}
               disabled={!!editingId || viewing}
+              error={viewing ? undefined : errors.id}
             />
             <LabeledInput
               label="Name"
@@ -1456,7 +1455,7 @@ export default function TrainingPackagesView() {
                   disabled={viewing}
                   onChange={setOption}
                 />
-                {!viewing && <button onClick={removeOption}>Remove</button>}
+                {!viewing && <button onClick={removeOption} style={{ color: '#b00020' }}>Remove</button>}
               </div>
             )}
           />
