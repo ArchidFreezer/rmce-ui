@@ -1,10 +1,5 @@
 import * as React from 'react';
-
-/**
- * NOTE:
- * If you already use a sanitizer elsewhere, plug it in here.
- * This implementation assumes trusted content (same as HtmlPreview did).
- */
+import DOMPurify from 'dompurify';
 
 export interface MarkupPreviewProps {
   /** Markup source (HTML or Markdown) */
@@ -22,25 +17,37 @@ export interface MarkupPreviewProps {
 
 /**
  * Minimal markdown renderer.
- * Replace with a real library (marked, markdown-it, etc.) if already used elsewhere.
+ * You may replace this with marked / markdown-it later.
  */
 function renderMarkdown(markdown: string): string {
-  // VERY minimal – intentional
-  // Headings
   let html = markdown
+    // headings
     .replace(/^### (.*)$/gm, '<h3>$1</h3>')
     .replace(/^## (.*)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.*)$/gm, '<h1>$1</h1>');
+    .replace(/^# (.*)$/gm, '<h1>$1</h1>')
 
-  // Bold / italic
-  html = html
+    // bold / italic
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>');
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
 
-  // Line breaks
-  html = html.replace(/\n/g, '<br />');
+    // line breaks
+    .replace(/\n/g, '<br />');
 
   return html;
+}
+
+/**
+ * Sanitize HTML safely.
+ * This is the only place where dangerous HTML is handled.
+ */
+function sanitizeHtml(html: string): string {
+  return DOMPurify.sanitize(html, {
+    USE_PROFILES: { html: true },
+
+    // Optional hardening — uncomment if desired:
+    FORBID_TAGS: ['style', 'script', 'iframe'],
+    FORBID_ATTR: ['style', 'onerror', 'onclick'],
+  });
 }
 
 export function MarkupPreview({
@@ -63,16 +70,18 @@ export function MarkupPreview({
     );
   }
 
-  const html =
+  const rawHtml =
     format === 'markdown'
       ? renderMarkdown(source)
       : source;
+
+  const safeHtml = sanitizeHtml(rawHtml);
 
   return (
     <div
       className={className}
       style={style}
-      dangerouslySetInnerHTML={{ __html: html }}
+      dangerouslySetInnerHTML={{ __html: safeHtml }}
     />
   );
 }
