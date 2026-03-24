@@ -1212,11 +1212,13 @@ export default function TrainingPackagesView() {
           <section style={{ marginTop: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <h4 style={{ margin: '8px 0' }}>Description</h4>
-              <button type="button" onClick={() => setPreviewDescription((p) => !p)}>
-                {previewDescription ? 'Edit' : 'Preview'}
-              </button>
+              {!viewing && (
+                <button type="button" onClick={() => setPreviewDescription((p) => !p)}>
+                  {previewDescription ? 'Edit' : 'Preview'}
+                </button>
+              )}
             </div>
-            {previewDescription ? (
+            {previewDescription || viewing ? (
               <HtmlPreview
                 html={form.description}
                 emptyHint="No description"
@@ -1239,11 +1241,13 @@ export default function TrainingPackagesView() {
           <section style={{ marginTop: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <h4 style={{ margin: '8px 0' }}>Flavour Text</h4>
-              <button type="button" onClick={() => setPreviewFlavourText((p) => !p)}>
-                {previewFlavourText ? 'Edit' : 'Preview'}
-              </button>
+              {!viewing && (
+                <button type="button" onClick={() => setPreviewFlavourText((p) => !p)}>
+                  {previewFlavourText ? 'Edit' : 'Preview'}
+                </button>
+              )}
             </div>
-            {previewFlavourText ? (
+            {previewFlavourText || viewing ? (
               <HtmlPreview
                 html={form.flavourText}
                 emptyHint="No flavour text"
