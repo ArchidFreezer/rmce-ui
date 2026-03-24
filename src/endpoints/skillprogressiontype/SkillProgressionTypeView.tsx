@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { LabeledInput } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
-import { isValidID, makeIDOnChange, isValidSignedInt, makeSignedIntOnChange, isValidUnsignedInt, makeUnsignedIntOnChange } from '../../utils/inputHelpers';
 
 import {
   fetchSkillprogressiontypes,
@@ -11,6 +9,9 @@ import {
   deleteSkillprogressiontype,
 } from '../../api/skillprogressiontype';
 import type { SkillProgressionType } from '../../types/skillprogressiontype';
+
+import { LabeledInput } from '../../components/inputs';
+import { isValidID, makeIDOnChange, isValidSignedInt, makeSignedIntOnChange, isValidUnsignedInt, makeUnsignedIntOnChange } from '../../utils/inputHelpers';
 
 const prefix = 'SKILLPROGRESSIONTYPE_';
 

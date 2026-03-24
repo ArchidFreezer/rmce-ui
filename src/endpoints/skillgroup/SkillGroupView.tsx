@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { LabeledInput } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 
 import { fetchSkillgroups, upsertSkillgroup, deleteSkillgroup } from '../../api/skillgroup';
 import type { SkillGroup } from '../../types/skillgroup';
+
+import { LabeledInput } from '../../components/inputs';
 import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
+
 const prefix = 'SKILLGROUP_';
 
 // ------------------------

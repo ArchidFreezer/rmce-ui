@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { LabeledInput, LabeledSelect, CheckboxInput } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
-import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
+
 
 import { fetchSkillcategories, upsertSkillcategory, deleteSkillcategory } from '../../api/skillcategory';
 import { fetchSkillprogressiontypes } from '../../api/skillprogressiontype';
@@ -13,6 +12,9 @@ import type { SkillCategory } from '../../types/skillcategory';
 import type { SkillProgressionType } from '../../types/skillprogressiontype';
 import type { SkillGroup } from '../../types/skillgroup';
 import { STATS, type Stat } from '../../types/enum';
+
+import { LabeledInput, LabeledSelect, CheckboxInput } from '../../components/inputs';
+import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
 
 const prefix = 'SKILLCATEGORY_';
 

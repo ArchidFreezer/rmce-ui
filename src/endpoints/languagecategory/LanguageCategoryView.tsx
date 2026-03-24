@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { LabeledInput } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 
 import { fetchLanguagecategories, upsertLanguagecategory, deleteLanguagecategory } from '../../api/languagecategory';
 
 import type { LanguageCategory } from '../../types/languagecategory';
+
+import { LabeledInput } from '../../components/inputs';
 import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
 
 const prefix = 'LANGUAGECATEGORY_';

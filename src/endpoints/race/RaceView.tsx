@@ -6,16 +6,6 @@ import {
   type DataTableHandle,
 } from '../../components/DataTable';
 
-import { LabeledInput } from '../../components/inputs/LabeledInput';
-import { LabeledSelect } from '../../components/inputs/LabeledSelect';
-import { MarkupPreview } from '../../components/inputs/MarkupPreview';
-import { IdValueListEditor } from '../../components/inputs/IdValueListEditor';
-import { SkillValueListEditor } from '../../components/inputs/SkillValueListEditor';
-import { ChoiceListEditor } from '../../components/inputs/ChoiceListEditor';
-import { LanguageRankListEditor } from '../../components/inputs/LanguageRankListEditor';
-import { SkillListEditor } from '../../components/inputs/SkillListEditor';
-import { CheckboxInput } from '../../components/inputs/CheckboxInput';
-
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 
@@ -42,8 +32,20 @@ import {
   type Stat,
 } from '../../types/enum';
 
-import { isValidID, makeIDOnChange, isValidUnsignedInt, makeUnsignedIntOnChange, sanitizeUnsignedInt, isValidSignedInt, makeSignedIntOnChange, sanitizeSignedFloat, makeSignedFloatOnChange } from '../../utils/inputHelpers';
-import { IdListEditor } from '../../components/inputs/IdListEditor';
+import {
+  CheckboxInput,
+  ChoiceListEditor,
+  IdListEditor,
+  IdValueListEditor,
+  LabeledInput,
+  LabeledSelect,
+  LanguageRankListEditor,
+  MarkupPreview,
+  SkillListEditor,
+  SkillValueListEditor,
+} from '../../components/inputs';
+
+import { isValidID, makeIDOnChange, isValidUnsignedInt, makeUnsignedIntOnChange, isValidSignedInt, makeSignedFloatOnChange } from '../../utils/inputHelpers';
 
 const prefix = 'RACE_';
 

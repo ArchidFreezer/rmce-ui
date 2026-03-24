@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { LabeledInput, LabeledSelect } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 
@@ -8,6 +7,7 @@ import { fetchTreasurecodes, upsertTreasurecode, deleteTreasurecode } from '../.
 import type { TreasureCode } from '../../types/treasurecode';
 import { TREASUREVALUETYPES, type TreasureValueType } from '../../types/enum';
 
+import { LabeledInput, LabeledSelect } from '../../components/inputs';
 import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
 
 const prefix = 'TREASURECODE_';

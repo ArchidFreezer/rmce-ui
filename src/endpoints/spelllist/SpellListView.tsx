@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { LabeledInput, LabeledSelect, CheckboxGroup, CheckboxInput } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 
@@ -11,6 +10,7 @@ import { SPELL_TYPES, SPELL_REALMS, SpellType, Realm } from '../../types/enum';
 import { fetchBooks } from '../../api/book';
 import type { Book } from '../../types/book';
 
+import { LabeledInput, LabeledSelect, CheckboxGroup, CheckboxInput } from '../../components/inputs';
 import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
 
 const prefix = 'SPELLLIST_';

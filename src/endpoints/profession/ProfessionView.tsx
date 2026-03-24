@@ -5,18 +5,9 @@ import {
   type ColumnDef,
   type DataTableHandle,
 } from '../../components/DataTable';
-import { LabeledInput } from '../../components/inputs/LabeledInput';
-import { LabeledSelect } from '../../components/inputs/LabeledSelect';
-import { HtmlPreview } from '../../components/inputs/MarkupPreview';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
-import { CheckboxInput } from '../../components/inputs/CheckboxInput';
-import { IdValueListEditor } from '../../components/inputs/IdValueListEditor';
-import { IdTypeListEditor } from '../../components/inputs/IdTypeListEditor';
-import { SkillValueListEditor } from '../../components/inputs/SkillValueListEditor';
-import { SkillTypeListEditor } from '../../components/inputs/SkillTypeListEditor';
-import { ChoiceListEditor } from '../../components/inputs/ChoiceListEditor';
-import { IdCostListEditor } from '../../components/inputs/IdCostListEditor';
+
 
 import { fetchProfessions, upsertProfession, deleteProfession } from '../../api/profession';
 import { fetchBooks } from '../../api/book';
@@ -57,6 +48,20 @@ import {
   type SpellUserType,
   type SkillDevelopmentType,
 } from '../../types/enum';
+
+import {
+  CheckboxInput,
+  ChoiceListEditor,
+  IdCostListEditor,
+  IdTypeListEditor,
+  IdValueListEditor,
+  LabeledInput,
+  LabeledSelect,
+  MarkupPreview,
+  SkillTypeListEditor,
+  SkillValueListEditor,
+} from '../../components/inputs';
+
 
 import { isValidID, makeIDOnChange, isValidUnsignedInt, sanitizeUnsignedInt, isValidSignedInt } from '../../utils/inputHelpers';
 
@@ -825,8 +830,8 @@ export default function ProfessionView() {
               </button>
             </div>
             {previewDescription ? (
-              <HtmlPreview
-                html={form.description}
+              <MarkupPreview
+                content={form.description}
                 emptyHint="No description"
                 className="preview-html"
                 style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}

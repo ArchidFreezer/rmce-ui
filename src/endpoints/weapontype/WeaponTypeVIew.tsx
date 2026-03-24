@@ -1,12 +1,9 @@
 // src/endpoints/weapontype/WeapontypesView.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { DataTable, DataTableSearchInput, type ColumnDef, type DataTableHandle } from '../../components/DataTable';
-import { LabeledInput } from '../../components/inputs/LabeledInput';
-import { LabeledSelect } from '../../components/inputs/LabeledSelect';
+
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
-import { MarkupPreview } from '../../components/inputs/MarkupPreview';
-
 import { fetchWeaponTypes, upsertWeaponType, deleteWeaponType } from '../../api/weapontype';
 import { fetchSkills } from '../../api/skill';                 // assume you have this
 import { fetchBooks } from '../../api/book';                   // assume you have this
@@ -16,8 +13,9 @@ import type { Book } from '../../types/book';
 import { AttackTable } from '../../types/attacktable';
 import type { WeaponType } from '../../types/weapontype';
 import { CRITICAL_TYPES, type CriticalType } from '../../types/enum';          // array of strings for select
-import { isValidID, makeIDOnChange, isValidSignedInt, sanitizeSignedInt, isValidUnsignedInt, makeUnsignedIntOnChange, sanitizeUnsignedInt } from '../../utils/inputHelpers';
 
+import { LabeledInput, LabeledSelect, MarkupPreview } from '../../components/inputs';
+import { isValidID, makeIDOnChange, isValidSignedInt, sanitizeSignedInt, isValidUnsignedInt, makeUnsignedIntOnChange, sanitizeUnsignedInt } from '../../utils/inputHelpers';
 const prefix = 'WEAPONTYPE_';
 
 // ------------------------

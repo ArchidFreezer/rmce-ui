@@ -6,26 +6,6 @@ import {
   type DataTableHandle,
 } from '../../components/DataTable';
 
-import {
-  CheckboxInput,
-  ChoiceListEditor,
-  IdListEditor,
-  IdMultiSkillRankEditor,
-  IdValueListEditor,
-  LabeledInput,
-  LabeledSelect,
-  LanguageChoiceEditor,
-  MarkupPreview,
-  MarkupPreviewList,
-  SkillListEditor,
-  SkillRankChoiceEditor,
-  SkillValueListEditor,
-  SpellListCategoryRankEditor,
-  SpellListRankEditor,
-  StatGainChoiceEditor,
-  TextNumberListEditor,
-} from '../../components/inputs';
-
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 
@@ -55,6 +35,27 @@ import {
   STATS,
   type Stat,
 } from '../../types/enum';
+
+import {
+  CheckboxInput,
+  ChoiceListEditor,
+  IdListEditor,
+  IdMultiSkillRankEditor,
+  IdValueListEditor,
+  LabeledInput,
+  LabeledSelect,
+  LanguageChoiceEditor,
+  MarkupPreview,
+  MarkupPreviewList,
+  SkillListEditor,
+  SkillRankChoiceEditor,
+  SkillValueListEditor,
+  SpellListCategoryRankEditor,
+  SpellListRankEditor,
+  StatGainChoiceEditor,
+  TextNumberListEditor,
+} from '../../components/inputs';
+
 import { isValidID, makeIDOnChange, isValidUnsignedInt, makeUnsignedIntOnChange, isValidSignedInt } from '../../utils/inputHelpers';
 
 

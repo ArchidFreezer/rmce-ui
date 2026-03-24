@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { LabeledInput } from '../../components/inputs/LabeledInput';
-import { AttackTableEditor, type AttackTableRowVM } from '../../components/inputs/AttackTableEditor';
+
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
-import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
 
 import {
   fetchSpecialattacktables,
@@ -14,6 +12,14 @@ import {
 
 import type { SpecialAttackTable } from '../../types/specialattacktable';
 import type { AttackTableRow } from '../../types/attacktable';
+
+import {
+  AttackTableEditor,
+  type AttackTableRowVM,
+  LabeledInput,
+} from '../../components/inputs';
+
+import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
 
 const prefix = 'SPECIALATTACKTABLE_';
 

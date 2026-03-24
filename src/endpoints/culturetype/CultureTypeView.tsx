@@ -5,8 +5,6 @@ import {
   type ColumnDef,
   type DataTableHandle,
 } from '../../components/DataTable';
-import { LabeledInput } from '../../components/inputs/LabeledInput';
-import { MarkupPreview } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 
@@ -33,9 +31,7 @@ import {
 } from '../../types/enum';
 
 import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
-import { SkillValueListEditor } from '../../components/inputs/SkillValueListEditor';
-import { IdValueListEditor } from '../../components/inputs/IdValueListEditor';
-import { IdListEditor } from '../../components/inputs/IdListEditor';
+import { IdListEditor, IdValueListEditor, LabeledInput, MarkupPreview, SkillValueListEditor } from '../../components/inputs';
 
 const prefix = 'CULTURETYPE_';
 

@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { LabeledInput, LabeledSelect } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 
 import { fetchCreaturePaces, upsertCreaturePace, deleteCreaturePace } from '../../api/creaturepace';
 import type { CreaturePace } from '../../types/creaturepace';
 import { MANOEUVRE_DIFFICULTIES, type ManoeuvreDifficulty } from '../../types/enum';
+import { LabeledInput, LabeledSelect } from '../../components/inputs';
 import { isValidID, makeIDOnChange, isValidScientific, makeScientificOnChange } from '../../utils/inputHelpers';
 
 const prefix = 'CREATUREPACE_';

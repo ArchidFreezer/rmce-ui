@@ -6,6 +6,7 @@ import type { Poison } from '../../types/poison';
 import type { PoisonType } from '../../types/poisontype';
 import { useConfirm } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
+
 import { LabeledInput, LabeledSelect } from '../../components/inputs';
 import { isValidUnsignedInt, makeUnsignedIntOnChange, isValidID, makeIDOnChange } from '../../utils/inputHelpers';
 

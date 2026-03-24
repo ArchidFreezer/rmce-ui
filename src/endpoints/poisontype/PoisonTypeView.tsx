@@ -1,13 +1,14 @@
 // src/endpoints/poisontype/PoisontypesView.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { LabeledInput, MarkupPreview } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 
 import { fetchPoisontypes, upsertPoisontype, deletePoisontype } from '../../api/poisontype';
 import type { PoisonType } from '../../types/poisontype';
 import { MALADY_SEVERITIES, MaladySeverity } from '../../types/enum';
+
+import { LabeledInput, MarkupPreview } from '../../components/inputs';
 import { isValidID, makeIDOnChange, isValidUnsignedInt, makeUnsignedIntOnChange } from '../../utils/inputHelpers';
 
 const prefix = 'POISONTYPE_';

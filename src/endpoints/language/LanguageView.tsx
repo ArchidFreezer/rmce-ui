@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { CheckboxInput, LabeledInput, LabeledSelect } from '../../components/inputs';
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
 
@@ -8,6 +7,8 @@ import { fetchLanguages, upsertLanguage, deleteLanguage } from '../../api/langua
 import { fetchLanguagecategories } from '../../api/languagecategory';
 import type { Language } from '../../types/language';
 import type { LanguageCategory } from '../../types/languagecategory';
+
+import { CheckboxInput, LabeledInput, LabeledSelect } from '../../components/inputs';
 import { isValidID, makeIDOnChange } from '../../utils/inputHelpers';
 
 const prefix = 'LANGUAGE_';

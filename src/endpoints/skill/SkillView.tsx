@@ -1,12 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { DataTable, DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { LabeledInput } from '../../components/inputs/LabeledInput';
-import { LabeledSelect } from '../../components/inputs/LabeledSelect';
+
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
-import { CheckboxInput } from '../../components/inputs';
-import { MarkupPreview } from '../../components/inputs/MarkupPreview';
-
 import { fetchSkills, upsertSkill, deleteSkill } from '../../api/skill';
 import { fetchSkillcategories } from '../../api/skillcategory';
 import { fetchBooks } from '../../api/book';
@@ -15,6 +11,14 @@ import type { Skill } from '../../types/skill';
 import type { SkillCategory } from '../../types/skillcategory';
 import type { Book } from '../../types/book';
 import { SkillActionType, SKILL_ACTION_TYPES, STATS, type Stat } from '../../types/enum'; // ensure you export a list for options
+
+import {
+  CheckboxInput,
+  LabeledInput,
+  LabeledSelect,
+  MarkupPreview,
+} from '../../components/inputs';
+
 import { isValidSignedFloat, makeSignedFloatOnChange, isValidID, makeIDOnChange } from '../../utils/inputHelpers';
 
 
