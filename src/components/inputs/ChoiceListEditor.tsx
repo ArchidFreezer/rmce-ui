@@ -23,6 +23,8 @@ export function ChoiceListEditor<TType extends string = string, TOption = string
   numChoicesWidth = 120,
   typeWidth = 220,
 }: ChoiceListEditorProps<TType, TOption>) {
+  const showActions = !viewing;
+
   const resolvedNumChoicesWidth =
     typeof numChoicesWidth === 'number' ? `${numChoicesWidth}px` : numChoicesWidth;
 
@@ -152,11 +154,7 @@ export function ChoiceListEditor<TType extends string = string, TOption = string
       <h4 style={{ margin: '8px 0' }}>{title}</h4>
 
       {!viewing && (
-        <button
-          type="button"
-          onClick={addRow}
-          style={{ marginBottom: 8 }}
-        >
+        <button type="button" onClick={addRow} style={{ marginBottom: 8 }}>
           {addRowButtonLabel}
         </button>
       )}
@@ -171,11 +169,13 @@ export function ChoiceListEditor<TType extends string = string, TOption = string
             marginBottom: 8,
           }}
         >
+          {/* Header fields */}
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: `${resolvedNumChoicesWidth} ${resolvedTypeWidth}`,
-              gap: 8,
+              gridTemplateColumns: showActions
+                ? `${resolvedNumChoicesWidth} ${resolvedTypeWidth} 120px`
+                : `${resolvedNumChoicesWidth} ${resolvedTypeWidth}`, gap: 8,
               marginBottom: 8,
             }}
           >
@@ -199,6 +199,16 @@ export function ChoiceListEditor<TType extends string = string, TOption = string
                 options={typeOptions}
                 disabled={viewing}
               />
+            )}
+
+            {showActions && (
+              <button
+                type="button"
+                onClick={() => removeRowAt(rowIndex)}
+                style={{ color: '#b00020', marginTop: 8 }}
+              >
+                {removeRowButtonLabel}
+              </button>
             )}
           </div>
 
@@ -232,15 +242,7 @@ export function ChoiceListEditor<TType extends string = string, TOption = string
             )}
           </div>
 
-          {!viewing && (
-            <button
-              type="button"
-              onClick={() => removeRowAt(rowIndex)}
-              style={{ color: '#b00020', marginTop: 8 }}
-            >
-              {removeRowButtonLabel}
-            </button>
-          )}
+
         </div>
       ))}
 

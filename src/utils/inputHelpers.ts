@@ -250,7 +250,7 @@ export function sanitizeID(input: string, prefix: string): string {
   raw = raw.replace(/[^A-Z0-9_]/g, '');
   // Ensure it starts with the prefix
   if (!raw.startsWith(upperPrefix)) {
-    raw = upperPrefix + raw.replace(new RegExp('^' + upperPrefix), '');
+    raw = upperPrefix;
   }
   return raw;
 }

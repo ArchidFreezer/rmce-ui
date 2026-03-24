@@ -20,6 +20,7 @@ const SkillGroupView = lazy(() => import('../endpoints/skillgroup/SkillGroupView
 const SkillProgressionTypeView = lazy(() => import('../endpoints/skillprogressiontype/SkillProgressionTypeView'));
 const SpecialAttackTableView = lazy(() => import('../endpoints/specialattacktable/SpecialAttackTableView'));
 const SpellListView = lazy(() => import('../endpoints/spelllist/SpellListView'));
+const TrainingPackageView = lazy(() => import('../endpoints/trainingpackage/TrainingPackageView'));
 const TreasureCodeView = lazy(() => import('../endpoints/treasurecode/TreasureCodeView'));
 const WeaponTypeView = lazy(() => import('../endpoints/weapontype/WeaponTypeVIew'));
 
@@ -53,6 +54,7 @@ const known: Record<string, ResourceDef> = {
   skillprogressiontype: { prefix: 'skillprogressiontype', label: 'Skill Progression Types', path: '/skillprogressiontypes', Component: SkillProgressionTypeView },
   specialattacktable: { prefix: 'specialattacktable', label: 'Special Attack Tables', path: '/specialattacktables', Component: SpecialAttackTableView },
   spelllist: { prefix: 'spelllist', label: 'Spell Lists', path: '/spelllists', Component: SpellListView },
+  trainingpackage: { prefix: 'trainingpackage', label: 'Training Packages', path: '/trainingpackages', Component: TrainingPackageView },
   treasurecode: { prefix: 'treasurecode', label: 'Treasure Codes', path: '/treasurecodes', Component:TreasureCodeView },
   weapontype: { prefix: 'weapontype', label: 'Weapon Types', path: '/weapontypes', Component: WeaponTypeView },
 }
@@ -92,6 +94,7 @@ export const FALLBACK_RESOURCES: ResourceDef[] = [
   known.skillprogressiontype,
   known.specialattacktable,
   known.spelllist,
+  known.trainingpackage,
   known.treasurecode,
   known.weapontype,
 ].filter((r): r is ResourceDef => Boolean(r));

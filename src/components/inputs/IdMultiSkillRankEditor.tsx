@@ -2,50 +2,41 @@ import * as React from 'react';
 import { LabeledInput } from './LabeledInput';
 import { LabeledSelect } from './LabeledSelect';
 
-export type SkillRowVM = {
-  id: string;
-  subcategory?: string | undefined;
+export type IdMultiSkillRankRowVM<TId extends string = string> = {
+  id: TId | '';
+  value: string;
+  numChoices: string;
 };
 
-export interface SkillListEditorProps {
-
+export interface IdMultiSkillRankEditorProps<TId extends string = string> {
   title: string;
-  rows: SkillRowVM[];
-  onChangeRows: (next: SkillRowVM[]) => void;
+  rows: IdMultiSkillRankRowVM<TId>[];
+  onChangeRows: (next: IdMultiSkillRankRowVM<TId>[]) => void;
 
-  /** Options for the ID selector */
-  idOptions: Array<{ value: string; label: string }>;
+  /** Options for the ID selector (categories or groups) */
+  idOptions: Array<{ value: TId; label: string }>;
 
   loading?: boolean | undefined;
   viewing?: boolean | undefined;
-  /** Whether to show the component when viewing if there are no rows */
   showWhenEmpty?: boolean | undefined;
-
   error?: string | undefined;
 
   /** Optional labels */
   idColumnLabel?: string | undefined;
-  subcategoryColumnLabel?: string | undefined;
+  valueColumnLabel?: string | undefined;
+  numChoicesColumnLabel?: string | undefined;
 
-  /** Optional button labels */
+  /** Buttons */
   addButtonLabel?: string | undefined;
   removeButtonLabel?: string | undefined;
 
-  /** Optional width/layout overrides */
+  /** Layout */
   idColumnMinWidth?: number | string | undefined;
 }
 
-/**
- * SkillListEditor component
- * 
- * Renders a list of rows, each containing a Skill selected from a dropdown and an optional subcategory input.
- * The component supports loading and viewing states, and displays error messages when provided.
- * 
- * Allows adding and removing rows, and supports loading and viewing states.
- * @param param0  Props for the SkillListEditor component
- * @returns JSX.Element
- */
-export function SkillListEditor({
+const sanitizeUnsignedInt = (s: string) => s.replace(/[^\d]/g, '');
+
+export function IdMultiSkillRankEditor<TId extends string = string>({
   title,
   rows,
   onChangeRows,
@@ -53,36 +44,35 @@ export function SkillListEditor({
   loading,
   viewing,
   showWhenEmpty = false,
+
   error,
   idColumnLabel = 'ID',
-  subcategoryColumnLabel = 'Subcategory',
+  valueColumnLabel = 'Ranks',
+  numChoicesColumnLabel = '# Choices',
   addButtonLabel = '+ Add row',
   removeButtonLabel = 'Remove',
   idColumnMinWidth = 280,
-}: SkillListEditorProps) {
+}: IdMultiSkillRankEditorProps<TId>) {
   const showActions = !viewing;
 
-  const resolvedIdColumnWidth =
+  const resolvedIdWidth =
     typeof idColumnMinWidth === 'number'
       ? `${idColumnMinWidth}px`
       : idColumnMinWidth;
 
   const updateRowAt = React.useCallback(
-    (index: number, patch: Partial<SkillRowVM>) => {
+    (index: number, patch: Partial<IdMultiSkillRankRowVM<TId>>) => {
       const copy = rows.slice();
 
       if (index < 0 || index >= copy.length) return;
       const current = copy[index];
       if (!current) return;
 
-      const nextRow: SkillRowVM = {
+      copy[index] = {
         id: patch.id ?? current.id,
-        subcategory: Object.prototype.hasOwnProperty.call(patch, 'subcategory')
-          ? patch.subcategory
-          : current.subcategory,
+        value: patch.value ?? current.value,
+        numChoices: patch.numChoices ?? current.numChoices,
       };
-
-      copy[index] = nextRow;
 
       onChangeRows(copy);
     },
@@ -90,23 +80,21 @@ export function SkillListEditor({
   );
 
   const addRow = React.useCallback(() => {
-    const next: SkillRowVM[] = [
+    onChangeRows([
       ...rows,
       {
         id: '',
-        subcategory: '',
+        value: '',
+        numChoices: '',
       },
-    ];
-    onChangeRows(next);
+    ]);
   }, [rows, onChangeRows]);
 
   const removeRowAt = React.useCallback(
     (index: number) => {
       const copy = rows.slice();
-
       if (index < 0 || index >= copy.length) return;
       copy.splice(index, 1);
-
       onChangeRows(copy);
     },
     [rows, onChangeRows],
@@ -120,11 +108,7 @@ export function SkillListEditor({
       <h4 style={{ margin: '8px 0' }}>{title}</h4>
 
       {!viewing && (
-        <button
-          type="button"
-          onClick={addRow}
-          style={{ marginBottom: 8 }}
-        >
+        <button type="button" onClick={addRow} style={{ marginBottom: 8 }}>
           {addButtonLabel}
         </button>
       )}
@@ -132,16 +116,15 @@ export function SkillListEditor({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: showActions
-            ? `minmax(${resolvedIdColumnWidth}, 1fr) 1fr auto`
-            : `minmax(${resolvedIdColumnWidth}, 1fr) 1fr`,
+          gridTemplateColumns: showActions ? `minmax(${resolvedIdWidth}, 1fr) 160px 160px auto` : `minmax(${resolvedIdWidth}, 1fr) 160px 160px`,
           gap: 8,
         }}
       >
         {rows.length > 0 && (
           <>
             <div style={{ fontWeight: 600 }}>{idColumnLabel}</div>
-            <div style={{ fontWeight: 600 }}>{subcategoryColumnLabel}</div>
+            <div style={{ fontWeight: 600 }}>{valueColumnLabel}</div>
+            <div style={{ fontWeight: 600 }}>{numChoicesColumnLabel}</div>
             {showActions && <div />}
           </>
         )}
@@ -153,18 +136,33 @@ export function SkillListEditor({
               hideLabel
               ariaLabel={idColumnLabel}
               value={row.id}
-              onChange={(v) => updateRowAt(i, { id: v })}
               options={idOptions}
               disabled={loading || viewing}
+              onChange={(v) => updateRowAt(i, { id: v as TId })}
             />
 
             <LabeledInput
-              label={subcategoryColumnLabel}
+              label={valueColumnLabel}
               hideLabel
-              ariaLabel={subcategoryColumnLabel}
-              value={row.subcategory ?? ''}
-              onChange={(v) => updateRowAt(i, { subcategory: v })}
+              ariaLabel={valueColumnLabel}
+              value={row.value}
               disabled={viewing}
+              width={100}
+              onChange={(v) =>
+                updateRowAt(i, { value: sanitizeUnsignedInt(v) })
+              }
+            />
+
+            <LabeledInput
+              label={numChoicesColumnLabel}
+              hideLabel
+              ariaLabel={numChoicesColumnLabel}
+              value={row.numChoices}
+              disabled={viewing}
+              width={100}
+              onChange={(v) =>
+                updateRowAt(i, { numChoices: sanitizeUnsignedInt(v) })
+              }
             />
 
             {showActions && (
