@@ -8,7 +8,7 @@ import {
 
 import { LabeledInput } from '../../components/inputs/LabeledInput';
 import { LabeledSelect } from '../../components/inputs/LabeledSelect';
-import { HtmlPreview } from '../../components/inputs/HtmlPreview';
+import { MarkupPreview } from '../../components/inputs/MarkupPreview';
 import { IdValueListEditor } from '../../components/inputs/IdValueListEditor';
 import { SkillValueListEditor } from '../../components/inputs/SkillValueListEditor';
 import { ChoiceListEditor } from '../../components/inputs/ChoiceListEditor';
@@ -826,8 +826,8 @@ export default function RaceView() {
               </button>
             </div>
             {previewDescription ? (
-              <HtmlPreview
-                html={form.description}
+              <MarkupPreview
+                content={form.description}
                 emptyHint="No description"
                 className="preview-html"
                 style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}

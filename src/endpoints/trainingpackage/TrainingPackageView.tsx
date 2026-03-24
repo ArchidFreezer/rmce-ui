@@ -9,14 +9,14 @@ import {
 import {
   CheckboxInput,
   ChoiceListEditor,
-  HtmlPreview,
-  HtmlPreviewList,
   IdListEditor,
   IdMultiSkillRankEditor,
   IdValueListEditor,
   LabeledInput,
   LabeledSelect,
   LanguageChoiceEditor,
+  MarkupPreview,
+  MarkupPreviewList,
   SkillListEditor,
   SkillRankChoiceEditor,
   SkillValueListEditor,
@@ -1219,8 +1219,8 @@ export default function TrainingPackagesView() {
               )}
             </div>
             {previewDescription || viewing ? (
-              <HtmlPreview
-                html={form.description}
+              <MarkupPreview
+                content={form.description}
                 emptyHint="No description"
                 className="preview-html"
                 style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
@@ -1248,8 +1248,8 @@ export default function TrainingPackagesView() {
               )}
             </div>
             {previewFlavourText || viewing ? (
-              <HtmlPreview
-                html={form.flavourText}
+              <MarkupPreview
+                content={form.flavourText}
                 emptyHint="No flavour text"
                 className="preview-html"
                 style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
@@ -1272,9 +1272,9 @@ export default function TrainingPackagesView() {
             * In editing mode, we render an editor that allows adding/removing/reordering notes, and we show validation errors if any
             */}
           {viewing ? (
-            <HtmlPreviewList title="Notes" arr={form.notes} viewing />
+            <MarkupPreviewList title="Notes" arr={form.notes} viewing />
           ) : (
-            <HtmlPreviewList title="Notes" arr={form.notes} viewing={false} error={errors.notes}
+            <MarkupPreviewList title="Notes" arr={form.notes} viewing={false} error={errors.notes}
               onChangeNotes={(next) => setForm((s) => ({ ...s, notes: next }))}
             />
           )}
