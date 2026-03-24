@@ -6,14 +6,23 @@ import {
   type DataTableHandle,
 } from '../../components/DataTable';
 
-import { LabeledInput } from '../../components/inputs/LabeledInput';
-import { LabeledSelect } from '../../components/inputs/LabeledSelect';
-import { HtmlPreview } from '../../components/inputs/HtmlPreview';
-
-import { IdListEditor } from '../../components/inputs/IdListEditor';
-import { SkillListEditor } from '../../components/inputs/SkillListEditor';
-import { SkillValueListEditor } from '../../components/inputs/SkillValueListEditor';
-import { ChoiceListEditor } from '../../components/inputs/ChoiceListEditor';
+import {
+  CheckboxInput,
+  ChoiceListEditor,
+  HtmlPreview,
+  IdListEditor,
+  IdMultiSkillRankEditor,
+  IdValueListEditor,
+  LabeledInput,
+  LabeledSelect,
+  LanguageChoiceEditor,
+  SkillListEditor,
+  SkillRankChoiceEditor,
+  SkillValueListEditor,
+  SpellListCategoryRankEditor,
+  SpellListRankEditor,
+  StatGainChoiceEditor
+} from '../../components/inputs';
 
 import { useToast } from '../../components/Toast';
 import { useConfirm } from '../../components/ConfirmDialog';
@@ -44,11 +53,8 @@ import {
   STATS,
   type Stat,
 } from '../../types/enum';
-import { isValidID, makeIDOnChange, isValidUnsignedInt, isValidSignedInt } from '../../utils/inputHelpers';
-import { IdMultiSkillRankEditor } from '../../components/inputs/IdMultiSkillRankEditor';
-import { LanguageChoiceEditor } from '../../components/inputs/LanguageChoiceEditor';
-import { SpellListCategoryRankEditor } from '../../components/inputs/SpellListCategoryRankEditor';
-import { SpellListRankEditor } from '../../components/inputs/SpellListRankEditor';
+import { isValidID, makeIDOnChange, isValidUnsignedInt, makeUnsignedIntOnChange, isValidSignedInt } from '../../utils/inputHelpers';
+
 
 const prefix = 'TRAININGPACKAGE_';
 
@@ -599,6 +605,10 @@ export default function TrainingPackagesView() {
     () => languages.map((l) => ({ value: l.id, label: l.name })),
     [languages],
   );
+  const statOptions = useMemo(
+    () => STATS.map(v => ({ value: v, label: v })),
+    []
+  );
 
   /* ------------------------------------------------------------------ */
   /* Validation                                                          */
@@ -667,11 +677,6 @@ export default function TrainingPackagesView() {
     /* -------------------------------------------------- */
     /* Stat gains                                         */
     /* -------------------------------------------------- */
-
-    if (!draft.statGains.length && !draft.statGainChoices) {
-      e.statGains = 'At least one stat gain or stat gain choice is required';
-    }
-
     if (draft.statGainChoices) {
       const { numChoices, options } = draft.statGainChoices;
 
@@ -1111,6 +1116,20 @@ export default function TrainingPackagesView() {
     }
   };
 
+  // ---------- reusable updaters (guard + narrow + full-object writes) ----------
+  const toggleStatArray = (
+    key: 'statGains',
+    value: Stat
+  ) => {
+    setForm((s) => {
+      const arr = [...(s[key])];
+      const ix = arr.indexOf(value);
+      if (ix >= 0) arr.splice(ix, 1);
+      else arr.push(value);
+      return { ...s, [key]: arr };
+    });
+  };
+
   /* ------------------------------------------------------------------ */
   /* Render                                                            */
   /* ------------------------------------------------------------------ */
@@ -1161,6 +1180,27 @@ export default function TrainingPackagesView() {
               value={form.book}
               onChange={(v) => setForm((s) => ({ ...s, book: v }))}
               options={bookOptions}
+              disabled={viewing}
+            />
+            {/* Lifestyle */}
+            <CheckboxInput
+              label="Lifestyle"
+              checked={form.lifestyle}
+              onChange={(c) => setForm((s) => ({ ...s, lifestyle: c }))}
+              disabled={viewing}
+            />
+            {/* Timing */}
+            <LabeledInput
+              label="Time to Acquire (months)"
+              value={form.timeToAcquire}
+              onChange={makeUnsignedIntOnChange<typeof form>('timeToAcquire', setForm)}
+              disabled={viewing}
+            />
+            {/* Starting money modifier */}
+            <LabeledInput
+              label="Starting Money Modifier (dice notation, e.g. 2d6)"
+              value={form.startingMoneyModifierDice}
+              onChange={(v) => setForm((s) => ({ ...s, startingMoneyModifierDice: v }))}
               disabled={viewing}
             />
           </div>
@@ -1232,19 +1272,40 @@ export default function TrainingPackagesView() {
 
           {/* Qualifiers */}
 
-          {/* Lifestyle */}
-
-          {/* Timing */}
-
-          {/* Starting money modifier */}
-
           {/* Specials */}
 
           {/* Stat gains */}
-
-          {/* Realm stat gains */}
+          <h4 style={{ margin: '16px 0 8px' }}>Stat Gains</h4>
+          <CheckboxInput
+            label="Realm Stat Gains"
+            checked={form.realmStatGain}
+            onChange={(c) => setForm((s) => ({ ...s, realmStatGain: c, statGains: [] }))}
+            disabled={viewing}
+          />
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            {statOptions.map((opt) => (
+              <CheckboxInput
+                key={opt.value}
+                label={opt.label}
+                checked={form.statGains.includes(opt.value as Stat)}
+                onChange={() => toggleStatArray('statGains', opt.value as Stat)}
+                disabled={viewing || form.realmStatGain}
+              />
+            ))}
+          </div>
+          {errors.statGains && <div style={{ color: '#b00020', marginTop: 6 }}>{errors.statGains}</div>}
 
           {/* Stat gain choices */}
+          <StatGainChoiceEditor<Stat>
+            title="Stat Gain Choices"
+            value={form.statGainChoices}
+            onChange={(next) =>
+              setForm((s) => ({ ...s, statGainChoices: next }))
+            }
+            statOptions={statOptions}
+            viewing={viewing}
+            error={errors.statGainChoices}
+          />
 
           {/* Skill Ranks */}
           <SkillValueListEditor
@@ -1256,8 +1317,28 @@ export default function TrainingPackagesView() {
           />
 
           {/* Skill Rank Choices */}
+          <SkillRankChoiceEditor
+            title="Skill Rank Choices"
+            rows={form.skillRankChoices}
+            onChangeRows={(next) =>
+              setForm((s) => ({ ...s, skillRankChoices: next }))
+            }
+            skillOptions={skillOptions}
+            viewing={viewing}
+            error={errors.skillRankChoices}
+          />
 
           {/* Category Ranks */}
+          <IdValueListEditor
+            title="Skill Category Ranks"
+            rows={form.categoryRanks}
+            onChangeRows={(next) => setForm((s) => ({ ...s, categoryRanks: next }))}
+            options={categoryOptions}
+            loading={loading}
+            viewing={viewing}
+            error={errors.categoryRanks}
+            signedValues
+          />
 
           {/* Category Multi‑Skill Rank Choices */}
           <IdMultiSkillRankEditor

@@ -7,7 +7,6 @@ export interface CheckboxInputProps {
   disabled?: boolean;
   id?: string;
   /**
-   * EXACT OPTIONAL PROP (Fix A):
    * When tsconfig has "exactOptionalPropertyTypes": true, an optional prop does NOT include undefined
    * unless we state it. This allows passing `error={errors.id}` where type is `string | undefined`.
    */
