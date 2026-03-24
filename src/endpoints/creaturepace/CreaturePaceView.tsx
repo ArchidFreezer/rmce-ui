@@ -1,13 +1,28 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { LabeledInput, LabeledSelect } from '../../components/inputs';
-import { useToast } from '../../components/Toast';
-import { useConfirm } from '../../components/ConfirmDialog';
 
-import { fetchCreaturePaces, upsertCreaturePace, deleteCreaturePace } from '../../api/creaturepace';
-import type { CreaturePace } from '../../types/creaturepace';
-import { MANOEUVRE_DIFFICULTIES, type ManoeuvreDifficulty } from '../../types/enum';
-import { isValidID, makeIDOnChange, isValidScientific, makeScientificOnChange } from '../../utils/inputHelpers';
+import {
+  fetchCreaturePaces, upsertCreaturePace, deleteCreaturePace,
+} from '../../api';
+
+import {
+  DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
+  LabeledInput,
+  LabeledSelect,
+  useConfirm, useToast,
+} from '../../components';
+
+import type {
+  CreaturePace
+} from '../../types';
+
+import {
+  MANOEUVRE_DIFFICULTIES, ManoeuvreDifficulty
+} from '../../types/enum';
+
+import {
+  isValidID, makeIDOnChange,
+  isValidScientific, makeScientificOnChange,
+} from '../../utils';
 
 const prefix = 'CREATUREPACE_';
 

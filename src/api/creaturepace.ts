@@ -1,7 +1,13 @@
 // src/api/creaturepace.ts
 import { fetchJson, sendJson } from './client';
-import type { CreaturePace, CreaturePacesPayload } from '../types/creaturepace';
-import { MANOEUVRE_DIFFICULTIES, ManoeuvreDifficulty } from '../types/enum';
+
+import type { 
+  CreaturePace, CreaturePacesPayload,
+ } from '../types';
+
+import { 
+  MANOEUVRE_DIFFICULTIES, ManoeuvreDifficulty,
+ } from '../types/enum';
 
 const BASE = '/rmce/objects/creaturepace';
 

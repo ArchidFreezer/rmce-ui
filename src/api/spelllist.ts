@@ -1,6 +1,13 @@
 import { fetchJson, sendJson } from './client';
-import type { SpellList, SpellListsPayload } from '../types/spelllist';
-import { SPELL_TYPES, SpellType, SPELL_REALMS, Realm } from '../types/enum';
+
+import type { 
+  SpellList, SpellListsPayload,
+ } from '../types';
+
+import { 
+  SPELL_TYPES, SpellType, 
+  SPELL_REALMS, Realm,
+ } from '../types/enum';
 
 const BASE = '/rmce/objects/spelllist';
 

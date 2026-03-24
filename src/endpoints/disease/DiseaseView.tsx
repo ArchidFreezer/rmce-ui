@@ -1,13 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable'
-import { fetchDiseases, upsertDisease, deleteDisease } from '../../api/disease';
-import { fetchDiseasetypes } from '../../api/diseasetype';
-import type { Disease } from '../../types/disease';
-import type { DiseaseType } from '../../types/diseasetype';
-import { useConfirm } from '../../components/ConfirmDialog';
-import { useToast } from '../../components/Toast';
-import { LabeledInput, LabeledSelect } from '../../components/inputs';
-import { isValidUnsignedInt, makeUnsignedIntOnChange, isValidID, makeIDOnChange } from '../../utils/inputHelpers';
+
+import {
+  fetchDiseases, upsertDisease, deleteDisease,
+  fetchDiseasetypes,
+} from '../../api';
+
+import {
+  DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
+  LabeledInput,
+  LabeledSelect,
+  useConfirm, useToast,
+} from '../../components'
+
+import type {
+  Disease,
+  DiseaseType,
+} from '../../types';
+
+import {
+  isValidID, makeIDOnChange,
+  isValidUnsignedInt, makeUnsignedIntOnChange,
+} from '../../utils';
 
 const prefix = 'DISEASE_';
 

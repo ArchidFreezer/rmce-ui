@@ -10,13 +10,7 @@ export const PRECIPITATIONS: ReadonlyArray<Precipitation> = [
 
 /** Enum plus reusable list for form checkboxes */
 export type Temperature = 'Hot' | 'Warm' | 'Temperate' | 'Cool' | 'Cold';
-export const TEMPERATURES: ReadonlyArray<Temperature> = [
-  'Hot',
-  'Warm',
-  'Temperate',
-  'Cool',
-  'Cold',
-] as const;
+export const TEMPERATURES: ReadonlyArray<Temperature> = [ 'Hot', 'Warm', 'Temperate', 'Cool', 'Cold'] as const;
 
 /** Enum for moving manoeuvres reusable list for form checkboxes */
 export type ManoeuvreDifficulty = 'Normal' | 'Routine' | 'Easy' | 'Light' | 'Medium' | 'Hard' | 'Very Hard' | 'Extremely Hard' | 'Sheer Folly' | 'Absurd'
@@ -49,18 +43,58 @@ export const TREASUREVALUETYPES: ReadonlyArray<TreasureValueType> = ['Very Poor'
 /** Enum for Environment features */
 export type EnvironmentFeature = 'Battlefield' | 'Burial' | 'Cave' | 'Cavern' | 'Dimention' | 'Enchanted' | 'Habitation' | 'Ruins' | 'Rural' | 'Volcanic';
 export const ENVIRONMENT_FEATURES: ReadonlyArray<EnvironmentFeature> = ['Battlefield', 'Burial', 'Cave', 'Cavern', 'Dimention', 'Enchanted', 'Habitation', 'Ruins', 'Rural', 'Volcanic'] as const;
+const FEATURE_SET = new Set<EnvironmentFeature>(ENVIRONMENT_FEATURES);
+export function asFeatureArray(v: unknown): EnvironmentFeature[] {
+  if (!Array.isArray(v)) return [];
+  const out: EnvironmentFeature[] = [];
+  for (const x of v) {
+    const s = String(x) as EnvironmentFeature;
+    if (FEATURE_SET.has(s)) out.push(s);
+  }
+  return out;
+}
 
 /** Enum for Environment terrain  */
 export type EnvironmentTerrain = 'Alpine' | 'Rough' | 'Underground' | 'Waste';
 export const ENVIRONMENT_TERRAINS: ReadonlyArray<EnvironmentTerrain> = ['Alpine', 'Rough', 'Underground', 'Waste'] as const;
+const TERRAIN_SET = new Set<EnvironmentTerrain>(ENVIRONMENT_TERRAINS);
+export function asTerrainArray(v: unknown): EnvironmentTerrain[] {
+  if (!Array.isArray(v)) return [];
+  const out: EnvironmentTerrain[] = [];
+  for (const x of v) {
+    const s = String(x) as EnvironmentTerrain;
+    if (TERRAIN_SET.has(s)) out.push(s);
+  }
+  return out;
+}
 
 /** Enum for Environment vegetation */
 export type EnvironmentVegetation = 'Barren' | 'Coniferous' | 'Deciduous' | 'Grasslands' | 'Heath' | 'Jungle' | 'Plains' | 'Tundra';
 export const ENVIRONMENT_VEGETATIONS: ReadonlyArray<EnvironmentVegetation> = ['Barren', 'Coniferous', 'Deciduous', 'Grasslands', 'Heath', 'Jungle', 'Plains', 'Tundra'] as const;
+const VEGETATION_SET = new Set<EnvironmentVegetation>(ENVIRONMENT_VEGETATIONS);
+export function asVegetationArray(v: unknown): EnvironmentVegetation[] {
+  if (!Array.isArray(v)) return [];
+  const out: EnvironmentVegetation[] = [];
+  for (const x of v) {
+    const s = String(x) as EnvironmentVegetation;
+    if (VEGETATION_SET.has(s)) out.push(s);
+  }
+  return out;
+}
 
 /** Enum for Environment water bodies */
 export type EnvironmentWaterBody = 'Breaks' | 'Desert' | 'Fresh Coast' | 'Glacier' | 'Islet' | 'Lake' | 'Marsh' | 'Oasis' | 'Ocean' | 'Salt Coast';
 export const ENVIRONMENT_WATER_BODIES: ReadonlyArray<EnvironmentWaterBody> = ['Breaks', 'Desert', 'Fresh Coast', 'Glacier', 'Islet', 'Lake', 'Marsh', 'Oasis', 'Ocean', 'Salt Coast'] as const;
+const WATER_BODY_SET = new Set<EnvironmentWaterBody>(ENVIRONMENT_WATER_BODIES);
+export function asWaterBodyArray(v: unknown): EnvironmentWaterBody[] {
+  if (!Array.isArray(v)) return [];
+  const out: EnvironmentWaterBody[] = [];
+  for (const x of v) {
+    const s = String(x) as EnvironmentWaterBody;
+    if (WATER_BODY_SET.has(s)) out.push(s);
+  }
+  return out;
+}
 
 //** Enum for armour types  */
 export type ArmourType = 'AT 1' | 'AT 2' | 'AT 3' | 'AT 4' | 'AT 5' | 'AT 6' | 'AT 7' | 'AT 8' | 'AT 9' | 'AT 10' | 'AT 11' | 'AT 12' | 'AT 13' | 'AT 14' | 'AT 15' | 'AT 16' | 'AT 17' | 'AT 18' | 'AT 19' | 'AT 20';

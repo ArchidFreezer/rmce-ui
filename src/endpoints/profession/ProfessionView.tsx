@@ -1,36 +1,31 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+
 import {
-  DataTable,
-  DataTableSearchInput,
-  type ColumnDef,
-  type DataTableHandle,
-} from '../../components/DataTable';
-import { LabeledInput } from '../../components/inputs/LabeledInput';
-import { LabeledSelect } from '../../components/inputs/LabeledSelect';
-import { HtmlPreview } from '../../components/inputs/MarkupPreview';
-import { useToast } from '../../components/Toast';
-import { useConfirm } from '../../components/ConfirmDialog';
-import { CheckboxInput } from '../../components/inputs/CheckboxInput';
-import { IdValueListEditor } from '../../components/inputs/IdValueListEditor';
-import { IdTypeListEditor } from '../../components/inputs/IdTypeListEditor';
-import { SkillValueListEditor } from '../../components/inputs/SkillValueListEditor';
-import { SkillTypeListEditor } from '../../components/inputs/SkillTypeListEditor';
-import { ChoiceListEditor } from '../../components/inputs/ChoiceListEditor';
-import { IdCostListEditor } from '../../components/inputs/IdCostListEditor';
+  fetchBooks,
+  fetchProfessions, upsertProfession, deleteProfession,
+  fetchSkills,
+  fetchSkillcategories,
+  fetchSkillgroups,
+  fetchSpelllists,
+} from '../../api';
 
-import { fetchProfessions, upsertProfession, deleteProfession } from '../../api/profession';
-import { fetchBooks } from '../../api/book';
-import { fetchSpelllists } from '../../api/spelllist';
-import { fetchSkills } from '../../api/skill';
-import { fetchSkillcategories } from '../../api/skillcategory';
-import { fetchSkillgroups } from '../../api/skillgroup';
+import {
+  DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
+  CheckboxInput,
+  ChoiceListEditor,
+  IdCostListEditor,
+  IdTypeListEditor,
+  IdValueListEditor,
+  LabeledInput,
+  LabeledSelect,
+  MarkupPreview,
+  SkillTypeListEditor,
+  SkillValueListEditor,
+  useConfirm, useToast,
+} from '../../components';
 
-import type { Book } from '../../types/book';
-import type { SpellList } from '../../types/spelllist';
-import type { Skill } from '../../types/skill';
-import type { SkillCategory } from '../../types/skillcategory';
-import type { SkillGroup } from '../../types/skillgroup';
 import type {
+  Book,
   Profession,
   ProfessionSpellListChoice,
   ProfessionSkillBonus,
@@ -45,20 +40,24 @@ import type {
   ProfessionCategorySkillDevelopmentTypeChoice,
   ProfessionGroupSkillDevelopmentTypeChoice,
   ProfessionSkillCategoryCost,
-} from '../../types/profession';
+  Skill,
+  SkillCategory,
+  SkillGroup,
+  SpellList,
+} from '../../types';
 
 import {
-  REALMS,
-  STATS,
-  SPELL_USER_TYPES,
-  SKILL_DEVELOPMENT_TYPES,
-  type Realm,
-  type Stat,
-  type SpellUserType,
-  type SkillDevelopmentType,
+  REALMS, type Realm,
+  STATS, type Stat,
+  SPELL_USER_TYPES, type SpellUserType,
+  SKILL_DEVELOPMENT_TYPES, type SkillDevelopmentType,
 } from '../../types/enum';
 
-import { isValidID, makeIDOnChange, isValidUnsignedInt, sanitizeUnsignedInt, isValidSignedInt } from '../../utils/inputHelpers';
+import {
+  isValidID, makeIDOnChange,
+  isValidUnsignedInt, sanitizeUnsignedInt,
+  isValidSignedInt,
+} from '../../utils';
 
 const prefix = 'PROFESSION_';
 
@@ -825,8 +824,8 @@ export default function ProfessionView() {
               </button>
             </div>
             {previewDescription ? (
-              <HtmlPreview
-                html={form.description}
+              <MarkupPreview
+                content={form.description}
                 emptyHint="No description"
                 className="preview-html"
                 style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}

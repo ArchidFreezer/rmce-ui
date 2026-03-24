@@ -1,6 +1,12 @@
 import { fetchJson, sendJson } from './client';
-import type { TreasureCode, TreasureCodesPayload } from '../types/treasurecode';
-import { TREASUREVALUETYPES, type TreasureValueType } from '../types/enum';
+
+import type { 
+  TreasureCode, TreasureCodesPayload,
+ } from '../types';
+
+ import { 
+  TREASUREVALUETYPES, type TreasureValueType,
+ } from '../types/enum';
 
 const BASE = '/rmce/objects/treasurecode';
 

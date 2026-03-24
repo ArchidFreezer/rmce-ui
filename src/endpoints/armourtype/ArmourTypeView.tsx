@@ -1,11 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef } from '../../components/DataTable';
-import { fetchArmourTypes, upsertArmourType, deleteArmourType } from '../../api/armourtype';
-import type { ArmourType } from '../../types/armourtype';
-import { useConfirm } from '../../components/ConfirmDialog';
-import { useToast } from '../../components/Toast';
-import { CheckboxInput, LabeledInput } from '../../components/inputs';
-import { isValidSignedInt, makeSignedIntOnChange, isValidUnsignedInt, makeUnsignedIntOnChange, isValidID, makeIDOnChange } from '../../utils/inputHelpers';
+
+import {
+  fetchArmourTypes, upsertArmourType, deleteArmourType,
+} from '../../api';
+
+import {
+  DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
+  CheckboxInput,
+  LabeledInput,
+  useConfirm, useToast,
+} from '../../components';
+
+import type {
+  ArmourType
+} from '../../types';
+
+import {
+  isValidID, makeIDOnChange,
+  isValidSignedInt, makeSignedIntOnChange,
+  isValidUnsignedInt, makeUnsignedIntOnChange,
+} from '../../utils';
 
 const prefix = 'ARMOURTYPE_';
 

@@ -1,5 +1,8 @@
 import { fetchJson, sendJson } from './client';
-import type { LanguageCategory, LanguageCategoriesPayload } from '../types/languagecategory';
+
+import type { 
+  LanguageCategory, LanguageCategoriesPayload,
+ } from '../types';
 
 const BASE = '/rmce/objects/languagecategory';
 

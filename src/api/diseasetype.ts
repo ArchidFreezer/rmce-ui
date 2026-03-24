@@ -1,6 +1,12 @@
 import { fetchJson, sendJson } from './client';
-import type { DiseaseType, DiseaseTypesPayload } from '../types/diseasetype';
-import { MALADY_SEVERITIES, MaladySeverity } from '../types/enum';
+
+import type { 
+  DiseaseType, DiseaseTypesPayload,
+ } from '../types';
+
+import { 
+  MALADY_SEVERITIES, MaladySeverity,
+ } from '../types/enum';
 
 const BASE = '/rmce/objects/diseasetype';
 

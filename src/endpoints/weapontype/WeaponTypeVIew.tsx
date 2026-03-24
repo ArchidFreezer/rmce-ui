@@ -1,22 +1,38 @@
 // src/endpoints/weapontype/WeapontypesView.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { DataTable, DataTableSearchInput, type ColumnDef, type DataTableHandle } from '../../components/DataTable';
-import { LabeledInput } from '../../components/inputs/LabeledInput';
-import { LabeledSelect } from '../../components/inputs/LabeledSelect';
-import { useToast } from '../../components/Toast';
-import { useConfirm } from '../../components/ConfirmDialog';
-import { MarkupPreview } from '../../components/inputs/MarkupPreview';
 
-import { fetchWeaponTypes, upsertWeaponType, deleteWeaponType } from '../../api/weapontype';
-import { fetchSkills } from '../../api/skill';                 // assume you have this
-import { fetchBooks } from '../../api/book';                   // assume you have this
-import { fetchAttacktables } from '../../api/attacktable';
-import type { Skill } from '../../types/skill';                      // has id,name
-import type { Book } from '../../types/book';
-import { AttackTable } from '../../types/attacktable';
-import type { WeaponType } from '../../types/weapontype';
-import { CRITICAL_TYPES, type CriticalType } from '../../types/enum';          // array of strings for select
-import { isValidID, makeIDOnChange, isValidSignedInt, sanitizeSignedInt, isValidUnsignedInt, makeUnsignedIntOnChange, sanitizeUnsignedInt } from '../../utils/inputHelpers';
+import {
+  fetchAttacktables,
+  fetchBooks,
+  fetchSkills,
+  fetchWeaponTypes, upsertWeaponType, deleteWeaponType,
+} from '../../api';
+
+import {
+  DataTable, DataTableSearchInput, type ColumnDef, type DataTableHandle,
+  LabeledInput,
+  LabeledSelect,
+  MarkupPreview,
+  useConfirm,
+  useToast,
+} from '../../components';
+
+import type {
+  AttackTable,
+  Book,
+  Skill,
+  WeaponType,
+} from '../../types';
+
+import {
+  CRITICAL_TYPES, type CriticalType,
+} from '../../types/enum';
+
+import {
+  isValidID, makeIDOnChange,
+  isValidSignedInt, sanitizeSignedInt,
+  isValidUnsignedInt, makeUnsignedIntOnChange, sanitizeUnsignedInt,
+} from '../../utils';
 
 const prefix = 'WEAPONTYPE_';
 

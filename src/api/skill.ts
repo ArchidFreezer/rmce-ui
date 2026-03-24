@@ -1,5 +1,8 @@
 import { fetchJson, sendJson } from './client';
-import type { Skill, SkillsPayload } from '../types/skill';
+
+import type { 
+  Skill, SkillsPayload,
+ } from '../types';
 
 const BASE = '/rmce/objects/skill';
 

@@ -1,8 +1,8 @@
 import { fetchJson, sendJson } from './client';
+
 import type {
-  TrainingPackage,
-  TrainingPackagesPayload,
-} from '../types/trainingpackage';
+  TrainingPackage, TrainingPackagesPayload,
+} from '../types';
 
 const BASE = '/rmce/objects/trainingpackage';
 
