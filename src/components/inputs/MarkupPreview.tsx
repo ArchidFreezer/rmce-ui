@@ -1,5 +1,6 @@
 import * as React from 'react';
 import DOMPurify from 'dompurify';
+import { marked } from 'marked';
 
 export interface MarkupPreviewProps {
   /** Markup source (HTML or Markdown) */
@@ -16,35 +17,23 @@ export interface MarkupPreviewProps {
 }
 
 /**
- * Minimal markdown renderer.
- * You may replace this with marked / markdown-it later.
+ * Configure marked once.
+ * Keep this minimal and predictable.
  */
-function renderMarkdown(markdown: string): string {
-  let html = markdown
-    // headings
-    .replace(/^### (.*)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.*)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.*)$/gm, '<h1>$1</h1>')
-
-    // bold / italic
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-
-    // line breaks
-    .replace(/\n/g, '<br />');
-
-  return html;
-}
+marked.setOptions({
+  gfm: true,
+  breaks: true,
+});
 
 /**
  * Sanitize HTML safely.
- * This is the only place where dangerous HTML is handled.
+ * This is the single trust boundary.
  */
 function sanitizeHtml(html: string): string {
   return DOMPurify.sanitize(html, {
     USE_PROFILES: { html: true },
 
-    // Optional hardening — uncomment if desired:
+    // Optional hardening (uncomment if desired)
     FORBID_TAGS: ['style', 'script', 'iframe'],
     FORBID_ATTR: ['style', 'onerror', 'onclick'],
   });
@@ -70,11 +59,13 @@ export function MarkupPreview({
     );
   }
 
+  // 1) Convert markup → HTML
   const rawHtml =
     format === 'markdown'
-      ? renderMarkdown(source)
+      ? marked.parse(source, { async: false })
       : source;
 
+  // 2) Sanitize HTML
   const safeHtml = sanitizeHtml(rawHtml);
 
   return (
