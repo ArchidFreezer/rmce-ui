@@ -10,6 +10,7 @@ import {
   CheckboxInput,
   ChoiceListEditor,
   HtmlPreview,
+  HtmlPreviewList,
   IdListEditor,
   IdMultiSkillRankEditor,
   IdValueListEditor,
@@ -207,6 +208,7 @@ type FormErrors = {
   book?: string;
 
   races?: string;
+  notes?: string;
   qualifiers?: string;
   specials?: string;
 
@@ -1261,6 +1263,17 @@ export default function TrainingPackagesView() {
           </section>
 
           {/* Notes */}
+          {/* Notes are simple HTML strings, so we can reuse the same component for both viewing and editing (with a few tweaks)
+            * In viewing mode, we just render the HTML and ignore errors (since the data is already saved and valid)
+            * In editing mode, we render an editor that allows adding/removing/reordering notes, and we show validation errors if any
+            */}
+          {viewing ? (
+            <HtmlPreviewList title="Notes" arr={form.notes} viewing />
+          ) : (
+            <HtmlPreviewList title="Notes" arr={form.notes} viewing={false} error={errors.notes}
+              onChangeNotes={(next) => setForm((s) => ({ ...s, notes: next }))}
+            />
+          )}
 
           {/* Races */}
           <IdListEditor
@@ -1316,25 +1329,30 @@ export default function TrainingPackagesView() {
           />
 
           {/* Stat gains */}
-          <h4 style={{ margin: '16px 0 8px' }}>Stat Gains</h4>
-          <CheckboxInput
-            label="Realm Stat Gains"
-            checked={form.realmStatGain}
-            onChange={(c) => setForm((s) => ({ ...s, realmStatGain: c, statGains: [] }))}
-            disabled={viewing}
-          />
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            {statOptions.map((opt) => (
+          {/* Realm stat gain is a special case that disables all other stat gain options when enabled */}
+          {(!viewing || (form.realmStatGain || form.statGains.length > 0)) && (
+            <>
+              <h4 style={{ margin: '16px 0 8px' }}>Stat Gains</h4>
               <CheckboxInput
-                key={opt.value}
-                label={opt.label}
-                checked={form.statGains.includes(opt.value as Stat)}
-                onChange={() => toggleStatArray('statGains', opt.value as Stat)}
-                disabled={viewing || form.realmStatGain}
+                label="Realm Stat Gains"
+                checked={form.realmStatGain}
+                onChange={(c) => setForm((s) => ({ ...s, realmStatGain: c, statGains: [] }))}
+                disabled={viewing}
               />
-            ))}
-          </div>
-          {errors.statGains && <div style={{ color: '#b00020', marginTop: 6 }}>{errors.statGains}</div>}
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                {statOptions.map((opt) => (
+                  <CheckboxInput
+                    key={opt.value}
+                    label={opt.label}
+                    checked={form.statGains.includes(opt.value as Stat)}
+                    onChange={() => toggleStatArray('statGains', opt.value as Stat)}
+                    disabled={viewing || form.realmStatGain}
+                  />
+                ))}
+              </div>
+              {errors.statGains && <div style={{ color: '#b00020', marginTop: 6 }}>{errors.statGains}</div>}
+            </>
+          )}
 
           {/* Stat gain choices */}
           <StatGainChoiceEditor<Stat>

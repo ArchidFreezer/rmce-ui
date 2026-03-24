@@ -3,6 +3,7 @@ export * from './CheckboxGroup';
 export * from './CheckboxInput';
 export * from './ChoiceListEditor';
 export * from './HtmlPreview';
+export * from './HtmlPreviewList';
 export * from './IdListEditor';
 export * from './IdValueListEditor';
 export * from './IdMultiSkillRankEditor';
