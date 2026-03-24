@@ -577,6 +577,12 @@ export default function TrainingPackagesView() {
     return m;
   }, [books]);
 
+  const sgNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const sg of groups) m.set(sg.id, sg.name);
+    return m;
+  }, [groups]);
+
   const raceOptions = useMemo(
     () => races.map((r) => ({ value: r.id, label: r.name })),
     [races],
@@ -588,8 +594,8 @@ export default function TrainingPackagesView() {
   );
 
   const categoryOptions = useMemo(
-    () => categories.map((c) => ({ value: c.id, label: c.name })),
-    [categories],
+    () => categories.map(c => ({ value: c.id, label: `(${sgNameById.get(c.group) ?? c.group}) - ${c.name}` })),
+    [categories, sgNameById],
   );
 
   const groupOptions = useMemo(

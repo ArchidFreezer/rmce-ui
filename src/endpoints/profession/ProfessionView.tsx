@@ -402,6 +402,18 @@ export default function ProfessionView() {
   }, []);
 
   // ---------- option maps ----------
+  const bookNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const b of books) m.set(b.id, b.name);
+    return m;
+  }, [books]);
+
+  const sgNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const sg of groups) m.set(sg.id, sg.name);
+    return m;
+  }, [groups]);
+
   const bookOptions = useMemo(
     () => books.map(b => ({ value: b.id, label: b.name })),
     [books]
@@ -415,8 +427,8 @@ export default function ProfessionView() {
     [skills]
   );
   const categoryOptions = useMemo(
-    () => categories.map(c => ({ value: c.id, label: c.name })),
-    [categories]
+    () => categories.map(c => ({ value: c.id, label: `(${sgNameById.get(c.group) ?? c.group}) - ${c.name}` })),
+    [categories, sgNameById]
   );
   const groupOptions = useMemo(
     () => groups.map(g => ({ value: g.id, label: g.name })),
@@ -696,7 +708,17 @@ export default function ProfessionView() {
         </div>
       )
     },
-    { id: 'book', header: 'Book', accessor: r => r.book, sortType: 'string', minWidth: 220 },
+    {
+      id: 'book',
+      header: 'Book',
+      accessor: r => bookNameById.get(r.book) ?? r.book,
+      sortType: 'string',
+      minWidth: 180,
+      render: r => {
+        const label = bookNameById.get(r.book);
+        return label ? label : r.book;
+      },
+    },
     {
       id: 'actions',
       header: 'Actions',
@@ -711,7 +733,7 @@ export default function ProfessionView() {
         </>
       ),
     },
-  ], []);
+  ], [bookNameById]);
 
   const globalFilter = (r: Profession, q: string) => {
     const s = q.toLowerCase();

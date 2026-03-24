@@ -4,6 +4,7 @@ import {
   fetchBooks,
   fetchSkills, upsertSkill, deleteSkill,
   fetchSkillcategories,
+  fetchSkillgroups,
 } from '../../api';
 
 import {
@@ -19,6 +20,7 @@ import type {
   Book,
   Skill,
   SkillCategory,
+  SkillGroup,
 } from '../../types';
 
 import {
@@ -159,10 +161,12 @@ export default function SkillView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [categories, setCategories] = useState<SkillCategory[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
-  const [catLoading, setCatLoading] = useState(true);
   const [bookLoading, setBookLoading] = useState(true);
+  const [categories, setCategories] = useState<SkillCategory[]>([]);
+  const [catLoading, setCatLoading] = useState(true);
+  const [skillgroups, setSkillgroups] = useState<SkillGroup[]>([]);
+  const [sgLoading, setSgLoading] = useState(true);
 
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -240,12 +244,32 @@ export default function SkillView() {
     return () => { mounted = false; };
   }, []);
 
+  // Load groups
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const list = await fetchSkillgroups();
+        if (!mounted) return;
+        setSkillgroups(list);
+      } catch { }
+      finally { if (mounted) setSgLoading(false); }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
   // Maps & Options
+  const sgNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const sg of skillgroups) m.set(sg.id, sg.name);
+    return m;
+  }, [skillgroups]);
+
   const catNameById = useMemo(() => {
     const m = new Map<string, string>();
-    for (const c of categories) m.set(c.id, c.name);
+    for (const c of categories) m.set(c.id, `(${sgNameById.get(c.group) ?? c.group}) - ${c.name}`);
     return m;
-  }, [categories]);
+  }, [categories, sgNameById]);
 
   const bookNameById = useMemo(() => {
     const m = new Map<string, string>();
@@ -254,8 +278,8 @@ export default function SkillView() {
   }, [books]);
 
   const categoryOptions = useMemo(
-    () => categories.map(c => ({ value: c.id, label: c.name })),
-    [categories]
+    () => categories.map(c => ({ value: c.id, label: `(${sgNameById.get(c.group) ?? c.group}) - ${c.name}` })),
+    [categories, sgNameById]
   );
   const bookOptions = useMemo(
     () => books.map(b => ({ value: b.id, label: b.name })),
@@ -586,9 +610,9 @@ export default function SkillView() {
               value={form.category}
               onChange={(v) => setForm(s => ({ ...s, category: v }))}
               options={categoryOptions}
-              disabled={catLoading || viewing}
+              disabled={catLoading || sgLoading || viewing}
               error={viewing ? undefined : errors.category}
-              helperText={catLoading ? 'Loading categories…' : 'Select a SkillCategory id'}
+              helperText={(catLoading || sgLoading) ? 'Loading categories…' : 'Select a SkillCategory id'}
             />
             <LabeledSelect
               label="Book"

@@ -6,6 +6,7 @@ import {
   fetchCulturetypes, upsertCulturetype, deleteCulturetype,
   fetchSkills,
   fetchSkillcategories,
+  fetchSkillgroups,
   fetchWeaponTypes,
 } from '../../api';
 
@@ -25,6 +26,7 @@ import type {
   CultureType,
   Skill,
   SkillCategory,
+  SkillGroup,
   WeaponType,
 } from '../../types';
 
@@ -181,12 +183,14 @@ export default function CultureTypeView() {
   const [armours, setArmours] = useState<ArmourType[]>([]);
   const [weapons, setWeapons] = useState<WeaponType[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [skillgroups, setSkillgroups] = useState<SkillGroup[]>([]);
   const [categories, setCategories] = useState<SkillCategory[]>([]);
   const [climates, setClimates] = useState<Climate[]>([]);
 
   const [armourLoading, setArmourLoading] = useState(true);
   const [weaponLoading, setWeaponLoading] = useState(true);
   const [skillLoading, setSkillLoading] = useState(true);
+  const [sgLoading, setSgLoading] = useState(true);
   const [categoryLoading, setCategoryLoading] = useState(true);
   const [climateLoading, setClimateLoading] = useState(true);
 
@@ -282,8 +286,27 @@ export default function CultureTypeView() {
     })();
     return () => { mounted = false; };
   }, []);
+  // Load groups
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const list = await fetchSkillgroups();
+        if (!mounted) return;
+        setSkillgroups(list);
+      } catch { }
+      finally { if (mounted) setSgLoading(false); }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   // Option lists
+  const sgNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const sg of skillgroups) m.set(sg.id, sg.name);
+    return m;
+  }, [skillgroups]);
+
   const armourOptions = useMemo(
     () => armours.map(a => ({ value: a.id, label: `${a.name} - (${a.type})` })),
     [armours]
@@ -297,8 +320,8 @@ export default function CultureTypeView() {
     [skills]
   );
   const categoryOptions = useMemo(
-    () => categories.map(c => ({ value: c.id, label: c.name })),
-    [categories]
+    () => categories.map(c => ({ value: c.id, label: `(${sgNameById.get(c.group) ?? c.group}) - ${c.name}` })),
+    [categories, sgNameById]
   );
   const climateOptions = useMemo(
     () => climates.map(c => ({ value: c.id, label: c.name })),
@@ -680,7 +703,7 @@ export default function CultureTypeView() {
             rows={form.skillCategorySkillRanks}
             onChangeRows={(next) => setForm((s) => ({ ...s, skillCategorySkillRanks: next }))}
             options={categoryOptions}
-            loading={categoryLoading}
+            loading={categoryLoading || sgLoading}
             viewing={viewing}
             error={errors.skillCategorySkillRanks}
             signedValues

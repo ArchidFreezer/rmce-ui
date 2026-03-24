@@ -271,15 +271,15 @@ export default function WeaponTypeView() {
   }, [attackTables]);
 
   const skillOptions = useMemo(
-    () => skills.map(s => ({ value: s.id, label: `${s.id} — ${s.name}` })),
+    () => skills.map(s => ({ value: s.id, label: s.name })),
     [skills]
   );
   const bookOptions = useMemo(
-    () => books.map(b => ({ value: b.id, label: `${b.id} — ${b.name}` })),
+    () => books.map(b => ({ value: b.id, label: b.name })),
     [books]
   );
   const attackTableOptions = useMemo(
-    () => attackTables.map(a => ({ value: a.id, label: `${a.id} — ${a.name}` })),
+    () => attackTables.map(a => ({ value: a.id, label: a.name })),
     [attackTables]
   );
   const criticalTypeOptions = useMemo(
