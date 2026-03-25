@@ -412,3 +412,34 @@ body.theme-dark tr:nth-child(even) {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* Optional: add a subtle overlay to indicate non-interactive state */
+.form-container {
+  position: relative;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  z-index: 10;
+}
+
+/* Simple spinner for loading state */
+.spinner {
+  display: inline-block;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  border-top-color: rgba(0, 0, 0, 0.8);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
