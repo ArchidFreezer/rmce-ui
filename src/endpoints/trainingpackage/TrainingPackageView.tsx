@@ -29,6 +29,7 @@ import {
   SkillValueListEditor,
   SpellListCategoryRankEditor,
   SpellListRankEditor,
+  Spinner,
   StatGainChoiceEditor,
   TextNumberListEditor,
   useConfirm, useToast,
@@ -507,6 +508,7 @@ export default function TrainingPackagesView() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<FormState>(emptyVM());
 
   const [previewFlavourText, setPreviewFlavourText] = useState(false);
@@ -1087,9 +1089,16 @@ export default function TrainingPackagesView() {
   };
 
   const saveForm = async () => {
+
+    if (submitting) return;
+
     const nextErrors = computeErrors(form);
     setErrors(nextErrors);
-    if (Object.values(nextErrors).some(Boolean)) return;
+    if (Object.values(nextErrors).some(Boolean)) {
+      return;
+    }
+
+    setSubmitting(true);
 
     const payload = fromVM(form);
     const isEditing = Boolean(editingId);
@@ -1129,10 +1138,17 @@ export default function TrainingPackagesView() {
         title: 'Save failed',
         description: String(err instanceof Error ? err.message : err),
       });
+    } finally {
+      setSubmitting(false);
     }
+
   };
 
   const onDelete = async (row: TrainingPackage) => {
+
+    if (submitting) return;
+    setSubmitting(true);
+
     const ok = await confirm({
       title: 'Delete Training Package',
       body: `Delete "${row.id}"? This cannot be undone.`,
@@ -1156,6 +1172,8 @@ export default function TrainingPackagesView() {
         title: 'Delete failed',
         description: String(err instanceof Error ? err.message : err),
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -1201,445 +1219,447 @@ export default function TrainingPackagesView() {
       )}
 
       {showForm && (
-        <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`}>
-          <h3>{viewing ? 'View' : editingId ? 'Edit' : 'New'} Training Package</h3>
-
-          {/* Basic */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput
-              label="ID"
-              value={form.id}
-              onChange={makeIDOnChange<typeof form>('id', setForm, prefix)}
-              disabled={!!editingId || viewing}
-              error={viewing ? undefined : errors.id}
-            />
-            <LabeledInput
-              label="Name"
-              value={form.name}
-              onChange={(v) => setForm((s) => ({ ...s, name: v }))}
-              disabled={viewing}
-              error={viewing ? undefined : errors.name}
-            />
-            <LabeledSelect
-              label="Book"
-              value={form.book}
-              onChange={(v) => setForm((s) => ({ ...s, book: v }))}
-              options={bookOptions}
-              disabled={viewing}
-              error={viewing ? undefined : errors.book}
-            />
-            {/* Lifestyle */}
-            <CheckboxInput
-              label="Lifestyle"
-              checked={form.lifestyle}
-              onChange={(c) => setForm((s) => ({ ...s, lifestyle: c }))}
-              disabled={viewing}
-            />
-            {/* Timing */}
-            <LabeledInput
-              label="Time to Acquire (months)"
-              value={form.timeToAcquire}
-              onChange={makeUnsignedIntOnChange<typeof form>('timeToAcquire', setForm)}
-              disabled={viewing}
-              error={viewing ? undefined : errors.timeToAcquire}
-            />
-            {/* Starting money modifier */}
-            <LabeledInput
-              label="Starting Money Modifier (dice notation, e.g. 2d6)"
-              value={form.startingMoneyModifierDice}
-              onChange={makeDiceOnChange<typeof form>('startingMoneyModifierDice', setForm)}
-              disabled={viewing}
-              error={viewing ? undefined : errors.startingMoneyModifierDice}
-            />
-          </div>
-
-          {/* Description */}
-          <section style={{ marginTop: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <h4 style={{ margin: '8px 0' }}>Description</h4>
-              {!viewing && (
-                <button type="button" onClick={() => setPreviewDescription((p) => !p)}>
-                  {previewDescription ? 'Edit' : 'Preview'}
-                </button>
-              )}
+        <div className="form-container">
+          {submitting && (
+            <div className="overlay">
+              <Spinner size={24} />
+              <span>Saving…</span>
             </div>
-            {previewDescription || viewing ? (
-              <MarkupPreview
-                content={form.description}
-                emptyHint="No description"
-                className="preview-html"
-                style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
-              />
-            ) : (
-              <label style={{ display: 'grid', gap: 6 }}>
-                <textarea
-                  value={form.description}
-                  onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))}
-                  disabled={viewing}
-                  rows={5}
-                />
-              </label>
-            )}
-          </section>
+          )}
 
-          {/* Flavour Text */}
-          <section style={{ marginTop: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <h4 style={{ margin: '8px 0' }}>Flavour Text</h4>
-              {!viewing && (
-                <button type="button" onClick={() => setPreviewFlavourText((p) => !p)}>
-                  {previewFlavourText ? 'Edit' : 'Preview'}
-                </button>
-              )}
+          <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`}>
+            <h3>{viewing ? 'View' : editingId ? 'Edit' : 'New'} Training Package</h3>
+
+            {/* Basic */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <LabeledInput
+                label="ID"
+                value={form.id}
+                onChange={makeIDOnChange<typeof form>('id', setForm, prefix)}
+                disabled={!!editingId || viewing}
+                error={viewing ? undefined : errors.id}
+              />
+              <LabeledInput
+                label="Name"
+                value={form.name}
+                onChange={(v) => setForm((s) => ({ ...s, name: v }))}
+                disabled={viewing}
+                error={viewing ? undefined : errors.name}
+              />
+              <LabeledSelect
+                label="Book"
+                value={form.book}
+                onChange={(v) => setForm((s) => ({ ...s, book: v }))}
+                options={bookOptions}
+                disabled={viewing}
+                error={viewing ? undefined : errors.book}
+              />
+              {/* Lifestyle */}
+              <CheckboxInput
+                label="Lifestyle"
+                checked={form.lifestyle}
+                onChange={(c) => setForm((s) => ({ ...s, lifestyle: c }))}
+                disabled={viewing}
+              />
+              {/* Timing */}
+              <LabeledInput
+                label="Time to Acquire (months)"
+                value={form.timeToAcquire}
+                onChange={makeUnsignedIntOnChange<typeof form>('timeToAcquire', setForm)}
+                disabled={viewing}
+                error={viewing ? undefined : errors.timeToAcquire}
+              />
+              {/* Starting money modifier */}
+              <LabeledInput
+                label="Starting Money Modifier (dice notation, e.g. 2d6)"
+                value={form.startingMoneyModifierDice}
+                onChange={makeDiceOnChange<typeof form>('startingMoneyModifierDice', setForm)}
+                disabled={viewing}
+                error={viewing ? undefined : errors.startingMoneyModifierDice}
+              />
             </div>
-            {previewFlavourText || viewing ? (
-              <MarkupPreview
-                content={form.flavourText}
-                emptyHint="No flavour text"
-                className="preview-html"
-                style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
-              />
-            ) : (
-              <label style={{ display: 'grid', gap: 6 }}>
-                <textarea
-                  value={form.flavourText}
-                  onChange={(e) => setForm((s) => ({ ...s, flavourText: e.target.value }))}
-                  disabled={viewing}
-                  rows={5}
-                />
-              </label>
-            )}
-          </section>
 
-          {/* Notes */}
-          {/* Notes are simple HTML strings, so we can reuse the same component for both viewing and editing (with a few tweaks)
+            {/* Description */}
+            <section style={{ marginTop: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h4 style={{ margin: '8px 0' }}>Description</h4>
+                {!viewing && (
+                  <button type="button" onClick={() => setPreviewDescription((p) => !p)}>
+                    {previewDescription ? 'Edit' : 'Preview'}
+                  </button>
+                )}
+              </div>
+              {previewDescription || viewing ? (
+                <MarkupPreview
+                  content={form.description}
+                  emptyHint="No description"
+                  className="preview-html"
+                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
+                />
+              ) : (
+                <label style={{ display: 'grid', gap: 6 }}>
+                  <textarea
+                    value={form.description}
+                    onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))}
+                    disabled={viewing}
+                    rows={5}
+                  />
+                </label>
+              )}
+            </section>
+
+            {/* Flavour Text */}
+            <section style={{ marginTop: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h4 style={{ margin: '8px 0' }}>Flavour Text</h4>
+                {!viewing && (
+                  <button type="button" onClick={() => setPreviewFlavourText((p) => !p)}>
+                    {previewFlavourText ? 'Edit' : 'Preview'}
+                  </button>
+                )}
+              </div>
+              {previewFlavourText || viewing ? (
+                <MarkupPreview
+                  content={form.flavourText}
+                  emptyHint="No flavour text"
+                  className="preview-html"
+                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
+                />
+              ) : (
+                <label style={{ display: 'grid', gap: 6 }}>
+                  <textarea
+                    value={form.flavourText}
+                    onChange={(e) => setForm((s) => ({ ...s, flavourText: e.target.value }))}
+                    disabled={viewing}
+                    rows={5}
+                  />
+                </label>
+              )}
+            </section>
+
+            {/* Notes */}
+            {/* Notes are simple HTML strings, so we can reuse the same component for both viewing and editing (with a few tweaks)
             * In viewing mode, we just render the HTML and ignore errors (since the data is already saved and valid)
             * In editing mode, we render an editor that allows adding/removing/reordering notes, and we show validation errors if any
             */}
-          {viewing ? (
-            <MarkupPreviewList title="Notes" arr={form.notes} viewing />
-          ) : (
-            <MarkupPreviewList title="Notes" arr={form.notes} viewing={false} error={errors.notes}
-              onChangeNotes={(next) => setForm((s) => ({ ...s, notes: next }))}
-            />
-          )}
-
-          {/* Races */}
-          <IdListEditor
-            title="Allowed Races"
-            addButtonLabel='+ Add race'
-            rows={form.races}
-            onChangeRows={(next) => setForm((s) => ({ ...s, races: next }))}
-            options={raceOptions}
-            viewing={viewing}
-            error={errors.races}
-          />
-
-          {/* Qualifiers */}
-          <TextNumberListEditor
-            title="Qualifiers"
-            addButtonLabel='+ Add qualifier'
-            rows={form.qualifiers.map((q) => ({
-              text: q.qualifier,
-              number: q.reduction,
-            }))}
-            onChangeRows={(next) =>
-              setForm((s) => ({
-                ...s,
-                qualifiers: next.map((r) => ({
-                  qualifier: r.text,
-                  reduction: r.number,
-                })),
-              }))
-            }
-            textLabel="Qualifier"
-            numberLabel="Reduction"
-            viewing={viewing}
-            error={errors.qualifiers}
-          />
-
-          {/* Specials */}
-          <TextNumberListEditor
-            title="Specials"
-            addButtonLabel='+ Add special'
-            rows={form.specials.map((s) => ({
-              text: s.value,
-              number: s.chance,
-            }))}
-            onChangeRows={(next) =>
-              setForm((s) => ({
-                ...s,
-                specials: next.map((r) => ({
-                  value: r.text,
-                  chance: r.number,
-                })),
-              }))
-            }
-            textLabel="Special"
-            numberLabel="Chance (%)"
-            viewing={viewing}
-            error={errors.specials}
-          />
-
-          {/* Stat gains */}
-          {/* Realm stat gain is a special case that disables all other stat gain options when enabled */}
-          {(!viewing || (form.realmStatGain || form.statGains.length > 0)) && (
-            <>
-              <h4 style={{ margin: '16px 0 8px' }}>Stat Gains</h4>
-              <CheckboxInput
-                label="Realm Stat Gains"
-                checked={form.realmStatGain}
-                onChange={(c) => setForm((s) => ({ ...s, realmStatGain: c, statGains: [] }))}
-                disabled={viewing}
+            {viewing ? (
+              <MarkupPreviewList title="Notes" arr={form.notes} viewing />
+            ) : (
+              <MarkupPreviewList title="Notes" arr={form.notes} viewing={false} error={errors.notes}
+                onChangeNotes={(next) => setForm((s) => ({ ...s, notes: next }))}
               />
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                {statOptions.map((opt) => (
-                  <CheckboxInput
-                    key={opt.value}
-                    label={opt.label}
-                    checked={form.statGains.includes(opt.value as Stat)}
-                    onChange={() => toggleStatArray('statGains', opt.value as Stat)}
-                    disabled={viewing || form.realmStatGain}
-                  />
-                ))}
-              </div>
-              {errors.statGains && <div style={{ color: '#b00020', marginTop: 6 }}>{errors.statGains}</div>}
-            </>
-          )}
+            )}
 
-          {/* Stat gain choices */}
-          <StatGainChoiceEditor<Stat>
-            title="Stat Gain Choices"
-            value={form.statGainChoices}
-            onChange={(next) =>
-              setForm((s) => ({ ...s, statGainChoices: next }))
-            }
-            statOptions={statOptions}
-            viewing={viewing}
-            error={errors.statGainChoices}
-          />
+            {/* Races */}
+            <IdListEditor
+              title="Allowed Races"
+              addButtonLabel='+ Add race'
+              rows={form.races}
+              onChangeRows={(next) => setForm((s) => ({ ...s, races: next }))}
+              options={raceOptions}
+              viewing={viewing}
+              error={errors.races}
+            />
 
-          {/* Skill Ranks */}
-          <SkillValueListEditor
-            title="Skill Ranks"
-            addButtonLabel='+ Add skill rank'
-            idColumnLabel="Skill"
-            valueColumnLabel="Ranks"
-            rows={form.skillRanks}
-            onChangeRows={(next) => setForm((s) => ({ ...s, skillRanks: next }))}
-            idOptions={skillOptions}
-            viewing={viewing}
-            error={errors.skillRanks}
-            signedValues={false}
-          />
+            {/* Qualifiers */}
+            <TextNumberListEditor
+              title="Qualifiers"
+              addButtonLabel='+ Add qualifier'
+              rows={form.qualifiers.map((q) => ({
+                text: q.qualifier,
+                number: q.reduction,
+              }))}
+              onChangeRows={(next) =>
+                setForm((s) => ({
+                  ...s,
+                  qualifiers: next.map((r) => ({
+                    qualifier: r.text,
+                    reduction: r.number,
+                  })),
+                }))
+              }
+              textLabel="Qualifier"
+              numberLabel="Reduction"
+              viewing={viewing}
+              error={errors.qualifiers}
+            />
 
-          {/* Skill Rank Choices */}
-          <SkillRankChoiceEditor
-            title="Skill Rank Choices"
-            rows={form.skillRankChoices}
-            onChangeRows={(next) =>
-              setForm((s) => ({ ...s, skillRankChoices: next }))
-            }
-            skillOptions={skillOptions}
-            viewing={viewing}
-            error={errors.skillRankChoices}
-          />
+            {/* Specials */}
+            <TextNumberListEditor
+              title="Specials"
+              addButtonLabel='+ Add special'
+              rows={form.specials.map((s) => ({
+                text: s.value,
+                number: s.chance,
+              }))}
+              onChangeRows={(next) =>
+                setForm((s) => ({
+                  ...s,
+                  specials: next.map((r) => ({
+                    value: r.text,
+                    chance: r.number,
+                  })),
+                }))
+              }
+              textLabel="Special"
+              numberLabel="Chance (%)"
+              viewing={viewing}
+              error={errors.specials}
+            />
 
-          {/* Category Ranks */}
-          <IdValueListEditor
-            title="Skill Category Ranks"
-            addButtonLabel='+ Add category rank'
-            idColumnLabel="Category"
-            valueColumnLabel="Ranks"
-            rows={form.categoryRanks}
-            onChangeRows={(next) => setForm((s) => ({ ...s, categoryRanks: next }))}
-            options={categoryOptions}
-            loading={loading}
-            viewing={viewing}
-            error={errors.categoryRanks}
-            signedValues={false}
-          />
-
-          {/* Category Multi‑Skill Rank Choices */}
-          <IdMultiSkillRankEditor
-            title="Category Multi-Skill Rank Choices"
-            addButtonLabel='+ Add category rank choice'
-            rows={form.categoryMultiSkillRankChoices}
-            onChangeRows={(next) =>
-              setForm((s) => ({ ...s, categoryMultiSkillRankChoices: next }))
-            }
-            idOptions={categoryOptions}
-            loading={loading}
-            viewing={viewing}
-            error={errors.categoryMultiSkillRankChoices}
-            idColumnLabel="Category"
-          />
-
-          {/* Group Multi‑Skill Rank Choices */}
-          <IdMultiSkillRankEditor
-            title="Group Multi-Skill Rank Choices"
-            addButtonLabel='+ Add group rank choice'
-            rows={form.groupMultiSkillRankChoices}
-            onChangeRows={(next) =>
-              setForm((s) => ({ ...s, groupMultiSkillRankChoices: next }))
-            }
-            idOptions={groupOptions}
-            loading={loading}
-            viewing={viewing}
-            error={errors.groupMultiSkillRankChoices}
-            idColumnLabel="Group"
-          />
-
-          {/* Group Category & Skill Rank Choices */}
-          <IdValueListEditor
-            title="Group Category & Skill Rank Choices"
-            addButtonLabel='+ Add group rank choice'
-            idColumnLabel="Group"
-            valueColumnLabel="# Ranks"
-            rows={form.groupCategoryAndSkillRankChoices}
-            onChangeRows={(next) => setForm((s) => ({ ...s, groupCategoryAndSkillRankChoices: next }))}
-            options={groupOptions}
-            loading={loading}
-            viewing={viewing}
-            error={errors.groupCategoryAndSkillRankChoices}
-            signedValues
-          />
-
-          {/* Spell List Ranks */}
-          <SpellListRankEditor
-            title="Spell List Ranks"
-            rows={form.spellListRanks}
-            onChangeRows={(next) =>
-              setForm((s) => ({ ...s, spellListRanks: next }))
-            }
-            categoryOptions={categoryOptions}
-            spellListOptions={spellListOptions}
-            viewing={viewing}
-            error={errors.spellListRanks}
-          />
-
-          {/* Spell List Category Rank Choices */}
-          <SpellListCategoryRankEditor
-            title="Spell List Category Rank Choices"
-            rows={form.spellListCategoryRankChoices}
-            onChangeRows={(next) =>
-              setForm((s) => ({
-                ...s,
-                spellListCategoryRankChoices: next,
-              }))
-            }
-            categoryOptions={categoryOptions}
-            viewing={viewing}
-            error={errors.spellListCategoryRankChoices}
-          />
-
-          {/* Lifestyle Skills */}
-          <SkillListEditor
-            title="Lifestyle Skills"
-            idColumnLabel='Skill'
-            addButtonLabel='+ Add lifestyle skill'
-            rows={form.lifestyleSkills}
-            onChangeRows={(next) => setForm((s) => ({ ...s, lifestyleSkills: next }))}
-            idOptions={skillOptions}
-            viewing={viewing}
-          />
-
-          {/* Lifestyle Categories */}
-          <IdListEditor
-            title="Lifestyle Categories"
-            addButtonLabel='+ Add lifestyle category'
-            rows={form.lifestyleCategories}
-            onChangeRows={(next) => setForm((s) => ({ ...s, lifestyleCategories: next }))}
-            options={categoryOptions}
-            viewing={viewing}
-          />
-
-          {/* Lifestyle Groups */}
-          <IdListEditor
-            title="Lifestyle Groups"
-            addButtonLabel='+ Add lifestyle group'
-            rows={form.lifestyleGroups}
-            onChangeRows={(next) => setForm((s) => ({ ...s, lifestyleGroups: next }))}
-            options={groupOptions}
-            viewing={viewing}
-          />
-
-          {/* Lifestyle Category Skill Choices */}
-          <ChoiceListEditor<string, string>
-            title="Lifestyle Category Skill Choices"
-            addRowButtonLabel='+ Add lifestyle category choice'
-            optionSectionLabel="Categories"
-            numChoicesLabel="# Categories"
-            addOptionButtonLabel="+ Add category"
-            rows={form.lifestyleCategorySkillChoices.map((r) => ({
-              numChoices: r.numChoices,
-              type: '',
-              options: r.options,
-            }))}
-            onChangeRows={(next) =>
-              setForm((s) => ({
-                ...s,
-                lifestyleCategorySkillChoices: next.map((r) => ({
-                  numChoices: r.numChoices,
-                  options: r.options,
-                })),
-              }))
-            }
-            typeOptions={[]}
-            createEmptyOption={() => ''}
-            viewing={viewing}
-            error={errors.lifestyleCategorySkillChoices}
-            renderOptionEditor={({ option, setOption, removeOption, viewing }) => (
-              <div style={{ display: 'grid', gridTemplateColumns: viewing ? '1fr' : '1fr auto', gap: 8 }}>
-                <LabeledSelect
-                  label="Category"
-                  hideLabel
-                  value={option}
-                  options={categoryOptions}
+            {/* Stat gains */}
+            {/* Realm stat gain is a special case that disables all other stat gain options when enabled */}
+            {(!viewing || (form.realmStatGain || form.statGains.length > 0)) && (
+              <>
+                <h4 style={{ margin: '16px 0 8px' }}>Stat Gains</h4>
+                <CheckboxInput
+                  label="Realm Stat Gains"
+                  checked={form.realmStatGain}
+                  onChange={(c) => setForm((s) => ({ ...s, realmStatGain: c, statGains: [] }))}
                   disabled={viewing}
-                  onChange={setOption}
                 />
-                {!viewing && <button onClick={removeOption} style={{ color: '#b00020' }}>Remove</button>}
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                  {statOptions.map((opt) => (
+                    <CheckboxInput
+                      key={opt.value}
+                      label={opt.label}
+                      checked={form.statGains.includes(opt.value as Stat)}
+                      onChange={() => toggleStatArray('statGains', opt.value as Stat)}
+                      disabled={viewing || form.realmStatGain}
+                    />
+                  ))}
+                </div>
+                {errors.statGains && <div style={{ color: '#b00020', marginTop: 6 }}>{errors.statGains}</div>}
+              </>
+            )}
+
+            {/* Stat gain choices */}
+            <StatGainChoiceEditor<Stat>
+              title="Stat Gain Choices"
+              value={form.statGainChoices}
+              onChange={(next) =>
+                setForm((s) => ({ ...s, statGainChoices: next }))
+              }
+              statOptions={statOptions}
+              viewing={viewing}
+              error={errors.statGainChoices}
+            />
+
+            {/* Skill Ranks */}
+            <SkillValueListEditor
+              title="Skill Ranks"
+              addButtonLabel='+ Add skill rank'
+              idColumnLabel="Skill"
+              valueColumnLabel="Ranks"
+              rows={form.skillRanks}
+              onChangeRows={(next) => setForm((s) => ({ ...s, skillRanks: next }))}
+              idOptions={skillOptions}
+              viewing={viewing}
+              error={errors.skillRanks}
+              signedValues={false}
+            />
+
+            {/* Skill Rank Choices */}
+            <SkillRankChoiceEditor
+              title="Skill Rank Choices"
+              rows={form.skillRankChoices}
+              onChangeRows={(next) =>
+                setForm((s) => ({ ...s, skillRankChoices: next }))
+              }
+              skillOptions={skillOptions}
+              viewing={viewing}
+              error={errors.skillRankChoices}
+            />
+
+            {/* Category Ranks */}
+            <IdValueListEditor
+              title="Skill Category Ranks"
+              addButtonLabel='+ Add category rank'
+              idColumnLabel="Category"
+              valueColumnLabel="Ranks"
+              rows={form.categoryRanks}
+              onChangeRows={(next) => setForm((s) => ({ ...s, categoryRanks: next }))}
+              options={categoryOptions}
+              loading={loading}
+              viewing={viewing}
+              error={errors.categoryRanks}
+              signedValues={false}
+            />
+
+            {/* Category Multi‑Skill Rank Choices */}
+            <IdMultiSkillRankEditor
+              title="Category Multi-Skill Rank Choices"
+              addButtonLabel='+ Add category rank choice'
+              rows={form.categoryMultiSkillRankChoices}
+              onChangeRows={(next) =>
+                setForm((s) => ({ ...s, categoryMultiSkillRankChoices: next }))
+              }
+              idOptions={categoryOptions}
+              loading={loading}
+              viewing={viewing}
+              error={errors.categoryMultiSkillRankChoices}
+              idColumnLabel="Category"
+            />
+
+            {/* Group Multi‑Skill Rank Choices */}
+            <IdMultiSkillRankEditor
+              title="Group Multi-Skill Rank Choices"
+              addButtonLabel='+ Add group rank choice'
+              rows={form.groupMultiSkillRankChoices}
+              onChangeRows={(next) =>
+                setForm((s) => ({ ...s, groupMultiSkillRankChoices: next }))
+              }
+              idOptions={groupOptions}
+              loading={loading}
+              viewing={viewing}
+              error={errors.groupMultiSkillRankChoices}
+              idColumnLabel="Group"
+            />
+
+            {/* Group Category & Skill Rank Choices */}
+            <IdValueListEditor
+              title="Group Category & Skill Rank Choices"
+              addButtonLabel='+ Add group rank choice'
+              idColumnLabel="Group"
+              valueColumnLabel="# Ranks"
+              rows={form.groupCategoryAndSkillRankChoices}
+              onChangeRows={(next) => setForm((s) => ({ ...s, groupCategoryAndSkillRankChoices: next }))}
+              options={groupOptions}
+              loading={loading}
+              viewing={viewing}
+              error={errors.groupCategoryAndSkillRankChoices}
+              signedValues
+            />
+
+            {/* Spell List Ranks */}
+            <SpellListRankEditor
+              title="Spell List Ranks"
+              rows={form.spellListRanks}
+              onChangeRows={(next) =>
+                setForm((s) => ({ ...s, spellListRanks: next }))
+              }
+              categoryOptions={categoryOptions}
+              spellListOptions={spellListOptions}
+              viewing={viewing}
+              error={errors.spellListRanks}
+            />
+
+            {/* Spell List Category Rank Choices */}
+            <SpellListCategoryRankEditor
+              title="Spell List Category Rank Choices"
+              rows={form.spellListCategoryRankChoices}
+              onChangeRows={(next) =>
+                setForm((s) => ({
+                  ...s,
+                  spellListCategoryRankChoices: next,
+                }))
+              }
+              categoryOptions={categoryOptions}
+              viewing={viewing}
+              error={errors.spellListCategoryRankChoices}
+            />
+
+            {/* Lifestyle Skills */}
+            <SkillListEditor
+              title="Lifestyle Skills"
+              idColumnLabel='Skill'
+              addButtonLabel='+ Add lifestyle skill'
+              rows={form.lifestyleSkills}
+              onChangeRows={(next) => setForm((s) => ({ ...s, lifestyleSkills: next }))}
+              idOptions={skillOptions}
+              viewing={viewing}
+            />
+
+            {/* Lifestyle Categories */}
+            <IdListEditor
+              title="Lifestyle Categories"
+              addButtonLabel='+ Add lifestyle category'
+              rows={form.lifestyleCategories}
+              onChangeRows={(next) => setForm((s) => ({ ...s, lifestyleCategories: next }))}
+              options={categoryOptions}
+              viewing={viewing}
+            />
+
+            {/* Lifestyle Groups */}
+            <IdListEditor
+              title="Lifestyle Groups"
+              addButtonLabel='+ Add lifestyle group'
+              rows={form.lifestyleGroups}
+              onChangeRows={(next) => setForm((s) => ({ ...s, lifestyleGroups: next }))}
+              options={groupOptions}
+              viewing={viewing}
+            />
+
+            {/* Lifestyle Category Skill Choices */}
+            <ChoiceListEditor<string, string>
+              title="Lifestyle Category Skill Choices"
+              addRowButtonLabel='+ Add lifestyle category choice'
+              optionSectionLabel="Categories"
+              numChoicesLabel="# Categories"
+              addOptionButtonLabel="+ Add category"
+              rows={form.lifestyleCategorySkillChoices.map((r) => ({
+                numChoices: r.numChoices,
+                type: '',
+                options: r.options,
+              }))}
+              onChangeRows={(next) =>
+                setForm((s) => ({
+                  ...s,
+                  lifestyleCategorySkillChoices: next.map((r) => ({
+                    numChoices: r.numChoices,
+                    options: r.options,
+                  })),
+                }))
+              }
+              typeOptions={[]}
+              createEmptyOption={() => ''}
+              viewing={viewing}
+              error={errors.lifestyleCategorySkillChoices}
+              renderOptionEditor={({ option, setOption, removeOption, viewing }) => (
+                <div style={{ display: 'grid', gridTemplateColumns: viewing ? '1fr' : '1fr auto', gap: 8 }}>
+                  <LabeledSelect
+                    label="Category"
+                    hideLabel
+                    value={option}
+                    options={categoryOptions}
+                    disabled={viewing}
+                    onChange={setOption}
+                  />
+                  {!viewing && <button onClick={removeOption} style={{ color: '#b00020' }}>Remove</button>}
+                </div>
+              )}
+            />
+
+            {/* Language Choices */}
+            <LanguageChoiceEditor
+              title="Language Choices"
+              rows={form.languageChoices}
+              onChangeRows={(next) =>
+                setForm((s) => ({ ...s, languageChoices: next }))
+              }
+              languageOptions={languageOptions}
+              viewing={viewing}
+              error={errors.languageChoices}
+            />
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              {!viewing && <button onClick={saveForm} disabled={hasErrors || submitting}>{submitting ? 'Submitting…' : 'Save'}</button>}
+              <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
+            </div>
+
+            {/* Validation errors */}
+            {Object.values(errors).some(Boolean) && (
+              <div style={{ marginTop: 12, color: '#b00020' }}>
+                <h4 style={{ margin: '0 0 4px' }}>Please fix the following errors:</h4>
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  {Object.entries(errors).map(([field, error]) =>
+                    error ? <li key={field}>{error}</li> : null
+                  )}
+                </ul>
               </div>
             )}
-          />
-
-          {/* Language Choices */}
-          <LanguageChoiceEditor
-            title="Language Choices"
-            rows={form.languageChoices}
-            onChangeRows={(next) =>
-              setForm((s) => ({ ...s, languageChoices: next }))
-            }
-            languageOptions={languageOptions}
-            viewing={viewing}
-            error={errors.languageChoices}
-          />
-
-          {/* Action buttons */}
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            {!viewing && (
-              <button onClick={saveForm} disabled={hasErrors}>
-                Save
-              </button>
-            )}
-            <button onClick={cancelForm} type="button">
-              {viewing ? 'Close' : 'Cancel'}
-            </button>
           </div>
-
-          {/* Validation errors */}
-          {Object.values(errors).some(Boolean) && (
-            <div style={{ marginTop: 12, color: '#b00020' }}>
-              <h4 style={{ margin: '0 0 4px' }}>Please fix the following errors:</h4>
-              <ul style={{ margin: 0, paddingLeft: 20 }}>
-                {Object.entries(errors).map(([field, error]) =>
-                  error ? <li key={field}>{error}</li> : null
-                )}
-              </ul>
-            </div>
-          )}
-
         </div>
       )}
 
