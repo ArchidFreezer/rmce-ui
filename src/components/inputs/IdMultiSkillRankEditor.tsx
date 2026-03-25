@@ -2,6 +2,8 @@ import * as React from 'react';
 import { LabeledInput } from './LabeledInput';
 import { LabeledSelect } from './LabeledSelect';
 
+import { sanitizeUnsignedInt } from '../../utils';
+
 export type IdMultiSkillRankRowVM<TId extends string = string> = {
   id: TId | '';
   value: string;
@@ -33,8 +35,6 @@ export interface IdMultiSkillRankEditorProps<TId extends string = string> {
   /** Layout */
   idColumnMinWidth?: number | string | undefined;
 }
-
-const sanitizeUnsignedInt = (s: string) => s.replace(/[^\d]/g, '');
 
 export function IdMultiSkillRankEditor<TId extends string = string>({
   title,
