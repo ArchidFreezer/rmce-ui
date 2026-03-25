@@ -49,6 +49,7 @@ import {
 } from '../../types/enum';
 
 import {
+  isValidDice, makeDiceOnChange,
   isValidID, makeIDOnChange,
   isValidSignedInt,
   isValidUnsignedInt, makeUnsignedIntOnChange,
@@ -635,8 +636,10 @@ export default function TrainingPackagesView() {
       e.timeToAcquire = 'Time to acquire must be a positive integer';
     }
 
-    if (!draft.startingMoneyModifierDice.trim()) {
-      e.startingMoneyModifierDice = 'Starting money modifier is required';
+    if (draft.startingMoneyModifierDice) {
+      if (!isValidDice(draft.startingMoneyModifierDice.trim())) {
+        e.startingMoneyModifierDice = 'Starting money modifier is required';
+      }
     }
 
     /* -------------------------------------------------- */
@@ -1244,8 +1247,9 @@ export default function TrainingPackagesView() {
             <LabeledInput
               label="Starting Money Modifier (dice notation, e.g. 2d6)"
               value={form.startingMoneyModifierDice}
-              onChange={(v) => setForm((s) => ({ ...s, startingMoneyModifierDice: v }))}
+              onChange={makeDiceOnChange<typeof form>('startingMoneyModifierDice', setForm)}
               disabled={viewing}
+              error={viewing ? undefined : errors.startingMoneyModifierDice}
             />
           </div>
 
@@ -1612,6 +1616,7 @@ export default function TrainingPackagesView() {
             error={errors.languageChoices}
           />
 
+          {/* Action buttons */}
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             {!viewing && (
               <button onClick={saveForm} disabled={hasErrors}>
@@ -1622,6 +1627,19 @@ export default function TrainingPackagesView() {
               {viewing ? 'Close' : 'Cancel'}
             </button>
           </div>
+
+          {/* Validation errors */}
+          {Object.values(errors).some(Boolean) && (
+            <div style={{ marginTop: 12, color: '#b00020' }}>
+              <h4 style={{ margin: '0 0 4px' }}>Please fix the following errors:</h4>
+              <ul style={{ margin: 0, paddingLeft: 20 }}>
+                {Object.entries(errors).map(([field, error]) =>
+                  error ? <li key={field}>{error}</li> : null
+                )}
+              </ul>
+            </div>
+          )}
+
         </div>
       )}
 
