@@ -111,6 +111,18 @@ export function SkillRankChoiceEditor({
             }}
           >
             <LabeledInput
+              label="Total Ranks"
+              value={row.value}
+              disabled={viewing}
+              width={100}
+              onChange={(v) =>
+                updateRowAt(rowIndex, {
+                  value: sanitizeUnsignedInt(v),
+                })
+              }
+            />
+
+            <LabeledInput
               label="# Choices"
               value={row.numChoices}
               disabled={viewing}
@@ -118,18 +130,6 @@ export function SkillRankChoiceEditor({
               onChange={(v) =>
                 updateRowAt(rowIndex, {
                   numChoices: sanitizeUnsignedInt(v),
-                })
-              }
-            />
-
-            <LabeledInput
-              label="Ranks"
-              value={row.value}
-              disabled={viewing}
-              width={100}
-              onChange={(v) =>
-                updateRowAt(rowIndex, {
-                  value: sanitizeUnsignedInt(v),
                 })
               }
             />

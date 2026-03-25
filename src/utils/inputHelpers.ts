@@ -288,6 +288,83 @@ export function isValidID(val: string, prefix: string): boolean {
 }
 
 /* =========================================================================
+   Dice notation (e.g. "2d6", "-1d4", "d20")
+   ========================================================================= */
+
+const diceNegRegex = /^(-)?([0-9]+)?[dD][1-9][0-9]*$/;
+const dicePosRegex = /^([0-9]+)?[dD][1-9][0-9]*$/;
+
+/**
+ * Sanitize to a dice-in-progress string (e.g. "2d6", "-1d4", "d20").
+ * Valid formats: optional leading '-', optional count (default 1) followed by 'd' or 'D', then sides.
+ * Examples:
+ * sanitizeDice("2d6") -> "2d6"
+ * sanitizeDice("-1d4") -> "-1d4"
+ * sanitizeDice("d20") -> "d20"
+ * sanitizeDice("abc") -> ""
+ * sanitizeDice("1-2d6") -> "12d6"
+ * sanitizeDice("--3D8") -> "-3D8"
+ * sanitizeDice("4d6x") -> "4d6"
+ */
+export function sanitizeDice(input: string, allowNegative = true): string {
+  let result = "";
+  let hasSign = false;
+  let hasD = false;
+
+  for (const ch of input) {
+    // Allow leading minus
+    if (ch === "-" && result.length === 0 && !hasSign && allowNegative) {
+      result += ch;
+      hasSign = true;
+      continue;
+    }
+
+    // Allow digits anywhere
+    if (ch >= "0" && ch <= "9") {
+      result += ch;
+      continue;
+    }
+
+    // Allow exactly one d/D
+    if ((ch === "d" || ch === "D") && !hasD) {
+      result += "d";
+      hasD = true;
+      continue;
+    }
+
+    // Ignore everything else
+  }
+
+  return result;
+}
+
+/**
+ * Create an onChange handler for a Dice field stored as string.
+ * The handler will sanitize the input to ensure it is a valid dice string.
+ */
+export function makeDiceOnChange<T extends Record<string, any>>(
+  field: keyof T,
+  setForm: React.Dispatch<React.SetStateAction<T>>,
+  allowNegative = true,
+) {
+  return (v: string) => {
+    setForm((s) => ({
+      ...s,
+      [field]: sanitizeDice(v, allowNegative),
+    }));
+  };
+}
+
+/**
+ * Returns true when val is a valid dice string in the format of optional leading '-', optional count (default 1) followed by 'd' or 'D', then sides.
+ * Examples of valid dice strings: "2d6", "-1d4", "d20"
+ * Examples of invalid dice strings: "", "abc", "1-2d6", "--3D8", "4d6x"
+ */
+export function isValidDice(val: string, allowNegative = true): boolean {
+  return allowNegative ? diceNegRegex.test(val) : dicePosRegex.test(val);
+}
+
+/* =========================================================================
    Other specific formats
    ========================================================================= */
 

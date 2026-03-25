@@ -178,7 +178,7 @@ export function SpellListRankEditor<
             }}
           >
             <LabeledInput
-              label="Ranks"
+              label="Total Ranks"
               value={row.value}
               disabled={viewing}
               width={100}
