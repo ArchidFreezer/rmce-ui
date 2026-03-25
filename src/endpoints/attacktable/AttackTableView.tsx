@@ -8,6 +8,7 @@ import {
   DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
   AttackTableEditor, AttackTableRowVM,
   LabeledInput,
+  Spinner,
   useConfirm, useToast,
 } from '../../components';
 
@@ -87,16 +88,6 @@ function fromVM(vm: FormState): AttackTable {
   };
 }
 
-// Helpers to update a row WITHOUT type widening
-function updateRowField(row: AttackTableRowVM, key: 'min' | 'max', val: string): AttackTableRowVM {
-  return { min: key === 'min' ? val : row.min, max: key === 'max' ? val : row.max, cells: row.cells.slice() };
-}
-function updateRowCell(row: AttackTableRowVM, index: number, val: string): AttackTableRowVM {
-  const cells = row.cells.slice();
-  cells[index] = val;
-  return { min: row.min, max: row.max, cells };
-}
-
 export default function AttacktablesView() {
   const dtRef = useRef<DataTableHandle>(null);
   const [rows, setRows] = useState<AttackTable[]>([]);
@@ -110,6 +101,7 @@ export default function AttacktablesView() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<FormState>(emptyVM());
   const [errors, setErrors] = useState<{
     id?: string | undefined;
@@ -231,11 +223,14 @@ export default function AttacktablesView() {
 
   const saveForm = async () => {
 
+    // Prevent multiple submissions
+    if (submitting) return;
+    setSubmitting(true);
+
     const nextErrors = computeErrors(form);
     setErrors(nextErrors);
     const anyError = nextErrors.id || nextErrors.name || nextErrors.maxRow || nextErrors.modified || nextErrors.unmodified;
     if (anyError) return;
-
 
     const payload = fromVM(form);
     const isEditing = Boolean(editingId);
@@ -274,10 +269,17 @@ export default function AttacktablesView() {
         title: 'Save failed',
         description: String(err instanceof Error ? err.message : err),
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const onDelete = async (row: AttackTable) => {
+
+    // Prevent multiple submissions
+    if (submitting) return;
+    setSubmitting(true);
+
     const ok = await confirm({
       title: 'Delete Attack Table',
       body: `Delete "${row.id}"? This cannot be undone.`,
@@ -296,6 +298,8 @@ export default function AttacktablesView() {
     } catch (err) {
       setRows(prev);
       toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err) });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -376,66 +380,76 @@ export default function AttacktablesView() {
 
       {/* Form panel */}
       {showForm && (
-        <div
-          className={`form-panel ${viewing ? 'form-panel--view' : ''}`}
-          style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}
-        >
-          <h3 style={{ marginTop: 0 }}>
-            {viewing ? 'View Attack Table' : (editingId ? 'Edit Attack Table' : 'New Attack Table')}
-          </h3>
 
-          {/* Basics */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
-            <LabeledInput
-              label="ID"
-              value={form.id}
-              onChange={makeIDOnChange<typeof form>('id', setForm, prefix)}  // string-based
-              disabled={!!editingId || viewing}
-              error={errors.id}
+        <div className="form-container">
+          {submitting && (
+            <div className="overlay">
+              <Spinner size={24} />
+              <span>Saving…</span>
+            </div>
+          )}
+
+          <div
+            className={`form-panel ${viewing ? 'form-panel--view' : ''}`}
+            style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}
+          >
+            <h3 style={{ marginTop: 0 }}>
+              {viewing ? 'View Attack Table' : (editingId ? 'Edit Attack Table' : 'New Attack Table')}
+            </h3>
+
+            {/* Basics */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
+              <LabeledInput
+                label="ID"
+                value={form.id}
+                onChange={makeIDOnChange<typeof form>('id', setForm, prefix)}  // string-based
+                disabled={!!editingId || viewing}
+                error={errors.id}
+              />
+              <LabeledInput
+                label="Name"
+                value={form.name}
+                onChange={(v) => setForm((s) => ({ ...s, name: v }))}         // string-based
+                disabled={viewing}
+                error={errors.name}
+              />
+              <LabeledInput
+                label="Max Row"
+                value={form.maxRow}
+                onChange={makeUnsignedIntOnChange<typeof form>('maxRow', setForm)} // string-based
+                disabled={viewing}
+                inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
+                error={viewing ? undefined : errors.maxRow}
+              />
+            </div>
+
+            {/* Modified Rows */}
+            <AttackTableEditor
+              sectionKey="modified"
+              title="Modified Rows"
+              rows={form.modified}
+              onChangeRows={(next) => setForm((s) => ({ ...s, modified: next }))}
+              viewing={viewing}
+              error={errors.modified}
+              minMaxWidth={72}
             />
-            <LabeledInput
-              label="Name"
-              value={form.name}
-              onChange={(v) => setForm((s) => ({ ...s, name: v }))}         // string-based
-              disabled={viewing}
-              error={errors.name}
+
+            {/* Unmodified Rows */}
+            <AttackTableEditor
+              sectionKey="unmodified"
+              title="Unmodified Rows (optional)"
+              rows={form.unmodified}
+              onChangeRows={(next) => setForm((s) => ({ ...s, unmodified: next }))}
+              viewing={viewing}
+              error={errors.unmodified}
+              minMaxWidth={72}
             />
-            <LabeledInput
-              label="Max Row"
-              value={form.maxRow}
-              onChange={makeUnsignedIntOnChange<typeof form>('maxRow', setForm)} // string-based
-              disabled={viewing}
-              inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
-              error={viewing ? undefined : errors.maxRow}
-            />
-          </div>
 
-          {/* Modified Rows */}
-          <AttackTableEditor
-            sectionKey="modified"
-            title="Modified Rows"
-            rows={form.modified}
-            onChangeRows={(next) => setForm((s) => ({ ...s, modified: next }))}
-            viewing={viewing}
-            error={errors.modified}
-            minMaxWidth={72}
-          />
-
-          {/* Unmodified Rows */}
-          <AttackTableEditor
-            sectionKey="unmodified"
-            title="Unmodified Rows (optional)"
-            rows={form.unmodified}
-            onChangeRows={(next) => setForm((s) => ({ ...s, unmodified: next }))}
-            viewing={viewing}
-            error={errors.unmodified}
-            minMaxWidth={72}
-          />
-
-          {/* Buttons */}
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
-            <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              {!viewing && <button onClick={saveForm} disabled={hasErrors || submitting}>{submitting ? 'Submitting…' : 'Save'}</button>}
+              <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
+            </div>
           </div>
         </div>
       )}
