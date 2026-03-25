@@ -36,6 +36,16 @@ type FormState = {
   includesGreaves: boolean;
 };
 
+type FormErrors = {
+  id?: string;
+  name?: string;
+  type?: string;
+  minManoeuvreMod?: string;
+  maxManoeuvreMod?: string;
+  missileAttackPenalty?: string;
+  quicknessPenalty?: string;
+};
+
 // Create an empty form state with default values
 function emptyVM(): FormState {
   return {
@@ -87,8 +97,8 @@ export default function ArmourTypeView() {
   const [rows, setRows] = useState<ArmourType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [errors, setErrors] = useState<{ id?: string; name?: string; type?: string; minManoeuvreMod?: string; maxManoeuvreMod?: string; missileAttackPenalty?: string; quicknessPenalty?: string; }>({});
-  const hasErrors = Boolean(errors.id || errors.name || errors.type || errors.minManoeuvreMod || errors.maxManoeuvreMod || errors.missileAttackPenalty || errors.quicknessPenalty);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const hasErrors = Object.values(errors).some(Boolean);
 
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -367,10 +377,23 @@ export default function ArmourTypeView() {
             <CheckboxInput label="Includes Greaves" checked={form.includesGreaves} onChange={(v) => setForm(s => ({ ...s, includesGreaves: v }))} disabled={viewing} />
           </div>
 
+          {/* Action buttons */}
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
             <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
           </div>
+
+          {/* Validation errors */}
+          {Object.values(errors).some(Boolean) && (
+            <div style={{ marginTop: 12, color: '#b00020' }}>
+              <h4 style={{ margin: '0 0 4px' }}>Please fix the following errors:</h4>
+              <ul style={{ margin: 0, paddingLeft: 20 }}>
+                {Object.entries(errors).map(([field, error]) =>
+                  error ? <li key={field}>{error}</li> : null
+                )}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 
