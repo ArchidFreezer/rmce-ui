@@ -9,6 +9,7 @@ import {
   CheckboxGroup,
   LabeledInput,
   LabeledSelect,
+  PillList,
   Spinner,
   useConfirm, useToast,
 } from '../../components';
@@ -171,18 +172,9 @@ export default function ClimateView() {
       minWidth: 140,
     },
     {
-      id: 'precipitations',
-      header: 'Precipitations',
+      id: 'precipitations', header: 'Precipitations', minWidth: 220,
       accessor: (r) => r.precipitations.join(', '),
-      sortType: 'string',
-      minWidth: 220,
-      render: (r) => (
-        <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-          {r.precipitations.length === 0
-            ? <span style={{ color: 'var(--muted)' }}>—</span>
-            : r.precipitations.map(pill)}
-        </div>
-      ),
+      render: r => (<PillList values={r.precipitations} />),
     },
     {
       id: 'actions',
