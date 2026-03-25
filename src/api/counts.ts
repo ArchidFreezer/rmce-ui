@@ -9,7 +9,7 @@ export async function fetchResourceCount(prefix: string, signal?: AbortSignal): 
   return n;
 }
 
-/** Batch: GET /rmce/objects/count?prefix=a,b,c -> { counts: [{ type: 'a', count: n }, ...] } */
+/** Batch: GET /rmce/objects/count?types=a,b,c -> { counts: [{ type: 'a', count: n }, ...] } */
 export async function fetchResourceCountsBatch(
   prefixes: string[],
   signal?: AbortSignal
@@ -17,7 +17,7 @@ export async function fetchResourceCountsBatch(
   const list = Array.from(new Set(prefixes)).filter(Boolean);
   if (list.length === 0) return new Map();
 
-  const url = `/rmce/objects/count?prefix=${encodeURIComponent(list.join(','))}`;
+  const url = `/rmce/objects/count?types=${encodeURIComponent(list.join(','))}`;
   const res = await fetch(url, {
     signal: signal ?? null,
     headers: { accept: 'application/json' } as const,
