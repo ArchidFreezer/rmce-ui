@@ -1669,12 +1669,20 @@ export default function TrainingPackagesView() {
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}
+          initialSort={{ colId: 'name', dir: 'asc' }} //
+          // search
           searchQuery={query}
           globalFilter={globalFilter}
+          // pagination (client)
+          mode="client"
           page={page}
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
+          // styles
+          tableMinWidth={0} // allow table to shrink below container width (for better mobile support)
+          persistKey="dt.trainingPackages.v1"
+          ariaLabel='Training Package data'
         />
       )}
     </>
