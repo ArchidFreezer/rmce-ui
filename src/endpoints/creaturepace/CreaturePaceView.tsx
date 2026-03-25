@@ -8,6 +8,7 @@ import {
   DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
   LabeledInput,
   LabeledSelect,
+  Spinner,
   useConfirm, useToast,
 } from '../../components';
 
@@ -37,6 +38,14 @@ type FormState = {
   manoeuvreDifficulty: ManoeuvreDifficulty;
 };
 
+type FormErrors = {
+  id?: string;
+  name?: string;
+  exhaustionMultiplier?: string;
+  movementMultiplier?: string;
+  manoeuvreDifficulty?: string;
+};
+
 function emptyVM(): FormState {
   return { id: prefix, name: '', exhaustionMultiplier: '', movementMultiplier: '', manoeuvreDifficulty: 'Normal' };
 }
@@ -63,17 +72,12 @@ function fromVM(vm: FormState): CreaturePace {
 
 export default function CreaturePaceView() {
   const dtRef = useRef<DataTableHandle>(null);
+
   const [rows, setRows] = useState<CreaturePace[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [errors, setErrors] = useState<{
-    id?: string | undefined;
-    name?: string | undefined;
-    exhaustionMultiplier?: string | undefined;
-    movementMultiplier?: string | undefined;
-    manoeuvreDifficulty?: string | undefined;
-  }>({});
-  const hasErrors = Boolean(errors.id || errors.name || errors.exhaustionMultiplier || errors.movementMultiplier || errors.manoeuvreDifficulty);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const hasErrors = Object.values(errors).some(Boolean);
 
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -83,49 +87,59 @@ export default function CreaturePaceView() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<FormState>(emptyVM());
 
   const toast = useToast();
   const confirm = useConfirm();
 
-  // ---- Load ----
+  /* ------------------------------------------------------------------ */
+  /* Load data                                                          */
+  /* ------------------------------------------------------------------ */
+
   useEffect(() => {
-    let mounted = true;
     (async () => {
       try {
-        const list = await fetchCreaturePaces();
-        if (!mounted) return;
-        setRows(list);
+        const [tp] = await Promise.all([
+          fetchCreaturePaces(),
+        ]);
+        setRows(tp);
       } catch (e) {
-        if (!mounted) return;
-        setError(e instanceof Error ? e.message : String(e));
+        setError(String(e));
       } finally {
-        if (mounted) setLoading(false);
+        setLoading(false);
       }
     })();
-    return () => { mounted = false; };
   }, []);
 
-  // ---- Validation ----
+  /* ------------------------------------------------------------------ */
+  /* Validation                                                         */
+  /* ------------------------------------------------------------------ */
   const isDifficulty = (s: string): s is ManoeuvreDifficulty => (MANOEUVRE_DIFFICULTIES as readonly string[]).includes(s);
-  const computeErrors = (draft: FormState) => {
-    const next: typeof errors = {};
+
+  const computeErrors = (draft: FormState): FormErrors => {
+    const next: FormErrors = {};
+
     // ID validation: non-empty, uppercase letters/numbers/underscores only, must start with "CREATUREPACE_", must be unique (create only)
     if (!draft.id.trim()) next.id = 'ID is required';
     else if (!editingId && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
     else if (!isValidID(draft.id, prefix)) next.id = `ID must start with "${prefix}" and contain additional characters`;
+
     // Name validation: non-empty, allow any chars (including spaces), but trim whitespace
     if (!draft.name.trim()) next.name = 'Name is required';
+
     // Exhaustion and movement multipliers: required, must be valid numbers (supporting scientific notation)
     const ex = draft.exhaustionMultiplier.trim();
     if (!ex) next.exhaustionMultiplier = 'Exhaustion multiplier is required';
     else if (!isValidScientific(ex)) next.exhaustionMultiplier = 'Must be a number (supports scientific notation)';
     else if (!Number.isFinite(Number(ex))) next.exhaustionMultiplier = 'Invalid number';
-    // Manoeuvre difficulty: required, must be one of the predefined difficulties
+
+    // Movement multiplier: required, must be valid number (supporting scientific notation)
     const mv = draft.movementMultiplier.trim();
     if (!mv) next.movementMultiplier = 'Movement multiplier is required';
     else if (!isValidScientific(mv)) next.movementMultiplier = 'Must be a number (supports scientific notation)';
     else if (!Number.isFinite(Number(mv))) next.movementMultiplier = 'Invalid number';
+
     // Manoeuvre difficulty: required, must be one of the predefined difficulties
     if (!draft.manoeuvreDifficulty.trim()) next.manoeuvreDifficulty = 'Manoeuvre difficulty is required';
     else if (!isDifficulty(draft.manoeuvreDifficulty)) next.manoeuvreDifficulty = 'Invalid manoeuvre difficulty';
@@ -133,124 +147,10 @@ export default function CreaturePaceView() {
     return next;
   };
 
-  useEffect(() => {
-    if (!showForm || viewing) return;
-    setErrors(computeErrors(form));
-  }, [form, showForm, viewing]); // keep current with form changes for live validation (but skip in view mode)
-
-  // ----- Handlers (Create / Edit / Delete) -----
-  const startNew = () => {
-    setViewing(false);
-    setEditingId(null);
-    setForm(emptyVM());
-    setErrors({});
-    setShowForm(true);
-  };
-
-  const startView = (row: CreaturePace) => {
-    setViewing(true);
-    setEditingId(row.id);
-    setForm(toVM(row));
-    setErrors({});
-    setShowForm(true);
-  };
-
-  const startEdit = (row: CreaturePace) => {
-    setViewing(false);
-    setEditingId(row.id);
-    setForm(toVM(row));
-    setErrors({});
-    setShowForm(true);
-  };
-
-  const startDuplicate = (row: CreaturePace) => {
-    setViewing(false);
-    setEditingId(null);
-    const vm = toVM(row);
-    vm.id = prefix; // Reset ID to force user to enter a new one, since it must be unique
-    vm.name += ' (Copy)';
-    setForm(vm);
-    setErrors({});
-    setShowForm(true);
-  };
-
-  const cancelForm = () => {
-    setShowForm(false);
-    setViewing(false);
-    setEditingId(null);
-    setErrors({});
-  };
-
-  const saveForm = async () => {
-    // Normalize payload (strings -> numbers for numeric fields)
-    const payload = fromVM(form);
-
-    const nextErrors = computeErrors(form);
-    setErrors(nextErrors);
-    if (hasErrors) return;
-
-    const isEditing = Boolean(editingId);
-    try {
-      const opts = isEditing
-        ? { method: 'PUT' as const, useResourceIdPath: true }
-        : { method: 'POST' as const, useResourceIdPath: false };
-
-      await upsertCreaturePace(payload, opts);
-
-      setRows((prev) => {
-        if (isEditing) {
-          const idx = prev.findIndex((r) => r.id === payload.id);
-          if (idx >= 0) {
-            const copy = [...prev];
-            copy[idx] = { ...copy[idx], ...payload };
-            return copy;
-          }
-          return [payload, ...prev];
-        }
-        return [payload, ...prev];
-      });
-
-      setShowForm(false);
-      setViewing(false);
-      setEditingId(null);
-      toast({
-        variant: 'success',
-        title: isEditing ? 'Updated' : 'Saved',
-        description: `Creature pace "${payload.id}" ${isEditing ? 'updated' : 'created'}.`,
-      });
-    } catch (err) {
-      toast({
-        variant: 'danger',
-        title: 'Save failed',
-        description: String(err instanceof Error ? err.message : err),
-      });
-    }
-  };
-
-  const onDelete = async (row: CreaturePace) => {
-    const ok = await confirm({
-      title: 'Delete Creature Pace',
-      body: `Delete creature pace "${row.id}"? This cannot be undone.`,
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
-      tone: 'danger',
-    });
-    if (!ok) return;
-
-    const prev = rows;
-    setRows(prev.filter((r) => r.id !== row.id));
-    try {
-      await deleteCreaturePace(row.id);
-      if (editingId === row.id || viewing) cancelForm();
-      toast({ variant: 'success', title: 'Deleted', description: `Creature pace "${row.id}" deleted.` });
-    } catch (err) {
-      setRows(prev);
-      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err) });
-    }
-  };
-
-  // ---- Table ----
-  const columns: ColumnDef<CreaturePace>[] = useMemo(() => [
+  /* ------------------------------------------------------------------ */
+  /* Table                                                              */
+  /* ------------------------------------------------------------------ */
+  const columns: ColumnDef<CreaturePace>[] = [
     { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 240 },
     { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 160 },
     {
@@ -280,17 +180,17 @@ export default function CreaturePaceView() {
       id: 'actions',
       header: 'Actions',
       sortable: false,
-      width: 300,
+      width: 360,
       render: (row) => (
         <>
-          <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
-          <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
-          <button onClick={() => startDuplicate(row)} style={{ marginRight: 6 }}>Duplicate</button>
+          <button onClick={() => startView(row)}>View</button>
+          <button onClick={() => startEdit(row)}>Edit</button>
+          <button onClick={() => startDuplicate(row)}>Duplicate</button>
           <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
         </>
       ),
     },
-  ], [rows]); // columns here don’t depend on external label maps
+  ];
 
   // ----- Search -----
   const globalFilter = (r: CreaturePace, q: string) => {
@@ -301,7 +201,143 @@ export default function CreaturePaceView() {
     ].some(v => String(v ?? '').toLowerCase().includes(s));
   };
 
-  // ----- Render -----
+  useEffect(() => {
+    if (!showForm || viewing) return;
+    setErrors(computeErrors(form));
+  }, [form, showForm, viewing]); // keep current with form changes for live validation (but skip in view mode)
+
+  /* ------------------------------------------------------------------ */
+  /* Actions                                                            */
+  /* ------------------------------------------------------------------ */
+  const startNew = () => {
+    setViewing(false);
+    setEditingId(null);
+    setForm(emptyVM());
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const startView = (row: CreaturePace) => {
+    setViewing(true);
+    setEditingId(row.id);
+    setForm(toVM(row));
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const startEdit = (row: CreaturePace) => {
+    setViewing(false);
+    setEditingId(row.id);
+    setForm(toVM(row));
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const startDuplicate = (row: CreaturePace) => {
+    setViewing(false);
+    setEditingId(null);
+    const vm = toVM(row);
+    vm.id = prefix;
+    vm.name += ' (Copy)';
+    setForm(vm);
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const cancelForm = () => {
+    setViewing(false);
+    setEditingId(null);
+    setErrors({});
+    setShowForm(false);
+  };
+
+  const saveForm = async () => {
+
+    if (submitting) return;
+
+    const nextErrors = computeErrors(form);
+    setErrors(nextErrors);
+    if (Object.values(nextErrors).some(Boolean)) {
+      return;
+    }
+
+    setSubmitting(true);
+
+    const payload = fromVM(form);
+    const isEditing = Boolean(editingId);
+
+    try {
+      const opts = isEditing
+        ? { method: 'PUT' as const, useResourceIdPath: true }
+        : { method: 'POST' as const, useResourceIdPath: false };
+
+      await upsertCreaturePace(payload, opts);
+
+      setRows((prev) => {
+        if (isEditing) {
+          const idx = prev.findIndex((r) => r.id === payload.id);
+          if (idx >= 0) {
+            const copy = [...prev];
+            copy[idx] = { ...copy[idx], ...payload };
+            return copy;
+          }
+          return [payload, ...prev];
+        }
+        return [payload, ...prev];
+      });
+
+      setShowForm(false);
+      setViewing(false);
+      setEditingId(null);
+
+      toast({
+        variant: 'success',
+        title: isEditing ? 'Updated' : 'Saved',
+        description: `Creature Pace "${payload.id}" ${isEditing ? 'updated' : 'created'}.`,
+      });
+    } catch (err) {
+      toast({
+        variant: 'danger',
+        title: 'Save failed',
+        description: String(err instanceof Error ? err.message : err),
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onDelete = async (row: CreaturePace) => {
+
+    if (submitting) return;
+    setSubmitting(true);
+
+    const ok = await confirm({
+      title: 'Delete Creature Pace',
+      body: `Delete "${row.id}"? This cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      tone: 'danger',
+    });
+    if (!ok) return;
+
+    const prev = rows;
+    setRows(prev.filter((r) => r.id !== row.id));
+
+    try {
+      await deleteCreaturePace(row.id);
+      if (editingId === row.id || viewing) cancelForm();
+      toast({ variant: 'success', title: 'Deleted', description: `Creature Pace "${row.id}" deleted.` });
+    } catch (err) {
+      setRows(prev);
+      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err), });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Render                                                             */
+  /* ------------------------------------------------------------------ */
   if (loading) return <div>Loading…</div>;
   if (error) return <div style={{ color: 'crimson' }}>Error: {error}</div>;
 
@@ -311,7 +347,7 @@ export default function CreaturePaceView() {
 
       {/* Toolbar shown only when table visible */}
       {!showForm && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <button onClick={startNew}>New Creature Pace</button>
           <DataTableSearchInput
             value={query}
@@ -319,6 +355,7 @@ export default function CreaturePaceView() {
             placeholder="Search creature paces…"
             aria-label="Search creature paces"
           />
+
           {/* Reset and auto-fit column widths */}
           <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
           <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
@@ -327,62 +364,74 @@ export default function CreaturePaceView() {
 
       {/* Form panel */}
       {showForm && (
-        <div
-          className={`form-panel ${viewing ? 'form-panel--view' : ''}`}
-          style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}
-        >
-          <h3 style={{ marginTop: 0 }}>
-            {viewing ? 'View Creature Pace' : (editingId ? 'Edit Creature Pace' : 'New Creature Pace')}
-          </h3>
+        <div className="form-container">
+          {/* Simple overlay while submitting */}
+          {submitting && (<div className="overlay"><Spinner size={24} /> <span>Saving…</span> </div>)}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput
-              label="ID"
-              value={form.id}
-              onChange={makeIDOnChange<typeof form>('id', setForm, prefix)}
-              disabled={!!editingId || viewing}
-              error={viewing ? undefined : errors.id}
-            />
-            <LabeledInput
-              label="Name"
-              value={form.name}
-              onChange={(v) => setForm(s => ({ ...s, name: v }))}
-              disabled={viewing}
-              error={viewing ? undefined : errors.name}
-            />
+          <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`}>
+            <h3>{viewing ? 'View' : editingId ? 'Edit' : 'New'} Creature Pace</h3>
 
-            <LabeledInput
-              label="Exhaustion Multiplier"
-              value={form.exhaustionMultiplier}
-              onChange={makeScientificOnChange<typeof form>('exhaustionMultiplier', setForm)}
-              disabled={viewing}
-              inputProps={{ inputMode: 'decimal', pattern: '^[+\\-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+\\-]?\\d+)?$' }}
-              error={viewing ? undefined : errors.exhaustionMultiplier}
-            />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <LabeledInput
+                label="ID"
+                value={form.id}
+                onChange={makeIDOnChange<typeof form>('id', setForm, prefix)}
+                disabled={!!editingId || viewing}
+                error={viewing ? undefined : errors.id}
+              />
+              <LabeledInput
+                label="Name"
+                value={form.name}
+                onChange={(v) => setForm(s => ({ ...s, name: v }))}
+                disabled={viewing}
+                error={viewing ? undefined : errors.name}
+              />
 
-            <LabeledInput
-              label="Movement Multiplier"
-              value={form.movementMultiplier}
-              onChange={makeScientificOnChange<typeof form>('movementMultiplier', setForm)}
-              disabled={viewing}
-              inputProps={{ inputMode: 'decimal', pattern: '^[+\\-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+\\-]?\\d+)?$' }}
-              error={viewing ? undefined : errors.movementMultiplier}
-            />
+              <LabeledInput
+                label="Exhaustion Multiplier"
+                value={form.exhaustionMultiplier}
+                onChange={makeScientificOnChange<typeof form>('exhaustionMultiplier', setForm)}
+                disabled={viewing}
+                // inputProps={{ inputMode: 'decimal', pattern: '^[+\\-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+\\-]?\\d+)?$' }}
+                error={viewing ? undefined : errors.exhaustionMultiplier}
+              />
 
-            <LabeledSelect
-              label="Manoeuvre Difficulty"
-              value={form.manoeuvreDifficulty}
-              onChange={(v) => setForm(s => ({ ...s, manoeuvreDifficulty: v as ManoeuvreDifficulty }))}
-              options={MANOEUVRE_DIFFICULTIES}
-              disabled={viewing}
-              error={viewing ? undefined : errors.manoeuvreDifficulty}
-            />
-          </div>
+              <LabeledInput
+                label="Movement Multiplier"
+                value={form.movementMultiplier}
+                onChange={makeScientificOnChange<typeof form>('movementMultiplier', setForm)}
+                disabled={viewing}
+                // inputProps={{ inputMode: 'decimal', pattern: '^[+\\-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+\\-]?\\d+)?$' }}
+                error={viewing ? undefined : errors.movementMultiplier}
+              />
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
-            <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
-          </div>
+              <LabeledSelect
+                label="Manoeuvre Difficulty"
+                value={form.manoeuvreDifficulty}
+                onChange={(v) => setForm(s => ({ ...s, manoeuvreDifficulty: v as ManoeuvreDifficulty }))}
+                options={MANOEUVRE_DIFFICULTIES}
+                disabled={viewing}
+                error={viewing ? undefined : errors.manoeuvreDifficulty}
+              />
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              {!viewing && <button onClick={saveForm} disabled={hasErrors || submitting}>{submitting ? 'Submitting…' : 'Save'}</button>}
+              <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
+            </div>
+
+            {/* Validation errors */}
+            {Object.values(errors).some(Boolean) && (
+              <div style={{ marginTop: 12, color: '#b00020' }}>
+                <h4 style={{ margin: '0 0 4px' }}>Please fix the following errors:</h4>
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  {Object.entries(errors).map(([field, error]) =>
+                    error ? <li key={field}>{error}</li> : null
+                  )}
+                </ul>
+              </div>
+            )}          </div>
         </div>
       )}
 
@@ -393,19 +442,18 @@ export default function CreaturePaceView() {
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}
-          initialSort={{ colId: 'movementMultiplier', dir: 'asc' }}
+          initialSort={{ colId: 'name', dir: 'asc' }} //
+          // search
           searchQuery={query}
           globalFilter={globalFilter}
+          // pagination (client)
           mode="client"
           page={page}
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
-          pageSizeOptions={[5, 10, 20, 50, 100]}
-          tableMinWidth={0}
-          zebra
-          hover
-          resizable
+          // styles
+          tableMinWidth={0} // allow table to shrink below container width (for better mobile support)
           persistKey="dt.creaturepace.v1"
           ariaLabel="Creature paces"
         />
