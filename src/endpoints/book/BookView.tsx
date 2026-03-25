@@ -7,6 +7,7 @@ import {
 import {
   DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
   LabeledInput,
+  Spinner,
   useConfirm, useToast,
 } from '../../components';
 
@@ -26,13 +27,60 @@ function emptyBook(): Book {
   return { id: prefix, code: 1234, name: '', abbreviation: '', isbn: '' };
 }
 
+/* ------------------------------------------------------------------ */
+/* VM types                                                           */
+/* ------------------------------------------------------------------ */
+type FormState = {
+  id: string;
+  name: string;
+  code: number | '';
+  abbreviation: string;
+  isbn: string;
+}
+
+type FormErrors = {
+  id?: string;
+  name?: string;
+  code?: string;
+  abbreviation?: string;
+  isbn?: string;
+};
+
+const emptyVM = (): FormState => ({
+  id: prefix,
+  name: '',
+  code: '',
+  abbreviation: '',
+  isbn: '',
+});
+
+const toVM = (b: Book): FormState => ({
+  id: b.id,
+  name: b.name,
+  code: b.code,
+  abbreviation: b.abbreviation,
+  isbn: b.isbn,
+});
+
+const fromVM = (vm: FormState): Book => ({
+  id: String(vm.id).trim(),
+  name: String(vm.name).trim(),
+  code: Number(vm.code),
+  abbreviation: String(vm.abbreviation).trim(),
+  isbn: String(vm.isbn).trim(),
+});
+
+/* ------------------------------------------------------------------ */
+/* View                                                               */
+/* ------------------------------------------------------------------ */
 export default function BookView() {
   const dtRef = useRef<DataTableHandle>(null);
+
   const [rows, setRows] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [errors, setErrors] = useState<{ id?: string; name?: string; type?: string; code?: string; abbreviation?: string; isbn?: string; }>({});
-  const hasErrors = Boolean(errors.id || errors.name || errors.type || errors.code || errors.abbreviation || errors.isbn);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const hasErrors = Object.values(errors).some(Boolean);
 
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -42,68 +90,118 @@ export default function BookView() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
-  const [form, setForm] = useState<Book>(emptyBook());   // <- form is typed as Book
+  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState<FormState>(emptyVM());
+
   const toast = useToast();
   const confirm = useConfirm();
 
   // ----- Load -----
   useEffect(() => {
-    let mounted = true;
     (async () => {
       try {
-        const books = await fetchBooks();
-        if (!mounted) return;
-        setRows(books);
+        const [b] = await Promise.all([
+          fetchBooks(),
+        ]);
+        setRows(b);
       } catch (err) {
-        if (!mounted) return;
         setError(err instanceof Error ? err.message : String(err));
       } finally {
-        if (mounted) setLoading(false);
+        setLoading(false);
       }
     })();
-    return () => { mounted = false; };
   }, []);
 
-  // ----- Inline validation helpers -----
-  const computeErrors = (draft: Book) => {
-    const next: { id?: string; name?: string; type?: string; code?: string; abbreviation?: string; isbn?: string; } = {};
+  /* ------------------------------------------------------------------ */
+  /* Validation                                                         */
+  /* ------------------------------------------------------------------ */
+  const computeErrors = (draft: FormState): FormErrors => {
+    const e: FormErrors = {};
+
     // ID (only on create, must be unique and start with prefix in ucase and contain additional characters)
-    if (!draft.id.trim()) next.id = 'ID is required';
-    else if (!editingId && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
-    else if (!isValidID(draft.id.trim(), prefix)) next.id = `ID must start with "${prefix}" and contain only uppercase letters, numbers and underscores`;
+    if (!draft.id.trim()) e.id = 'ID is required';
+    else if (!editingId && rows.some(r => r.id === draft.id.trim())) e.id = `ID "${draft.id.trim()}" already exists`;
+    else if (!isValidID(draft.id.trim(), prefix)) e.id = `ID must start with "${prefix}" and contain only uppercase letters, numbers and underscores`;
+
     // Name
-    if (!draft.name.trim()) next.name = 'Name is required';
+    if (!draft.name.trim()) e.name = 'Name is required';
+
     // Code
     const code = (draft.code);
-    if (!code) next.code = 'Code is required';
-    else if (!isValidUnsignedInt(String(code))) next.code = 'Code must be a positive integer';
-    // Abbreviation
-    if (!draft.abbreviation.trim()) next.abbreviation = 'Abbreviation is required';
-    // ISBN
-    if (!draft.isbn.trim()) next.isbn = 'ISBN is required';
-    else if (!isValidISBN(draft.isbn.trim())) next.isbn = 'ISBN must be a valid ISBN-10 or ISBN-13';
+    if (!code) e.code = 'Code is required';
+    else if (!isValidUnsignedInt(String(code))) e.code = 'Code must be a positive integer';
 
-    return next;
+    // Abbreviation
+    if (!draft.abbreviation.trim()) e.abbreviation = 'Abbreviation is required';
+
+    // ISBN
+    if (!draft.isbn.trim()) e.isbn = 'ISBN is required';
+    else if (!isValidISBN(draft.isbn.trim())) e.isbn = 'ISBN must be a valid ISBN-10 or ISBN-13';
+
+    return e;
   };
 
   useEffect(() => {
     if (!showForm || viewing) return;
     setErrors(computeErrors(form));
-  }, [form, showForm, viewing]); // keep current to avoid stale closure
+  }, [form, showForm, viewing]);
 
-  // ----- Handlers (Create / Edit / Delete) -----
+  /* ------------------------------------------------------------------ */
+  /* Table                                                              */
+  /* ------------------------------------------------------------------ */
+  const columns: ColumnDef<Book>[] = [
+    { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
+    { id: 'code', header: 'Code', accessor: (r) => r.code, sortType: 'number', align: 'right' },
+    { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
+    { id: 'abbreviation', header: 'Abbreviation', accessor: (r) => r.abbreviation, sortType: 'string' },
+    { id: 'isbn', header: 'ISBN', accessor: (r) => r.isbn, sortType: 'string' },
+    {
+      id: 'actions',
+      header: 'Actions',
+      sortable: false,
+      width: 360,
+      render: (row) => (
+        <>
+          <button onClick={() => startView(row)}>View</button>
+          <button onClick={() => startEdit(row)}>Edit</button>
+          <button onClick={() => startDuplicate(row)}>Duplicate</button>
+          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>
+            Delete
+          </button>
+        </>
+      ),
+    },
+  ];
+
+  // ----- Search -----
+  const globalFilter = (b: Book, q: string) => {
+    return [b.id, b.code, b.name, b.abbreviation, b.isbn]
+      .some(v => String(v ?? '').toLowerCase().includes(q.toLowerCase()));
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Actions                                                            */
+  /* ------------------------------------------------------------------ */
   const startNew = () => {
     setViewing(false);
     setEditingId(null);
-    setForm(emptyBook());
+    setForm(emptyVM());
     setErrors({});
     setShowForm(true);
   };
 
+  const startView = (row: Book) => {
+    setViewing(true);
+    setEditingId(row.id);
+    setForm(toVM(row));
+    setErrors({});
+    setShowForm(true);
+  }
+
   const startEdit = (row: Book) => {
     setViewing(false);
     setEditingId(row.id);
-    setForm({ ...row });
+    setForm(toVM(row));
     setErrors({});
     setShowForm(true);
   };
@@ -111,48 +209,37 @@ export default function BookView() {
   const startDuplicate = (row: Book) => {
     setViewing(false);
     setEditingId(null);
-
-    const next = { ...row };
-    next.id = prefix; // Reset ID to force user to enter a new one, since it must be unique
-    next.name += ' (Copy)';
-    next.isbn = ''; // Clear ISBN to force user to enter a new one, since it must be unique
-
-    setForm(next);
+    const vm = toVM(row);
+    vm.id = prefix;
+    vm.name += ' (Copy)';
+    vm.isbn = ''; // ISBN should be unique, so we clear it for the user to fill in
+    setForm(vm);
     setErrors({});
     setShowForm(true);
   };
-
-  const startView = (row: Book) => {
-    setViewing(true);
-    setEditingId(row.id);       // we can reuse editingId to preload the item, but we won't allow saving
-    setForm({ ...row });
-    setErrors({});              // no need to compute field errors for read-only view, but we can keep formErr for any potential top-level messages
-    setShowForm(true);
-  }
 
   const cancelForm = () => {
     setViewing(false);
-    setShowForm(false);
     setEditingId(null);
     setErrors({});
+    setShowForm(false);
   };
 
   const saveForm = async () => {
-    const payload: Book = {
-      id: String(form.id).trim(),
-      code: Number(form.code),
-      name: String(form.name).trim(),
-      abbreviation: String(form.abbreviation).trim(),
-      isbn: String(form.isbn).trim(),
-    };
+    if (submitting) return;
 
     const nextErrors = computeErrors(form);
     setErrors(nextErrors);
-    if (hasErrors) return;
+    if (Object.values(nextErrors).some(Boolean)) {
+      return;
+    }
 
+    setSubmitting(true);
+
+    const payload = fromVM(form);
     const isEditing = Boolean(editingId);
+
     try {
-      // default POST to /rmce/objects/book/ with a single JSON object
       const opts = isEditing
         ? { method: 'PUT' as const, useResourceIdPath: true }
         : { method: 'POST' as const, useResourceIdPath: false };
@@ -161,23 +248,21 @@ export default function BookView() {
 
       setRows((prev) => {
         if (isEditing) {
-          // replace existing row
           const idx = prev.findIndex((r) => r.id === payload.id);
           if (idx >= 0) {
             const copy = [...prev];
             copy[idx] = { ...copy[idx], ...payload };
             return copy;
           }
-          // fallback: if not found (rare), prepend
           return [payload, ...prev];
         }
-        // create → prepend
         return [payload, ...prev];
       });
 
-
       setShowForm(false);
+      setViewing(false);
       setEditingId(null);
+
       toast({
         variant: 'success',
         title: isEditing ? 'Updated' : 'Saved',
@@ -189,15 +274,19 @@ export default function BookView() {
         title: 'Save failed',
         description: String(err instanceof Error ? err.message : err),
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const onDelete = async (row: Book) => {
-    const id = row?.id;
-    if (!id) return;
+
+    if (submitting) return;
+    setSubmitting(true);
+
     const ok = await confirm({
       title: 'Delete Book',
-      body: `Delete book "${id}"? This cannot be undone.`,
+      body: `Delete book "${row.id}"? This cannot be undone.`,
       confirmText: 'Delete',
       cancelText: 'Cancel',
       tone: 'danger',
@@ -205,55 +294,25 @@ export default function BookView() {
     if (!ok) return;
 
     const prev = rows;
-    setRows(prev.filter(a => a.id !== id));
+    setRows(prev.filter((r) => r.id !== row.id));
+
     try {
-      await deleteBook(id);
+      await deleteBook(row.id);
       // if currently editing this item, close the form
       if (editingId === row.id) cancelForm();
-      toast({ variant: 'success', title: 'Deleted', description: `Book "${id}" deleted.` });
+      toast({ variant: 'success', title: 'Deleted', description: `Book "${row.id}" deleted.` });
     } catch (err) {
       setRows(prev);
       toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err) });
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  // Columns
-  const columns: ColumnDef<Book>[] = useMemo(() => {
-    return [
-      { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
-      { id: 'code', header: 'Code', accessor: (r) => r.code, sortType: 'number', align: 'right' },
-      { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
-      { id: 'abbreviation', header: 'Abbreviation', accessor: (r) => r.abbreviation, sortType: 'string' },
-      { id: 'isbn', header: 'ISBN', accessor: (r) => r.isbn, sortType: 'string' },
+  /* ------------------------------------------------------------------ */
+  /* Render                                                             */
+  /* ------------------------------------------------------------------ */
 
-
-      {
-        id: 'actions',
-        header: 'Actions',
-        sortable: false,
-        width: 160,
-        render: (row) => (
-          <>
-            <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
-            <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
-            <button onClick={() => startDuplicate(row)} style={{ marginRight: 6 }}>Duplicate</button>
-            <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
-          </>
-        ),
-      },
-    ];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows]); // allows closing form on self-delete
-
-  // ----- Search -----
-  const globalFilter = (b: Book, q: string) => {
-    const s = q.toLowerCase();
-    return [b.id, b.code, b.name, b.abbreviation, b.isbn]
-      .some(v => String(v ?? '').toLowerCase().includes(s));
-  };
-
-
-  // ----- Render -----
   if (loading) return <div>Loading…</div>;
   if (error) return <div style={{ color: 'crimson' }}>Error: {error}</div>;
 
@@ -277,34 +336,52 @@ export default function BookView() {
         </div>
       )}
 
-
       {/* Form panel (Create & Edit) */}
       {showForm && (
-        <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}>
-          <h3 style={{ marginTop: 0 }}>{viewing ? 'View Book' : (editingId ? 'Edit Book' : 'New Book')}</h3>
+        <div className="form-container">
+          {/* Simple overlay while submitting */}
+          {submitting && (<div className="overlay"><Spinner size={24} /> <span>Saving…</span> </div>)}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />
+          <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`}>
+            <h3 style={{ marginTop: 0 }}>{viewing ? 'View Book' : (editingId ? 'Edit Book' : 'New Book')}</h3>
 
-            <LabeledInput label="Code" value={String(form.code).trim()} disabled={viewing}
-              onChange={makeUnsignedIntOnChange<typeof form>('code', setForm)}
-              inputProps={{ inputMode: 'numeric', pattern: '\\d*', }} // mobile numeric keypad
-              error={errors.code} />
-            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm((s) => ({ ...s, name: v }))} error={errors.name} disabled={viewing} />
-            <LabeledInput label="Abbreviation" value={form.abbreviation} onChange={(v) => setForm((s) => ({ ...s, abbreviation: v }))} error={errors.abbreviation} disabled={viewing} />
-            <LabeledInput label="ISBN" value={form.isbn} onChange={(v) => setForm((s) => ({ ...s, isbn: v }))} error={errors.isbn} disabled={viewing} />
-          </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
-            <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
+              <LabeledInput label="Code" value={String(form.code).trim()} disabled={viewing}
+                onChange={makeUnsignedIntOnChange<typeof form>('code', setForm)}
+                inputProps={{ inputMode: 'numeric', pattern: '\\d*', }} // mobile numeric keypad
+                error={errors.code} />
+              <LabeledInput label="Name" value={form.name} onChange={(v) => setForm((s) => ({ ...s, name: v }))} error={errors.name} disabled={viewing} />
+              <LabeledInput label="Abbreviation" value={form.abbreviation} onChange={(v) => setForm((s) => ({ ...s, abbreviation: v }))} error={errors.abbreviation} disabled={viewing} />
+              <LabeledInput label="ISBN" value={form.isbn} onChange={(v) => setForm((s) => ({ ...s, isbn: v }))} error={errors.isbn} disabled={viewing} />
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              {!viewing && <button onClick={saveForm} disabled={hasErrors || submitting}>{submitting ? 'Submitting…' : 'Save'}</button>}
+              <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
+            </div>
+
+            {/* Validation errors */}
+            {Object.values(errors).some(Boolean) && (
+              <div style={{ marginTop: 12, color: '#b00020' }}>
+                <h4 style={{ margin: '0 0 4px' }}>Please fix the following errors:</h4>
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  {Object.entries(errors).map(([field, error]) =>
+                    error ? <li key={field}>{error}</li> : null
+                  )}
+                </ul>
+              </div>
+            )}
+
           </div>
         </div>
       )}
 
       {/* Shared DataTable */}
       {!showForm && (
-        <DataTable<Book>
+        <DataTable
           ref={dtRef}
           rows={rows}
           columns={columns}
