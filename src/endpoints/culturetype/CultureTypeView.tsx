@@ -16,7 +16,9 @@ import {
   IdValueListEditor,
   LabeledInput,
   MarkupPreview,
+  PillList,
   SkillValueListEditor,
+  Spinner,
   useConfirm, useToast,
 } from '../../components';
 
@@ -39,11 +41,14 @@ import {
 
 import {
   isValidID, makeIDOnChange,
+  isValidUnsignedInt, makeUnsignedIntOnChange,
 } from '../../utils';
 
 const prefix = 'CULTURETYPE_';
 
-// ---------- Form VM (strings for numbers while typing) ----------
+/* ------------------------------------------------------------------ */
+/* VM types                                                           */
+/* ------------------------------------------------------------------ */
 type SkillRankVM = { id: string; subcategory?: string | undefined; value: string };
 type CategoryRankVM = { id: string; value: string };
 
@@ -74,6 +79,25 @@ type FormState = {
   requiredTerrains: string[];
   requiredVegetations: string[];
   requiredWaterSources: string[];
+};
+
+type FormErrors = {
+  id?: string | undefined;
+  name?: string | undefined;
+  hobbySkillRanks?: string | undefined;
+
+  preferredArmours?: string | undefined;
+  preferredWeapons?: string | undefined;
+
+  skillRanks?: string | undefined;
+  skillCategoryRanks?: string | undefined;
+  skillCategorySkillRanks?: string | undefined;
+
+  requiredClimates?: string | undefined;
+  requiredFeatures?: string | undefined;
+  requiredTerrains?: string | undefined;
+  requiredVegetations?: string | undefined;
+  requiredWaterSources?: string | undefined;
 };
 
 const emptyVM = (): FormState => ({
@@ -168,9 +192,6 @@ const fromVM = (vm: FormState): CultureType => ({
   requiredWaterSources: vm.requiredWaterSources.length ? asWaterBodyArray(vm.requiredWaterSources) : undefined,
 });
 
-// helpers
-const INT_RE = /^\d+$/;
-const sanitizeInt = (s: string) => s.replace(/[^\d]/g, '');
 
 export default function CultureTypeView() {
   const dtRef = useRef<DataTableHandle>(null);
@@ -178,6 +199,8 @@ export default function CultureTypeView() {
   const [rows, setRows] = useState<CultureType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const hasErrors = Object.values(errors).some(Boolean);
 
   // reference lists
   const [armours, setArmours] = useState<ArmourType[]>([]);
@@ -187,13 +210,6 @@ export default function CultureTypeView() {
   const [categories, setCategories] = useState<SkillCategory[]>([]);
   const [climates, setClimates] = useState<Climate[]>([]);
 
-  const [armourLoading, setArmourLoading] = useState(true);
-  const [weaponLoading, setWeaponLoading] = useState(true);
-  const [skillLoading, setSkillLoading] = useState(true);
-  const [sgLoading, setSgLoading] = useState(true);
-  const [categoryLoading, setCategoryLoading] = useState(true);
-  const [climateLoading, setClimateLoading] = useState(true);
-
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -201,111 +217,64 @@ export default function CultureTypeView() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<FormState>(emptyVM());
-
-  const [errors, setErrors] = useState<{
-    id?: string | undefined;
-    name?: string | undefined;
-    hobbySkillRanks?: string | undefined;
-
-    preferredArmours?: string | undefined;
-    preferredWeapons?: string | undefined;
-
-    skillRanks?: string | undefined;
-    skillCategoryRanks?: string | undefined;
-    skillCategorySkillRanks?: string | undefined;
-
-    requiredClimates?: string | undefined;
-    requiredFeatures?: string | undefined;
-    requiredTerrains?: string | undefined;
-    requiredVegetations?: string | undefined;
-    requiredWaterSources?: string | undefined;
-  }>({});
+  const [preview, setPreview] = useState<Record<string, boolean>>({});
 
   const toast = useToast();
   const confirm = useConfirm();
 
-  const [preview, setPreview] = useState<Record<string, boolean>>({});
+  /* ------------------------------------------------------------------ */
+  /* Load data                                                          */
+  /* ------------------------------------------------------------------ */
 
-  // Load list
   useEffect(() => {
-    let mounted = true;
     (async () => {
       try {
-        const list = await fetchCulturetypes();
-        if (!mounted) return;
-        setRows(list);
+        const [tp, at, wt, s, c, g, cl] = await Promise.all([
+          fetchCulturetypes(),
+          fetchArmourTypes(),
+          fetchWeaponTypes(),
+          fetchSkills(),
+          fetchSkillcategories(),
+          fetchSkillgroups(),
+          fetchClimates(),
+        ]);
+        setRows(tp);
+        setArmours(at);
+        setWeapons(wt);
+        setSkills(s);
+        setCategories(c);
+        setSkillgroups(g);
+        setClimates(cl);
       } catch (e) {
-        if (!mounted) return;
-        setError(e instanceof Error ? e.message : String(e));
+        setError(String(e));
       } finally {
-        if (mounted) setLoading(false);
+        setLoading(false);
       }
     })();
-    return () => { mounted = false; };
   }, []);
 
-  // Load references
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try { const list = await fetchArmourTypes(); if (mounted) setArmours(list); }
-      finally { if (mounted) setArmourLoading(false); }
-    })();
-    return () => { mounted = false; };
-  }, []);
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try { const list = await fetchWeaponTypes(); if (mounted) setWeapons(list); }
-      finally { if (mounted) setWeaponLoading(false); }
-    })();
-    return () => { mounted = false; };
-  }, []);
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try { const list = await fetchSkills(); if (mounted) setSkills(list); }
-      finally { if (mounted) setSkillLoading(false); }
-    })();
-    return () => { mounted = false; };
-  }, []);
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try { const list = await fetchSkillcategories(); if (mounted) setCategories(list); }
-      finally { if (mounted) setCategoryLoading(false); }
-    })();
-    return () => { mounted = false; };
-  }, []);
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try { const list = await fetchClimates(); if (mounted) setClimates(list); }
-      finally { if (mounted) setClimateLoading(false); }
-    })();
-    return () => { mounted = false; };
-  }, []);
-  // Load groups
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const list = await fetchSkillgroups();
-        if (!mounted) return;
-        setSkillgroups(list);
-      } catch { }
-      finally { if (mounted) setSgLoading(false); }
-    })();
-    return () => { mounted = false; };
-  }, []);
-
-  // Option lists
+  /* ------------------------------------------------------------------ */
+  /* Options                                                            */
+  /* ------------------------------------------------------------------ */
   const sgNameById = useMemo(() => {
     const m = new Map<string, string>();
     for (const sg of skillgroups) m.set(sg.id, sg.name);
     return m;
   }, [skillgroups]);
+
+  const atNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const at of armours) m.set(at.id, at.name);
+    return m;
+  }, [armours]);
+
+  const wtNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const wt of weapons) m.set(wt.id, wt.name);
+    return m;
+  }, [weapons]);
 
   const armourOptions = useMemo(
     () => armours.map(a => ({ value: a.id, label: `${a.name} - (${a.type})` })),
@@ -344,53 +313,147 @@ export default function CultureTypeView() {
     []
   );
 
-  // Validation
-  const computeErrors = (draft = form) => {
+  /* ------------------------------------------------------------------ */
+  /* Validation                                                         */
+  /* ------------------------------------------------------------------ */
+  const computeErrors = (draft: FormState): FormErrors => {
     const e: typeof errors = {};
 
+    /* -------------------------------------------------- */
+    /* Basic fields                                       */
+    /* -------------------------------------------------- */
     const id = draft.id.trim();
-    const nm = draft.name.trim();
     if (!id) e.id = 'ID is required';
     else if (!editingId && rows.some(r => r.id === id)) e.id = `ID "${id}" already exists`;
     else if (!isValidID(id, prefix)) e.id = `ID must start with "${prefix}" and contain additional characters`;
 
+    const nm = draft.name.trim();
     if (!nm) e.name = 'Name is required';
 
     const h = draft.hobbySkillRanks.trim();
     if (!h) e.hobbySkillRanks = 'Hobby skill ranks is required';
-    else if (!INT_RE.test(h)) e.hobbySkillRanks = 'Must be a non-negative integer';
+    else if (!isValidUnsignedInt(h)) e.hobbySkillRanks = 'Must be a non-negative integer';
 
-    // skill ranks: id present, value int
+    /* -------------------------------------------------- */
+    /* Preferred weapons/armours                          */
+    /* -------------------------------------------------- */
+    for (let i = 0; i < draft.preferredArmours.length; i++) {
+      const at = draft.preferredArmours[i]?.trim();
+      if (!at) { e.preferredArmours = `Preferred Armours[${i + 1}]: armour id required`; break; };
+    }
+
+    for (let i = 0; i < draft.preferredWeapons.length; i++) {
+      const wt = draft.preferredWeapons[i]?.trim();
+      if (!wt) { e.preferredWeapons = `Preferred Weapons[${i + 1}]: weapon id required`; break; };
+    }
+
+    /* -------------------------------------------------- */
+    /* Skill ranks                                        */
+    /* -------------------------------------------------- */
     for (let i = 0; i < draft.skillRanks.length; i++) {
       const r = draft.skillRanks[i];
       if (!r) continue;
       if (!r.id) { e.skillRanks = `SkillRanks[${i + 1}]: skill id required`; break; }
-      if (!INT_RE.test((r.value ?? '').trim())) { e.skillRanks = `SkillRanks[${i + 1}]: value must be integer`; break; }
+      if (!isValidUnsignedInt((r.value ?? '').trim())) { e.skillRanks = `SkillRanks[${i + 1}]: value must be integer`; break; }
     }
+
     for (let i = 0; i < draft.skillCategoryRanks.length; i++) {
       const r = draft.skillCategoryRanks[i];
       if (!r) continue;
       if (!r.id) { e.skillCategoryRanks = `CategoryRanks[${i + 1}]: category id required`; break; }
-      if (!INT_RE.test((r.value ?? '').trim())) { e.skillCategoryRanks = `CategoryRanks[${i + 1}]: value must be integer`; break; }
+      if (!isValidUnsignedInt((r.value ?? '').trim())) { e.skillCategoryRanks = `CategoryRanks[${i + 1}]: value must be integer`; break; }
     }
+
     for (let i = 0; i < draft.skillCategorySkillRanks.length; i++) {
       const r = draft.skillCategorySkillRanks[i];
       if (!r) continue;
       if (!r.id) { e.skillCategorySkillRanks = `CategorySkillRanks[${i + 1}]: category id required`; break; }
-      if (!INT_RE.test((r.value ?? '').trim())) { e.skillCategorySkillRanks = `CategorySkillRanks[${i + 1}]: value must be integer`; break; }
+      if (!isValidUnsignedInt((r.value ?? '').trim())) { e.skillCategorySkillRanks = `CategorySkillRanks[${i + 1}]: value must be integer`; break; }
+    }
+
+    /* ----------------------------------------------------- */
+    /* Climates/Features/Terrains/Vegetations/Water Sources  */
+    /* ----------------------------------------------------- */
+    for (let i = 0; i < draft.requiredClimates.length; i++) {
+      const c = draft.requiredClimates[i]?.trim();
+      if (!c) { e.requiredClimates = `Required Climates[${i + 1}]: climate id required`; break; };
+    }
+
+    for (let i = 0; i < draft.requiredFeatures.length; i++) {
+      const f = draft.requiredFeatures[i]?.trim();
+      if (!f) { e.requiredFeatures = `Required Features[${i + 1}]: feature id required`; break; };
+    }
+
+    for (let i = 0; i < draft.requiredTerrains.length; i++) {
+      const t = draft.requiredTerrains[i]?.trim();
+      if (!t) { e.requiredTerrains = `Required Terrains[${i + 1}]: terrain id required`; break; };
+    }
+
+    for (let i = 0; i < draft.requiredVegetations.length; i++) {
+      const v = draft.requiredVegetations[i]?.trim();
+      if (!v) { e.requiredVegetations = `Required Vegetations[${i + 1}]: vegetation id required`; break; };
+    }
+
+    for (let i = 0; i < draft.requiredWaterSources.length; i++) {
+      const w = draft.requiredWaterSources[i]?.trim();
+      if (!w) { e.requiredWaterSources = `Required Water Sources[${i + 1}]: water source id required`; break; };
     }
 
     return e;
   };
 
-  const hasErrors = Boolean(Object.values(errors).some(Boolean));
-
   useEffect(() => {
     if (!showForm || viewing) return;
-    setErrors(computeErrors());
-  }, [form, showForm, viewing, rows]);
+    setErrors(computeErrors(form));
+  }, [form, showForm, viewing]);
 
-  // Actions
+  /* ------------------------------------------------------------------ */
+  /* Table                                                              */
+  /* ------------------------------------------------------------------ */
+  const columns: ColumnDef<CultureType>[] = [
+    { id: 'id', header: 'ID', accessor: r => r.id, minWidth: 260 },
+    { id: 'name', header: 'Name', accessor: r => r.name, minWidth: 200 },
+    { id: 'hobby', header: 'Hobby Ranks', accessor: r => r.hobbySkillRanks, minWidth: 120 },
+    {
+      id: 'weapons',
+      header: 'Preferred Weapons',
+      minWidth: 180,
+      accessor: r => r.preferredWeapons.map(id => wtNameById.get(id) ?? id).join(', '),
+      render: r => (<PillList values={r.preferredWeapons} getLabel={id => wtNameById.get(id) ?? id} />),
+    },
+    {
+      id: 'armours', header: 'Preferred Armours', minWidth: 180,
+      accessor: r => r.preferredArmours.map(id => atNameById.get(id) ?? id).join(', '),
+      render: r => (<PillList values={r.preferredArmours} getLabel={id => atNameById.get(id) ?? id} />),
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      sortable: false,
+      width: 360,
+      render: (row) => (
+        <>
+          <button onClick={() => startView(row)}>View</button>
+          <button onClick={() => startEdit(row)}>Edit</button>
+          <button onClick={() => startDuplicate(row)}>Duplicate</button>
+          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
+        </>
+      ),
+    },
+  ];
+
+  const globalFilter = (r: CultureType, q: string) => {
+    const s = q.toLowerCase();
+    return [
+      r.id, r.name, r.hobbySkillRanks,
+      (r.description ?? ''), (r.characterConcepts ?? ''), (r.clothing ?? ''),
+    ].some(v => String(v ?? '').toLowerCase().includes(s));
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Actions                                                            */
+  /* ------------------------------------------------------------------ */
+
   const startNew = () => {
     setViewing(false);
     setEditingId(null);
@@ -398,6 +461,7 @@ export default function CultureTypeView() {
     setErrors({});
     setShowForm(true);
   };
+
   const startView = (row: CultureType) => {
     setViewing(true);
     setEditingId(row.id);
@@ -405,6 +469,7 @@ export default function CultureTypeView() {
     setErrors({});
     setShowForm(true);
   };
+
   const startEdit = (row: CultureType) => {
     setViewing(false);
     setEditingId(row.id);
@@ -412,39 +477,50 @@ export default function CultureTypeView() {
     setErrors({});
     setShowForm(true);
   };
+
   const startDuplicate = (row: CultureType) => {
     setViewing(false);
     setEditingId(null);
     const vm = toVM(row);
     vm.id = prefix;
-    vm.name = vm.name ? `${vm.name} (Copy)` : vm.name;
+    vm.name += ' (Copy)';
     setForm(vm);
     setErrors({});
     setShowForm(true);
   };
+
   const cancelForm = () => {
-    setShowForm(false);
     setViewing(false);
     setEditingId(null);
     setErrors({});
+    setShowForm(false);
   };
 
   const saveForm = async () => {
+
+    if (submitting) return;
+
     const nextErrors = computeErrors(form);
     setErrors(nextErrors);
-    if (Object.values(nextErrors).some(Boolean)) return;
+    if (Object.values(nextErrors).some(Boolean)) {
+      return;
+    }
+
+    setSubmitting(true);
 
     const payload = fromVM(form);
     const isEditing = Boolean(editingId);
+
     try {
       const opts = isEditing
         ? { method: 'PUT' as const, useResourceIdPath: true }
         : { method: 'POST' as const, useResourceIdPath: false };
+
       await upsertCulturetype(payload, opts);
 
-      setRows(prev => {
+      setRows((prev) => {
         if (isEditing) {
-          const idx = prev.findIndex(r => r.id === payload.id);
+          const idx = prev.findIndex((r) => r.id === payload.id);
           if (idx >= 0) {
             const copy = [...prev];
             copy[idx] = { ...copy[idx], ...payload };
@@ -458,10 +534,11 @@ export default function CultureTypeView() {
       setShowForm(false);
       setViewing(false);
       setEditingId(null);
+
       toast({
         variant: 'success',
         title: isEditing ? 'Updated' : 'Saved',
-        description: `Culture type "${payload.id}" ${isEditing ? 'updated' : 'created'}.`,
+        description: `Culture Type "${payload.id}" ${isEditing ? 'updated' : 'created'}.`,
       });
     } catch (err) {
       toast({
@@ -469,10 +546,16 @@ export default function CultureTypeView() {
         title: 'Save failed',
         description: String(err instanceof Error ? err.message : err),
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const onDelete = async (row: CultureType) => {
+
+    if (submitting) return;
+    setSubmitting(true);
+
     const ok = await confirm({
       title: 'Delete Culture Type',
       body: `Delete "${row.id}"? This cannot be undone.`,
@@ -483,66 +566,25 @@ export default function CultureTypeView() {
     if (!ok) return;
 
     const prev = rows;
-    setRows(prev.filter(r => r.id !== row.id));
+    setRows(prev.filter((r) => r.id !== row.id));
+
     try {
       await deleteCulturetype(row.id);
       if (editingId === row.id || viewing) cancelForm();
-      toast({ variant: 'success', title: 'Deleted', description: `Culture type "${row.id}" deleted.` });
+      toast({ variant: 'success', title: 'Deleted', description: `Culture Type "${row.id}" deleted.` });
     } catch (err) {
       setRows(prev);
-      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err) });
+      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err), });
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  // Table
-  const columns: ColumnDef<CultureType>[] = useMemo(() => [
-    { id: 'id', header: 'ID', accessor: r => r.id, sortType: 'string', minWidth: 260 },
-    { id: 'name', header: 'Name', accessor: r => r.name, sortType: 'string', minWidth: 200 },
-    { id: 'hobby', header: 'Hobby Ranks', accessor: r => r.hobbySkillRanks, sortType: 'number', align: 'right', minWidth: 120 },
-    { id: 'weapons', header: 'Preferred Weapons', accessor: r => r.preferredWeapons.length, sortType: 'number', align: 'right', minWidth: 180 },
-    { id: 'armours', header: 'Preferred Armours', accessor: r => r.preferredArmours.length, sortType: 'number', align: 'right', minWidth: 180 },
-    {
-      id: 'actions',
-      header: 'Actions',
-      sortable: false,
-      width: 420,
-      render: (row) => (
-        <>
-          <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
-          <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
-          <button onClick={() => startDuplicate(row)} style={{ marginRight: 6 }}>Duplicate</button>
-          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
-        </>
-      ),
-    },
-  ], []);
-
-  const globalFilter = (r: CultureType, q: string) => {
-    const s = q.toLowerCase();
-    return [
-      r.id, r.name, r.hobbySkillRanks,
-      (r.description ?? ''), (r.characterConcepts ?? ''), (r.clothing ?? ''),
-    ].some(v => String(v ?? '').toLowerCase().includes(s));
-  };
-
+  /* ------------------------------------------------------------------ */
+  /* Render                                                             */
+  /* ------------------------------------------------------------------ */
   if (loading) return <div>Loading…</div>;
   if (error) return <div style={{ color: 'crimson' }}>Error: {error}</div>;
-
-  // Reusable helpers for array editors
-  const addIdTo = (key: keyof FormState, value: string) =>
-    setForm(s => ({ ...s, [key]: [...(s[key] as string[]), value] }));
-  const removeIndexFrom = (key: keyof FormState, i: number) =>
-    setForm(s => {
-      const copy = [...(s[key] as string[])];
-      copy.splice(i, 1);
-      return { ...s, [key]: copy };
-    });
-  const updateIndexOf = (key: keyof FormState, i: number, value: string) =>
-    setForm(s => {
-      const copy = [...(s[key] as string[])];
-      copy[i] = value;
-      return { ...s, [key]: copy };
-    });
 
   // Long text preview toggles
   const renderHtmlField = (label: string, key: keyof FormState, rowsCount = 6) => {
@@ -583,7 +625,7 @@ export default function CultureTypeView() {
       <h2>Culture Types</h2>
 
       {!showForm && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <button onClick={startNew}>New Culture Type</button>
           <DataTableSearchInput
             value={query}
@@ -591,181 +633,207 @@ export default function CultureTypeView() {
             placeholder="Search culture types…"
             aria-label="Search culture types"
           />
-          <button
-            type="button"
-            onClick={() => dtRef.current?.resetColumnWidths()}
-            title="Reset all column widths"
-            style={{ marginLeft: 'auto' }}
-          >
-            Reset column widths
-          </button>
+
+          {/* Reset and auto-fit column widths */}
+          <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
+          <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
         </div>
       )}
 
       {showForm && (
-        <div
-          className={`form-panel ${viewing ? 'form-panel--view' : ''}`}
-          style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}
-        >
-          <h3 style={{ marginTop: 0 }}>
-            {viewing ? 'View Culture Type' : (editingId ? 'Edit Culture Type' : 'New Culture Type')}
-          </h3>
+        <div className="form-container">
+          {/* Simple overlay while submitting */}
+          {submitting && (<div className="overlay"><Spinner size={24} /> <span>Saving…</span> </div>)}
 
-          {/* Basics */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
-            <LabeledInput
-              label="ID"
-              value={form.id}
-              onChange={makeIDOnChange<typeof form>('id', setForm, prefix)}
-              disabled={!!editingId || viewing}
-              error={viewing ? undefined : errors.id}
-            />
-            <LabeledInput
-              label="Name"
-              value={form.name}
-              onChange={(v) => setForm(s => ({ ...s, name: v }))}
-              disabled={viewing}
-              error={viewing ? undefined : errors.name}
-            />
-            <LabeledInput
-              label="Hobby Skill Ranks"
-              value={form.hobbySkillRanks}
-              onChange={(v) => setForm(s => ({ ...s, hobbySkillRanks: sanitizeInt(v) }))}
-              disabled={viewing}
-              width={160}
-              inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
-              error={viewing ? undefined : errors.hobbySkillRanks}
-            />
-          </div>
+          <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`}>
+            <h3>{viewing ? 'View' : editingId ? 'Edit' : 'New'} Culture Type</h3>
 
-          {/* Long text fields */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
-            {renderHtmlField('Description', 'description', 6)}
-            {renderHtmlField('Character Concepts', 'characterConcepts', 6)}
-            {renderHtmlField('Clothing', 'clothing', 5)}
-            {renderHtmlField('Aspirations', 'aspirations', 5)}
-            {renderHtmlField('Fears', 'fears', 5)}
-            {renderHtmlField('Marriage Patterns', 'marriagePatterns', 4)}
-            {renderHtmlField('Prejudices', 'prejudices', 5)}
-            {renderHtmlField('Religious Beliefs', 'religiousBeliefs', 6)}
-          </div>
-
-          {/* Preferred Armours / Weapons */}
-          <section style={{ marginTop: 12 }}>
-            <IdListEditor
-              title="Preferred Armours"
-              rows={form.preferredArmours}
-              onChangeRows={(next) => setForm((s) => ({ ...s, preferredArmours: next }))}
-              options={armourOptions}
-              loading={armourLoading}
-              viewing={viewing}
-              columnLabel="Armour"
-            />
-
-            <IdListEditor
-              title="Preferred Weapons"
-              rows={form.preferredWeapons}
-              onChangeRows={(next) => setForm((s) => ({ ...s, preferredWeapons: next }))}
-              options={weaponOptions}
-              loading={weaponLoading}
-              viewing={viewing}
-              columnLabel="Weapon"
-            />
-          </section>
-
-          {/* Skill Ranks */}
-          <SkillValueListEditor
-            title="Skill Ranks"
-            rows={form.skillRanks}
-            onChangeRows={(next) => setForm((s) => ({ ...s, skillRanks: next }))}
-            idOptions={skillOptions}
-            loading={skillLoading}
-            viewing={viewing}
-            error={errors.skillRanks}
-            signedValues
-          />
-
-          {/* Category Ranks */}
-          <IdValueListEditor
-            title="Skill Category Ranks"
-            rows={form.skillCategoryRanks}
-            onChangeRows={(next) => setForm((s) => ({ ...s, skillCategoryRanks: next }))}
-            options={categoryOptions}
-            loading={categoryLoading}
-            viewing={viewing}
-            error={errors.skillCategoryRanks}
-            signedValues
-          />
-
-          {/* Category Skill Ranks */}
-          <IdValueListEditor
-            title="Skill Category Skill Ranks"
-            rows={form.skillCategorySkillRanks}
-            onChangeRows={(next) => setForm((s) => ({ ...s, skillCategorySkillRanks: next }))}
-            options={categoryOptions}
-            loading={categoryLoading || sgLoading}
-            viewing={viewing}
-            error={errors.skillCategorySkillRanks}
-            signedValues
-          />
-
-          {/* Requirements */}
-          <section style={{ marginTop: 12 }}>
-            <div style={{ marginTop: 6, display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
-              {/* Climates */}
-              <IdListEditor
-                title="Required Climates"
-                rows={form.requiredClimates}
-                onChangeRows={(next) => setForm((s) => ({ ...s, requiredClimates: next }))}
-                options={climateOptions}
-                loading={climateLoading}
-                viewing={viewing}
-                columnLabel="Climate"
+            {/* Basics */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
+              <LabeledInput
+                label="ID"
+                value={form.id}
+                onChange={makeIDOnChange<typeof form>('id', setForm, prefix)}
+                disabled={!!editingId || viewing}
+                error={viewing ? undefined : errors.id}
               />
-
-              {/* Features/Terrains/Vegetations/Water */}
-              <IdListEditor<string>
-                title="Required Features"
-                rows={form.requiredFeatures}
-                onChangeRows={(next) => setForm((s) => ({ ...s, requiredFeatures: next }))}
-                options={featureOptions}
-                viewing={viewing}
-                columnLabel="Feature"
+              <LabeledInput
+                label="Name"
+                value={form.name}
+                onChange={(v) => setForm(s => ({ ...s, name: v }))}
+                disabled={viewing}
+                error={viewing ? undefined : errors.name}
               />
-
-              <IdListEditor<string>
-                title="Required Terrains"
-                rows={form.requiredTerrains}
-                onChangeRows={(next) => setForm((s) => ({ ...s, requiredTerrains: next }))}
-                options={terrainOptions}
-                viewing={viewing}
-                columnLabel="Terrain"
+              <LabeledInput
+                label="Hobby Skill Ranks"
+                value={form.hobbySkillRanks}
+                onChange={makeUnsignedIntOnChange<typeof form>('hobbySkillRanks', setForm)}
+                disabled={viewing}
+                width={160}
+                inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
+                error={viewing ? undefined : errors.hobbySkillRanks}
               />
-
-              <IdListEditor<string>
-                title="Required Vegetations"
-                rows={form.requiredVegetations}
-                onChangeRows={(next) => setForm((s) => ({ ...s, requiredVegetations: next }))}
-                options={vegetationOptions}
-                viewing={viewing}
-                columnLabel="Vegetation"
-              />
-
-              <IdListEditor<string>
-                title="Required Water Sources"
-                rows={form.requiredWaterSources}
-                onChangeRows={(next) => setForm((s) => ({ ...s, requiredWaterSources: next }))}
-                options={waterBodyOptions}
-                viewing={viewing}
-                columnLabel="Water Source"
-              />
-
             </div>
-          </section>
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
-            <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
+            {/* Long text fields */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
+              {renderHtmlField('Description', 'description', 6)}
+              {renderHtmlField('Character Concepts', 'characterConcepts', 6)}
+              {renderHtmlField('Clothing', 'clothing', 5)}
+              {renderHtmlField('Aspirations', 'aspirations', 5)}
+              {renderHtmlField('Fears', 'fears', 5)}
+              {renderHtmlField('Marriage Patterns', 'marriagePatterns', 4)}
+              {renderHtmlField('Prejudices', 'prejudices', 5)}
+              {renderHtmlField('Religious Beliefs', 'religiousBeliefs', 6)}
+            </div>
+
+            {/* Preferred Armours / Weapons */}
+            <section style={{ marginTop: 12 }}>
+              <IdListEditor
+                title="Preferred Armours"
+                addButtonLabel='+ Add armour'
+                rows={form.preferredArmours}
+                onChangeRows={(next) => setForm((s) => ({ ...s, preferredArmours: next }))}
+                options={armourOptions}
+                loading={loading}
+                viewing={viewing}
+                columnLabel="Armour"
+                error={errors.preferredArmours}
+              />
+
+              <IdListEditor
+                title="Preferred Weapons"
+                addButtonLabel='+ Add weapon'
+                rows={form.preferredWeapons}
+                onChangeRows={(next) => setForm((s) => ({ ...s, preferredWeapons: next }))}
+                options={weaponOptions}
+                loading={loading}
+                viewing={viewing}
+                columnLabel="Weapon"
+                error={errors.preferredWeapons}
+              />
+            </section>
+
+            {/* Skill Ranks */}
+            <SkillValueListEditor
+              title="Skill Ranks"
+              addButtonLabel='+ Add skill rank'
+              rows={form.skillRanks}
+              onChangeRows={(next) => setForm((s) => ({ ...s, skillRanks: next }))}
+              idOptions={skillOptions}
+              loading={loading}
+              viewing={viewing}
+              error={errors.skillRanks}
+              signedValues={false}
+            />
+
+            {/* Category Ranks */}
+            <IdValueListEditor
+              title="Skill Category Ranks"
+              addButtonLabel='+ Add skill category rank'
+              rows={form.skillCategoryRanks}
+              onChangeRows={(next) => setForm((s) => ({ ...s, skillCategoryRanks: next }))}
+              options={categoryOptions}
+              loading={loading}
+              viewing={viewing}
+              error={errors.skillCategoryRanks}
+              signedValues={false}
+            />
+
+            {/* Category Skill Ranks */}
+            <IdValueListEditor
+              title="Skill Category Skill Ranks"
+              addButtonLabel='+ Add skill category skill rank'
+              rows={form.skillCategorySkillRanks}
+              onChangeRows={(next) => setForm((s) => ({ ...s, skillCategorySkillRanks: next }))}
+              options={categoryOptions}
+              loading={loading}
+              viewing={viewing}
+              error={errors.skillCategorySkillRanks}
+              signedValues={false}
+            />
+
+            {/* Requirements */}
+            <section style={{ marginTop: 12 }}>
+              <div style={{ marginTop: 6, display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
+                {/* Climates */}
+                <IdListEditor
+                  title="Required Climates"
+                  addButtonLabel='+ Add climate'
+                  rows={form.requiredClimates}
+                  onChangeRows={(next) => setForm((s) => ({ ...s, requiredClimates: next }))}
+                  options={climateOptions}
+                  loading={loading}
+                  viewing={viewing}
+                  columnLabel="Climate"
+                  error={errors.requiredClimates}
+                />
+
+                {/* Features/Terrains/Vegetations/Water */}
+                <IdListEditor<string>
+                  title="Required Features"
+                  addButtonLabel='+ Add feature'
+                  rows={form.requiredFeatures}
+                  onChangeRows={(next) => setForm((s) => ({ ...s, requiredFeatures: next }))}
+                  options={featureOptions}
+                  viewing={viewing}
+                  columnLabel="Feature"
+                  error={errors.requiredFeatures}
+                />
+
+                <IdListEditor<string>
+                  title="Required Terrains"
+                  addButtonLabel='+ Add terrain'
+                  rows={form.requiredTerrains}
+                  onChangeRows={(next) => setForm((s) => ({ ...s, requiredTerrains: next }))}
+                  options={terrainOptions}
+                  viewing={viewing}
+                  columnLabel="Terrain"
+                  error={errors.requiredTerrains}
+                />
+
+                <IdListEditor<string>
+                  title="Required Vegetations"
+                  addButtonLabel='+ Add vegetation'
+                  rows={form.requiredVegetations}
+                  onChangeRows={(next) => setForm((s) => ({ ...s, requiredVegetations: next }))}
+                  options={vegetationOptions}
+                  viewing={viewing}
+                  columnLabel="Vegetation"
+                  error={errors.requiredVegetations}
+                />
+
+                <IdListEditor<string>
+                  title="Required Water Sources"
+                  addButtonLabel='+ Add water source'
+                  rows={form.requiredWaterSources}
+                  onChangeRows={(next) => setForm((s) => ({ ...s, requiredWaterSources: next }))}
+                  options={waterBodyOptions}
+                  viewing={viewing}
+                  columnLabel="Water Source"
+                  error={errors.requiredWaterSources}
+                />
+
+              </div>
+            </section>
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              {!viewing && <button onClick={saveForm} disabled={hasErrors || submitting}>{submitting ? 'Submitting…' : 'Save'}</button>}
+              <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
+            </div>
+
+            {/* Validation errors */}
+            {Object.values(errors).some(Boolean) && (
+              <div style={{ marginTop: 12, color: '#b00020' }}>
+                <h4 style={{ margin: '0 0 4px' }}>Please fix the following errors:</h4>
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  {Object.entries(errors).map(([field, error]) =>
+                    error ? <li key={field}>{error}</li> : null
+                  )}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -776,19 +844,18 @@ export default function CultureTypeView() {
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}
-          initialSort={{ colId: 'name', dir: 'asc' }}
+          initialSort={{ colId: 'name', dir: 'asc' }} //
+          // search
           searchQuery={query}
           globalFilter={globalFilter}
+          // pagination (client)
           mode="client"
           page={page}
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
-          pageSizeOptions={[5, 10, 20, 50, 100]}
-          tableMinWidth={1200}
-          zebra
-          hover
-          resizable
+          // styles
+          tableMinWidth={0} // allow table to shrink below container width (for better mobile support)
           persistKey="dt.culturetype.v1"
           ariaLabel="Culture types"
         />
