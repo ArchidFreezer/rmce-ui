@@ -9,6 +9,7 @@ import {
   CheckboxGroup,
   LabeledInput,
   LabeledSelect,
+  Spinner,
   useConfirm, useToast,
 } from '../../components';
 
@@ -28,18 +29,56 @@ import {
 
 const prefix = 'CLIMATE_';
 
-function emptyClimate(): Climate {
-  return { id: prefix, name: '', temperature: 'Temperate', precipitations: [] };
-}
+/* ------------------------------------------------------------------ */
+/* VM types                                                           */
+/* ------------------------------------------------------------------ */
+type FormState = {
+  id: string;
+  name: string;
+  temperature: Temperature | '';
+  precipitations: Precipitation[];
+};
 
+type FormErrors = {
+  id?: string;
+  name?: string;
+  temperature?: string;
+  precipitations?: string;
+};
+
+const emptyVM = (): FormState => ({
+  id: prefix,
+  name: '',
+  temperature: '',
+  precipitations: [],
+});
+
+const toVM = (c: Climate): FormState => ({
+  id: c.id,
+  name: c.name,
+  temperature: c.temperature,
+  precipitations: c.precipitations,
+});
+
+const fromVM = (vm: FormState): Climate => ({
+  id: vm.id.trim(),
+  name: vm.name.trim(),
+  temperature: vm.temperature as Temperature,
+  precipitations: vm.precipitations,
+});
+
+/* ------------------------------------------------------------------ */
+/* View                                                          */
+/* ------------------------------------------------------------------ */
 export default function ClimateView() {
 
   const dtRef = useRef<DataTableHandle>(null);
+
   const [rows, setRows] = useState<Climate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [errors, setErrors] = useState<{ id?: string; name?: string; temperature?: string; precipitations?: string }>({});
-  const hasErrors = Boolean(errors.id || errors.name || errors.temperature || errors.precipitations);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const hasErrors = Object.values(errors).some(Boolean);
 
   // table UX
   const [query, setQuery] = useState('');
@@ -50,40 +89,49 @@ export default function ClimateView() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
-  const [form, setForm] = useState<Climate>(emptyClimate());
+  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState<FormState>(emptyVM());
+
   const toast = useToast();
   const confirm = useConfirm();
 
-  // ----- Load -----
+  /* ------------------------------------------------------------------ */
+  /* Load data                                                          */
+  /* ------------------------------------------------------------------ */
+
   useEffect(() => {
-    let mounted = true;
     (async () => {
       try {
-        const data = await fetchClimates();
-        if (!mounted) return;
-        setRows(data);
+        const [tp] = await Promise.all([
+          fetchClimates(),
+        ]);
+        setRows(tp);
       } catch (e) {
-        if (!mounted) return;
-        setError(e instanceof Error ? e.message : String(e));
+        setError(String(e));
       } finally {
-        if (mounted) setLoading(false);
+        setLoading(false);
       }
     })();
-    return () => { mounted = false; };
   }, []);
 
-  // ----- Inline validation helpers -----
-  const computeErrors = (draft: Climate) => {
-    const next: { id?: string; name?: string; temperature?: string; precipitations?: string } = {};
+  /* ------------------------------------------------------------------ */
+  /* Validation                                                         */
+  /* ------------------------------------------------------------------ */
+  const computeErrors = (draft: FormState): FormErrors => {
+    const next: FormErrors = {};
+
     // ID
     if (!draft.id.trim()) next.id = 'ID is required';
     else if (!editingId && rows.some(r => r.id === draft.id.trim())) next.id = `ID "${draft.id.trim()}" already exists`;
     else if (!isValidID(draft.id, prefix)) next.id = `ID must start with "${prefix}" and contain additional characters`;
+
     // Name
     if (!draft.name.trim()) next.name = 'Name is required';
+
     // Temperature
     if (!draft.temperature) next.temperature = 'Temperature is required';
     else if (!TEMPERATURES.includes(draft.temperature)) next.temperature = `Must be one of: ${TEMPERATURES.join(', ')}`;
+
     // Precipitations
     const precipError = requireAtLeastOne(draft.precipitations, 'precipitation');
     if (precipError) next.precipitations = precipError;
@@ -93,198 +141,64 @@ export default function ClimateView() {
   useEffect(() => {
     if (!showForm || viewing) return;
     setErrors(computeErrors(form));
-  }, [form, showForm, viewing]); // keep current
+  }, [form, showForm, viewing]);
 
-  // ----- Handlers (Create / Edit / Delete) -----
-  const startNew = () => {
-    setViewing(false);
-    setEditingId(null);
-    setForm(emptyClimate());   // reset form to empty state with prefix
-    setErrors({});
-    setShowForm(true);
-  };
+  /* ------------------------------------------------------------------ */
+  /* Table                                                              */
+  /* ------------------------------------------------------------------ */
+  const pill = (p: string) => (
+    <span
+      key={p}
+      style={{ display: 'inline-block', padding: '2px 8px', marginRight: 6, marginBottom: 4, borderRadius: 999, fontSize: 12, border: '1px solid var(--border)', background: 'var(--panel)', }}
+      title={p}
+    >
+      {p}
+    </span>
+  );
 
-  const startEdit = (row: Climate) => {
-    setViewing(false);
-    setEditingId(row.id);
-    setForm({ ...row });
-    setErrors({});
-    setShowForm(true);
-  };
+  // Define sort order for temperatures (custom sortType doesn't work well with enums, so we convert to index)    
+  const TEMP_ORDER: Temperature[] = ['Cold', 'Cool', 'Temperate', 'Warm', 'Hot'];
+  const idx = (t: string) => Math.max(0, TEMP_ORDER.indexOf(t as Temperature));
 
-  const startDuplicate = (row: Climate) => {
-    setViewing(false);
-    setEditingId(null);
-
-    const vm = { ...row }; // your Climate form already uses domain type as form state
-    vm.id = prefix;
-    vm.name += ' (Copy)';
-
-    setForm(vm);
-    setErrors({});
-    setShowForm(true);
-  };
-
-  const startView = (row: Climate) => {
-    setViewing(true);
-    setEditingId(row.id);       // we can reuse editingId to preload the item, but we won't allow saving
-    setForm({ ...row });
-    setErrors({});              // no need to compute field errors for read-only view, but we can keep formErr for any potential top-level messages
-    setShowForm(true);
-  };
-
-  const cancelForm = () => {
-    setViewing(false);
-    setShowForm(false);
-    setEditingId(null);
-    setErrors({});
-  };
-
-  const saveForm = async () => {
-    const payload: Climate = {
-      id: String(form.id).trim(),
-      name: String(form.name).trim(),
-      temperature: form.temperature as Temperature,
-      precipitations: [...form.precipitations],
-    };
-
-    const nextErrors = computeErrors(form);
-    setErrors(nextErrors);
-    if (hasErrors) return;
-
-    const isEditing = Boolean(editingId);
-    try {
-      // Default edit → PUT /rmce/objects/climate/{id}; create → POST /rmce/objects/climate/
-      const opts = isEditing
-        ? { method: 'PUT' as const, useResourceIdPath: true }
-        : { method: 'POST' as const, useResourceIdPath: false };
-
-      await upsertClimate(payload, opts);
-
-      setRows((prev) => {
-        if (isEditing) {
-          // replace existing row
-          const idx = prev.findIndex((r) => r.id === payload.id);
-          if (idx >= 0) {
-            const copy = [...prev];
-            copy[idx] = { ...copy[idx], ...payload };
-            return copy;
-          }
-          // fallback: if not found (rare), prepend
-          return [payload, ...prev];
-        }
-        // create → prepend
-        return [payload, ...prev];
-      });
-
-      setShowForm(false);
-      setEditingId(null);
-      toast({
-        variant: 'success',
-        title: isEditing ? 'Updated' : 'Saved',
-        description: `Climate "${payload.id}" ${isEditing ? 'updated' : 'created'}.`,
-      });
-    } catch (err) {
-      toast({
-        variant: 'danger',
-        title: 'Save failed',
-        description: String(err instanceof Error ? err.message : err),
-      });
-    }
-  };
-
-  const onDelete = async (row: Climate) => {
-    const id = row?.id;
-    if (!id) return;
-    const ok = await confirm({
-      title: 'Delete Climate',
-      body: `Delete climate "${id}"? This cannot be undone.`,
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
-      tone: 'danger',
-    });
-    if (!ok) return;
-
-    // optimistic remove + rollback
-    const prev = rows;
-    setRows(prev.filter((r) => r.id !== id));
-    try {
-      await deleteClimate(id);
-      // if currently editing this item, close the form
-      if (editingId === id) cancelForm();
-      toast({ variant: 'success', title: 'Deleted', description: `Climate "${id}" deleted.` });
-    } catch (err) {
-      setRows(prev);
-      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err) });
-    }
-  };
-
-  // ----- Columns (Edit + Delete) -----
-  const columns: ColumnDef<Climate>[] = useMemo(() => {
-    const pill = (p: string) => (
-      <span
-        key={p}
-        style={{
-          display: 'inline-block',
-          padding: '2px 8px',
-          marginRight: 6,
-          marginBottom: 4,
-          borderRadius: 999,
-          fontSize: 12,
-          border: '1px solid var(--border)',
-          background: 'var(--panel)',
-        }}
-        title={p}
-      >
-        {p}
-      </span>
-    );
-
-    // Define sort order for temperatures (custom sortType doesn't work well with enums, so we convert to index)    
-    const TEMP_ORDER: Temperature[] = ['Cold', 'Cool', 'Temperate', 'Warm', 'Hot'];
-    const idx = (t: string) => Math.max(0, TEMP_ORDER.indexOf(t as Temperature));
-
-    return [
-      { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
-      { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
-      {
-        id: 'temperature',
-        header: 'Temperature',
-        accessor: (r) => r.temperature,
-        sortType: (a, b) => idx(a.temperature as string) - idx(b.temperature as string),
-        minWidth: 140,
-      },
-      {
-        id: 'precipitations',
-        header: 'Precipitations',
-        accessor: (r) => r.precipitations.join(', '),
-        sortType: 'string',
-        minWidth: 220,
-        render: (r) => (
-          <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-            {r.precipitations.length === 0
-              ? <span style={{ color: 'var(--muted)' }}>—</span>
-              : r.precipitations.map(pill)}
-          </div>
-        ),
-      },
-      {
-        id: 'actions',
-        header: 'Actions',
-        sortable: false,
-        width: 160,
-        render: (row) => (
-          <>
-            <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
-            <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
-            <button onClick={() => startDuplicate(row)} style={{ marginRight: 6 }}>Duplicate</button>
-            <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
-          </>
-        ),
-      },
-    ];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows]); // allows closing form on self-delete
+  const columns: ColumnDef<Climate>[] = [
+    { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
+    { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
+    {
+      id: 'temperature',
+      header: 'Temperature',
+      accessor: (r) => r.temperature,
+      sortType: (a, b) => idx(a.temperature as string) - idx(b.temperature as string),
+      minWidth: 140,
+    },
+    {
+      id: 'precipitations',
+      header: 'Precipitations',
+      accessor: (r) => r.precipitations.join(', '),
+      sortType: 'string',
+      minWidth: 220,
+      render: (r) => (
+        <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+          {r.precipitations.length === 0
+            ? <span style={{ color: 'var(--muted)' }}>—</span>
+            : r.precipitations.map(pill)}
+        </div>
+      ),
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      sortable: false,
+      width: 160,
+      render: (row) => (
+        <>
+          <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
+          <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
+          <button onClick={() => startDuplicate(row)} style={{ marginRight: 6 }}>Duplicate</button>
+          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
+        </>
+      ),
+    },
+  ];
 
   // ----- Search -----
   const globalFilter = (r: Climate, q: string) => {
@@ -297,7 +211,141 @@ export default function ClimateView() {
     );
   };
 
-  // ----- Render -----
+
+
+  /* ------------------------------------------------------------------ */
+  /* Actions                                                            */
+  /* ------------------------------------------------------------------ */
+  const startNew = () => {
+    setViewing(false);
+    setEditingId(null);
+    setForm(emptyVM());
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const startView = (row: Climate) => {
+    setViewing(true);
+    setEditingId(row.id);
+    setForm(toVM(row));
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const startEdit = (row: Climate) => {
+    setViewing(false);
+    setEditingId(row.id);
+    setForm(toVM(row));
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const startDuplicate = (row: Climate) => {
+    setViewing(false);
+    setEditingId(null);
+    const vm = toVM(row);
+    vm.id = prefix;
+    vm.name += ' (Copy)';
+    setForm(vm);
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const cancelForm = () => {
+    setViewing(false);
+    setEditingId(null);
+    setErrors({});
+    setShowForm(false);
+  };
+
+  const saveForm = async () => {
+
+    if (submitting) return;
+
+    const nextErrors = computeErrors(form);
+    setErrors(nextErrors);
+    if (Object.values(nextErrors).some(Boolean)) {
+      return;
+    }
+
+    setSubmitting(true);
+
+    const payload = fromVM(form);
+    const isEditing = Boolean(editingId);
+
+    try {
+      const opts = isEditing
+        ? { method: 'PUT' as const, useResourceIdPath: true }
+        : { method: 'POST' as const, useResourceIdPath: false };
+
+      await upsertClimate(payload, opts);
+
+      setRows((prev) => {
+        if (isEditing) {
+          const idx = prev.findIndex((r) => r.id === payload.id);
+          if (idx >= 0) {
+            const copy = [...prev];
+            copy[idx] = { ...copy[idx], ...payload };
+            return copy;
+          }
+          return [payload, ...prev];
+        }
+        return [payload, ...prev];
+      });
+
+      setShowForm(false);
+      setViewing(false);
+      setEditingId(null);
+
+      toast({
+        variant: 'success',
+        title: isEditing ? 'Updated' : 'Saved',
+        description: `Climate "${payload.id}" ${isEditing ? 'updated' : 'created'}.`,
+      });
+    } catch (err) {
+      toast({
+        variant: 'danger',
+        title: 'Save failed',
+        description: String(err instanceof Error ? err.message : err),
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onDelete = async (row: Climate) => {
+
+    if (submitting) return;
+    setSubmitting(true);
+
+    const ok = await confirm({
+      title: 'Delete Climate',
+      body: `Delete "${row.id}"? This cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      tone: 'danger',
+    });
+    if (!ok) return;
+
+    const prev = rows;
+    setRows(prev.filter((r) => r.id !== row.id));
+
+    try {
+      await deleteClimate(row.id);
+      if (editingId === row.id || viewing) cancelForm();
+      toast({ variant: 'success', title: 'Deleted', description: `Climate "${row.id}" deleted.` });
+    } catch (err) {
+      setRows(prev);
+      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err), });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+
+  /* ------------------------------------------------------------------ */
+  /* Render                                                             */
+  /* ------------------------------------------------------------------ */
   if (loading) return <div>Loading…</div>;
   if (error) return <div style={{ color: 'crimson' }}>Error: {error}</div>;
 
@@ -315,6 +363,7 @@ export default function ClimateView() {
             placeholder="Search climates…"
             aria-label="Search climates"
           />
+
           {/* Reset and auto-fit column widths */}
           <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
           <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
@@ -323,75 +372,84 @@ export default function ClimateView() {
 
       {/* Form panel (Create & Edit) */}
       {showForm && (
-        <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}>
-          <h3 style={{ marginTop: 0 }}>{viewing ? 'View Climate' : (editingId ? 'Edit Climate' : 'New Climate')}</h3>
+        <div className="form-container">
+          {/* Simple overlay while submitting */}
+          {submitting && (<div className="overlay"><Spinner size={24} /> <span>Saving…</span> </div>)}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />
-            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm(s => ({ ...s, name: v }))} disabled={viewing} error={errors.name} />
+          <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`}>
+            <h3>{viewing ? 'View' : editingId ? 'Edit' : 'New'} Training Package</h3>
 
-            <LabeledSelect
-              label="Temperature"
-              value={form.temperature}
-              onChange={(v) => setForm(s => ({ ...s, temperature: v as Temperature }))}
-              options={TEMPERATURES}
-              disabled={viewing}
-              error={errors.temperature}
-            />
-            <div />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />
+              <LabeledInput label="Name" value={form.name} onChange={(v) => setForm(s => ({ ...s, name: v }))} disabled={viewing} error={errors.name} />
 
-            <CheckboxGroup<Precipitation>
-              label="Precipitations"
-              value={form.precipitations}
-              options={PRECIPITATIONS}    // can be a simple string array
-              onChange={(vals) => setForm(s => ({ ...s, precipitations: vals }))}
-              helperText="Choose all that apply"
-              error={errors.precipitations}
-              direction="row"
-              columns={3}
-              showSelectAll={!viewing}  // Hide select/clear all when viewing, as checkboxes are disabled and it's not relevant
-              disabled={viewing}
-            />
-          </div>
+              <LabeledSelect
+                label="Temperature"
+                value={form.temperature}
+                onChange={(v) => setForm(s => ({ ...s, temperature: v as Temperature }))}
+                options={TEMPERATURES}
+                disabled={viewing}
+                error={errors.temperature}
+              />
+              <div />
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
-            <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
+              <CheckboxGroup<Precipitation>
+                label="Precipitations"
+                value={form.precipitations}
+                options={PRECIPITATIONS}    // can be a simple string array
+                onChange={(vals) => setForm(s => ({ ...s, precipitations: vals }))}
+                helperText="Choose all that apply"
+                error={errors.precipitations}
+                direction="row"
+                columns={3}
+                showSelectAll={!viewing}  // Hide select/clear all when viewing, as checkboxes are disabled and it's not relevant
+                disabled={viewing}
+              />
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              {!viewing && <button onClick={saveForm} disabled={hasErrors || submitting}>{submitting ? 'Submitting…' : 'Save'}</button>}
+              <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
+            </div>
+
+            {/* Validation errors */}
+            {Object.values(errors).some(Boolean) && (
+              <div style={{ marginTop: 12, color: '#b00020' }}>
+                <h4 style={{ margin: '0 0 4px' }}>Please fix the following errors:</h4>
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  {Object.entries(errors).map(([field, error]) =>
+                    error ? <li key={field}>{error}</li> : null
+                  )}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {/* Shared DataTable */}
       {!showForm && (
-        <DataTable<Climate>
+        <DataTable
           ref={dtRef}
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}
-          initialSort={{ colId: 'name', dir: 'asc' }}
+          initialSort={{ colId: 'name', dir: 'asc' }} //
           // search
           searchQuery={query}
           globalFilter={globalFilter}
-          // pagination
+          // pagination (client)
           mode="client"
           page={page}
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
-          pageSizeOptions={[5, 10, 20, 50, 100]}
           // styles
-          tableMinWidth={0} // Allow table to shrink below container width (enables horizontal scroll when needed)
-          zebra
-          // Resizable columns
-          resizable
+          tableMinWidth={0} // allow table to shrink below container width (for better mobile support)
           persistKey="dt.climate.v1"
-          ariaLabel="Climates data"
+          ariaLabel='Climate data'
         />
-      )}
-      {!rows.length && !showForm && (
-        <div style={{ marginTop: 8, color: 'var(--muted)' }}>
-          No climates found.
-        </div>
       )}
     </>
   );
