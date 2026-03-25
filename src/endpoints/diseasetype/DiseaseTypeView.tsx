@@ -1,13 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-  fetchDiseasetypes, upsertDiseasetype, deleteDiseasetype
+  fetchDiseasetypes, upsertDiseasetype, deleteDiseasetype,
+  deleteTrainingPackage
 } from '../../api';
 
 import {
   DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
   LabeledInput,
   MarkupPreview,
+  Spinner,
   useConfirm, useToast,
 } from '../../components';
 
@@ -26,7 +28,9 @@ import {
 
 const prefix = 'DISEASETYPE_';
 
-// ---- Form VM: keep symptoms editable with textareas ----
+/* ------------------------------------------------------------------ */
+/* VM types                                                           */
+/* ------------------------------------------------------------------ */
 type SymptomRowVM = { severity: MaladySeverity; symptoms: string };
 
 type FormState = {
@@ -35,6 +39,14 @@ type FormState = {
   transmission: string;
   description: string;
   symptoms: SymptomRowVM[]; // Mild..Extreme (exactly 4)
+};
+
+type FormErrors = {
+  id?: string;
+  type?: string;
+  transmission?: string;
+  description?: string;
+  symptoms?: Record<MaladySeverity, string | undefined>;
 };
 
 function emptyVM(): FormState {
@@ -74,19 +86,19 @@ function fromVM(vm: FormState): DiseaseType {
   };
 }
 
+/* ------------------------------------------------------------------ */
+/* View                                                               */
+/* ------------------------------------------------------------------ */
+
 export default function DiseaseTypeView() {
   const dtRef = useRef<DataTableHandle>(null);
+
   const [rows, setRows] = useState<DiseaseType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [errors, setErrors] = useState<{
-    id?: string; type?: string; transmission?: string; description?: string;
-    symptoms?: Record<MaladySeverity, string | undefined>;
-  }>({});
-  const hasErrors = Boolean(
-    errors.id || errors.type || errors.transmission || errors.description ||
-    (errors.symptoms && MALADY_SEVERITIES.some((s) => errors.symptoms?.[s]))
-  );
+  const [errors, setErrors] = useState<FormErrors>({});
+  const hasErrors = Object.values(errors).some(Boolean);
+
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -95,37 +107,47 @@ export default function DiseaseTypeView() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
-
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<FormState>(emptyVM());
+
+  const [previewDescription, setPreviewDescription] = useState(false);
+
   const toast = useToast();
   const confirm = useConfirm();
 
-  // ---- Load ----
+  /* ------------------------------------------------------------------ */
+  /* Load data                                                          */
+  /* ------------------------------------------------------------------ */
+
   useEffect(() => {
-    let mounted = true;
     (async () => {
       try {
-        const list = await fetchDiseasetypes();
-        if (!mounted) return;
-        setRows(list);
+        const [tp] = await Promise.all([
+          fetchDiseasetypes(),
+
+        ]);
+        setRows(tp);
+
       } catch (e) {
-        if (!mounted) return;
-        setError(e instanceof Error ? e.message : String(e));
+        setError(String(e));
       } finally {
-        if (mounted) setLoading(false);
+        setLoading(false);
       }
     })();
-    return () => { mounted = false; };
   }, []);
 
-  // ---- Validation ----
+  /* ------------------------------------------------------------------ */
+  /* Validation                                                         */
+  /* ------------------------------------------------------------------ */
 
-  const computeErrors = (draft = form) => {
+  const computeErrors = (draft: FormState): FormErrors => {
     const e: typeof errors = {};
+
     // ID: required, unique (when creating), format (starts with DISEASETYPE_, only uppercase letters/numbers/underscores, etc.)
     if (!draft.id.trim()) e.id = 'ID is required';
     else if (!editingId && rows.some(r => r.id === draft.id.trim())) e.id = `ID "${draft.id.trim()}" already exists`;
     else if (!isValidID(draft.id.trim(), prefix)) e.id = `ID must start with "${prefix}" and contain only uppercase letters, numbers, and underscores`;
+
     // Type, Transmission, Description: required
     if (!draft.type.trim()) e.type = 'Type is required';
     if (!draft.transmission.trim()) e.transmission = 'Transmission is required';
@@ -138,6 +160,7 @@ export default function DiseaseTypeView() {
       else seen.add(r.severity);
       if (!r.symptoms.trim()) sy[r.severity] = 'Symptoms are required';
     }
+
     // Ensure all severities
     for (const s of MALADY_SEVERITIES) {
       if (!draft.symptoms.some((r) => r.severity === s)) sy[s] = 'Missing severity';
@@ -152,7 +175,45 @@ export default function DiseaseTypeView() {
     setErrors(computeErrors(form));
   }, [form, showForm, viewing]); // keep current with form changes for live validation (but skip in view mode)
 
-  // ---- Actions ----
+
+  /* ------------------------------------------------------------------ */
+  /* Table                                                              */
+  /* ------------------------------------------------------------------ */
+  const columns: ColumnDef<DiseaseType>[] = [
+    { id: 'id', header: 'ID', accessor: (r) => r.id, minWidth: 260 },
+    { id: 'type', header: 'Type', accessor: (r) => r.type, minWidth: 160 },
+    { id: 'transmission', header: 'Transmission', accessor: (r) => r.transmission, minWidth: 160 },
+    { id: 'description', header: 'Description', accessor: (r) => r.description, minWidth: 320 },
+    {
+      id: 'actions',
+      header: 'Actions',
+      sortable: false,
+      width: 360,
+      render: (row) => (
+        <>
+          <button onClick={() => startView(row)}>View</button>
+          <button onClick={() => startEdit(row)}>Edit</button>
+          <button onClick={() => startDuplicate(row)}>Duplicate</button>
+          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
+        </>
+      ),
+    },
+  ];
+
+
+  const globalFilter = (r: DiseaseType, q: string) => {
+    const s = q.toLowerCase();
+    const hay = [
+      r.id, r.type, r.transmission, r.description,
+      ...r.severitySymptoms.map(o => `${o.severity} ${o.symptoms}`),
+    ].join(' ').toLowerCase();
+    return hay.includes(s);
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Actions                                                            */
+  /* ------------------------------------------------------------------ */
+
   const startNew = () => {
     setViewing(false);
     setEditingId(null);
@@ -180,31 +241,36 @@ export default function DiseaseTypeView() {
   const startDuplicate = (row: DiseaseType) => {
     setViewing(false);
     setEditingId(null);
-
     const vm = toVM(row);
     vm.id = prefix;
-    vm.type += ' (Copy)'; // Append " (Copy)" to the type for clarity
-
+    vm.type += ' (Copy)';
     setForm(vm);
     setErrors({});
     setShowForm(true);
   };
 
   const cancelForm = () => {
-    setShowForm(false);
     setViewing(false);
     setEditingId(null);
     setErrors({});
+    setShowForm(false);
   };
 
   const saveForm = async () => {
-    const payload = fromVM(form);
+
+    if (submitting) return;
 
     const nextErrors = computeErrors(form);
     setErrors(nextErrors);
-    if (hasErrors) return;
+    if (Object.values(nextErrors).some(Boolean)) {
+      return;
+    }
 
+    setSubmitting(true);
+
+    const payload = fromVM(form);
     const isEditing = Boolean(editingId);
+
     try {
       const opts = isEditing
         ? { method: 'PUT' as const, useResourceIdPath: true }
@@ -228,10 +294,11 @@ export default function DiseaseTypeView() {
       setShowForm(false);
       setViewing(false);
       setEditingId(null);
+
       toast({
         variant: 'success',
         title: isEditing ? 'Updated' : 'Saved',
-        description: `Disease type "${payload.id}" ${isEditing ? 'updated' : 'created'}.`,
+        description: `Disease Type "${payload.id}" ${isEditing ? 'updated' : 'created'}.`,
       });
     } catch (err) {
       toast({
@@ -239,13 +306,19 @@ export default function DiseaseTypeView() {
         title: 'Save failed',
         description: String(err instanceof Error ? err.message : err),
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const onDelete = async (row: DiseaseType) => {
+
+    if (submitting) return;
+    setSubmitting(true);
+
     const ok = await confirm({
       title: 'Delete Disease Type',
-      body: `Delete disease type "${row.id}"? This cannot be undone.`,
+      body: `Delete "${row.id}"? This cannot be undone.`,
       confirmText: 'Delete',
       cancelText: 'Cancel',
       tone: 'danger',
@@ -254,70 +327,22 @@ export default function DiseaseTypeView() {
 
     const prev = rows;
     setRows(prev.filter((r) => r.id !== row.id));
+
     try {
       await deleteDiseasetype(row.id);
       if (editingId === row.id || viewing) cancelForm();
-      toast({ variant: 'success', title: 'Deleted', description: `Disease type "${row.id}" deleted.` });
+      toast({ variant: 'success', title: 'Deleted', description: `Disease Type "${row.id}" deleted.` });
     } catch (err) {
       setRows(prev);
-      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err) });
+      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err), });
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  // ---- Table ----
-  const columns: ColumnDef<DiseaseType>[] = useMemo(() => {
-    return [
-      { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 260 },
-      { id: 'type', header: 'Type', accessor: (r) => r.type, sortType: 'string', minWidth: 160 },
-      { id: 'transmission', header: 'Transmission', accessor: (r) => r.transmission, sortType: 'string', minWidth: 160 },
-      { id: 'description', header: 'Description', accessor: (r) => r.description, sortType: 'string', minWidth: 320 },
-      // We do not display the symptoms directly in the table since they can be long and would require a lot of space.
-      // The full symptoms details can be viewed/edited in the form panel. This keeps the table concise and readable.
-      // {
-      //   id: 'symptoms',
-      //   header: 'Symptoms',
-      //   accessor: (r) => r.severitySymptoms.length,
-      //   sortType: 'number',
-      //   minWidth: 420,
-      //   render: (r) => (
-      //     <div style={{ display: 'grid', gap: 4 }}>
-      //       {SEVERITIES.map((s) => {
-      //         const row = r.severitySymptoms.find((x) => x.severity === s);
-      //         return (
-      //           <div key={s}>
-      //             <strong>{s}</strong>: {row ? row.symptoms : '—'}
-      //           </div>
-      //         );
-      //       })}
-      //     </div>
-      //   ),
-      // },
-      {
-        id: 'actions',
-        header: 'Actions',
-        sortable: false,
-        width: 280,
-        render: (row) => (
-          <>
-            <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
-            <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
-            <button onClick={() => startDuplicate(row)} style={{ marginRight: 6 }}>Duplicate</button>
-            <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
-          </>
-        ),
-      },
-    ];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows]);
-
-  const globalFilter = (r: DiseaseType, q: string) => {
-    const s = q.toLowerCase();
-    const hay = [
-      r.id, r.type, r.transmission, r.description,
-      ...r.severitySymptoms.map(o => `${o.severity} ${o.symptoms}`),
-    ].join(' ').toLowerCase();
-    return hay.includes(s);
-  };
+  /* ------------------------------------------------------------------ */
+  /* Render                                                             */
+  /* ------------------------------------------------------------------ */
 
   if (loading) return <div>Loading…</div>;
   if (error) return <div style={{ color: 'crimson' }}>Error: {error}</div>;
@@ -328,7 +353,7 @@ export default function DiseaseTypeView() {
 
       {/* Toolbar shown only when table visible */}
       {!showForm && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <button onClick={startNew}>New Disease Type</button>
           <DataTableSearchInput
             value={query}
@@ -336,93 +361,112 @@ export default function DiseaseTypeView() {
             placeholder="Search disease types…"
             aria-label="Search disease types"
           />
+
           {/* Reset and auto-fit column widths */}
           <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
           <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
         </div>
       )}
 
-      {/* Form panel */}
       {showForm && (
-        <div
-          className={`form-panel ${viewing ? 'form-panel--view' : ''}`}
-          style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}
-        >
-          <h3 style={{ marginTop: 0 }}>
-            {viewing ? 'View Disease Type' : (editingId ? 'Edit Disease Type' : 'New Disease Type')}
-          </h3>
+        <div className="form-container">
+          {/* Simple overlay while submitting */}
+          {submitting && (<div className="overlay"><Spinner size={24} /> <span>Saving…</span> </div>)}
 
-          {/* Basics */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
-            <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />
-            <LabeledInput label="Type" value={form.type} onChange={(v) => setForm(s => ({ ...s, type: v }))} disabled={viewing} error={errors.type} />
-            <LabeledInput label="Transmission" value={form.transmission} onChange={(v) => setForm(s => ({ ...s, transmission: v }))} disabled={viewing} error={errors.transmission} />
-            <LabeledInput label="Description" value={form.description} onChange={(v) => setForm(s => ({ ...s, description: v }))} disabled={viewing} error={errors.description} />
-          </div>
+          <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`}>
+            <h3>{viewing ? 'View' : editingId ? 'Edit' : 'New'} Disease Type</h3>
 
-          {/* Symptoms editor */}
-          <section style={{ marginTop: 8 }}>
-            <h4 style={{ margin: '8px 0' }}>Severity Symptoms</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 8 }}>
-              <div style={{ fontWeight: 600 }}>Severity</div>
-              <div style={{ fontWeight: 600 }}>Symptoms</div>
-
-              {form.symptoms.map((row, idx) => (
-                <FragmentRowSymptom
-                  key={row.severity}
-                  row={row}
-                  error={errors.symptoms?.[row.severity]}
-                  disabled={viewing}
-                  onChange={(next) => setForm(s => {
-                    const copy = [...s.symptoms];
-                    copy[idx] = next;
-                    return { ...s, symptoms: copy };
-                  })}
-                />
-              ))}
+            {/* Basics */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
+              <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />
+              <LabeledInput label="Type" value={form.type} onChange={(v) => setForm(s => ({ ...s, type: v }))} disabled={viewing} error={errors.type} />
+              <LabeledInput label="Transmission" value={form.transmission} onChange={(v) => setForm(s => ({ ...s, transmission: v }))} disabled={viewing} error={errors.transmission} />
             </div>
-          </section>
 
-          {/* Buttons */}
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
-            <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
+            {/* Description */}
+            <section style={{ marginTop: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h4 style={{ margin: '8px 0' }}>Description</h4>
+                {!viewing && (
+                  <button type="button" onClick={() => setPreviewDescription((p) => !p)}>
+                    {previewDescription ? 'Edit' : 'Preview'}
+                  </button>
+                )}
+              </div>
+              {previewDescription || viewing ? (
+                <MarkupPreview
+                  content={form.description}
+                  emptyHint="No description"
+                  className="preview-html"
+                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
+                />
+              ) : (
+                <label style={{ display: 'grid', gap: 6 }}>
+                  <textarea
+                    value={form.description}
+                    onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))}
+                    disabled={viewing}
+                    rows={5}
+                  />
+                </label>
+              )}
+            </section>
+
+            {/* Symptoms editor */}
+            <section style={{ marginTop: 8 }}>
+              <h4 style={{ margin: '8px 0' }}>Severity Symptoms</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 8 }}>
+                <div style={{ fontWeight: 600 }}>Severity</div>
+                <div style={{ fontWeight: 600 }}>Symptoms</div>
+
+                {form.symptoms.map((row, idx) => (
+                  <FragmentRowSymptom
+                    key={row.severity}
+                    row={row}
+                    error={errors.symptoms?.[row.severity]}
+                    disabled={viewing}
+                    onChange={(next) => setForm(s => {
+                      const copy = [...s.symptoms];
+                      copy[idx] = next;
+                      return { ...s, symptoms: copy };
+                    })}
+                  />
+                ))}
+              </div>
+            </section>
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
+              <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Shared DataTable */}
       {!showForm && (
-        <DataTable<DiseaseType>
+        <DataTable
           ref={dtRef}
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}
-          initialSort={{ colId: 'type', dir: 'asc' }}
+          initialSort={{ colId: 'type', dir: 'asc' }} //
+          // search
           searchQuery={query}
           globalFilter={globalFilter}
+          // pagination (client)
           mode="client"
           page={page}
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
-          pageSizeOptions={[5, 10, 20, 50, 100]}
-          tableMinWidth={0}
-          zebra
-          hover
-          resizable
+          // styles
+          tableMinWidth={0} // allow table to shrink below container width (for better mobile support)
           persistKey="dt.diseasetype.v1"
-          ariaLabel="Disease types"
+          ariaLabel='Disease types'
         />
       )}
-
-      {/* Empty dataset */}
-      {!rows.length && !showForm && (
-        <div style={{ marginTop: 8, color: 'var(--muted)' }}>
-          No disease types found.
-        </div>
-      )}
-
     </>
   );
 }
@@ -474,6 +518,7 @@ function FragmentRowSymptom({
             content={row.symptoms}
             emptyHint="No symptoms provided"
             className="preview-html"
+            format="markdown"
             style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
           />
         ) : (
