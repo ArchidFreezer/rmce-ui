@@ -21,7 +21,8 @@ export interface LanguageChoiceEditorProps<TLanguageId extends string = string> 
   viewing?: boolean | undefined;
   loading?: boolean | undefined;
   /** Whether to show the component when viewing if there are no rows */
-  showWhenEmpty?: boolean | undefined; error?: string | undefined;
+  showWhenEmpty?: boolean | undefined;
+  error?: string | undefined;
 
   /** Labels */
   numChoicesLabel?: string | undefined;
@@ -43,7 +44,7 @@ export function LanguageChoiceEditor<TLanguageId extends string = string>({
   showWhenEmpty = false,
   error,
   numChoicesLabel = '# Choices',
-  valueLabel = 'Ranks',
+  valueLabel = 'Total Ranks',
   optionLabel = 'Language',
   addRowLabel = '+ Add language choice',
   removeRowLabel = 'Remove',
@@ -176,11 +177,11 @@ export function LanguageChoiceEditor<TLanguageId extends string = string>({
             }}
           >
             <LabeledInput
-              label={numChoicesLabel}
-              value={row.numChoices}
+              label={valueLabel}
+              value={row.value}
               onChange={(v) =>
                 updateRowAt(rowIndex, {
-                  numChoices: sanitizeUnsignedInt(v),
+                  value: sanitizeUnsignedInt(v),
                 })
               }
               disabled={viewing}
@@ -188,11 +189,11 @@ export function LanguageChoiceEditor<TLanguageId extends string = string>({
             />
 
             <LabeledInput
-              label={valueLabel}
-              value={row.value}
+              label={numChoicesLabel}
+              value={row.numChoices}
               onChange={(v) =>
                 updateRowAt(rowIndex, {
-                  value: sanitizeUnsignedInt(v),
+                  numChoices: sanitizeUnsignedInt(v),
                 })
               }
               disabled={viewing}

@@ -14,7 +14,7 @@ export function ChoiceListEditor<TType extends string = string, TOption = string
   createEmptyOption,
   createEmptyRow,
   renderOptionEditor,
-  numChoicesLabel = 'Num Choices',
+  numChoicesLabel = '# Choices',
   typeLabel = 'Type',
   optionSectionLabel = 'Options',
   addRowButtonLabel = '+ Add row',

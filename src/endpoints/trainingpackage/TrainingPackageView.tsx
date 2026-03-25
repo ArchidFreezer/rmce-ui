@@ -848,18 +848,24 @@ export default function TrainingPackagesView() {
       const r = draft.spellListRanks[i];
       if (!r) continue;
 
-      if (!isValidUnsignedInt(r.numChoices) || Number(r.numChoices) <= 0) {
-        e.spellListRanks = `SpellListRanks[${i + 1}]: numChoices must be positive`;
+      if (!isValidUnsignedInt(r.value) || Number(r.value) <= 0) {
+        e.spellListRanks = `SpellListRanks[${i + 1}]: total ranks must be positive`;
         break;
       }
 
-      if (!isValidUnsignedInt(r.value) || Number(r.value) <= 0) {
-        e.spellListRanks = `SpellListRanks[${i + 1}]: value must be positive`;
+      if (!isValidUnsignedInt(r.numChoices) || Number(r.numChoices) <= 0) {
+        e.spellListRanks = `SpellListRanks[${i + 1}]: number of spell lists to select must be positive`;
+        break;
+      } else if (Number(r.value) < Number(r.numChoices)) {
+        e.spellListRanks = `SpellListRanks[${i + 1}]: number of spell lists to select cannot exceed total ranks`;
         break;
       }
 
       if (!r.options.length) {
         e.spellListRanks = `SpellListRanks[${i + 1}]: select at least one spell list`;
+        break;
+      } else if (r.options.length < Number(r.numChoices)) {
+        e.spellListRanks = `SpellListRanks[${i + 1}]: number of spell lists to select from must be at least as many as the number of spell lists to select`;
         break;
       }
     }
@@ -870,23 +876,25 @@ export default function TrainingPackagesView() {
 
     for (let i = 0; i < draft.spellListCategoryRankChoices.length; i++) {
       const r = draft.spellListCategoryRankChoices[i];
-
       if (!r) continue;
+
       if (!isValidUnsignedInt(r.value) || Number(r.value) <= 0) {
-        e.spellListCategoryRankChoices =
-          `SpellListCategoryRankChoices[${i + 1}]: value must be a positive integer`;
+        e.spellListCategoryRankChoices = `SpellListCategoryRankChoices[${i + 1}]: total ranks must be positive`;
         break;
       }
 
       if (!isValidUnsignedInt(r.numChoices) || Number(r.numChoices) <= 0) {
-        e.spellListCategoryRankChoices =
-          `SpellListCategoryRankChoices[${i + 1}]: numChoices must be a positive integer`;
+        e.spellListCategoryRankChoices = `SpellListCategoryRankChoices[${i + 1}]: number of categories to select must be positive`;
+        break;
+      } else if (Number(r.value) < Number(r.numChoices)) {
+        e.spellListCategoryRankChoices = `SpellListCategoryRankChoices[${i + 1}]: number of categories to select cannot exceed total ranks`;
         break;
       }
-
       if (!r.options.length) {
-        e.spellListCategoryRankChoices =
-          `SpellListCategoryRankChoices[${i + 1}]: select at least one category`;
+        e.spellListCategoryRankChoices = `SpellListCategoryRankChoices[${i + 1}]: select at least one category`;
+        break;
+      } else if (r.options.length < Number(r.numChoices)) {
+        e.spellListCategoryRankChoices = `SpellListCategoryRankChoices[${i + 1}]: number of categories to select from must be at least as many as the number of categories to select`;
         break;
       }
     }
@@ -921,13 +929,17 @@ export default function TrainingPackagesView() {
 
       if (!isValidUnsignedInt(r.numChoices) || Number(r.numChoices) <= 0) {
         e.lifestyleCategorySkillChoices =
-          `LifestyleCategorySkillChoices[${i + 1}]: numChoices must be a positive integer`;
+          `LifestyleCategorySkillChoices[${i + 1}]: number of choices must be positive`;
         break;
       }
 
       if (!r.options.length) {
         e.lifestyleCategorySkillChoices =
           `LifestyleCategorySkillChoices[${i + 1}]: select at least one category`;
+        break;
+      } else if (r.options.length < Number(r.numChoices)) {
+        e.lifestyleCategorySkillChoices =
+          `LifestyleCategorySkillChoices[${i + 1}]: number of categories to select from must be at least as many as the number of categories to select`;
         break;
       }
     }
@@ -939,18 +951,25 @@ export default function TrainingPackagesView() {
     for (let i = 0; i < draft.languageChoices.length; i++) {
       const r = draft.languageChoices[i];
       if (!r) continue;
-      if (!isValidUnsignedInt(r.numChoices) || Number(r.numChoices) <= 0) {
-        e.languageChoices = `LanguageChoices[${i + 1}]: numChoices must be positive`;
+
+      if (!isValidUnsignedInt(r.value) || Number(r.value) <= 0) {
+        e.languageChoices = `LanguageChoices[${i + 1}]: number of ranks to spend must be positive`;
         break;
       }
 
-      if (!isValidUnsignedInt(r.value) || Number(r.value) <= 0) {
-        e.languageChoices = `LanguageChoices[${i + 1}]: value must be positive`;
+      if (!isValidUnsignedInt(r.numChoices) || Number(r.numChoices) <= 0) {
+        e.languageChoices = `LanguageChoices[${i + 1}]: number of languages to select must be positive`;
+        break;
+      } else if (Number(r.value) < Number(r.numChoices)) {
+        e.languageChoices = `LanguageChoices[${i + 1}]: number of choices cannot exceed number of ranks to spend`;
         break;
       }
 
       if (!r.options.length) {
         e.languageChoices = `LanguageChoices[${i + 1}]: select at least one language`;
+        break;
+      } else if (r.options.length < Number(r.numChoices)) {
+        e.languageChoices = `LanguageChoices[${i + 1}]: number of choices cannot exceed number of available languages`;
         break;
       }
     }

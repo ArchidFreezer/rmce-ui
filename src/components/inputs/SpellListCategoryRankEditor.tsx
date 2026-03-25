@@ -151,14 +151,14 @@ export function SpellListCategoryRankEditor<
             style={{
               display: 'grid',
               gridTemplateColumns: showActions
-                ? '120px 120px auto'
+                ? '120px 120px 120px'
                 : '120px 120px',
               gap: 8,
               marginBottom: 8,
             }}
           >
             <LabeledInput
-              label="Ranks"
+              label="Total Ranks"
               value={row.value}
               disabled={viewing}
               width={100}
