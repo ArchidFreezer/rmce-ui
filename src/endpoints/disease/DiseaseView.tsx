@@ -349,12 +349,12 @@ export default function DiseaseView() {
       {/* Toolbar shown only when table visible */}
       {!showForm && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          <button onClick={startNew}>New Training Package</button>
+          <button onClick={startNew}>New Disease</button>
           <DataTableSearchInput
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search training packages…"
-            aria-label="Search training packages"
+            placeholder="Search diseases…"
+            aria-label="Search diseases"
           />
 
           {/* Reset and auto-fit column widths */}
