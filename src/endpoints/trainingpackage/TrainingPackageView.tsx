@@ -61,21 +61,6 @@ const prefix = 'TRAININGPACKAGE_';
 /* VM types                                                           */
 /* ------------------------------------------------------------------ */
 
-type QualifierVM = {
-  qualifier: string;
-  reduction: string;
-};
-
-type SpecialVM = {
-  value: string;
-  chance: string;
-};
-
-type StatGainChoiceVM = {
-  numChoices: string;
-  options: Stat[];
-};
-
 type FormState = {
   id: string;
   name: string;
@@ -643,11 +628,28 @@ export default function TrainingPackagesView() {
     }
 
     /* -------------------------------------------------- */
+    /* Timing / money                                     */
+    /* -------------------------------------------------- */
+
+    if (!draft.timeToAcquire || !isValidUnsignedInt(draft.timeToAcquire)) {
+      e.timeToAcquire = 'Time to acquire must be a positive integer';
+    }
+
+    if (!draft.startingMoneyModifierDice.trim()) {
+      e.startingMoneyModifierDice = 'Starting money modifier is required';
+    }
+
+    /* -------------------------------------------------- */
     /* Races                                              */
     /* -------------------------------------------------- */
 
-    if (!draft.races.length) {
-      e.races = 'Select at least one allowed race';
+    for (let i = 0; i < draft.races.length; i++) {
+      const r = draft.races[i];
+
+      if (!r) {
+        e.races = `Race ${i + 1}: value is required`;
+        break;
+      }
     }
 
     /* -------------------------------------------------- */
@@ -668,15 +670,20 @@ export default function TrainingPackagesView() {
     }
 
     /* -------------------------------------------------- */
-    /* Timing / money                                     */
+    /* Specials                                         */
     /* -------------------------------------------------- */
 
-    if (draft.timeToAcquire && !isValidUnsignedInt(draft.timeToAcquire)) {
-      e.timeToAcquire = 'Time to acquire must be a positive integer';
-    }
-
-    if (!draft.startingMoneyModifierDice.trim()) {
-      e.startingMoneyModifierDice = 'Starting money modifier is required';
+    for (let i = 0; i < draft.specials.length; i++) {
+      const s = draft.specials[i];
+      if (!s) continue;
+      if (!s.value.trim()) {
+        e.specials = `Special ${i + 1}: text is required`;
+        break;
+      }
+      if (!isValidSignedInt(s.chance)) {
+        e.specials = `Special ${i + 1}: chance must be a positive integer`;
+        break;
+      }
     }
 
     /* -------------------------------------------------- */
@@ -707,12 +714,12 @@ export default function TrainingPackagesView() {
       if (!r) continue;
 
       if (!r.id) {
-        e.skillRanks = `SkillRanks[${i + 1}]: skill is required`;
+        e.skillRanks = `SkillRanks[${i + 1}]: skill required`;
         break;
       }
 
       if (!isValidUnsignedInt(r.value)) {
-        e.skillRanks = `SkillRanks[${i + 1}]: value must be a positive integer`;
+        e.skillRanks = `SkillRanks[${i + 1}]: ranks must be a positive integer`;
         break;
       }
     }
@@ -725,18 +732,21 @@ export default function TrainingPackagesView() {
       const r = draft.skillRankChoices[i];
       if (!r) continue;
 
-      if (!isValidUnsignedInt(r.numChoices) || Number(r.numChoices) <= 0) {
-        e.skillRankChoices = `SkillRankChoices[${i + 1}]: numChoices must be a positive integer`;
-        break;
-      }
-
       if (!isValidUnsignedInt(r.value) || Number(r.value) <= 0) {
-        e.skillRankChoices = `SkillRankChoices[${i + 1}]: rank value must be positive`;
+        e.skillRankChoices = `SkillRankChoices[${i + 1}]: total ranks must be a positive integer`;
         break;
       }
 
-      if (!r.options.length) {
-        e.skillRankChoices = `SkillRankChoices[${i + 1}]: at least one skill option required`;
+      if (!isValidUnsignedInt(r.numChoices) || Number(r.numChoices) <= 0) {
+        e.skillRankChoices = `SkillRankChoices[${i + 1}]: number of choices must be a positive integer`;
+        break;
+      } else if (Number(r.value) < Number(r.numChoices)) {
+        e.skillRankChoices = `SkillRankChoices[${i + 1}]: number of choices cannot exceed total ranks`;
+        break;
+      }
+
+      if (r.options.length < Number(r.numChoices)) {
+        e.skillRankChoices = `SkillRankChoices[${i + 1}]: number of skill options must be at least ${r.numChoices}`;
         break;
       }
 
@@ -760,13 +770,14 @@ export default function TrainingPackagesView() {
     for (let i = 0; i < draft.categoryRanks.length; i++) {
       const r = draft.categoryRanks[i];
       if (!r) continue;
+
       if (!r.id) {
         e.categoryRanks = `CategoryRanks[${i + 1}]: category required`;
         break;
       }
 
       if (!isValidUnsignedInt(r.value)) {
-        e.categoryRanks = `CategoryRanks[${i + 1}]: value must be a positive integer`;
+        e.categoryRanks = `CategoryRanks[${i + 1}]: ranks must be a positive integer`;
         break;
       }
     }
@@ -785,13 +796,16 @@ export default function TrainingPackagesView() {
 
       if (!isValidUnsignedInt(r.value) || Number(r.value) <= 0) {
         e.categoryMultiSkillRankChoices =
-          `CategoryMultiSkillRankChoices[${i + 1}]: value must be a positive integer`;
+          `CategoryMultiSkillRankChoices[${i + 1}]: total ranks must be a positive integer`;
         break;
       }
 
       if (!isValidUnsignedInt(r.numChoices) || Number(r.numChoices) <= 0) {
         e.categoryMultiSkillRankChoices =
-          `CategoryMultiSkillRankChoices[${i + 1}]: numChoices must be a positive integer`;
+          `CategoryMultiSkillRankChoices[${i + 1}]: number of choices must be a positive integer`;
+        break;
+      } else if (Number(r.value) < Number(r.numChoices)) {
+        e.categoryMultiSkillRankChoices = `CategoryMultiSkillRankChoices[${i + 1}]: number of choices cannot exceed total ranks`;
         break;
       }
     }
@@ -810,14 +824,15 @@ export default function TrainingPackagesView() {
       }
 
       if (!isValidUnsignedInt(r.value) || Number(r.value) <= 0) {
-        e.groupMultiSkillRankChoices =
-          `GroupMultiSkillRankChoices[${i + 1}]: value must be a positive integer`;
+        e.groupMultiSkillRankChoices = `GroupMultiSkillRankChoices[${i + 1}]: total ranks must be a positive integer`;
         break;
       }
 
       if (!isValidUnsignedInt(r.numChoices) || Number(r.numChoices) <= 0) {
-        e.groupMultiSkillRankChoices =
-          `GroupMultiSkillRankChoices[${i + 1}]: numChoices must be a positive integer`;
+        e.groupMultiSkillRankChoices = `GroupMultiSkillRankChoices[${i + 1}]: number of choices must be a positive integer`;
+        break;
+      } else if (Number(r.value) < Number(r.numChoices)) {
+        e.groupMultiSkillRankChoices = `GroupMultiSkillRankChoices[${i + 1}]: number of choices cannot exceed total ranks`;
         break;
       }
     }
@@ -835,7 +850,7 @@ export default function TrainingPackagesView() {
       }
 
       if (!isValidUnsignedInt(r.value)) {
-        e.groupCategoryAndSkillRankChoices = `GroupCategoryAndSkillRankChoices[${i + 1}]: value must be positive`;
+        e.groupCategoryAndSkillRankChoices = `GroupCategoryAndSkillRankChoices[${i + 1}]: number of ranks must be positive`;
         break;
       }
     }
@@ -976,6 +991,7 @@ export default function TrainingPackagesView() {
 
     return e;
   };
+
   useEffect(() => {
     if (!showForm || viewing) return;
     setErrors(computeErrors(form));
@@ -1199,6 +1215,7 @@ export default function TrainingPackagesView() {
               value={form.name}
               onChange={(v) => setForm((s) => ({ ...s, name: v }))}
               disabled={viewing}
+              error={viewing ? undefined : errors.name}
             />
             <LabeledSelect
               label="Book"
@@ -1206,6 +1223,7 @@ export default function TrainingPackagesView() {
               onChange={(v) => setForm((s) => ({ ...s, book: v }))}
               options={bookOptions}
               disabled={viewing}
+              error={viewing ? undefined : errors.book}
             />
             {/* Lifestyle */}
             <CheckboxInput
@@ -1220,6 +1238,7 @@ export default function TrainingPackagesView() {
               value={form.timeToAcquire}
               onChange={makeUnsignedIntOnChange<typeof form>('timeToAcquire', setForm)}
               disabled={viewing}
+              error={viewing ? undefined : errors.timeToAcquire}
             />
             {/* Starting money modifier */}
             <LabeledInput
@@ -1304,15 +1323,18 @@ export default function TrainingPackagesView() {
           {/* Races */}
           <IdListEditor
             title="Allowed Races"
+            addButtonLabel='+ Add race'
             rows={form.races}
             onChangeRows={(next) => setForm((s) => ({ ...s, races: next }))}
             options={raceOptions}
             viewing={viewing}
+            error={errors.races}
           />
 
           {/* Qualifiers */}
           <TextNumberListEditor
             title="Qualifiers"
+            addButtonLabel='+ Add qualifier'
             rows={form.qualifiers.map((q) => ({
               text: q.qualifier,
               number: q.reduction,
@@ -1335,6 +1357,7 @@ export default function TrainingPackagesView() {
           {/* Specials */}
           <TextNumberListEditor
             title="Specials"
+            addButtonLabel='+ Add special'
             rows={form.specials.map((s) => ({
               text: s.value,
               number: s.chance,
@@ -1395,10 +1418,15 @@ export default function TrainingPackagesView() {
           {/* Skill Ranks */}
           <SkillValueListEditor
             title="Skill Ranks"
+            addButtonLabel='+ Add skill rank'
+            idColumnLabel="Skill"
+            valueColumnLabel="Ranks"
             rows={form.skillRanks}
             onChangeRows={(next) => setForm((s) => ({ ...s, skillRanks: next }))}
             idOptions={skillOptions}
             viewing={viewing}
+            error={errors.skillRanks}
+            signedValues={false}
           />
 
           {/* Skill Rank Choices */}
@@ -1416,18 +1444,22 @@ export default function TrainingPackagesView() {
           {/* Category Ranks */}
           <IdValueListEditor
             title="Skill Category Ranks"
+            addButtonLabel='+ Add category rank'
+            idColumnLabel="Category"
+            valueColumnLabel="Ranks"
             rows={form.categoryRanks}
             onChangeRows={(next) => setForm((s) => ({ ...s, categoryRanks: next }))}
             options={categoryOptions}
             loading={loading}
             viewing={viewing}
             error={errors.categoryRanks}
-            signedValues
+            signedValues={false}
           />
 
           {/* Category Multi‑Skill Rank Choices */}
           <IdMultiSkillRankEditor
             title="Category Multi-Skill Rank Choices"
+            addButtonLabel='+ Add category rank choice'
             rows={form.categoryMultiSkillRankChoices}
             onChangeRows={(next) =>
               setForm((s) => ({ ...s, categoryMultiSkillRankChoices: next }))
@@ -1442,6 +1474,7 @@ export default function TrainingPackagesView() {
           {/* Group Multi‑Skill Rank Choices */}
           <IdMultiSkillRankEditor
             title="Group Multi-Skill Rank Choices"
+            addButtonLabel='+ Add group rank choice'
             rows={form.groupMultiSkillRankChoices}
             onChangeRows={(next) =>
               setForm((s) => ({ ...s, groupMultiSkillRankChoices: next }))
@@ -1456,6 +1489,9 @@ export default function TrainingPackagesView() {
           {/* Group Category & Skill Rank Choices */}
           <IdValueListEditor
             title="Group Category & Skill Rank Choices"
+            addButtonLabel='+ Add group rank choice'
+            idColumnLabel="Group"
+            valueColumnLabel="# Ranks"
             rows={form.groupCategoryAndSkillRankChoices}
             onChangeRows={(next) => setForm((s) => ({ ...s, groupCategoryAndSkillRankChoices: next }))}
             options={groupOptions}
@@ -1496,6 +1532,8 @@ export default function TrainingPackagesView() {
           {/* Lifestyle Skills */}
           <SkillListEditor
             title="Lifestyle Skills"
+            idColumnLabel='Skill'
+            addButtonLabel='+ Add lifestyle skill'
             rows={form.lifestyleSkills}
             onChangeRows={(next) => setForm((s) => ({ ...s, lifestyleSkills: next }))}
             idOptions={skillOptions}
@@ -1505,6 +1543,7 @@ export default function TrainingPackagesView() {
           {/* Lifestyle Categories */}
           <IdListEditor
             title="Lifestyle Categories"
+            addButtonLabel='+ Add lifestyle category'
             rows={form.lifestyleCategories}
             onChangeRows={(next) => setForm((s) => ({ ...s, lifestyleCategories: next }))}
             options={categoryOptions}
@@ -1514,6 +1553,7 @@ export default function TrainingPackagesView() {
           {/* Lifestyle Groups */}
           <IdListEditor
             title="Lifestyle Groups"
+            addButtonLabel='+ Add lifestyle group'
             rows={form.lifestyleGroups}
             onChangeRows={(next) => setForm((s) => ({ ...s, lifestyleGroups: next }))}
             options={groupOptions}
@@ -1523,6 +1563,10 @@ export default function TrainingPackagesView() {
           {/* Lifestyle Category Skill Choices */}
           <ChoiceListEditor<string, string>
             title="Lifestyle Category Skill Choices"
+            addRowButtonLabel='+ Add lifestyle category choice'
+            optionSectionLabel="Categories"
+            numChoicesLabel="# Categories"
+            addOptionButtonLabel="+ Add category"
             rows={form.lifestyleCategorySkillChoices.map((r) => ({
               numChoices: r.numChoices,
               type: '',

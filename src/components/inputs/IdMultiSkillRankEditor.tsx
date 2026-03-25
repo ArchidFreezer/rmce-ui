@@ -47,7 +47,7 @@ export function IdMultiSkillRankEditor<TId extends string = string>({
 
   error,
   idColumnLabel = 'ID',
-  valueColumnLabel = 'Ranks',
+  valueColumnLabel = 'Total Ranks',
   numChoicesColumnLabel = '# Choices',
   addButtonLabel = '+ Add row',
   removeButtonLabel = 'Remove',
