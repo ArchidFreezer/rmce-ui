@@ -2,6 +2,8 @@ import * as React from 'react';
 import { LabeledInput } from './LabeledInput';
 import { LabeledSelect } from './LabeledSelect';
 
+import { sanitizeUnsignedInt } from '../../utils';
+
 export type SpellListRankRowVM<
   TCategoryId extends string = string,
   TSpellListId extends string = string
@@ -33,8 +35,6 @@ export interface SpellListRankEditorProps<
   addRowLabel?: string | undefined;
   removeRowLabel?: string | undefined;
 }
-
-const sanitizeUnsignedInt = (s: string) => s.replace(/[^\d]/g, '');
 
 export function SpellListRankEditor<
   TCategoryId extends string = string,

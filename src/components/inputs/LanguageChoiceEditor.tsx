@@ -1,7 +1,9 @@
 import * as React from 'react';
-import { LabeledInput } from './LabeledInput';
 
+import { LabeledInput } from './LabeledInput';
 import { LabeledSelect } from './LabeledSelect';
+
+import { sanitizeUnsignedInt } from '../../utils';
 
 export type LanguageChoiceRowVM<TLanguageId extends string = string> = {
   numChoices: string;
@@ -30,8 +32,6 @@ export interface LanguageChoiceEditorProps<TLanguageId extends string = string> 
   addRowLabel?: string | undefined;
   removeRowLabel?: string | undefined;
 }
-
-const sanitizeUnsignedInt = (s: string) => s.replace(/[^\d]/g, '');
 
 export function LanguageChoiceEditor<TLanguageId extends string = string>({
   title,
