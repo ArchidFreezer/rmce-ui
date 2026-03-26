@@ -116,8 +116,8 @@ export function IdCostListEditor({
           gap: 8,
         }}
       >
-        <div style={{ fontWeight: 600 }}>{categoryColumnLabel}</div>
-        <div style={{ fontWeight: 600 }}>{costColumnLabel}</div>
+        {rows.length > 0 && <div style={{ fontWeight: 600 }}>{categoryColumnLabel}</div>}
+        {rows.length > 0 && <div style={{ fontWeight: 600 }}>{costColumnLabel}</div>}
         {showActions && <div />}
 
         {rows.map((row, i) => (
