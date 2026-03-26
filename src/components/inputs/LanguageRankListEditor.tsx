@@ -159,10 +159,10 @@ export function LanguageRankListEditor({
           gap: 8,
         }}
       >
-        <div style={{ fontWeight: 600 }}>{languageColumnLabel}</div>
-        <div style={{ fontWeight: 600 }}>{spokenColumnLabel}</div>
-        <div style={{ fontWeight: 600 }}>{writtenColumnLabel}</div>
-        {showSomatic && <div style={{ fontWeight: 600 }}>{somaticColumnLabel}</div>}
+        {rows.length > 0 && <div style={{ fontWeight: 600 }}>{languageColumnLabel}</div>}
+        {rows.length > 0 && <div style={{ fontWeight: 600 }}>{spokenColumnLabel}</div>}
+        {rows.length > 0 && <div style={{ fontWeight: 600 }}>{writtenColumnLabel}</div>}
+        {showSomatic && rows.length > 0 && <div style={{ fontWeight: 600 }}>{somaticColumnLabel}</div>}
         {showActions && <div />}
 
         {rows.map((row, i) => (
