@@ -150,8 +150,8 @@ export function IdTypeListEditor<
           gap: 8,
         }}
       >
-        <div style={{ fontWeight: 600 }}>{idColumnLabel}</div>
-        <div style={{ fontWeight: 600 }}>{typeColumnLabel}</div>
+        {rows.length > 0 && <div style={{ fontWeight: 600 }}>{idColumnLabel}</div>}
+        {rows.length > 0 && <div style={{ fontWeight: 600 }}>{typeColumnLabel}</div>}
         {showActions && <div />}
 
         {rows.map((row, i) => (
