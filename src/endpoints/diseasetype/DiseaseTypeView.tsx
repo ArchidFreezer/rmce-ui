@@ -179,26 +179,28 @@ export default function DiseaseTypeView() {
   /* ------------------------------------------------------------------ */
   /* Table                                                              */
   /* ------------------------------------------------------------------ */
-  const columns: ColumnDef<DiseaseType>[] = [
-    { id: 'id', header: 'ID', accessor: (r) => r.id, minWidth: 260 },
-    { id: 'type', header: 'Type', accessor: (r) => r.type, minWidth: 160 },
-    { id: 'transmission', header: 'Transmission', accessor: (r) => r.transmission, minWidth: 160 },
-    { id: 'description', header: 'Description', accessor: (r) => r.description, minWidth: 320 },
-    {
-      id: 'actions',
-      header: 'Actions',
-      sortable: false,
-      width: 360,
-      render: (row) => (
-        <>
-          <button onClick={() => startView(row)}>View</button>
-          <button onClick={() => startEdit(row)}>Edit</button>
-          <button onClick={() => startDuplicate(row)}>Duplicate</button>
-          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
-        </>
-      ),
-    },
-  ];
+  const columns: ColumnDef<DiseaseType>[] = useMemo(() => {
+    return [
+      { id: 'id', header: 'ID', accessor: (r) => r.id, minWidth: 260 },
+      { id: 'type', header: 'Type', accessor: (r) => r.type, minWidth: 160 },
+      { id: 'transmission', header: 'Transmission', accessor: (r) => r.transmission, minWidth: 160 },
+      { id: 'description', header: 'Description', accessor: (r) => r.description, minWidth: 320 },
+      {
+        id: 'actions',
+        header: 'Actions',
+        sortable: false,
+        width: 360,
+        render: (row) => (
+          <>
+            <button onClick={() => startView(row)}>View</button>
+            <button onClick={() => startEdit(row)}>Edit</button>
+            <button onClick={() => startDuplicate(row)}>Duplicate</button>
+            <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
+          </>
+        ),
+      },
+    ];
+  }, [rows]);
 
 
   const globalFilter = (r: DiseaseType, q: string) => {

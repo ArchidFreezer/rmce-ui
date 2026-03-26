@@ -150,47 +150,49 @@ export default function CreaturePaceView() {
   /* ------------------------------------------------------------------ */
   /* Table                                                              */
   /* ------------------------------------------------------------------ */
-  const columns: ColumnDef<CreaturePace>[] = [
-    { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 240 },
-    { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 160 },
-    {
-      id: 'exhaustionMultiplier',
-      header: 'Exhaustion Multiplier',
-      accessor: (r) => r.exhaustionMultiplier,
-      sortType: 'number',
-      align: 'center',
-      minWidth: 180,
-    },
-    {
-      id: 'movementMultiplier',
-      header: 'Movement Multiplier',
-      accessor: (r) => r.movementMultiplier,
-      sortType: 'number',
-      align: 'center',
-      minWidth: 80,
-    },
-    {
-      id: 'manoeuvreDifficulty',
-      header: 'Manoeuvre Difficulty',
-      accessor: (r) => r.manoeuvreDifficulty,
-      sortType: 'string',
-      minWidth: 180,
-    },
-    {
-      id: 'actions',
-      header: 'Actions',
-      sortable: false,
-      width: 360,
-      render: (row) => (
-        <>
-          <button onClick={() => startView(row)}>View</button>
-          <button onClick={() => startEdit(row)}>Edit</button>
-          <button onClick={() => startDuplicate(row)}>Duplicate</button>
-          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
-        </>
-      ),
-    },
-  ];
+  const columns: ColumnDef<CreaturePace>[] = useMemo(() => {
+    return [
+      { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 240 },
+      { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 160 },
+      {
+        id: 'exhaustionMultiplier',
+        header: 'Exhaustion Multiplier',
+        accessor: (r) => r.exhaustionMultiplier,
+        sortType: 'number',
+        align: 'center',
+        minWidth: 180,
+      },
+      {
+        id: 'movementMultiplier',
+        header: 'Movement Multiplier',
+        accessor: (r) => r.movementMultiplier,
+        sortType: 'number',
+        align: 'center',
+        minWidth: 80,
+      },
+      {
+        id: 'manoeuvreDifficulty',
+        header: 'Manoeuvre Difficulty',
+        accessor: (r) => r.manoeuvreDifficulty,
+        sortType: 'string',
+        minWidth: 180,
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        sortable: false,
+        width: 360,
+        render: (row) => (
+          <>
+            <button onClick={() => startView(row)}>View</button>
+            <button onClick={() => startEdit(row)}>Edit</button>
+            <button onClick={() => startDuplicate(row)}>Duplicate</button>
+            <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
+          </>
+        ),
+      },
+    ];
+  }, [rows]);
 
   // ----- Search -----
   const globalFilter = (r: CreaturePace, q: string) => {

@@ -410,37 +410,39 @@ export default function CultureTypeView() {
   /* ------------------------------------------------------------------ */
   /* Table                                                              */
   /* ------------------------------------------------------------------ */
-  const columns: ColumnDef<CultureType>[] = [
-    { id: 'id', header: 'ID', accessor: r => r.id, minWidth: 260 },
-    { id: 'name', header: 'Name', accessor: r => r.name, minWidth: 200 },
-    { id: 'hobby', header: 'Hobby Ranks', accessor: r => r.hobbySkillRanks, minWidth: 120 },
-    {
-      id: 'weapons',
-      header: 'Preferred Weapons',
-      minWidth: 180,
-      accessor: r => r.preferredWeapons.map(id => wtNameById.get(id) ?? id).join(', '),
-      render: r => (<PillList values={r.preferredWeapons} getLabel={id => wtNameById.get(id) ?? id} />),
-    },
-    {
-      id: 'armours', header: 'Preferred Armours', minWidth: 180,
-      accessor: r => r.preferredArmours.map(id => atNameById.get(id) ?? id).join(', '),
-      render: r => (<PillList values={r.preferredArmours} getLabel={id => atNameById.get(id) ?? id} />),
-    },
-    {
-      id: 'actions',
-      header: 'Actions',
-      sortable: false,
-      width: 360,
-      render: (row) => (
-        <>
-          <button onClick={() => startView(row)}>View</button>
-          <button onClick={() => startEdit(row)}>Edit</button>
-          <button onClick={() => startDuplicate(row)}>Duplicate</button>
-          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
-        </>
-      ),
-    },
-  ];
+  const columns: ColumnDef<CultureType>[] = useMemo(() => {
+    return [
+      { id: 'id', header: 'ID', accessor: r => r.id, minWidth: 260 },
+      { id: 'name', header: 'Name', accessor: r => r.name, minWidth: 200 },
+      { id: 'hobby', header: 'Hobby Ranks', accessor: r => r.hobbySkillRanks, minWidth: 120 },
+      {
+        id: 'weapons',
+        header: 'Preferred Weapons',
+        minWidth: 180,
+        accessor: r => r.preferredWeapons.map(id => wtNameById.get(id) ?? id).join(', '),
+        render: r => (<PillList values={r.preferredWeapons} getLabel={id => wtNameById.get(id) ?? id} />),
+      },
+      {
+        id: 'armours', header: 'Preferred Armours', minWidth: 180,
+        accessor: r => r.preferredArmours.map(id => atNameById.get(id) ?? id).join(', '),
+        render: r => (<PillList values={r.preferredArmours} getLabel={id => atNameById.get(id) ?? id} />),
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        sortable: false,
+        width: 360,
+        render: (row) => (
+          <>
+            <button onClick={() => startView(row)}>View</button>
+            <button onClick={() => startEdit(row)}>Edit</button>
+            <button onClick={() => startDuplicate(row)}>Duplicate</button>
+            <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
+          </>
+        ),
+      },
+    ];
+  }, [rows, atNameById, wtNameById]);
 
   const globalFilter = (r: CultureType, q: string) => {
     const s = q.toLowerCase();
