@@ -2,13 +2,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-  fetchPoisontypes, upsertPoisontype, deletePoisontype,
+  fetchPoisonTypes, upsertPoisonType, deletePoisonType,
 } from '../../api';
 
 import {
   DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
   LabeledInput,
   MarkupPreview,
+  PillList,
+  Spinner,
   useConfirm, useToast,
 } from '../../components';
 
@@ -22,12 +24,15 @@ import {
 
 import {
   isValidID, makeIDOnChange,
-  isValidUnsignedInt, makeUnsignedIntOnChange
+  isValidUnsignedInt
 } from '../../utils/inputHelpers';
 
 const prefix = 'POISONTYPE_';
 
-// ----- Local form VM types (strings for numeric editors to allow partial typing) -----
+/* ------------------------------------------------------------------ */
+/* VM types                                                           */
+/* ------------------------------------------------------------------ */
+
 type EffectRowVM = { severity: MaladySeverity; min: string; max: string };
 type SymptomRowVM = { severity: MaladySeverity; symptoms: string };
 
@@ -39,21 +44,25 @@ type FormState = {
   symptoms: SymptomRowVM[];    // exactly 4 rows (Mild..Extreme)
 };
 
-// Build an empty VM with all severities present
-function emptyVM(): FormState {
-  const mkEffect = (s: MaladySeverity): EffectRowVM => ({ severity: s, min: '', max: '' });
-  const mkSymptom = (s: MaladySeverity): SymptomRowVM => ({ severity: s, symptoms: '' });
-  return {
-    id: prefix,
-    type: '',
-    areasAffected: '',
-    effectOnsets: MALADY_SEVERITIES.map(mkEffect),
-    symptoms: MALADY_SEVERITIES.map(mkSymptom),
-  };
-}
+type FormErrors = {
+  id?: string;
+  type?: string;
+  areasAffected?: string;
+  effectOnsets?: Record<MaladySeverity, string | undefined>;
+  symptoms?: Record<MaladySeverity, string | undefined>;
+};
+
+const emptyVM = (): FormState => ({
+  id: prefix,
+  type: '',
+  areasAffected: '',
+  effectOnsets: MALADY_SEVERITIES.map((s) => ({ severity: s, min: '', max: '' })),
+  symptoms: MALADY_SEVERITIES.map((s) => ({ severity: s, symptoms: '' })),
+});
+
 
 // Map API model -> VM
-function toVM(p: PoisonType): FormState {
+const toVM = (p: PoisonType): FormState => {
   const ensureOrder = <T extends { severity: MaladySeverity }>(arr: T[], builder: (s: MaladySeverity) => T): T[] => {
     const by = new Map(arr.map((r) => [r.severity, r]));
     return MALADY_SEVERITIES.map((s) => by.get(s) ?? builder(s));
@@ -74,7 +83,7 @@ function toVM(p: PoisonType): FormState {
 }
 
 // Map VM -> API model (convert min/max to numbers)
-function fromVM(vm: FormState): PoisonType {
+const fromVM = (vm: FormState): PoisonType => {
   return {
     id: vm.id.trim(),
     type: vm.type.trim(),
@@ -91,20 +100,18 @@ function fromVM(vm: FormState): PoisonType {
   };
 }
 
+/* ------------------------------------------------------------------ */
+/* View                                                               */
+/* ------------------------------------------------------------------ */
+
 export default function PoisonTypeView() {
   const dtRef = useRef<DataTableHandle>(null);
+
   const [rows, setRows] = useState<PoisonType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [errors, setErrors] = useState<{
-    id?: string; type?: string; areasAffected?: string;
-    effectOnsets?: Record<MaladySeverity, string | undefined>;
-    symptoms?: Record<MaladySeverity, string | undefined>;
-  }>({});
-  const hasErrors = Boolean(errors.id || errors.type || errors.areasAffected ||
-    (errors.effectOnsets && MALADY_SEVERITIES.some((s) => errors.effectOnsets?.[s])) ||
-    (errors.symptoms && MALADY_SEVERITIES.some((s) => errors.symptoms?.[s]))
-  );
+  const [errors, setErrors] = useState<FormErrors>({});
+  const hasErrors = Object.values(errors).some(Boolean);
 
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -112,41 +119,48 @@ export default function PoisonTypeView() {
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [viewing, setViewing] = useState(false);                         // read-only toggle
-
+  const [viewing, setViewing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<FormState>(emptyVM());
+
   const toast = useToast();
   const confirm = useConfirm();
 
-  // ----- Load -----
+  /* ------------------------------------------------------------------ */
+  /* Load data                                                          */
+  /* ------------------------------------------------------------------ */
+
   useEffect(() => {
-    let mounted = true;
     (async () => {
       try {
-        const list = await fetchPoisontypes();
-        if (!mounted) return;
-        setRows(list);
+        const [pt] = await Promise.all([
+          fetchPoisonTypes(),
+        ]);
+        setRows(pt);
       } catch (e) {
-        if (!mounted) return;
-        setError(e instanceof Error ? e.message : String(e));
+        setError(String(e));
       } finally {
-        if (mounted) setLoading(false);
+        setLoading(false);
       }
     })();
-    return () => { mounted = false; };
   }, []);
 
-  // ----- Validation -----
-  const computeErrors = (draft = form) => {
+  /* ------------------------------------------------------------------ */
+  /* Validation                                                         */
+  /* ------------------------------------------------------------------ */
+  const computeErrors = (draft: FormState): FormErrors => {
     if (viewing) return {};             // suppress inline errors in view mode
 
     const e: typeof errors = {};
+
     // ID
     if (!draft.id.trim()) e.id = 'ID is required';
     else if (!editingId && rows.some(r => r.id === draft.id.trim())) e.id = `ID "${draft.id.trim()}" already exists`;
     else if (!isValidID(draft.id, prefix)) e.id = `ID must start with "${prefix}" and contain additional characters`;
+
     // Type
     if (!draft.type.trim()) e.type = 'Type is required';
+
     // Areas affected
     if (!draft.areasAffected.trim()) e.areasAffected = 'Areas affected is required';
 
@@ -187,139 +201,10 @@ export default function PoisonTypeView() {
     setErrors(computeErrors(form));
   }, [form, showForm, editingId]); // keep current to avoid stale closure
 
-  // ----- Actions -----
-  const startNew = () => {
-    setViewing(false);
-    setEditingId(null);
-    setForm(emptyVM());
-    setErrors({});
-    setShowForm(true);
-  };
-
-  const startEdit = (row: PoisonType) => {
-    setViewing(false);
-    setEditingId(row.id);
-    setForm(toVM(row));
-    setErrors({});
-    setShowForm(true);
-  };
-
-  const startDuplicate = (row: PoisonType) => {
-    setViewing(false);
-    setEditingId(null);
-    // Create a copy of the row 
-    const vm = toVM(row);
-    vm.id = prefix; // Set the ID to a default value that the user must change
-    vm.type += ' (Copy)'; // Append " (Copy)" to the type for clarity
-    setForm(vm);
-    setErrors({});
-    setShowForm(true);
-  };
-
-  const startView = (row: PoisonType) => {
-    setViewing(true);
-    setEditingId(row.id);
-    setForm(toVM(row));
-    setErrors({});
-    setShowForm(true);
-  };
-
-  const cancelForm = () => {
-    setShowForm(false);
-    setViewing(false);
-    setEditingId(null);
-    setErrors({});
-  };
-
-  const saveForm = async () => {
-    const payload = fromVM(form);
-
-    const nextErrors = computeErrors(form);
-    setErrors(nextErrors);
-    if (hasErrors) return;
-
-    const isEditing = Boolean(editingId);
-    try {
-      const opts = isEditing
-        ? { method: 'PUT' as const, useResourceIdPath: true }
-        : { method: 'POST' as const, useResourceIdPath: false };
-
-      await upsertPoisontype(payload, opts);
-
-      setRows((prev) => {
-        if (isEditing) {
-          const idx = prev.findIndex((r) => r.id === payload.id);
-          if (idx >= 0) {
-            const copy = [...prev];
-            copy[idx] = { ...copy[idx], ...payload };
-            return copy;
-          }
-          return [payload, ...prev];
-        }
-        return [payload, ...prev];
-      });
-
-      setShowForm(false);
-      setViewing(false);
-      setEditingId(null);
-      toast({
-        variant: 'success',
-        title: isEditing ? 'Updated' : 'Saved',
-        description: `Poison type "${payload.id}" ${isEditing ? 'updated' : 'created'}.`,
-      });
-    } catch (err) {
-      toast({
-        variant: 'danger',
-        title: 'Save failed',
-        description: String(err instanceof Error ? err.message : err),
-      });
-    }
-  };
-
-  const onDelete = async (row: PoisonType) => {
-    const ok = await confirm({
-      title: 'Delete Poison Type',
-      body: `Delete poison type "${row.id}"? This cannot be undone.`,
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
-      tone: 'danger',
-    });
-    if (!ok) return;
-
-    // optimistic remove + rollback
-    const prev = rows;
-    setRows(prev.filter((r) => r.id !== row.id));
-    try {
-      await deletePoisontype(row.id);
-      if (editingId === row.id || viewing) cancelForm();
-      toast({ variant: 'success', title: 'Deleted', description: `Poison type "${row.id}" deleted.` });
-    } catch (err) {
-      setRows(prev);
-      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err) });
-    }
-  };
-
-  // ----- Table -----
+  /* ------------------------------------------------------------------ */
+  /* Table                                                              */
+  /* ------------------------------------------------------------------ */
   const columns: ColumnDef<PoisonType>[] = useMemo(() => {
-    const pill = (txt: string) => (
-      <span
-        key={txt}
-        style={{
-          display: 'inline-block',
-          padding: '2px 8px',
-          marginRight: 6,
-          marginBottom: 4,
-          borderRadius: 999,
-          fontSize: 12,
-          border: '1px solid var(--border)',
-          background: 'var(--panel)',
-        }}
-        title={txt}
-      >
-        {txt}
-      </span>
-    );
-
     const renderOnsets = (r: PoisonType) => {
       // “Mild: 1–50; Moderate: 3–30; …”
       const map = new Map(r.severityEffectOnsets.map(o => [o.severity, o]));
@@ -346,10 +231,7 @@ export default function PoisonTypeView() {
         accessor: (r) => r.areasAffected,
         sortType: 'string',
         minWidth: 280,
-        render: (r) => {
-          const parts = r.areasAffected.split(',').map((x) => x.trim()).filter(Boolean);
-          return <div style={{ display: 'flex', flexWrap: 'wrap' }}>{parts.map(pill)}</div>;
-        },
+        render: r => (<PillList values={r.areasAffected.split(',')} />),
       },
       {
         id: 'effectOnsets',
@@ -374,7 +256,6 @@ export default function PoisonTypeView() {
         ),
       },
     ];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows]);
 
   // ----- Search -----
@@ -388,7 +269,140 @@ export default function PoisonTypeView() {
     return hay.includes(s);
   };
 
-  // ----- Render -----
+  /* ------------------------------------------------------------------ */
+  /* Actions                                                            */
+  /* ------------------------------------------------------------------ */
+
+  const startNew = () => {
+    setViewing(false);
+    setEditingId(null);
+    setForm(emptyVM());
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const startView = (row: PoisonType) => {
+    setViewing(true);
+    setEditingId(row.id);
+    setForm(toVM(row));
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const startEdit = (row: PoisonType) => {
+    setViewing(false);
+    setEditingId(row.id);
+    setForm(toVM(row));
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const startDuplicate = (row: PoisonType) => {
+    setViewing(false);
+    setEditingId(null);
+    const vm = toVM(row);
+    vm.id = prefix;
+    vm.type += ' (Copy)';
+    setForm(vm);
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const cancelForm = () => {
+    setViewing(false);
+    setEditingId(null);
+    setErrors({});
+    setShowForm(false);
+  };
+
+  const saveForm = async () => {
+
+    if (submitting) return;
+
+    const nextErrors = computeErrors(form);
+    setErrors(nextErrors);
+    if (Object.values(nextErrors).some(Boolean)) {
+      return;
+    }
+
+    setSubmitting(true);
+
+    const payload = fromVM(form);
+    const isEditing = Boolean(editingId);
+
+    try {
+      const opts = isEditing
+        ? { method: 'PUT' as const, useResourceIdPath: true }
+        : { method: 'POST' as const, useResourceIdPath: false };
+
+      await upsertPoisonType(payload, opts);
+
+      setRows((prev) => {
+        if (isEditing) {
+          const idx = prev.findIndex((r) => r.id === payload.id);
+          if (idx >= 0) {
+            const copy = [...prev];
+            copy[idx] = { ...copy[idx], ...payload };
+            return copy;
+          }
+          return [payload, ...prev];
+        }
+        return [payload, ...prev];
+      });
+
+      setShowForm(false);
+      setViewing(false);
+      setEditingId(null);
+
+      toast({
+        variant: 'success',
+        title: isEditing ? 'Updated' : 'Saved',
+        description: `Poison Type "${payload.id}" ${isEditing ? 'updated' : 'created'}.`,
+      });
+    } catch (err) {
+      toast({
+        variant: 'danger',
+        title: 'Save failed',
+        description: String(err instanceof Error ? err.message : err),
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onDelete = async (row: PoisonType) => {
+
+    if (submitting) return;
+    setSubmitting(true);
+
+    const ok = await confirm({
+      title: 'Delete Poison Type',
+      body: `Delete "${row.id}"? This cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      tone: 'danger',
+    });
+    if (!ok) return;
+
+    const prev = rows;
+    setRows(prev.filter((r) => r.id !== row.id));
+
+    try {
+      await deletePoisonType(row.id);
+      if (editingId === row.id || viewing) cancelForm();
+      toast({ variant: 'success', title: 'Deleted', description: `Poison Type "${row.id}" deleted.` });
+    } catch (err) {
+      setRows(prev);
+      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err), });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Render                                                             */
+  /* ------------------------------------------------------------------ */
+
   if (loading) return <div>Loading…</div>;
   if (error) return <div style={{ color: 'crimson' }}>Error: {error}</div>;
 
@@ -396,9 +410,9 @@ export default function PoisonTypeView() {
     <>
       <h2>Poison Types</h2>
 
-      {/* Toolbar shown only when table visible */}
+      {/* Toolbar hidden while form visible */}
       {!showForm && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <button onClick={startNew}>New Poison Type</button>
           <DataTableSearchInput
             value={query}
@@ -406,108 +420,131 @@ export default function PoisonTypeView() {
             placeholder="Search poison types…"
             aria-label="Search poison types"
           />
+
           {/* Reset and auto-fit column widths */}
           <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
           <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
         </div>
       )}
 
-      {/* Form panel */}
+      {/* Display main Form */}
       {showForm && (
-        <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}>
-          <h3 style={{ marginTop: 0 }}>
-            {viewing ? 'View Poison Type' : (editingId ? 'Edit Poison Type' : 'New Poison Type')}
-          </h3>
+        <div className="form-container">
+          {/* Simple overlay while submitting */}
+          {submitting && (<div className="overlay"><Spinner size={24} /> <span>Saving…</span> </div>)}
 
-          {/* Basics */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
-            <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />
-            <LabeledInput label="Type" value={form.type} onChange={(v) => setForm(s => ({ ...s, type: v }))} disabled={viewing} error={errors.type} />
-            <LabeledInput
-              label="Areas Affected"
-              value={form.areasAffected}
-              onChange={(v) => setForm(s => ({ ...s, areasAffected: v }))}
-              disabled={viewing}
-              error={viewing ? undefined : errors.areasAffected}
-              helperText="Comma-separated list (e.g., feet, legs, hands)"
-            />
-          </div>
+          <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`}>
+            <h3>{viewing ? 'View' : editingId ? 'Edit' : 'New'} Poison Type</h3>
 
-          {/* Effect Onsets editor */}
-          <section style={{ marginTop: 8 }}>
-            <h4 style={{ margin: '8px 0' }}>Effect Onsets</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr 1fr', gap: 8 }}>
-              <div style={{ fontWeight: 600 }}>Severity</div>
-              <div style={{ fontWeight: 600 }}>Min</div>
-              <div style={{ fontWeight: 600 }}>Max</div>
-
-              {form.effectOnsets.map((row, idx) => (
-                <FragmentRowEffect
-                  key={row.severity}
-                  row={row}
-                  error={viewing ? undefined : errors.effectOnsets?.[row.severity]}
-                  disabled={viewing}
-                  onChange={(next) => setForm(s => {
-                    const copy = [...s.effectOnsets];
-                    copy[idx] = next;
-                    return { ...s, effectOnsets: copy };
-                  })}
-                />
-              ))}
+            {/* Basics */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
+              <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />
+              <LabeledInput label="Type" value={form.type} onChange={(v) => setForm(s => ({ ...s, type: v }))} disabled={viewing} error={errors.type} />
+              <LabeledInput
+                label="Areas Affected"
+                value={form.areasAffected}
+                onChange={(v) => setForm(s => ({ ...s, areasAffected: v }))}
+                disabled={viewing}
+                error={viewing ? undefined : errors.areasAffected}
+                helperText="Comma-separated list (e.g., feet, legs, hands)"
+              />
             </div>
-          </section>
 
-          {/* Symptoms editor */}
-          <section style={{ marginTop: 16 }}>
-            <h4 style={{ margin: '8px 0' }}>Symptoms</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 8 }}>
-              <div style={{ fontWeight: 600 }}>Severity</div>
-              <div style={{ fontWeight: 600 }}>Symptoms</div>
+            {/* Effect Onsets editor */}
+            <section style={{ marginTop: 8 }}>
+              <h4 style={{ margin: '8px 0' }}>Effect Onsets</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '160px 160px 160px', gap: 8 }}>
+                <div style={{ fontWeight: 600 }}>Severity</div>
+                <div style={{ fontWeight: 600 }}>Min</div>
+                <div style={{ fontWeight: 600 }}>Max</div>
 
-              {form.symptoms.map((row, idx) => (
-                <FragmentRowSymptom
-                  key={row.severity}
-                  row={row}
-                  error={viewing ? undefined : errors.symptoms?.[row.severity]}
-                  disabled={viewing}
-                  onChange={(next) => setForm(s => {
-                    const copy = [...s.symptoms];
-                    copy[idx] = next;
-                    return { ...s, symptoms: copy };
-                  })}
-                />
-              ))}
+                {form.effectOnsets.map((row, idx) => (
+                  <FragmentRowEffect
+                    key={row.severity}
+                    row={row}
+                    error={viewing ? undefined : errors.effectOnsets?.[row.severity]}
+                    disabled={viewing}
+                    onChange={(next) => setForm(s => {
+                      const copy = [...s.effectOnsets];
+                      copy[idx] = next;
+                      return { ...s, effectOnsets: copy };
+                    })}
+                  />
+                ))}
+              </div>
+            </section>
+
+            {/* Symptoms editor */}
+            <section style={{ marginTop: 16 }}>
+              <h4 style={{ margin: '8px 0' }}>Symptoms</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 8 }}>
+                <div style={{ fontWeight: 600 }}>Severity</div>
+                <div style={{ fontWeight: 600 }}>Symptoms</div>
+
+                {form.symptoms.map((row, idx) => (
+                  <FragmentRowSymptom
+                    key={row.severity}
+                    row={row}
+                    error={viewing ? undefined : errors.symptoms?.[row.severity]}
+                    disabled={viewing}
+                    onChange={(next) => setForm(s => {
+                      const copy = [...s.symptoms];
+                      copy[idx] = next;
+                      return { ...s, symptoms: copy };
+                    })}
+                  />
+                ))}
+              </div>
+            </section>
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              {!viewing && <button onClick={saveForm} disabled={hasErrors || submitting}>{submitting ? 'Submitting…' : 'Save'}</button>}
+              <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
             </div>
-          </section>
 
-          {/* Buttons */}
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
-            <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
+            {/* Validation errors */}
+            {Object.values(errors).some(Boolean) && (
+              <div style={{ marginTop: 12, color: '#b00020' }}>
+                <h4 style={{ margin: '0 0 4px' }}>Please fix the following errors:</h4>
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  {Object.entries(errors).map(([field, error]) => {
+                    if (!error) return null;
+                    if (typeof error === 'string') { return <li key={field}>{error}</li>; }
+                    return (
+                      <li key={field}> {field}:
+                        <ul style={{ margin: '4px 0 0 0', paddingLeft: 20 }}>
+                          {Object.entries(error).map(([subField, subError]) => subError ? <li key={`${field}-${subField}`}>{subField}: {subError}</li> : null)}
+                        </ul>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {/* Shared DataTable */}
       {!showForm && (
-        <DataTable<PoisonType>
+        <DataTable
           ref={dtRef}
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}
-          initialSort={{ colId: 'type', dir: 'asc' }}
+          initialSort={{ colId: 'name', dir: 'asc' }} //
+          // search
           searchQuery={query}
           globalFilter={globalFilter}
+          // pagination (client)
           mode="client"
           page={page}
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
-          pageSizeOptions={[5, 10, 20, 50, 100]}
-          tableMinWidth={0}
-          zebra
-          hover
-          resizable
+          // styles
+          tableMinWidth={0} // allow table to shrink below container width (for better mobile support)
           persistKey="dt.poisontype.v1"
           ariaLabel="Poison types"
         />
