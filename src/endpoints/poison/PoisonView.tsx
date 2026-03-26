@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   fetchPoisons, upsertPoison, deletePoison,
-  fetchPoisontypes,
+  fetchPoisonTypes,
 } from '../../api';
 
 import {
@@ -106,7 +106,7 @@ export default function PoisonView() {
       try {
         const [p, pt] = await Promise.all([
           fetchPoisons(),
-          fetchPoisontypes(),
+          fetchPoisonTypes(),
 
         ]);
         setRows(p);

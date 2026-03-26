@@ -40,7 +40,7 @@ function sanitizeSymptoms(arr: unknown): PoisonTypeSymptom[] {
 }
 
 /** GET /rmce/objects/poisontype → { poisontypes: PoisonType[] } */
-export async function fetchPoisontypes(): Promise<PoisonType[]> {
+export async function fetchPoisonTypes(): Promise<PoisonType[]> {
   const data = await fetchJson<PoisonTypesPayload>(`${BASE}`);
   if (!data || !Array.isArray(data.poisontypes)) {
     throw new Error('Unexpected response: expected { poisontypes: [...] }');
@@ -56,7 +56,7 @@ export async function fetchPoisontypes(): Promise<PoisonType[]> {
 }
 
 /** Create or update a single poison type. */
-export async function upsertPoisontype(
+export async function upsertPoisonType(
   pt: PoisonType,
   opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {}
 ): Promise<unknown> {
@@ -68,8 +68,8 @@ export async function upsertPoisontype(
 }
 
 /** DELETE /rmce/objects/poisontype/{id} */
-export async function deletePoisontype(id: string): Promise<void> {
-  if (!id) throw new Error('deletePoisontype: id is required');
+export async function deletePoisonType(id: string): Promise<void> {
+  if (!id) throw new Error('deletePoisonType: id is required');
   const url = `${BASE}/${encodeURIComponent(id)}`;
   await fetchJson<void>(url, { method: 'DELETE' });
 }
