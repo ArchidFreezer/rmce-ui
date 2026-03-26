@@ -10,6 +10,7 @@ import {
   CheckboxInput,
   LabeledInput,
   LabeledSelect,
+  Spinner,
   useConfirm, useToast,
 } from '../../components';
 
@@ -24,9 +25,9 @@ import {
 
 const prefix = 'LANGUAGE_';
 
-// ------------------------
-// Form VM (strings for inputs, booleans as booleans)
-// ------------------------
+/* ------------------------------------------------------------------ */
+/* VM types                                                           */
+/* ------------------------------------------------------------------ */
 type FormState = {
   id: string;
   name: string;
@@ -35,6 +36,16 @@ type FormState = {
   isSpoken: boolean;
   isWritten: boolean;
   isSomatic: boolean;
+};
+
+type FormErrors = {
+  id?: string;
+  name?: string;
+  category?: string;
+  baseLanguage?: string;
+  isSpoken?: string;
+  isWritten?: string;
+  isSomatic?: string;
 };
 
 const emptyVM = (): FormState => ({
@@ -67,16 +78,20 @@ const fromVM = (vm: FormState): Language => ({
   isSomatic: !!vm.isSomatic,
 });
 
+/* ------------------------------------------------------------------ */
+/* View                                                               */
+/* ------------------------------------------------------------------ */
+
 export default function LanguagesView() {
   const dtRef = useRef<DataTableHandle>(null);
+
   const [rows, setRows] = useState<Language[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [errors, setErrors] = useState<{ id?: string | undefined; name?: string | undefined; category?: string | undefined; baseLanguage?: string | undefined; isSpoken?: string | undefined; isWritten?: string | undefined; isSomatic?: string | undefined; }>({});
-  const hasErrors = Boolean(errors.id || errors.name || errors.category || errors.baseLanguage || errors.isSpoken || errors.isWritten || errors.isSomatic);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const hasErrors = Object.values(errors).some(Boolean);
 
   const [categories, setCategories] = useState<LanguageCategory[]>([]);
-  const [catLoading, setCatLoading] = useState(true);
 
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -85,47 +100,37 @@ export default function LanguagesView() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<FormState>(emptyVM());
 
   const toast = useToast();
   const confirm = useConfirm();
 
-  // ---- Load languages ----
+  /* ------------------------------------------------------------------ */
+  /* Load data                                                          */
+  /* ------------------------------------------------------------------ */
+
   useEffect(() => {
-    let mounted = true;
     (async () => {
       try {
-        const list = await fetchLanguages();
-        if (!mounted) return;
-        setRows(list);
+        const [tp, lc] = await Promise.all([
+          fetchLanguages(),
+          fetchLanguagecategories(),
+        ]);
+        setRows(tp);
+        setCategories(lc);
       } catch (e) {
-        if (!mounted) return;
-        setError(e instanceof Error ? e.message : String(e));
+        setError(String(e));
       } finally {
-        if (mounted) setLoading(false);
+        setLoading(false);
       }
     })();
-    return () => { mounted = false; };
   }, []);
 
-  // ---- Load categories (for select + table labels) ----
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const list = await fetchLanguagecategories();
-        if (!mounted) return;
-        setCategories(list);
-      } catch (e) {
-        console.error('Failed to load LanguageCategories', e);
-      } finally {
-        if (mounted) setCatLoading(false);
-      }
-    })();
-    return () => { mounted = false; };
-  }, []);
+  /* ------------------------------------------------------------------ */
+  /* Options                                                            */
+  /* ------------------------------------------------------------------ */
 
-  // ---- Category maps/options ----
   const categoryNameById = useMemo(() => {
     const m = new Map<string, string>();
     for (const c of categories) m.set(c.id, c.name);
@@ -137,12 +142,16 @@ export default function LanguagesView() {
     [categories]
   );
 
-  // ---- Validation ----
-  const computeErrors = (draft = form) => {
+  /* ------------------------------------------------------------------ */
+  /* Validation                                                         */
+  /* ------------------------------------------------------------------ */
+  const computeErrors = (draft: FormState): FormErrors => {
     const e: typeof errors = {};
+
     if (!draft.id.trim()) e.id = 'ID is required';
     else if (!editingId && rows.some(r => r.id === draft.id.trim())) e.id = `ID "${draft.id.trim()}" already exists`;
     else if (!isValidID(draft.id, prefix)) e.id = `ID must start with "${prefix}" and contain additional characters`;
+
     if (!draft.name.trim()) e.name = 'Name is required';
 
     const cat = draft.category.trim();
@@ -154,10 +163,88 @@ export default function LanguagesView() {
 
   useEffect(() => {
     if (!showForm || viewing) return;
-    setErrors(computeErrors());
+    setErrors(computeErrors(form));
   }, [form, showForm, viewing, categoryNameById]);
 
-  // ---- Actions ----
+  /* ------------------------------------------------------------------ */
+  /* Table                                                              */
+  /* ------------------------------------------------------------------ */
+  const columns: ColumnDef<Language>[] = [
+    { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 260 },
+    { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 160 },
+    {
+      id: 'category',
+      header: 'Category',
+      accessor: (r) => categoryNameById.get(r.category) ?? r.category, // sort by label fallback to id
+      sortType: 'string',
+      minWidth: 100,
+      render: (r) => {
+        const label = categoryNameById.get(r.category);
+        return label ? `${label}` : r.category;
+      },
+    },
+    {
+      id: 'baseLanguage',
+      header: 'Base Language',
+      accessor: (r) => r.baseLanguage ?? '',
+      sortType: 'string',
+      minWidth: 160,
+    },
+    {
+      id: 'isSpoken',
+      header: 'Spoken',
+      accessor: (r) => Number(r.isSpoken),
+      sortType: 'number',
+      minWidth: 90,
+      render: (r) => (r.isSpoken ? 'Yes' : 'No'),
+    },
+    {
+      id: 'isWritten',
+      header: 'Written',
+      accessor: (r) => Number(r.isWritten),
+      sortType: 'number',
+      minWidth: 90,
+      render: (r) => (r.isWritten ? 'Yes' : 'No'),
+    },
+    {
+      id: 'isSomatic',
+      header: 'Somatic',
+      accessor: (r) => Number(r.isSomatic),
+      sortType: 'number',
+      minWidth: 100,
+      render: (r) => (r.isSomatic ? 'Yes' : 'No'),
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      sortable: false,
+      width: 340,
+      render: (row) => (
+        <>
+          <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
+          <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
+          <button onClick={() => startDuplicate(row)} style={{ marginRight: 6 }}>Duplicate</button>
+          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
+        </>
+      ),
+    },
+  ];
+
+  const globalFilter = (r: Language, q: string) => {
+    const s = q.toLowerCase();
+    const catLabel = categoryNameById.get(r.category) ?? '';
+    return [
+      r.id, r.name, r.category, catLabel,
+      r.baseLanguage ?? '',
+      r.isSpoken ? 'yes' : 'no',
+      r.isWritten ? 'yes' : 'no',
+      r.isSomatic ? 'yes' : 'no',
+    ].some((v) => String(v ?? '').toLowerCase().includes(s));
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Actions                                                            */
+  /* ------------------------------------------------------------------ */
   const startNew = () => {
     setViewing(false);
     setEditingId(null);
@@ -194,25 +281,32 @@ export default function LanguagesView() {
   };
 
   const cancelForm = () => {
-    setShowForm(false);
     setViewing(false);
     setEditingId(null);
     setErrors({});
+    setShowForm(false);
   };
 
   const saveForm = async () => {
-    // Normalize payload (strings -> numbers for numeric fields)
-    const payload = fromVM(form);
+
+    if (submitting) return;
 
     const nextErrors = computeErrors(form);
     setErrors(nextErrors);
-    if (hasErrors) return;
+    if (Object.values(nextErrors).some(Boolean)) {
+      return;
+    }
 
+    setSubmitting(true);
+
+    const payload = fromVM(form);
     const isEditing = Boolean(editingId);
+
     try {
       const opts = isEditing
         ? { method: 'PUT' as const, useResourceIdPath: true }
         : { method: 'POST' as const, useResourceIdPath: false };
+
       await upsertLanguage(payload, opts);
 
       setRows((prev) => {
@@ -231,6 +325,7 @@ export default function LanguagesView() {
       setShowForm(false);
       setViewing(false);
       setEditingId(null);
+
       toast({
         variant: 'success',
         title: isEditing ? 'Updated' : 'Saved',
@@ -242,13 +337,19 @@ export default function LanguagesView() {
         title: 'Save failed',
         description: String(err instanceof Error ? err.message : err),
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const onDelete = async (row: Language) => {
+
+    if (submitting) return;
+    setSubmitting(true);
+
     const ok = await confirm({
       title: 'Delete Language',
-      body: `Delete language "${row.id}"? This cannot be undone.`,
+      body: `Delete "${row.id}"? This cannot be undone.`,
       confirmText: 'Delete',
       cancelText: 'Cancel',
       tone: 'danger',
@@ -257,90 +358,22 @@ export default function LanguagesView() {
 
     const prev = rows;
     setRows(prev.filter((r) => r.id !== row.id));
+
     try {
       await deleteLanguage(row.id);
       if (editingId === row.id || viewing) cancelForm();
       toast({ variant: 'success', title: 'Deleted', description: `Language "${row.id}" deleted.` });
     } catch (err) {
       setRows(prev);
-      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err) });
+      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err), });
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  // ---- Table ----
-  const columns: ColumnDef<Language>[] = useMemo(() => [
-    { id: 'id', header: 'id', accessor: (r) => r.id, sortType: 'string', minWidth: 260 },
-    { id: 'name', header: 'name', accessor: (r) => r.name, sortType: 'string', minWidth: 160 },
-    {
-      id: 'category',
-      header: 'category',
-      accessor: (r) => categoryNameById.get(r.category) ?? r.category, // sort by label fallback to id
-      sortType: 'string',
-      minWidth: 100,
-      render: (r) => {
-        const label = categoryNameById.get(r.category);
-        return label ? `${label}` : r.category;
-      },
-    },
-    {
-      id: 'baseLanguage',
-      header: 'baseLanguage',
-      accessor: (r) => r.baseLanguage ?? '',
-      sortType: 'string',
-      minWidth: 160,
-    },
-    {
-      id: 'isSpoken',
-      header: 'spoken',
-      accessor: (r) => Number(r.isSpoken),
-      sortType: 'number',
-      minWidth: 90,
-      render: (r) => (r.isSpoken ? 'Yes' : 'No'),
-    },
-    {
-      id: 'isWritten',
-      header: 'written',
-      accessor: (r) => Number(r.isWritten),
-      sortType: 'number',
-      minWidth: 90,
-      render: (r) => (r.isWritten ? 'Yes' : 'No'),
-    },
-    {
-      id: 'isSomatic',
-      header: 'somatic',
-      accessor: (r) => Number(r.isSomatic),
-      sortType: 'number',
-      minWidth: 100,
-      render: (r) => (r.isSomatic ? 'Yes' : 'No'),
-    },
-    {
-      id: 'actions',
-      header: 'actions',
-      sortable: false,
-      width: 340,
-      render: (row) => (
-        <>
-          <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
-          <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
-          <button onClick={() => startDuplicate(row)} style={{ marginRight: 6 }}>Duplicate</button>
-          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
-        </>
-      ),
-    },
-    // 👇 ensure columns recompute when category labels arrive
-  ], [categoryNameById]);
-
-  const globalFilter = (r: Language, q: string) => {
-    const s = q.toLowerCase();
-    const catLabel = categoryNameById.get(r.category) ?? '';
-    return [
-      r.id, r.name, r.category, catLabel,
-      r.baseLanguage ?? '',
-      r.isSpoken ? 'yes' : 'no',
-      r.isWritten ? 'yes' : 'no',
-      r.isSomatic ? 'yes' : 'no',
-    ].some((v) => String(v ?? '').toLowerCase().includes(s));
-  };
+  /* ------------------------------------------------------------------ */
+  /* Render                                                             */
+  /* ------------------------------------------------------------------ */
 
   if (loading) return <div>Loading…</div>;
   if (error) return <div style={{ color: 'crimson' }}>Error: {error}</div>;
@@ -351,7 +384,7 @@ export default function LanguagesView() {
 
       {/* Toolbar hidden while form visible */}
       {!showForm && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <button onClick={startNew}>New Language</button>
           <DataTableSearchInput
             value={query}
@@ -359,77 +392,90 @@ export default function LanguagesView() {
             placeholder="Search languages…"
             aria-label="Search languages"
           />
+
           {/* Reset and auto-fit column widths */}
           <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
           <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
         </div>
       )}
 
-      {/* Form panel */}
+      {/* Display main Form */}
       {showForm && (
-        <div
-          className={`form-panel ${viewing ? 'form-panel--view' : ''}`}
-          style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}
-        >
-          <h3 style={{ marginTop: 0 }}>
-            {viewing ? 'View Language' : (editingId ? 'Edit Language' : 'New Language')}
-          </h3>
+        <div className="form-container">
+          {/* Simple overlay while submitting */}
+          {submitting && (<div className="overlay"><Spinner size={24} /> <span>Saving…</span> </div>)}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />
-            <LabeledInput label="Name" value={form.name} onChange={(v) => setForm(s => ({ ...s, name: v }))} disabled={viewing} error={errors.name} />
+          <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`}>
+            <h3>{viewing ? 'View' : editingId ? 'Edit' : 'New'} Language</h3>
 
-            <LabeledSelect
-              label="Category"
-              value={form.category}
-              onChange={(v) => setForm((s) => ({ ...s, category: v }))}
-              options={categoryOptions}
-              disabled={catLoading || viewing}
-              error={viewing ? undefined : errors.category}
-              helperText={catLoading ? 'Loading categories…' : undefined}
-            />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />
+              <LabeledInput label="Name" value={form.name} onChange={(v) => setForm(s => ({ ...s, name: v }))} disabled={viewing} error={errors.name} />
 
-            <LabeledInput
-              label="Base Language (optional)"
-              value={form.baseLanguage ?? ''}
-              onChange={(v) => setForm((s) => ({ ...s, baseLanguage: v }))}
-              disabled={viewing}
-            />
+              <LabeledSelect
+                label="Category"
+                value={form.category}
+                onChange={(v) => setForm((s) => ({ ...s, category: v }))}
+                options={categoryOptions}
+                disabled={loading || viewing}
+                error={viewing ? undefined : errors.category}
+                helperText={loading ? 'Loading categories…' : undefined}
+              />
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-              <CheckboxInput label="Spoken" checked={form.isSpoken} onChange={(c) => setForm((s) => ({ ...s, isSpoken: c }))} disabled={viewing} />
-              <CheckboxInput label="Written" checked={form.isWritten} onChange={(c) => setForm((s) => ({ ...s, isWritten: c }))} disabled={viewing} />
-              <CheckboxInput label="Somatic" checked={form.isSomatic} onChange={(c) => setForm((s) => ({ ...s, isSomatic: c }))} disabled={viewing} />
+              <LabeledInput
+                label="Base Language (optional)"
+                value={form.baseLanguage ?? ''}
+                onChange={(v) => setForm((s) => ({ ...s, baseLanguage: v }))}
+                disabled={viewing}
+              />
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                <CheckboxInput label="Spoken" checked={form.isSpoken} onChange={(c) => setForm((s) => ({ ...s, isSpoken: c }))} disabled={viewing} />
+                <CheckboxInput label="Written" checked={form.isWritten} onChange={(c) => setForm((s) => ({ ...s, isWritten: c }))} disabled={viewing} />
+                <CheckboxInput label="Somatic" checked={form.isSomatic} onChange={(c) => setForm((s) => ({ ...s, isSomatic: c }))} disabled={viewing} />
+              </div>
             </div>
-          </div>
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
-            <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              {!viewing && <button onClick={saveForm} disabled={hasErrors || submitting}>{submitting ? 'Submitting…' : 'Save'}</button>}
+              <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
+            </div>
+
+            {/* Validation errors */}
+            {Object.values(errors).some(Boolean) && (
+              <div style={{ marginTop: 12, color: '#b00020' }}>
+                <h4 style={{ margin: '0 0 4px' }}>Please fix the following errors:</h4>
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  {Object.entries(errors).map(([field, error]) =>
+                    error ? <li key={field}>{error}</li> : null
+                  )}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {/* Table hidden while form up */}
       {!showForm && (
-        <DataTable<Language>
+        <DataTable
           ref={dtRef}
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}
-          initialSort={{ colId: 'name', dir: 'asc' }}
+          initialSort={{ colId: 'name', dir: 'asc' }} //
+          // search
           searchQuery={query}
           globalFilter={globalFilter}
+          // pagination (client)
           mode="client"
           page={page}
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
-          pageSizeOptions={[5, 10, 20, 50, 100]}
-          tableMinWidth={0}
-          zebra
-          hover
-          resizable
+          // styles
+          tableMinWidth={0} // allow table to shrink below container width (for better mobile support)
           persistKey="dt.language.v1"
           ariaLabel="Languages"
         />
