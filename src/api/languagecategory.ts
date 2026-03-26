@@ -9,7 +9,7 @@ const BASE = '/rmce/objects/languagecategory';
 const asString = (v: unknown) => String(v ?? '');
 
 /** GET /rmce/objects/languagecategory → { languagecategories: LanguageCategory[] } */
-export async function fetchLanguagecategories(): Promise<LanguageCategory[]> {
+export async function fetchLanguageCategories(): Promise<LanguageCategory[]> {
   const data = await fetchJson<LanguageCategoriesPayload>(BASE);
   if (!data || !Array.isArray((data as any).languagecategories)) {
     throw new Error('Unexpected response: expected { languagecategories: [...] }');
@@ -21,7 +21,7 @@ export async function fetchLanguagecategories(): Promise<LanguageCategory[]> {
 }
 
 /** Create or update a single language category. */
-export async function upsertLanguagecategory(
+export async function upsertLanguageCategory(
   lc: LanguageCategory,
   opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {},
 ) {
@@ -33,7 +33,7 @@ export async function upsertLanguagecategory(
 }
 
 /** DELETE /rmce/objects/languagecategory/{id} */
-export async function deleteLanguagecategory(id: string) {
-  if (!id) throw new Error('deleteLanguagecategory: id is required');
+export async function deleteLanguageCategory(id: string) {
+  if (!id) throw new Error('deleteLanguageCategory: id is required');
   await fetchJson<void>(`${BASE}/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
