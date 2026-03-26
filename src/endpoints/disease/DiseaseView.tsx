@@ -169,33 +169,35 @@ export default function DiseaseView() {
   /* ------------------------------------------------------------------ */
   /* Table                                                              */
   /* ------------------------------------------------------------------ */
-  const columns: ColumnDef<Disease>[] = [
-    { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
-    { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
-    {
-      id: 'type',
-      header: 'Type',
-      accessor: (r) => r.type,
-      sortType: 'string',
-      render: (r) => dtNameById.get(r.type) ?? r.type, // use label if available, otherwise fallback to raw id
-    },
-    { id: 'level', header: 'Level', accessor: r => r.level, sortType: 'number', align: 'center', minWidth: 80 },
-    { id: 'levelVariance', header: 'Level Variance', accessor: r => r.levelVariance, sortType: 'string', align: 'center', minWidth: 80 },
-    {
-      id: 'actions',
-      header: 'Actions',
-      sortable: false,
-      width: 360,
-      render: (row) => (
-        <>
-          <button onClick={() => startView(row)}>View</button>
-          <button onClick={() => startEdit(row)}>Edit</button>
-          <button onClick={() => startDuplicate(row)}>Duplicate</button>
-          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
-        </>
-      ),
-    },
-  ];
+  const columns: ColumnDef<Disease>[] = useMemo(() => {
+    return [
+      { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
+      { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
+      {
+        id: 'type',
+        header: 'Type',
+        accessor: (r) => r.type,
+        sortType: 'string',
+        render: (r) => dtNameById.get(r.type) ?? r.type, // use label if available, otherwise fallback to raw id
+      },
+      { id: 'level', header: 'Level', accessor: r => r.level, sortType: 'number', align: 'center', minWidth: 80 },
+      { id: 'levelVariance', header: 'Level Variance', accessor: r => r.levelVariance, sortType: 'string', align: 'center', minWidth: 80 },
+      {
+        id: 'actions',
+        header: 'Actions',
+        sortable: false,
+        width: 360,
+        render: (row) => (
+          <>
+            <button onClick={() => startView(row)}>View</button>
+            <button onClick={() => startEdit(row)}>Edit</button>
+            <button onClick={() => startDuplicate(row)}>Duplicate</button>
+            <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
+          </>
+        ),
+      },
+    ];
+  }, [rows, dtNameById]);
 
 
   // ----- Search -----

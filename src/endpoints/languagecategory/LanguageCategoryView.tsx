@@ -99,24 +99,26 @@ export default function LanguageCategoryView() {
   /* ------------------------------------------------------------------ */
   /* Table                                                              */
   /* ------------------------------------------------------------------ */
-  const columns: ColumnDef<LanguageCategory>[] = [
-    { id: 'id', header: 'id', accessor: r => r.id, sortType: 'string', minWidth: 260 },
-    { id: 'name', header: 'name', accessor: r => r.name, sortType: 'string', minWidth: 180 },
-    {
-      id: 'actions',
-      header: 'actions',
-      sortable: false,
-      width: 300,
-      render: (row) => (
-        <>
-          <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
-          <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
-          <button onClick={() => startDuplicate(row)} style={{ marginRight: 6 }}>Duplicate</button>
-          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
-        </>
-      ),
-    },
-  ];
+  const columns: ColumnDef<LanguageCategory>[] = useMemo(() => {
+    return [
+      { id: 'id', header: 'id', accessor: r => r.id, sortType: 'string', minWidth: 260 },
+      { id: 'name', header: 'name', accessor: r => r.name, sortType: 'string', minWidth: 180 },
+      {
+        id: 'actions',
+        header: 'actions',
+        sortable: false,
+        width: 300,
+        render: (row) => (
+          <>
+            <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
+            <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
+            <button onClick={() => startDuplicate(row)} style={{ marginRight: 6 }}>Duplicate</button>
+            <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
+          </>
+        ),
+      },
+    ];
+  }, [rows]);
 
   const globalFilter = (r: LanguageCategory, q: string) => {
     const s = q.toLowerCase();

@@ -149,29 +149,31 @@ export default function BookView() {
   /* ------------------------------------------------------------------ */
   /* Table                                                              */
   /* ------------------------------------------------------------------ */
-  const columns: ColumnDef<Book>[] = [
-    { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
-    { id: 'code', header: 'Code', accessor: (r) => r.code, sortType: 'number', align: 'right' },
-    { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
-    { id: 'abbreviation', header: 'Abbreviation', accessor: (r) => r.abbreviation, sortType: 'string' },
-    { id: 'isbn', header: 'ISBN', accessor: (r) => r.isbn, sortType: 'string' },
-    {
-      id: 'actions',
-      header: 'Actions',
-      sortable: false,
-      width: 360,
-      render: (row) => (
-        <>
-          <button onClick={() => startView(row)}>View</button>
-          <button onClick={() => startEdit(row)}>Edit</button>
-          <button onClick={() => startDuplicate(row)}>Duplicate</button>
-          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>
-            Delete
-          </button>
-        </>
-      ),
-    },
-  ];
+  const columns: ColumnDef<Book>[] = useMemo(() => {
+    return [
+      { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
+      { id: 'code', header: 'Code', accessor: (r) => r.code, sortType: 'number', align: 'right' },
+      { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
+      { id: 'abbreviation', header: 'Abbreviation', accessor: (r) => r.abbreviation, sortType: 'string' },
+      { id: 'isbn', header: 'ISBN', accessor: (r) => r.isbn, sortType: 'string' },
+      {
+        id: 'actions',
+        header: 'Actions',
+        sortable: false,
+        width: 360,
+        render: (row) => (
+          <>
+            <button onClick={() => startView(row)}>View</button>
+            <button onClick={() => startEdit(row)}>Edit</button>
+            <button onClick={() => startDuplicate(row)}>Duplicate</button>
+            <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>
+              Delete
+            </button>
+          </>
+        ),
+      },
+    ];
+  }, [rows]);
 
   // ----- Search -----
   const globalFilter = (b: Book, q: string) => {

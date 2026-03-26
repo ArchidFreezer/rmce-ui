@@ -147,50 +147,43 @@ export default function ClimateView() {
   /* ------------------------------------------------------------------ */
   /* Table                                                              */
   /* ------------------------------------------------------------------ */
-  const pill = (p: string) => (
-    <span
-      key={p}
-      style={{ display: 'inline-block', padding: '2px 8px', marginRight: 6, marginBottom: 4, borderRadius: 999, fontSize: 12, border: '1px solid var(--border)', background: 'var(--panel)', }}
-      title={p}
-    >
-      {p}
-    </span>
-  );
 
   // Define sort order for temperatures (custom sortType doesn't work well with enums, so we convert to index)    
   const TEMP_ORDER: Temperature[] = ['Cold', 'Cool', 'Temperate', 'Warm', 'Hot'];
   const idx = (t: string) => Math.max(0, TEMP_ORDER.indexOf(t as Temperature));
 
-  const columns: ColumnDef<Climate>[] = [
-    { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
-    { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
-    {
-      id: 'temperature',
-      header: 'Temperature',
-      accessor: (r) => r.temperature,
-      sortType: (a, b) => idx(a.temperature as string) - idx(b.temperature as string),
-      minWidth: 140,
-    },
-    {
-      id: 'precipitations', header: 'Precipitations', minWidth: 220,
-      accessor: (r) => r.precipitations.join(', '),
-      render: r => (<PillList values={r.precipitations} />),
-    },
-    {
-      id: 'actions',
-      header: 'Actions',
-      sortable: false,
-      width: 160,
-      render: (row) => (
-        <>
-          <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
-          <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
-          <button onClick={() => startDuplicate(row)} style={{ marginRight: 6 }}>Duplicate</button>
-          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
-        </>
-      ),
-    },
-  ];
+  const columns: ColumnDef<Climate>[] = useMemo(() => {
+    return [
+      { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
+      { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
+      {
+        id: 'temperature',
+        header: 'Temperature',
+        accessor: (r) => r.temperature,
+        sortType: (a, b) => idx(a.temperature as string) - idx(b.temperature as string),
+        minWidth: 140,
+      },
+      {
+        id: 'precipitations', header: 'Precipitations', minWidth: 220,
+        accessor: (r) => r.precipitations.join(', '),
+        render: r => (<PillList values={r.precipitations} />),
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        sortable: false,
+        width: 160,
+        render: (row) => (
+          <>
+            <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
+            <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
+            <button onClick={() => startDuplicate(row)} style={{ marginRight: 6 }}>Duplicate</button>
+            <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
+          </>
+        ),
+      },
+    ];
+  }, [rows]);
 
   // ----- Search -----
   const globalFilter = (r: Climate, q: string) => {

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   fetchLanguages, upsertLanguage, deleteLanguage,
-  fetchLanguagecategories,
+  fetchLanguageCategories,
 } from '../../api';
 
 import {
@@ -115,7 +115,7 @@ export default function LanguagesView() {
       try {
         const [tp, lc] = await Promise.all([
           fetchLanguages(),
-          fetchLanguagecategories(),
+          fetchLanguageCategories(),
         ]);
         setRows(tp);
         setCategories(lc);
@@ -169,66 +169,68 @@ export default function LanguagesView() {
   /* ------------------------------------------------------------------ */
   /* Table                                                              */
   /* ------------------------------------------------------------------ */
-  const columns: ColumnDef<Language>[] = [
-    { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 260 },
-    { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 160 },
-    {
-      id: 'category',
-      header: 'Category',
-      accessor: (r) => categoryNameById.get(r.category) ?? r.category, // sort by label fallback to id
-      sortType: 'string',
-      minWidth: 100,
-      render: (r) => {
-        const label = categoryNameById.get(r.category);
-        return label ? `${label}` : r.category;
+  const columns: ColumnDef<Language>[] = useMemo(() => {
+    return [
+      { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 260 },
+      { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 160 },
+      {
+        id: 'category',
+        header: 'Category',
+        accessor: (r) => categoryNameById.get(r.category) ?? r.category, // sort by label fallback to id
+        sortType: 'string',
+        minWidth: 100,
+        render: (r) => {
+          const label = categoryNameById.get(r.category);
+          return label ? `${label}` : r.category;
+        },
       },
-    },
-    {
-      id: 'baseLanguage',
-      header: 'Base Language',
-      accessor: (r) => r.baseLanguage ?? '',
-      sortType: 'string',
-      minWidth: 160,
-    },
-    {
-      id: 'isSpoken',
-      header: 'Spoken',
-      accessor: (r) => Number(r.isSpoken),
-      sortType: 'number',
-      minWidth: 90,
-      render: (r) => (r.isSpoken ? 'Yes' : 'No'),
-    },
-    {
-      id: 'isWritten',
-      header: 'Written',
-      accessor: (r) => Number(r.isWritten),
-      sortType: 'number',
-      minWidth: 90,
-      render: (r) => (r.isWritten ? 'Yes' : 'No'),
-    },
-    {
-      id: 'isSomatic',
-      header: 'Somatic',
-      accessor: (r) => Number(r.isSomatic),
-      sortType: 'number',
-      minWidth: 100,
-      render: (r) => (r.isSomatic ? 'Yes' : 'No'),
-    },
-    {
-      id: 'actions',
-      header: 'Actions',
-      sortable: false,
-      width: 340,
-      render: (row) => (
-        <>
-          <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
-          <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
-          <button onClick={() => startDuplicate(row)} style={{ marginRight: 6 }}>Duplicate</button>
-          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
-        </>
-      ),
-    },
-  ];
+      {
+        id: 'baseLanguage',
+        header: 'Base Language',
+        accessor: (r) => r.baseLanguage ?? '',
+        sortType: 'string',
+        minWidth: 160,
+      },
+      {
+        id: 'isSpoken',
+        header: 'Spoken',
+        accessor: (r) => Number(r.isSpoken),
+        sortType: 'number',
+        minWidth: 90,
+        render: (r) => (r.isSpoken ? 'Yes' : 'No'),
+      },
+      {
+        id: 'isWritten',
+        header: 'Written',
+        accessor: (r) => Number(r.isWritten),
+        sortType: 'number',
+        minWidth: 90,
+        render: (r) => (r.isWritten ? 'Yes' : 'No'),
+      },
+      {
+        id: 'isSomatic',
+        header: 'Somatic',
+        accessor: (r) => Number(r.isSomatic),
+        sortType: 'number',
+        minWidth: 100,
+        render: (r) => (r.isSomatic ? 'Yes' : 'No'),
+      },
+      {
+        id: 'actions',
+        header: 'Actions',
+        sortable: false,
+        width: 340,
+        render: (row) => (
+          <>
+            <button onClick={() => startView(row)} style={{ marginRight: 6 }}>View</button>
+            <button onClick={() => startEdit(row)} style={{ marginRight: 6 }}>Edit</button>
+            <button onClick={() => startDuplicate(row)} style={{ marginRight: 6 }}>Duplicate</button>
+            <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
+          </>
+        ),
+      },
+    ];
+  }, [rows, categoryNameById]);
 
   const globalFilter = (r: Language, q: string) => {
     const s = q.toLowerCase();

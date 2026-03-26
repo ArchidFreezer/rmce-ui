@@ -345,7 +345,7 @@ export default function AttacktablesView() {
         </>
       ),
     },
-  ], []);
+  ], [rows]);
 
   const globalFilter = (r: AttackTable, q: string) => {
     const s = q.toLowerCase();
