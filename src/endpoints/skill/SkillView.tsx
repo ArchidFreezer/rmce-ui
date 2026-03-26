@@ -13,6 +13,7 @@ import {
   LabeledInput,
   LabeledSelect,
   MarkupPreview,
+  Spinner,
   useConfirm, useToast,
 } from '../../components';
 
@@ -37,9 +38,9 @@ import {
 
 const prefix = 'SKILL_';
 
-// ------------------------
-// Form VM (strings for numbers while typing; three stat slots)
-// ------------------------
+/* ------------------------------------------------------------------ */
+/* VM types                                                           */
+/* ------------------------------------------------------------------ */
 type FormState = {
   id: string;
   name: string;
@@ -67,6 +68,19 @@ type FormState = {
   // floats as strings while typing
   exhaustion: string;
   distanceMultiplier: string;
+};
+
+type FormErrors = {
+  id?: string;
+  name?: string;
+
+  category?: string;
+  book?: string;
+  action?: string;
+
+  stats?: string;
+  exhaustion?: string;
+  distanceMultiplier?: string;
 };
 
 const emptyVM = (): FormState => ({
@@ -155,18 +169,22 @@ function fromVM(vm: FormState): Skill {
   };
 }
 
+/* ------------------------------------------------------------------ */
+/* View                                                               */
+/* ------------------------------------------------------------------ */
+
 export default function SkillView() {
+
   const dtRef = useRef<DataTableHandle>(null);
   const [rows, setRows] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const hasErrors = Object.values(errors).some(Boolean);
 
   const [books, setBooks] = useState<Book[]>([]);
-  const [bookLoading, setBookLoading] = useState(true);
   const [categories, setCategories] = useState<SkillCategory[]>([]);
-  const [catLoading, setCatLoading] = useState(true);
   const [skillgroups, setSkillgroups] = useState<SkillGroup[]>([]);
-  const [sgLoading, setSgLoading] = useState(true);
 
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -175,17 +193,8 @@ export default function SkillView() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<FormState>(emptyVM());
-  const [errors, setErrors] = useState<{
-    id?: string | undefined;
-    name?: string | undefined;
-    category?: string | undefined;
-    book?: string | undefined;
-    action?: string | undefined;
-    stats?: string | undefined;
-    exhaustion?: string | undefined;
-    distanceMultiplier?: string | undefined;
-  }>({});
 
   // HTML preview toggles
   const [previewAll, setPreviewAll] = useState(false);
@@ -198,67 +207,35 @@ export default function SkillView() {
   const toast = useToast();
   const confirm = useConfirm();
 
-  // Load list
+  /* ------------------------------------------------------------------ */
+  /* Load data                                                          */
+  /* ------------------------------------------------------------------ */
+
   useEffect(() => {
-    let mounted = true;
     (async () => {
       try {
-        const list = await fetchSkills();
-        if (!mounted) return;
-        setRows(list);
+        const [s, c, g, b] = await Promise.all([
+          fetchSkills(),
+          fetchSkillcategories(),
+          fetchSkillgroups(),
+          fetchBooks(),
+        ]);
+        setRows(s);
+        setCategories(c);
+        setSkillgroups(g);
+        setBooks(b);
       } catch (e) {
-        if (!mounted) return;
-        setError(e instanceof Error ? e.message : String(e));
+        setError(String(e));
       } finally {
-        if (mounted) setLoading(false);
+        setLoading(false);
       }
     })();
-    return () => { mounted = false; };
   }, []);
 
-  // Load categories
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const list = await fetchSkillcategories();
-        if (!mounted) return;
-        setCategories(list);
-      } catch { }
-      finally { if (mounted) setCatLoading(false); }
-    })();
-    return () => { mounted = false; };
-  }, []);
+  /* ------------------------------------------------------------------ */
+  /* Helpers                                                            */
+  /* ------------------------------------------------------------------ */
 
-  // Load books
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const list = await fetchBooks();
-        if (!mounted) return;
-        setBooks(list);
-      } catch { }
-      finally { if (mounted) setBookLoading(false); }
-    })();
-    return () => { mounted = false; };
-  }, []);
-
-  // Load groups
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const list = await fetchSkillgroups();
-        if (!mounted) return;
-        setSkillgroups(list);
-      } catch { }
-      finally { if (mounted) setSgLoading(false); }
-    })();
-    return () => { mounted = false; };
-  }, []);
-
-  // Maps & Options
   const sgNameById = useMemo(() => {
     const m = new Map<string, string>();
     for (const sg of skillgroups) m.set(sg.id, sg.name);
@@ -290,8 +267,10 @@ export default function SkillView() {
     []
   );
 
-  // Validation
-  const computeErrors = (draft = form) => {
+  /* ------------------------------------------------------------------ */
+  /* Validation                                                         */
+  /* ------------------------------------------------------------------ */
+  const computeErrors = (draft: FormState): FormErrors => {
     const e: typeof errors = {};
 
     if (!draft.id.trim()) e.id = 'ID is required';
@@ -327,123 +306,14 @@ export default function SkillView() {
     return e;
   };
 
-  const hasErrors = Boolean(
-    errors.id || errors.name || errors.category || errors.book || errors.action ||
-    errors.stats || errors.exhaustion || errors.distanceMultiplier
-  );
-
   useEffect(() => {
     if (!showForm || viewing) return;
-    setErrors(computeErrors());
+    setErrors(computeErrors(form));
   }, [form, showForm, viewing, catNameById, bookNameById]);
 
-  // Actions
-  const startNew = () => {
-    setViewing(false);
-    setEditingId(null);
-    setForm(emptyVM());
-    setErrors({});
-    setShowForm(true);
-  };
-  const startView = (row: Skill) => {
-    setViewing(true);
-    setEditingId(row.id);
-    setForm(toVM(row));
-    setErrors({});
-    setShowForm(true);
-  };
-  const startEdit = (row: Skill) => {
-    setViewing(false);
-    setEditingId(row.id);
-    setForm(toVM(row));
-    setErrors({});
-    setShowForm(true);
-  };
-  const startDuplicate = (row: Skill) => {
-    setViewing(false);
-    setEditingId(null);
-    const vm = toVM(row);
-    vm.id = prefix;
-    vm.name += ' (Copy)';
-    setForm(vm);
-    setErrors({});
-    setShowForm(true);
-  };
-  const cancelForm = () => {
-    setShowForm(false);
-    setViewing(false);
-    setEditingId(null);
-    setErrors({});
-  };
-
-  const saveForm = async () => {
-    const nextErrors = computeErrors(form);
-    setErrors(nextErrors);
-    const anyError = Object.values(nextErrors).some(Boolean);
-    if (anyError) return;
-
-    const payload = fromVM(form);
-    const isEditing = Boolean(editingId);
-
-    try {
-      const opts = isEditing
-        ? { method: 'PUT' as const, useResourceIdPath: true }
-        : { method: 'POST' as const, useResourceIdPath: false };
-      await upsertSkill(payload, opts);
-
-      setRows(prev => {
-        if (isEditing) {
-          const idx = prev.findIndex(r => r.id === payload.id);
-          if (idx >= 0) {
-            const copy = [...prev];
-            copy[idx] = { ...copy[idx], ...payload };
-            return copy;
-          }
-          return [payload, ...prev];
-        }
-        return [payload, ...prev];
-      });
-
-      setShowForm(false);
-      setViewing(false);
-      setEditingId(null);
-      toast({
-        variant: 'success',
-        title: isEditing ? 'Updated' : 'Saved',
-        description: `Skill "${payload.id}" ${isEditing ? 'updated' : 'created'}.`,
-      });
-    } catch (err) {
-      toast({
-        variant: 'danger',
-        title: 'Save failed',
-        description: String(err instanceof Error ? err.message : err),
-      });
-    }
-  };
-
-  const onDelete = async (row: Skill) => {
-    const ok = await confirm({
-      title: 'Delete Skill',
-      body: `Delete skill "${row.id}"? This cannot be undone.`,
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
-      tone: 'danger',
-    });
-    if (!ok) return;
-
-    const prev = rows;
-    setRows(prev.filter(r => r.id !== row.id));
-    try {
-      await deleteSkill(row.id);
-      if (editingId === row.id || viewing) cancelForm();
-      toast({ variant: 'success', title: 'Deleted', description: `Skill "${row.id}" deleted.` });
-    } catch (err) {
-      setRows(prev);
-      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err) });
-    }
-  };
-
-  // Columns
+  /* ------------------------------------------------------------------ */
+  /* Table                                                              */
+  /* ------------------------------------------------------------------ */
   const columns: ColumnDef<Skill>[] = useMemo(() => [
     { id: 'id', header: 'ID', accessor: r => r.id, sortType: 'string', minWidth: 280 },
     { id: 'name', header: 'Name', accessor: r => r.name, sortType: 'string', minWidth: 180 },
@@ -533,11 +403,146 @@ export default function SkillView() {
     ].some(v => String(v ?? '').toLowerCase().includes(s));
   };
 
+  /* ------------------------------------------------------------------ */
+  /* Actions                                                            */
+  /* ------------------------------------------------------------------ */
+
+  const startNew = () => {
+    setViewing(false);
+    setEditingId(null);
+    setForm(emptyVM());
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const startView = (row: Skill) => {
+    setViewing(true);
+    setEditingId(row.id);
+    setForm(toVM(row));
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const startEdit = (row: Skill) => {
+    setViewing(false);
+    setEditingId(row.id);
+    setForm(toVM(row));
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const startDuplicate = (row: Skill) => {
+    setViewing(false);
+    setEditingId(null);
+    const vm = toVM(row);
+    vm.id = prefix;
+    vm.name += ' (Copy)';
+    setForm(vm);
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const cancelForm = () => {
+    setViewing(false);
+    setEditingId(null);
+    setErrors({});
+    setShowForm(false);
+  };
+
+  const saveForm = async () => {
+
+    if (submitting) return;
+
+    const nextErrors = computeErrors(form);
+    setErrors(nextErrors);
+    if (Object.values(nextErrors).some(Boolean)) {
+      return;
+    }
+
+    setSubmitting(true);
+
+    const payload = fromVM(form);
+    const isEditing = Boolean(editingId);
+
+    try {
+      const opts = isEditing
+        ? { method: 'PUT' as const, useResourceIdPath: true }
+        : { method: 'POST' as const, useResourceIdPath: false };
+
+      await upsertSkill(payload, opts);
+
+      setRows((prev) => {
+        if (isEditing) {
+          const idx = prev.findIndex((r) => r.id === payload.id);
+          if (idx >= 0) {
+            const copy = [...prev];
+            copy[idx] = { ...copy[idx], ...payload };
+            return copy;
+          }
+          return [payload, ...prev];
+        }
+        return [payload, ...prev];
+      });
+
+      setShowForm(false);
+      setViewing(false);
+      setEditingId(null);
+
+      toast({
+        variant: 'success',
+        title: isEditing ? 'Updated' : 'Saved',
+        description: `Skill "${payload.id}" ${isEditing ? 'updated' : 'created'}.`,
+      });
+    } catch (err) {
+      toast({
+        variant: 'danger',
+        title: 'Save failed',
+        description: String(err instanceof Error ? err.message : err),
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onDelete = async (row: Skill) => {
+
+    if (submitting) return;
+    setSubmitting(true);
+
+    const ok = await confirm({
+      title: 'Delete Skill',
+      body: `Delete "${row.id}"? This cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      tone: 'danger',
+    });
+    if (!ok) return;
+
+    const prev = rows;
+    setRows(prev.filter((r) => r.id !== row.id));
+
+    try {
+      await deleteSkill(row.id);
+      if (editingId === row.id || viewing) cancelForm();
+      toast({ variant: 'success', title: 'Deleted', description: `Skill "${row.id}" deleted.` });
+    } catch (err) {
+      setRows(prev);
+      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err), });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Render                                                             */
+  /* ------------------------------------------------------------------ */
+
   if (loading) return <div>Loading…</div>;
   if (error) return <div style={{ color: 'crimson' }}>Error: {error}</div>;
 
   // helpers to manage subcategories inline
   const addSubcat = () => setForm(s => ({ ...s, subcategories: [...s.subcategories, ''] }));
+
   const updateSubcat = (i: number, v: string) => setForm(s => {
     const copy = s.subcategories.slice();
     copy[i] = v;
@@ -553,8 +558,9 @@ export default function SkillView() {
     <>
       <h2>Skills</h2>
 
+      {/* Toolbar hidden while form visible */}
       {!showForm && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <button onClick={startNew}>New Skill</button>
           <DataTableSearchInput
             value={query}
@@ -569,284 +575,300 @@ export default function SkillView() {
         </div>
       )}
 
+      {/* Display main Form */}
       {showForm && (
-        <div
-          className={`form-panel ${viewing ? 'form-panel--view' : ''}`}
-          style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}
-        >
-          <h3 style={{ marginTop: 0 }}>
-            {viewing ? 'View Skill' : (editingId ? 'Edit Skill' : 'New Skill')}
-          </h3>
+        <div className="form-container">
+          {/* Simple overlay while submitting */}
+          {submitting && (<div className="overlay"><Spinner size={24} /> <span>Saving…</span> </div>)}
 
-          <button
-            type="button"
-            onClick={() => {
-              setPreviewAll(p => !p);
-              setShowPreview({ description: !previewAll, difficulties: !previewAll, notes: !previewAll });
-            }}
-          >
-            {previewAll ? 'Hide Previews' : 'Show Previews'}
-          </button>
+          <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`}>
+            <h3>{viewing ? 'View' : editingId ? 'Edit' : 'New'} Skill</h3>
 
-          {/* Basics */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput
-              label="ID"
-              value={form.id}
-              onChange={makeIDOnChange<typeof form>('id', setForm, prefix)}
-              disabled={!!editingId || viewing}
-              error={viewing ? undefined : errors.id}
-            />
-            <LabeledInput
-              label="Name"
-              value={form.name}
-              onChange={(v) => setForm(s => ({ ...s, name: v }))}
-              disabled={viewing}
-              error={viewing ? undefined : errors.name}
-            />
+            <button
+              type="button"
+              onClick={() => {
+                setPreviewAll(p => !p);
+                setShowPreview({ description: !previewAll, difficulties: !previewAll, notes: !previewAll });
+              }}
+            >
+              {previewAll ? 'Hide Previews' : 'Show Previews'}
+            </button>
 
-            <LabeledSelect
-              label="Category"
-              value={form.category}
-              onChange={(v) => setForm(s => ({ ...s, category: v }))}
-              options={categoryOptions}
-              disabled={catLoading || sgLoading || viewing}
-              error={viewing ? undefined : errors.category}
-              helperText={(catLoading || sgLoading) ? 'Loading categories…' : 'Select a SkillCategory id'}
-            />
-            <LabeledSelect
-              label="Book"
-              value={form.book}
-              onChange={(v) => setForm(s => ({ ...s, book: v }))}
-              options={bookOptions}
-              disabled={bookLoading || viewing}
-              error={viewing ? undefined : errors.book}
-              helperText={bookLoading ? 'Loading books…' : 'Select a Book id'}
-            />
-            <LabeledSelect
-              label="Action"
-              value={form.action}
-              onChange={(v) => setForm(s => ({ ...s, action: v as SkillActionType }))}
-              options={actionOptions}
-              disabled={viewing}
-              error={viewing ? undefined : errors.action}
-            />
+            {/* Basics */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <LabeledInput
+                label="ID"
+                value={form.id}
+                onChange={makeIDOnChange<typeof form>('id', setForm, prefix)}
+                disabled={!!editingId || viewing}
+                error={viewing ? undefined : errors.id}
+              />
+              <LabeledInput
+                label="Name"
+                value={form.name}
+                onChange={(v) => setForm(s => ({ ...s, name: v }))}
+                disabled={viewing}
+                error={viewing ? undefined : errors.name}
+              />
 
-            {/* Stats (3 slots) */}
-            <LabeledSelect
-              label="Stat #1"
-              value={form.stat1}
-              onChange={(v) => setForm(s => ({ ...s, stat1: (v as Stat) || '' }))}
-              options={STATS}
-              disabled={viewing}
-              error={viewing ? undefined : errors.stats}
-            />
-            <LabeledSelect
-              label="Stat #2"
-              value={form.stat2}
-              onChange={(v) => setForm(s => ({ ...s, stat2: (v as Stat) || '' }))}
-              options={STATS}
-              disabled={viewing}
-            />
-            <LabeledSelect
-              label="Stat #3"
-              value={form.stat3}
-              onChange={(v) => setForm(s => ({ ...s, stat3: (v as Stat) || '' }))}
-              options={STATS}
-              disabled={viewing}
-            />
+              <LabeledSelect
+                label="Category"
+                value={form.category}
+                onChange={(v) => setForm(s => ({ ...s, category: v }))}
+                options={categoryOptions}
+                disabled={loading || viewing}
+                error={viewing ? undefined : errors.category}
+                helperText={(loading) ? 'Loading categories…' : 'Select a SkillCategory id'}
+              />
+              <LabeledSelect
+                label="Book"
+                value={form.book}
+                onChange={(v) => setForm(s => ({ ...s, book: v }))}
+                options={bookOptions}
+                disabled={loading || viewing}
+                error={viewing ? undefined : errors.book}
+                helperText={loading ? 'Loading books…' : 'Select a Book id'}
+              />
+              <LabeledSelect
+                label="Action"
+                value={form.action}
+                onChange={(v) => setForm(s => ({ ...s, action: v as SkillActionType }))}
+                options={actionOptions}
+                disabled={viewing}
+                error={viewing ? undefined : errors.action}
+              />
 
-            {/* Floats */}
-            <LabeledInput
-              label="Exhaustion"
-              value={form.exhaustion}
-              onChange={makeSignedFloatOnChange<typeof form>('exhaustion', setForm)}
-              disabled={viewing}
-              width={140}
-              inputProps={{ inputMode: 'decimal', pattern: '^-?(?:\\d+\\.?\\d*|\\.\\d+)$' }}
-              error={viewing ? undefined : errors.exhaustion}
-            />
-            <LabeledInput
-              label="Distance Multiplier"
-              value={form.distanceMultiplier}
-              onChange={makeSignedFloatOnChange<typeof form>('distanceMultiplier', setForm)}
-              disabled={viewing}
-              width={180}
-              inputProps={{ inputMode: 'decimal', pattern: '^-?(?:\\d+\\.?\\d*|\\.\\d+)$' }}
-              error={viewing ? undefined : errors.distanceMultiplier}
-            />
-          </div>
-
-          {/* Long text sections */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginTop: 12 }}>
-            {/* Description */}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <h4 style={{ margin: '8px 0' }}>Description (HTML allowed)</h4>
-                {!viewing && (
-                  <button type="button" onClick={() => setShowPreview(s => ({ ...s, description: !s.description }))}>
-                    {showPreview.description ? 'Edit' : 'Preview'}
-                  </button>
-                )}
-              </div>
-
-              {(showPreview.description || viewing) ? (
-                <MarkupPreview
-                  content={form.description}
-                  emptyHint="No description"
-                  className="preview-html"
-                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
-                />
-              ) : (
-                <label style={{ display: 'grid', gap: 6 }}>
-                  <textarea
-                    value={form.description}
-                    onChange={(e) => setForm(s => ({ ...s, description: e.target.value }))}
-                    disabled={viewing}
-                    rows={5}
-                  />
-                </label>
-              )}
-            </div>
-
-            {/* Difficulties Summary */}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <h4 style={{ margin: '8px 0' }}>Difficulties Summary (HTML allowed)</h4>
-                {!viewing && (
-                  <button
-                    type="button"
-                    onClick={() => setShowPreview(s => ({ ...s, difficulties: !s.difficulties }))}
-                  >
-                    {showPreview.difficulties ? 'Edit' : 'Preview'}
-                  </button>
-                )}
-              </div>
-
-              {(showPreview.difficulties || viewing) ? (
-                <MarkupPreview
-                  content={form.difficultiesSummary}
-                  emptyHint="No difficulties summary"
-                  className="preview-html"
-                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
-                />
-              ) : (
-                <label style={{ display: 'grid', gap: 6 }}>
-                  <textarea
-                    value={form.difficultiesSummary}
-                    onChange={(e) => setForm(s => ({ ...s, difficultiesSummary: e.target.value }))}
-                    disabled={viewing}
-                    rows={6}
-                  />
-                </label>
-              )}
-            </div>
-
-            {/* Notes */}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <h4 style={{ margin: '8px 0' }}>Notes (HTML allowed)</h4>
-                {!viewing && (
-                  <button
-                    type="button"
-                    onClick={() => setShowPreview(s => ({ ...s, notes: !s.notes }))}
-                  >
-                    {showPreview.notes ? 'Edit' : 'Preview'}
-                  </button>
-                )}
-              </div>
-
-              {(showPreview.notes || viewing) ? (
-                <MarkupPreview
-                  content={form.notes}
-                  emptyHint="No notes"
-                  className="preview-html"
-                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
-                />
-              ) : (
-                <label style={{ display: 'grid', gap: 6 }}>
-                  <textarea
-                    value={form.notes}
-                    onChange={(e) => setForm(s => ({ ...s, notes: e.target.value }))}
-                    disabled={viewing}
-                    rows={5}
-                  />
-                </label>
-              )}
-            </div>
-          </div>
-          {/* Subcategories */}
-          <div style={{ marginTop: 12 }}>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 8 }}>
-              <CheckboxInput
-                label="Restricted"
-                checked={form.isRestricted}
-                onChange={(c) => setForm(s => ({ ...s, isRestricted: c }))}
+              {/* Stats (3 slots) */}
+              <LabeledSelect
+                label="Stat #1"
+                value={form.stat1}
+                onChange={(v) => setForm(s => ({ ...s, stat1: (v as Stat) || '' }))}
+                options={STATS}
+                disabled={viewing}
+                error={viewing ? undefined : errors.stats}
+              />
+              <LabeledSelect
+                label="Stat #2"
+                value={form.stat2}
+                onChange={(v) => setForm(s => ({ ...s, stat2: (v as Stat) || '' }))}
+                options={STATS}
                 disabled={viewing}
               />
-              <CheckboxInput
-                label="Can Specialise"
-                checked={form.canSpecialise}
-                onChange={(c) => setForm(s => ({ ...s, canSpecialise: c }))}
+              <LabeledSelect
+                label="Stat #3"
+                value={form.stat3}
+                onChange={(v) => setForm(s => ({ ...s, stat3: (v as Stat) || '' }))}
+                options={STATS}
                 disabled={viewing}
               />
-              <CheckboxInput
-                label="Mandatory Subcategory"
-                checked={form.mandatorySubcategory}
-                onChange={(c) => setForm(s => ({ ...s, mandatorySubcategory: c }))}
+
+              {/* Floats */}
+              <LabeledInput
+                label="Exhaustion"
+                value={form.exhaustion}
+                onChange={makeSignedFloatOnChange<typeof form>('exhaustion', setForm)}
                 disabled={viewing}
+                width={140}
+                inputProps={{ inputMode: 'decimal', pattern: '^-?(?:\\d+\\.?\\d*|\\.\\d+)$' }}
+                error={viewing ? undefined : errors.exhaustion}
+              />
+              <LabeledInput
+                label="Distance Multiplier"
+                value={form.distanceMultiplier}
+                onChange={makeSignedFloatOnChange<typeof form>('distanceMultiplier', setForm)}
+                disabled={viewing}
+                width={180}
+                inputProps={{ inputMode: 'decimal', pattern: '^-?(?:\\d+\\.?\\d*|\\.\\d+)$' }}
+                error={viewing ? undefined : errors.distanceMultiplier}
               />
             </div>
 
-            <h4 style={{ margin: '8px 0' }}>Subcategories</h4>
-            {!viewing && <button type="button" onClick={addSubcat} style={{ marginBottom: 8 }}>+ Add subcategory</button>}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
-              {form.subcategories.map((sc, i) => (
-                <React.Fragment key={`subcat-${i}`}>
-                  <LabeledInput
-                    label="Subcategory"
-                    hideLabel
-                    ariaLabel={`Subcategory ${i + 1}`}
-                    value={sc}
-                    onChange={(v) => updateSubcat(i, v)}
-                    disabled={viewing}
-                  />
+            {/* Long text sections */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginTop: 12 }}>
+              {/* Description */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <h4 style={{ margin: '8px 0' }}>Description (HTML allowed)</h4>
                   {!viewing && (
-                    <button type="button" onClick={() => removeSubcat(i)} style={{ color: '#b00020' }}>
-                      Remove
+                    <button type="button" onClick={() => setShowPreview(s => ({ ...s, description: !s.description }))}>
+                      {showPreview.description ? 'Edit' : 'Preview'}
                     </button>
                   )}
-                </React.Fragment>
-              ))}
-            </div>
-          </div>
+                </div>
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
-            <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
+                {(showPreview.description || viewing) ? (
+                  <MarkupPreview
+                    content={form.description}
+                    emptyHint="No description"
+                    className="preview-html"
+                    style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
+                  />
+                ) : (
+                  <label style={{ display: 'grid', gap: 6 }}>
+                    <textarea
+                      value={form.description}
+                      onChange={(e) => setForm(s => ({ ...s, description: e.target.value }))}
+                      disabled={viewing}
+                      rows={5}
+                    />
+                  </label>
+                )}
+              </div>
+
+              {/* Difficulties Summary */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <h4 style={{ margin: '8px 0' }}>Difficulties Summary (HTML allowed)</h4>
+                  {!viewing && (
+                    <button
+                      type="button"
+                      onClick={() => setShowPreview(s => ({ ...s, difficulties: !s.difficulties }))}
+                    >
+                      {showPreview.difficulties ? 'Edit' : 'Preview'}
+                    </button>
+                  )}
+                </div>
+
+                {(showPreview.difficulties || viewing) ? (
+                  <MarkupPreview
+                    content={form.difficultiesSummary}
+                    emptyHint="No difficulties summary"
+                    className="preview-html"
+                    style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
+                  />
+                ) : (
+                  <label style={{ display: 'grid', gap: 6 }}>
+                    <textarea
+                      value={form.difficultiesSummary}
+                      onChange={(e) => setForm(s => ({ ...s, difficultiesSummary: e.target.value }))}
+                      disabled={viewing}
+                      rows={6}
+                    />
+                  </label>
+                )}
+              </div>
+
+              {/* Notes */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <h4 style={{ margin: '8px 0' }}>Notes (HTML allowed)</h4>
+                  {!viewing && (
+                    <button
+                      type="button"
+                      onClick={() => setShowPreview(s => ({ ...s, notes: !s.notes }))}
+                    >
+                      {showPreview.notes ? 'Edit' : 'Preview'}
+                    </button>
+                  )}
+                </div>
+
+                {(showPreview.notes || viewing) ? (
+                  <MarkupPreview
+                    content={form.notes}
+                    emptyHint="No notes"
+                    className="preview-html"
+                    style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
+                  />
+                ) : (
+                  <label style={{ display: 'grid', gap: 6 }}>
+                    <textarea
+                      value={form.notes}
+                      onChange={(e) => setForm(s => ({ ...s, notes: e.target.value }))}
+                      disabled={viewing}
+                      rows={5}
+                    />
+                  </label>
+                )}
+              </div>
+            </div>
+            {/* Subcategories */}
+            <div style={{ marginTop: 12 }}>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 8 }}>
+                <CheckboxInput
+                  label="Restricted"
+                  checked={form.isRestricted}
+                  onChange={(c) => setForm(s => ({ ...s, isRestricted: c }))}
+                  disabled={viewing}
+                />
+                <CheckboxInput
+                  label="Can Specialise"
+                  checked={form.canSpecialise}
+                  onChange={(c) => setForm(s => ({ ...s, canSpecialise: c }))}
+                  disabled={viewing}
+                />
+                <CheckboxInput
+                  label="Mandatory Subcategory"
+                  checked={form.mandatorySubcategory}
+                  onChange={(c) => setForm(s => ({ ...s, mandatorySubcategory: c }))}
+                  disabled={viewing}
+                />
+              </div>
+              {form.subcategories.length > 0 && (
+                <>
+                  <h4 style={{ margin: '8px 0' }}>Subcategories</h4>
+                  {!viewing && <button type="button" onClick={addSubcat} style={{ marginBottom: 8 }}>+ Add subcategory</button>}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}>
+                    {form.subcategories.map((sc, i) => (
+                      <React.Fragment key={`subcat-${i}`}>
+                        <LabeledInput
+                          label="Subcategory"
+                          hideLabel
+                          ariaLabel={`Subcategory ${i + 1}`}
+                          value={sc}
+                          onChange={(v) => updateSubcat(i, v)}
+                          disabled={viewing}
+                        />
+                        {!viewing && (
+                          <button type="button" onClick={() => removeSubcat(i)} style={{ color: '#b00020' }}>
+                            Remove
+                          </button>
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              {!viewing && <button onClick={saveForm} disabled={hasErrors || submitting}>{submitting ? 'Submitting…' : 'Save'}</button>}
+              <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
+            </div>
+
+            {/* Validation errors */}
+            {Object.values(errors).some(Boolean) && (
+              <div style={{ marginTop: 12, color: '#b00020' }}>
+                <h4 style={{ margin: '0 0 4px' }}>Please fix the following errors:</h4>
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  {Object.entries(errors).map(([field, error]) =>
+                    error ? <li key={field}>{error}</li> : null
+                  )}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {!showForm && (
-        <DataTable<Skill>
+        <DataTable
           ref={dtRef}
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}
-          initialSort={{ colId: 'name', dir: 'asc' }}
+          initialSort={{ colId: 'name', dir: 'asc' }} //
+          // search
           searchQuery={query}
           globalFilter={globalFilter}
+          // pagination (client)
           mode="client"
           page={page}
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
-          pageSizeOptions={[5, 10, 20, 50, 100]}
-          tableMinWidth={0}
-          zebra
-          hover
-          resizable
+          // styles
+          tableMinWidth={0} // allow table to shrink below container width (for better mobile support)
           persistKey="dt.skill.v1"
           ariaLabel="Skills"
         />
