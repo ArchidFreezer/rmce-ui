@@ -60,6 +60,9 @@ export interface LabeledInputProps {
   error?: string | undefined;
   helperText?: string | undefined;
 
+  /** Hover tooltip text shown on the entire control. */
+  tooltip?: string | undefined;
+
   /** Optional styling hook for the whole control (legacy; prefer containerStyle) */
   style?: React.CSSProperties | undefined;
   className?: string | undefined;
@@ -88,6 +91,7 @@ export function LabeledInput({
   inputProps,
   error,
   helperText,
+  tooltip,
 
   // legacy hooks for the whole control
   style,
@@ -111,6 +115,7 @@ export function LabeledInput({
   return (
     <label
       className={[className, containerClassName].filter(Boolean).join(' ') || undefined}
+      title={tooltip}
       style={{
         display: 'grid',
         gap: 6,
