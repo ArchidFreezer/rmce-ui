@@ -385,12 +385,12 @@ export default function LanguagesView() {
       {/* Toolbar hidden while form visible */}
       {!showForm && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          <button onClick={startNew}>New Training Package</button>
+          <button onClick={startNew}>New Language</button>
           <DataTableSearchInput
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search training packages…"
-            aria-label="Search training packages"
+            placeholder="Search languages…"
+            aria-label="Search languages"
           />
 
           {/* Reset and auto-fit column widths */}
@@ -406,7 +406,7 @@ export default function LanguagesView() {
           {submitting && (<div className="overlay"><Spinner size={24} /> <span>Saving…</span> </div>)}
 
           <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`}>
-            <h3>{viewing ? 'View' : editingId ? 'Edit' : 'New'} Training Package</h3>
+            <h3>{viewing ? 'View' : editingId ? 'Edit' : 'New'} Language</h3>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />
