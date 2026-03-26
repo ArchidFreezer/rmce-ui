@@ -23,6 +23,7 @@ import {
   MarkupPreview,
   SkillListEditor,
   SkillValueListEditor,
+  Spinner,
   useConfirm, useToast,
 } from '../../components';
 
@@ -125,6 +126,39 @@ type FormState = {
   skillBonuses: SkillBonusVM[];
 
   skillCategoryChoicesEveryman: CategoryChoiceVM[];
+};
+
+type FormErrors = {
+  id?: string;
+  name?: string;
+  book?: string;
+  creatureSize?: string;
+  criticalTable?: string;
+  recoveryMultiplier?: string;
+  backgroundOptions?: string;
+  exhaustionBonus?: string;
+  statLossRacialType?: string;
+  requiredSleep?: string;
+  requiredSleepFrequency?: string;
+  soulDeparture?: string;
+  buildModifier?: string;
+  averageMaleHeight?: string;
+  averageFemaleHeight?: string;
+  averageLifespan?: string;
+  maleWeightModifier?: string;
+  femaleWeightModifier?: string;
+  arcaneProgression?: string;
+  armsProgression?: string;
+  channelingProgression?: string;
+  essenceProgression?: string;
+  mentalismProgression?: string;
+  startingLanguages?: string;
+  adolescentLanguages?: string;
+  statBonuses?: string;
+  everymanSkills?: string;
+  restrictedSkills?: string;
+  skillBonuses?: string;
+  skillCategoryChoicesEveryman?: string;
 };
 
 const emptyVM = (): FormState => ({
@@ -328,6 +362,8 @@ export default function RaceView() {
   const [rows, setRows] = useState<Race[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const hasErrors = Object.values(errors).some(Boolean);
 
   const [books, setBooks] = useState<Book[]>([]);
   const [progressions, setProgressions] = useState<SkillProgressionType[]>([]);
@@ -336,13 +372,6 @@ export default function RaceView() {
   const [categories, setCategories] = useState<SkillCategory[]>([]);
   const [groups, setGroups] = useState<SkillGroup[]>([]);
 
-  const [booksLoading, setBooksLoading] = useState(true);
-  const [progressionsLoading, setProgressionsLoading] = useState(true);
-  const [languagesLoading, setLanguagesLoading] = useState(true);
-  const [skillsLoading, setSkillsLoading] = useState(true);
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
-  const [groupsLoading, setGroupsLoading] = useState(true);
-
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -350,107 +379,49 @@ export default function RaceView() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<FormState>(emptyVM());
-
-  const [errors, setErrors] = useState<{
-    id?: string | undefined;
-    name?: string | undefined;
-    book?: string | undefined;
-    creatureSize?: string | undefined;
-    criticalTable?: string | undefined;
-    arcaneProgression?: string | undefined;
-    armsProgression?: string | undefined;
-    channelingProgression?: string | undefined;
-    essenceProgression?: string | undefined;
-    mentalismProgression?: string | undefined;
-    startingLanguages?: string | undefined;
-    adolescentLanguages?: string | undefined;
-    statBonuses?: string | undefined;
-    everymanSkills?: string | undefined;
-    restrictedSkills?: string | undefined;
-    skillBonuses?: string | undefined;
-    skillCategoryChoicesEveryman?: string | undefined;
-  }>({});
 
   const [previewDescription, setPreviewDescription] = useState(false);
 
   const toast = useToast();
   const confirm = useConfirm();
 
-  // ---------- load main ----------
+  /* ------------------------------------------------------------------ */
+  /* Load data                                                          */
+  /* ------------------------------------------------------------------ */
+
   useEffect(() => {
-    let mounted = true;
     (async () => {
       try {
-        const list = await fetchRaces();
-        if (!mounted) return;
-        setRows(list);
+        const [r, b, sp, l, s, c, g] = await Promise.all([
+          fetchRaces(),
+          fetchBooks(),
+          fetchSkillprogressiontypes(),
+          fetchLanguages(),
+          fetchSkills(),
+          fetchSkillcategories(),
+          fetchSkillgroups(),
+        ]);
+        setRows(r);
+        setBooks(b);
+        setProgressions(sp);
+        setLanguages(l);
+        setSkills(s);
+        setCategories(c);
+        setGroups(g);
       } catch (e) {
-        if (!mounted) return;
-        setError(e instanceof Error ? e.message : String(e));
+        setError(String(e));
       } finally {
-        if (mounted) setLoading(false);
+        setLoading(false);
       }
     })();
-    return () => { mounted = false; };
   }, []);
 
-  // ---------- load refs ----------
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try { const list = await fetchBooks(); if (mounted) setBooks(list); }
-      finally { if (mounted) setBooksLoading(false); }
-    })();
-    return () => { mounted = false; };
-  }, []);
+  /* ------------------------------------------------------------------ */
+  /* Helpers                                                            */
+  /* ------------------------------------------------------------------ */
 
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try { const list = await fetchSkillprogressiontypes(); if (mounted) setProgressions(list); }
-      finally { if (mounted) setProgressionsLoading(false); }
-    })();
-    return () => { mounted = false; };
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try { const list = await fetchLanguages(); if (mounted) setLanguages(list); }
-      finally { if (mounted) setLanguagesLoading(false); }
-    })();
-    return () => { mounted = false; };
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try { const list = await fetchSkills(); if (mounted) setSkills(list); }
-      finally { if (mounted) setSkillsLoading(false); }
-    })();
-    return () => { mounted = false; };
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try { const list = await fetchSkillcategories(); if (mounted) setCategories(list); }
-      finally { if (mounted) setCategoriesLoading(false); }
-    })();
-    return () => { mounted = false; };
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try { const list = await fetchSkillgroups(); if (mounted) setGroups(list); }
-      finally { if (mounted) setGroupsLoading(false); }
-    })();
-    return () => { mounted = false; };
-  }, []);
-
-  // ---------- options ----------
   const bookOptions = useMemo(
     () => books.map((b) => ({ value: b.id, label: b.name })),
     [books],
@@ -466,6 +437,15 @@ export default function RaceView() {
     () => progressions.map((p) => ({ value: p.id, label: p.name })),
     [progressions],
   );
+
+  const progressionOptionsByPrefix = useMemo(() => {
+    const byPrefix = {
+      arms: progressionOptions.filter((option) => option.value.startsWith('SKILLPROGRESSIONTYPE_BD_')),
+      spell: progressionOptions.filter((option) => option.value.startsWith('SKILLPROGRESSIONTYPE_PP_')),
+    };
+
+    return byPrefix;
+  }, [progressionOptions]);
 
   const languageOptions = useMemo(
     () => languages.map((l) => ({ value: l.id, label: l.name })),
@@ -503,9 +483,11 @@ export default function RaceView() {
     [],
   );
 
-  // ---------- validation ----------
-  const computeErrors = (draft = form) => {
-    const e: typeof errors = {};
+  /* ------------------------------------------------------------------ */
+  /* Validation                                                         */
+  /* ------------------------------------------------------------------ */
+  const computeErrors = (draft: FormState): FormErrors => {
+    const e: FormErrors = {};
 
     const id = draft.id.trim();
     const nm = draft.name.trim();
@@ -519,11 +501,30 @@ export default function RaceView() {
     if (!draft.creatureSize) e.creatureSize = 'Creature size is required';
     if (!draft.criticalTable) e.criticalTable = 'Critical table is required';
 
+    if (!draft.recoveryMultiplier) e.recoveryMultiplier = 'Recovery multiplier is required';
+    if (!draft.backgroundOptions) e.backgroundOptions = 'Background options is required';
+    if (!draft.exhaustionBonus) e.exhaustionBonus = 'Exhaustion bonus is required';
+    if (!draft.statLossRacialType) e.statLossRacialType = 'Stat loss racial type is required';
+    if (!draft.requiredSleep) e.requiredSleep = 'Required sleep is required';
+    if (!draft.requiredSleepFrequency) e.requiredSleepFrequency = 'Required sleep frequency is required';
+    if (!draft.soulDeparture) e.soulDeparture = 'Soul departure is required';
+    if (!draft.buildModifier) e.buildModifier = 'Build modifier is required';
+    if (!draft.averageMaleHeight) e.averageMaleHeight = 'Average male height is required';
+    if (!draft.averageFemaleHeight) e.averageFemaleHeight = 'Average female height is required';
+    if (!draft.averageLifespan) e.averageLifespan = 'Average lifespan is required';
+    if (!draft.maleWeightModifier) e.maleWeightModifier = 'Male weight modifier is required';
+    if (!draft.femaleWeightModifier) e.femaleWeightModifier = 'Female weight modifier is required';
+
     if (!draft.arcaneProgression) e.arcaneProgression = 'Arcane progression is required';
+    else if (!progressionOptionsByPrefix.spell.some((option) => option.value === draft.arcaneProgression)) e.arcaneProgression = 'Arcane progression must use a spell progression value';
     if (!draft.armsProgression) e.armsProgression = 'Arms progression is required';
+    else if (!progressionOptionsByPrefix.arms.some((option) => option.value === draft.armsProgression)) e.armsProgression = 'Arms progression must use an Arms progression value';
     if (!draft.channelingProgression) e.channelingProgression = 'Channeling progression is required';
+    else if (!progressionOptionsByPrefix.spell.some((option) => option.value === draft.channelingProgression)) e.channelingProgression = 'Channeling progression must use a spell progression value';
     if (!draft.essenceProgression) e.essenceProgression = 'Essence progression is required';
+    else if (!progressionOptionsByPrefix.spell.some((option) => option.value === draft.essenceProgression)) e.essenceProgression = 'Essence progression must use a spell progression value';
     if (!draft.mentalismProgression) e.mentalismProgression = 'Mentalism progression is required';
+    else if (!progressionOptionsByPrefix.spell.some((option) => option.value === draft.mentalismProgression)) e.mentalismProgression = 'Mentalism progression must use a spell progression value';
 
     for (let i = 0; i < draft.startingLanguages.length; i++) {
       const r = draft.startingLanguages[i];
@@ -585,130 +586,14 @@ export default function RaceView() {
     return e;
   };
 
-  const hasErrors = Boolean(Object.values(errors).some(Boolean));
-
   useEffect(() => {
     if (!showForm || viewing) return;
-    setErrors(computeErrors());
-  }, [form, showForm, viewing, rows]);
+    setErrors(computeErrors(form));
+  }, [form, showForm, viewing, progressionOptionsByPrefix]);
 
-  // ---------- actions ----------
-  const startNew = () => {
-    setViewing(false);
-    setEditingId(null);
-    setForm(emptyVM());
-    setErrors({});
-    setShowForm(true);
-  };
-
-  const startView = (row: Race) => {
-    setViewing(true);
-    setEditingId(row.id);
-    setForm(toVM(row));
-    setErrors({});
-    setShowForm(true);
-  };
-
-  const startEdit = (row: Race) => {
-    setViewing(false);
-    setEditingId(row.id);
-    setForm(toVM(row));
-    setErrors({});
-    setShowForm(true);
-  };
-
-  const startDuplicate = (row: Race) => {
-    setViewing(false);
-    setEditingId(null);
-    const vm = toVM(row);
-    vm.id = prefix;
-    vm.name += ' (Copy)';
-    setForm(vm);
-    setErrors({});
-    setShowForm(true);
-  };
-
-  const cancelForm = () => {
-    setShowForm(false);
-    setViewing(false);
-    setEditingId(null);
-    setErrors({});
-  };
-
-  const saveForm = async () => {
-    const nextErrors = computeErrors(form);
-    setErrors(nextErrors);
-    if (Object.values(nextErrors).some(Boolean)) return;
-
-    const payload = fromVM(form);
-    const isEditing = Boolean(editingId);
-
-    try {
-      const opts = isEditing
-        ? { method: 'PUT' as const, useResourceIdPath: true }
-        : { method: 'POST' as const, useResourceIdPath: false };
-
-      await upsertRace(payload, opts);
-
-      setRows((prev) => {
-        if (isEditing) {
-          const idx = prev.findIndex((r) => r.id === payload.id);
-          if (idx >= 0) {
-            const copy = [...prev];
-            copy[idx] = { ...copy[idx], ...payload };
-            return copy;
-          }
-          return [payload, ...prev];
-        }
-        return [payload, ...prev];
-      });
-
-      setShowForm(false);
-      setViewing(false);
-      setEditingId(null);
-
-      toast({
-        variant: 'success',
-        title: isEditing ? 'Updated' : 'Saved',
-        description: `Race "${payload.id}" ${isEditing ? 'updated' : 'created'}.`,
-      });
-    } catch (err) {
-      toast({
-        variant: 'danger',
-        title: 'Save failed',
-        description: String(err instanceof Error ? err.message : err),
-      });
-    }
-  };
-
-  const onDelete = async (row: Race) => {
-    const ok = await confirm({
-      title: 'Delete Race',
-      body: `Delete "${row.id}"? This cannot be undone.`,
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
-      tone: 'danger',
-    });
-    if (!ok) return;
-
-    const prev = rows;
-    setRows(prev.filter((r) => r.id !== row.id));
-
-    try {
-      await deleteRace(row.id);
-      if (editingId === row.id || viewing) cancelForm();
-      toast({ variant: 'success', title: 'Deleted', description: `Race "${row.id}" deleted.` });
-    } catch (err) {
-      setRows(prev);
-      toast({
-        variant: 'danger',
-        title: 'Delete failed',
-        description: String(err instanceof Error ? err.message : err),
-      });
-    }
-  };
-
-  // ---------- table ----------
+  /* ------------------------------------------------------------------ */
+  /* Table                                                              */
+  /* ------------------------------------------------------------------ */
   const columns: ColumnDef<Race>[] = useMemo(() => [
     { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 260 },
     { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 180 },
@@ -748,6 +633,140 @@ export default function RaceView() {
     ].some((v) => String(v ?? '').toLowerCase().includes(s));
   };
 
+
+  /* ------------------------------------------------------------------ */
+  /* Actions                                                            */
+  /* ------------------------------------------------------------------ */
+  const startNew = () => {
+    setViewing(false);
+    setEditingId(null);
+    setForm(emptyVM());
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const startView = (row: Race) => {
+    setViewing(true);
+    setEditingId(row.id);
+    setForm(toVM(row));
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const startEdit = (row: Race) => {
+    setViewing(false);
+    setEditingId(row.id);
+    setForm(toVM(row));
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const startDuplicate = (row: Race) => {
+    setViewing(false);
+    setEditingId(null);
+    const vm = toVM(row);
+    vm.id = prefix;
+    vm.name += ' (Copy)';
+    setForm(vm);
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const cancelForm = () => {
+    setViewing(false);
+    setEditingId(null);
+    setErrors({});
+    setShowForm(false);
+  };
+
+  const saveForm = async () => {
+
+    if (submitting) return;
+
+    const nextErrors = computeErrors(form);
+    setErrors(nextErrors);
+    if (Object.values(nextErrors).some(Boolean)) {
+      return;
+    }
+
+    setSubmitting(true);
+
+    const payload = fromVM(form);
+    const isEditing = Boolean(editingId);
+
+    try {
+      const opts = isEditing
+        ? { method: 'PUT' as const, useResourceIdPath: true }
+        : { method: 'POST' as const, useResourceIdPath: false };
+
+      await upsertRace(payload, opts);
+
+      setRows((prev) => {
+        if (isEditing) {
+          const idx = prev.findIndex((r) => r.id === payload.id);
+          if (idx >= 0) {
+            const copy = [...prev];
+            copy[idx] = { ...copy[idx], ...payload };
+            return copy;
+          }
+          return [payload, ...prev];
+        }
+        return [payload, ...prev];
+      });
+
+      setShowForm(false);
+      setViewing(false);
+      setEditingId(null);
+
+      toast({
+        variant: 'success',
+        title: isEditing ? 'Updated' : 'Saved',
+        description: `Race "${payload.id}" ${isEditing ? 'updated' : 'created'}.`,
+      });
+    } catch (err) {
+      toast({
+        variant: 'danger',
+        title: 'Save failed',
+        description: String(err instanceof Error ? err.message : err),
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onDelete = async (row: Race) => {
+
+    if (submitting) return;
+    setSubmitting(true);
+
+    const ok = await confirm({
+      title: 'Delete Race',
+      body: `Delete "${row.id}"? This cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      tone: 'danger',
+    });
+    if (!ok) return;
+
+    const prev = rows;
+    setRows(prev.filter((r) => r.id !== row.id));
+
+    try {
+      await deleteRace(row.id);
+      if (editingId === row.id || viewing) cancelForm();
+      toast({ variant: 'success', title: 'Deleted', description: `Race "${row.id}" deleted.` });
+    } catch (err) {
+      setRows(prev);
+      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err), });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+
+  /* ------------------------------------------------------------------ */
+  /* Render                                                             */
+  /* ------------------------------------------------------------------ */
   if (loading) return <div>Loading…</div>;
   if (error) return <div style={{ color: 'crimson' }}>Error: {error}</div>;
 
@@ -755,8 +774,9 @@ export default function RaceView() {
     <>
       <h2>Races</h2>
 
+      {/* Toolbar hidden while form visible */}
       {!showForm && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <button onClick={startNew}>New Race</button>
           <DataTableSearchInput
             value={query}
@@ -771,306 +791,314 @@ export default function RaceView() {
         </div>
       )}
 
+      {/* Display main Form */}
       {showForm && (
-        <div
-          className={`form-panel ${viewing ? 'form-panel--view' : ''}`}
-          style={{
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            padding: 12,
-            marginBottom: 16,
-            background: 'var(--panel)',
-          }}
-        >
-          <h3 style={{ marginTop: 0 }}>
-            {viewing ? 'View Race' : editingId ? 'Edit Race' : 'New Race'}
-          </h3>
+        <div className="form-container">
+          {/* Simple overlay while submitting */}
+          {submitting && (<div className="overlay"><Spinner size={24} /> <span>Saving…</span> </div>)}
 
-          {/* Basic */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
-            <LabeledInput
-              label="ID"
-              value={form.id}
-              onChange={makeIDOnChange<typeof form>('id', setForm, prefix)}
-              disabled={!!editingId || viewing}
-              error={viewing ? undefined : errors.id}
-            />
-            <LabeledInput
-              label="Name"
-              value={form.name}
-              onChange={(v) => setForm((s) => ({ ...s, name: v }))}
-              disabled={viewing}
-              error={viewing ? undefined : errors.name}
-            />
+          <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`}>
+            <h3>{viewing ? 'View' : editingId ? 'Edit' : 'New'} Race</h3>
 
-            <LabeledSelect
-              label="Book"
-              value={form.book}
-              onChange={(v) => setForm((s) => ({ ...s, book: v }))}
-              options={bookOptions}
-              disabled={booksLoading || viewing}
-              error={viewing ? undefined : errors.book}
-            />
-
-            <CheckboxInput
-              label="High Culture"
-              checked={form.highCulture}
-              onChange={(c) => setForm((s) => ({ ...s, highCulture: c }))}
-              disabled={viewing}
-            />
-
-            <LabeledSelect
-              label="Creature Size"
-              value={form.creatureSize}
-              onChange={(v) => setForm((s) => ({ ...s, creatureSize: v as CreatureSize }))}
-              options={creatureSizeOptions}
-              disabled={viewing}
-              error={viewing ? undefined : errors.creatureSize}
-            />
-
-            <LabeledSelect
-              label="Critical Table"
-              value={form.criticalTable}
-              onChange={(v) => setForm((s) => ({ ...s, criticalTable: v as CriticalTableType }))}
-              options={criticalTableOptions}
-              disabled={viewing}
-              error={viewing ? undefined : errors.criticalTable}
-            />
-          </div>
-
-          {/* Description */}
-          <section style={{ marginTop: 8 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <h4 style={{ margin: '8px 0' }}>Description</h4>
-              <button type="button" onClick={() => setPreviewDescription((p) => !p)}>
-                {previewDescription ? 'Edit' : 'Preview'}
-              </button>
-            </div>
-            {previewDescription ? (
-              <MarkupPreview
-                content={form.description}
-                emptyHint="No description"
-                className="preview-html"
-                style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
+            {/* Basic */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
+              <LabeledInput
+                label="ID"
+                value={form.id}
+                onChange={makeIDOnChange<typeof form>('id', setForm, prefix)}
+                disabled={!!editingId || viewing}
+                error={viewing ? undefined : errors.id}
               />
-            ) : (
-              <label style={{ display: 'grid', gap: 6 }}>
-                <textarea
-                  value={form.description}
-                  onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))}
-                  disabled={viewing}
-                  rows={5}
-                />
-              </label>
-            )}
-          </section>
+              <LabeledInput
+                label="Name"
+                value={form.name}
+                onChange={(v) => setForm((s) => ({ ...s, name: v }))}
+                disabled={viewing}
+                error={viewing ? undefined : errors.name}
+              />
 
-          {/* Numbers */}
-          <section style={{ marginTop: 12 }}>
-            <h4 style={{ margin: '8px 0' }}>Values</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-              <LabeledInput label="Recovery Multiplier" value={form.recoveryMultiplier} onChange={makeSignedFloatOnChange<typeof form>('recoveryMultiplier', setForm)} disabled={viewing} />
-              <LabeledInput label="Background Options" value={form.backgroundOptions} onChange={makeUnsignedIntOnChange<typeof form>('backgroundOptions', setForm)} disabled={viewing} />
-              <LabeledInput label="Exhaustion Bonus" value={form.exhaustionBonus} onChange={makeUnsignedIntOnChange<typeof form>('exhaustionBonus', setForm)} disabled={viewing} />
-              <LabeledInput label="Stat Loss Racial Type" value={form.statLossRacialType} onChange={makeUnsignedIntOnChange<typeof form>('statLossRacialType', setForm)} disabled={viewing} />
-              <LabeledInput label="Required Sleep" value={form.requiredSleep} onChange={makeUnsignedIntOnChange<typeof form>('requiredSleep', setForm)} disabled={viewing} />
-              <LabeledInput label="Required Sleep Frequency" value={form.requiredSleepFrequency} onChange={makeUnsignedIntOnChange<typeof form>('requiredSleepFrequency', setForm)} disabled={viewing} />
-              <LabeledInput label="Soul Departure" value={form.soulDeparture} onChange={makeUnsignedIntOnChange<typeof form>('soulDeparture', setForm)} disabled={viewing} />
-              <LabeledInput label="Build Modifier" value={form.buildModifier} onChange={makeUnsignedIntOnChange<typeof form>('buildModifier', setForm)} disabled={viewing} />
-              <LabeledInput label="Average Male Height" value={form.averageMaleHeight} onChange={makeUnsignedIntOnChange<typeof form>('averageMaleHeight', setForm)} disabled={viewing} />
-              <LabeledInput label="Average Female Height" value={form.averageFemaleHeight} onChange={makeUnsignedIntOnChange<typeof form>('averageFemaleHeight', setForm)} disabled={viewing} />
-              <LabeledInput label="Average Lifespan" value={form.averageLifespan} onChange={makeUnsignedIntOnChange<typeof form>('averageLifespan', setForm)} disabled={viewing} />
-              <LabeledInput label="Male Weight Modifier" value={form.maleWeightModifier} onChange={makeUnsignedIntOnChange<typeof form>('maleWeightModifier', setForm)} disabled={viewing} />
-              <LabeledInput label="Female Weight Modifier" value={form.femaleWeightModifier} onChange={makeUnsignedIntOnChange<typeof form>('femaleWeightModifier', setForm)} disabled={viewing} />
+              <LabeledSelect
+                label="Book"
+                value={form.book}
+                onChange={(v) => setForm((s) => ({ ...s, book: v }))}
+                options={bookOptions}
+                disabled={loading || viewing}
+                error={viewing ? undefined : errors.book}
+              />
+
+              <CheckboxInput
+                label="High Culture"
+                checked={form.highCulture}
+                onChange={(c) => setForm((s) => ({ ...s, highCulture: c }))}
+                disabled={viewing}
+              />
+
+              <LabeledSelect
+                label="Creature Size"
+                value={form.creatureSize}
+                onChange={(v) => setForm((s) => ({ ...s, creatureSize: v as CreatureSize }))}
+                options={creatureSizeOptions}
+                disabled={viewing}
+                error={viewing ? undefined : errors.creatureSize}
+              />
+
+              <LabeledSelect
+                label="Critical Table"
+                value={form.criticalTable}
+                onChange={(v) => setForm((s) => ({ ...s, criticalTable: v as CriticalTableType }))}
+                options={criticalTableOptions}
+                disabled={viewing}
+                error={viewing ? undefined : errors.criticalTable}
+              />
             </div>
-          </section>
 
-          {/* Progressions */}
-          <section style={{ marginTop: 12 }}>
-            <h4 style={{ margin: '8px 0' }}>Progressions</h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <LabeledSelect label="Arcane" value={form.arcaneProgression} onChange={(v) => setForm((s) => ({ ...s, arcaneProgression: v }))} options={progressionOptions} disabled={progressionsLoading || viewing} error={viewing ? undefined : errors.arcaneProgression} />
-              <LabeledSelect label="Arms" value={form.armsProgression} onChange={(v) => setForm((s) => ({ ...s, armsProgression: v }))} options={progressionOptions} disabled={progressionsLoading || viewing} error={viewing ? undefined : errors.armsProgression} />
-              <LabeledSelect label="Channeling" value={form.channelingProgression} onChange={(v) => setForm((s) => ({ ...s, channelingProgression: v }))} options={progressionOptions} disabled={progressionsLoading || viewing} error={viewing ? undefined : errors.channelingProgression} />
-              <LabeledSelect label="Essence" value={form.essenceProgression} onChange={(v) => setForm((s) => ({ ...s, essenceProgression: v }))} options={progressionOptions} disabled={progressionsLoading || viewing} error={viewing ? undefined : errors.essenceProgression} />
-              <LabeledSelect label="Mentalism" value={form.mentalismProgression} onChange={(v) => setForm((s) => ({ ...s, mentalismProgression: v }))} options={progressionOptions} disabled={progressionsLoading || viewing} error={viewing ? undefined : errors.mentalismProgression} />
-            </div>
-          </section>
-
-          {/* Language editors */}
-          <LanguageRankListEditor
-            title="Starting Languages"
-            rows={form.startingLanguages}
-            onChangeRows={(next) =>
-              setForm((s) => ({ ...s, startingLanguages: next }))
-            }
-            languageOptions={languageOptions}
-            loading={languagesLoading}
-            viewing={viewing}
-            error={errors.startingLanguages}
-            showSomatic
-          />
-
-          <LanguageRankListEditor
-            title="Adolescent Languages"
-            rows={form.adolescentLanguages}
-            onChangeRows={(next) =>
-              setForm((s) => ({ ...s, adolescentLanguages: next }))
-            }
-            languageOptions={languageOptions}
-            loading={languagesLoading}
-            viewing={viewing}
-            error={errors.adolescentLanguages}
-            showSomatic
-          />
-
-          {/* Stat bonuses */}
-          <IdValueListEditor
-            title="Stat Bonuses"
-            rows={form.statBonuses}
-            onChangeRows={(next) => setForm((s) => ({ ...s, statBonuses: next }))}
-            options={statOptions}
-            viewing={viewing}
-            error={errors.statBonuses}
-            signedValues
-          />
-
-          {/* Everyman skills */}
-          <SkillListEditor
-            title="Everyman Skills"
-            rows={form.everymanSkills}
-            onChangeRows={(next) => setForm((s) => ({ ...s, everymanSkills: next }))}
-            idOptions={skillOptions}
-            loading={skillsLoading}
-            viewing={viewing}
-            error={errors.everymanSkills}
-          />
-
-          {/* Restricted skills */}
-          <SkillListEditor
-            title="Restricted Skills"
-            rows={form.restrictedSkills}
-            onChangeRows={(next) => setForm((s) => ({ ...s, restrictedSkills: next }))}
-            idOptions={skillOptions}
-            loading={skillsLoading}
-            viewing={viewing}
-            error={errors.restrictedSkills}
-          />
-
-          {/* Everyman categories */}
-          <IdListEditor
-            title="Everyman Categories"
-            rows={form.everymanCategories}
-            onChangeRows={(next) => setForm((s) => ({ ...s, everymanCategories: next }))}
-            options={categoryOptions}
-            loading={categoriesLoading}
-            viewing={viewing}
-            columnLabel="Category"
-          />
-
-          {/* Restricted categories */}
-          <IdListEditor
-            title="Restricted Categories"
-            rows={form.restrictedCategories}
-            onChangeRows={(next) => setForm((s) => ({ ...s, restrictedCategories: next }))}
-            options={categoryOptions}
-            loading={categoriesLoading}
-            viewing={viewing}
-            columnLabel="Category"
-          />
-
-          {/* Skill bonuses */}
-          <SkillValueListEditor
-            title="Skill Bonuses"
-            rows={form.skillBonuses}
-            onChangeRows={(next) => setForm((s) => ({ ...s, skillBonuses: next }))}
-            idOptions={skillOptions}
-            loading={skillsLoading}
-            viewing={viewing}
-            error={errors.skillBonuses}
-            signedValues
-          />
-
-          {/* Skill Category Choices Everyman */}
-          <ChoiceListEditor<string, string>
-            title="Skill Category Choices (Everyman)"
-            rows={form.skillCategoryChoicesEveryman.map((r) => ({
-              numChoices: r.numChoices,
-              type: '' as string,
-              options: r.options,
-            }))}
-            onChangeRows={(next) =>
-              setForm((s) => ({
-                ...s,
-                skillCategoryChoicesEveryman: next.map((r) => ({
-                  numChoices: r.numChoices,
-                  options: r.options,
-                })),
-              }))
-            }
-            typeOptions={[]}
-            viewing={viewing}
-            error={errors.skillCategoryChoicesEveryman}
-            createEmptyOption={() => ''}
-            createEmptyRow={() => ({
-              numChoices: '',
-              type: '',
-              options: [],
-            })}
-            typeLabel="Unused"
-            optionSectionLabel="Categories"
-            renderOptionEditor={({ option, setOption, removeOption, viewing }) => (
-              <div style={{ display: 'grid', gridTemplateColumns: viewing ? '1fr' : '1fr auto', gap: 8 }}>
-                <LabeledSelect
-                  label="Category"
-                  hideLabel
-                  ariaLabel="Category"
-                  value={option}
-                  onChange={(v) => setOption(v)}
-                  options={categoryOptions}
-                  disabled={categoriesLoading || viewing}
+            {/* Description */}
+            <section style={{ marginTop: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h4 style={{ margin: '8px 0' }}>Description</h4>
+                <button type="button" onClick={() => setPreviewDescription((p) => !p)}>
+                  {previewDescription ? 'Edit' : 'Preview'}
+                </button>
+              </div>
+              {previewDescription ? (
+                <MarkupPreview
+                  content={form.description}
+                  emptyHint="No description"
+                  className="preview-html"
+                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
                 />
-                {!viewing && (
-                  <button type="button" onClick={removeOption} style={{ color: '#b00020' }}>
-                    Remove
-                  </button>
-                )}
+              ) : (
+                <label style={{ display: 'grid', gap: 6 }}>
+                  <textarea
+                    value={form.description}
+                    onChange={(e) => setForm((s) => ({ ...s, description: e.target.value }))}
+                    disabled={viewing}
+                    rows={5}
+                  />
+                </label>
+              )}
+            </section>
+
+            {/* Numbers */}
+            <section style={{ marginTop: 12 }}>
+              <h4 style={{ margin: '8px 0' }}>Values</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                <LabeledInput label="Recovery Multiplier" tooltip="Multiplier to injury recovery rate" value={form.recoveryMultiplier} onChange={makeSignedFloatOnChange<typeof form>('recoveryMultiplier', setForm)} disabled={viewing} error={errors.recoveryMultiplier} />
+                <LabeledInput label="Background Options" tooltip="Number of background options available" value={form.backgroundOptions} onChange={makeUnsignedIntOnChange<typeof form>('backgroundOptions', setForm)} disabled={viewing} error={errors.backgroundOptions} />
+                <LabeledInput label="Exhaustion Bonus" tooltip="Extra exhaustion points" value={form.exhaustionBonus} onChange={makeUnsignedIntOnChange<typeof form>('exhaustionBonus', setForm)} disabled={viewing} error={errors.exhaustionBonus} />
+                <LabeledInput label="Stat Loss Racial Type" tooltip="1 - 5; high is quicker stat loss" value={form.statLossRacialType} onChange={makeUnsignedIntOnChange<typeof form>('statLossRacialType', setForm)} disabled={viewing} error={errors.statLossRacialType} />
+                <LabeledInput label="Required Sleep" tooltip="Hours of sleep required (hrs)" value={form.requiredSleep} onChange={makeUnsignedIntOnChange<typeof form>('requiredSleep', setForm)} disabled={viewing} error={errors.requiredSleep} />
+                <LabeledInput label="Required Sleep Frequency" tooltip="Frequency of required sleep (days)" value={form.requiredSleepFrequency} onChange={makeUnsignedIntOnChange<typeof form>('requiredSleepFrequency', setForm)} disabled={viewing} error={errors.requiredSleepFrequency} />
+                <LabeledInput label="Soul Departure" tooltip="Rounds after death until soul departure" value={form.soulDeparture} onChange={makeUnsignedIntOnChange<typeof form>('soulDeparture', setForm)} disabled={viewing} error={errors.soulDeparture} />
+                <LabeledInput label="Build Modifier" tooltip="Variance from human build (typically -2 to 2)" value={form.buildModifier} onChange={makeUnsignedIntOnChange<typeof form>('buildModifier', setForm)} disabled={viewing} error={errors.buildModifier} />
+                <LabeledInput label="Average Male Height" tooltip="Average height for males (in)" value={form.averageMaleHeight} onChange={makeUnsignedIntOnChange<typeof form>('averageMaleHeight', setForm)} disabled={viewing} error={errors.averageMaleHeight} />
+                <LabeledInput label="Average Female Height" tooltip="Average height for females (in)" value={form.averageFemaleHeight} onChange={makeUnsignedIntOnChange<typeof form>('averageFemaleHeight', setForm)} disabled={viewing} error={errors.averageFemaleHeight} />
+                <LabeledInput label="Average Lifespan" tooltip="Average lifespan (years)" value={form.averageLifespan} onChange={makeUnsignedIntOnChange<typeof form>('averageLifespan', setForm)} disabled={viewing} error={errors.averageLifespan} />
+                <LabeledInput label="Male Weight Modifier" tooltip="Frame modifier: 1 is average" value={form.maleWeightModifier} onChange={makeUnsignedIntOnChange<typeof form>('maleWeightModifier', setForm)} disabled={viewing} error={errors.maleWeightModifier} />
+                <LabeledInput label="Female Weight Modifier" tooltip="Frame modifier: 1 is average" value={form.femaleWeightModifier} onChange={makeUnsignedIntOnChange<typeof form>('femaleWeightModifier', setForm)} disabled={viewing} error={errors.femaleWeightModifier} />
+              </div>
+            </section>
+
+            {/* Progressions */}
+            <section style={{ marginTop: 12 }}>
+              <h4 style={{ margin: '8px 0' }}>Progressions</h4>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <LabeledSelect label="Arcane" value={form.arcaneProgression} onChange={(v) => setForm((s) => ({ ...s, arcaneProgression: v }))} options={progressionOptionsByPrefix.spell} disabled={loading || viewing} error={viewing ? undefined : errors.arcaneProgression} />
+                <LabeledSelect label="Arms" value={form.armsProgression} onChange={(v) => setForm((s) => ({ ...s, armsProgression: v }))} options={progressionOptionsByPrefix.arms} disabled={loading || viewing} error={viewing ? undefined : errors.armsProgression} />
+                <LabeledSelect label="Channeling" value={form.channelingProgression} onChange={(v) => setForm((s) => ({ ...s, channelingProgression: v }))} options={progressionOptionsByPrefix.spell} disabled={loading || viewing} error={viewing ? undefined : errors.channelingProgression} />
+                <LabeledSelect label="Essence" value={form.essenceProgression} onChange={(v) => setForm((s) => ({ ...s, essenceProgression: v }))} options={progressionOptionsByPrefix.spell} disabled={loading || viewing} error={viewing ? undefined : errors.essenceProgression} />
+                <LabeledSelect label="Mentalism" value={form.mentalismProgression} onChange={(v) => setForm((s) => ({ ...s, mentalismProgression: v }))} options={progressionOptionsByPrefix.spell} disabled={loading || viewing} error={viewing ? undefined : errors.mentalismProgression} />
+              </div>
+            </section>
+
+            {/* Language editors */}
+            <LanguageRankListEditor
+              title="Starting Languages"
+              rows={form.startingLanguages}
+              onChangeRows={(next) =>
+                setForm((s) => ({ ...s, startingLanguages: next }))
+              }
+              languageOptions={languageOptions}
+              loading={loading}
+              viewing={viewing}
+              error={errors.startingLanguages}
+              showSomatic
+            />
+
+            <LanguageRankListEditor
+              title="Adolescent Languages"
+              rows={form.adolescentLanguages}
+              onChangeRows={(next) =>
+                setForm((s) => ({ ...s, adolescentLanguages: next }))
+              }
+              languageOptions={languageOptions}
+              loading={loading}
+              viewing={viewing}
+              error={errors.adolescentLanguages}
+              showSomatic
+            />
+
+            {/* Stat bonuses */}
+            <IdValueListEditor
+              title="Stat Bonuses"
+              addButtonLabel='+ Add stat bonus'
+              rows={form.statBonuses}
+              onChangeRows={(next) => setForm((s) => ({ ...s, statBonuses: next }))}
+              options={statOptions}
+              viewing={viewing}
+              error={errors.statBonuses}
+              signedValues
+            />
+
+            {/* Everyman skills */}
+            <SkillListEditor
+              title="Everyman Skills"
+              addButtonLabel='+ Add everyman skill'
+              rows={form.everymanSkills}
+              onChangeRows={(next) => setForm((s) => ({ ...s, everymanSkills: next }))}
+              idOptions={skillOptions}
+              loading={loading}
+              viewing={viewing}
+              error={errors.everymanSkills}
+            />
+
+            {/* Restricted skills */}
+            <SkillListEditor
+              title="Restricted Skills"
+              addButtonLabel='+ Add restricted skill'
+              rows={form.restrictedSkills}
+              onChangeRows={(next) => setForm((s) => ({ ...s, restrictedSkills: next }))}
+              idOptions={skillOptions}
+              loading={loading}
+              viewing={viewing}
+              error={errors.restrictedSkills}
+            />
+
+            {/* Everyman categories */}
+            <IdListEditor
+              title="Everyman Categories"
+              addButtonLabel='+ Add everyman category'
+              rows={form.everymanCategories}
+              onChangeRows={(next) => setForm((s) => ({ ...s, everymanCategories: next }))}
+              options={categoryOptions}
+              loading={loading}
+              viewing={viewing}
+              columnLabel="Category"
+            />
+
+            {/* Restricted categories */}
+            <IdListEditor
+              title="Restricted Categories"
+              addButtonLabel='+ Add restricted category'
+              rows={form.restrictedCategories}
+              onChangeRows={(next) => setForm((s) => ({ ...s, restrictedCategories: next }))}
+              options={categoryOptions}
+              loading={loading}
+              viewing={viewing}
+              columnLabel="Category"
+            />
+
+            {/* Skill bonuses */}
+            <SkillValueListEditor
+              title="Skill Bonuses"
+              addButtonLabel='+ Add skill bonus'
+              rows={form.skillBonuses}
+              onChangeRows={(next) => setForm((s) => ({ ...s, skillBonuses: next }))}
+              idOptions={skillOptions}
+              loading={loading}
+              viewing={viewing}
+              error={errors.skillBonuses}
+              signedValues
+            />
+
+            {/* Skill Category Choices Everyman */}
+            <ChoiceListEditor<string, string>
+              title="Skill Category Choices (Everyman)"
+              addRowButtonLabel='+ Add skill category choice'
+              rows={form.skillCategoryChoicesEveryman.map((r) => ({
+                numChoices: r.numChoices,
+                type: '' as string,
+                options: r.options,
+              }))}
+              onChangeRows={(next) =>
+                setForm((s) => ({
+                  ...s,
+                  skillCategoryChoicesEveryman: next.map((r) => ({
+                    numChoices: r.numChoices,
+                    options: r.options,
+                  })),
+                }))
+              }
+              typeOptions={[]}
+              viewing={viewing}
+              error={errors.skillCategoryChoicesEveryman}
+              createEmptyOption={() => ''}
+              createEmptyRow={() => ({
+                numChoices: '',
+                type: '',
+                options: [],
+              })}
+              typeLabel="Unused"
+              optionSectionLabel="Categories"
+              renderOptionEditor={({ option, setOption, removeOption, viewing }) => (
+                <div style={{ display: 'grid', gridTemplateColumns: viewing ? '1fr' : '1fr auto', gap: 8 }}>
+                  <LabeledSelect
+                    label="Category"
+                    hideLabel
+                    ariaLabel="Category"
+                    value={option}
+                    onChange={(v) => setOption(v)}
+                    options={categoryOptions}
+                    disabled={loading || viewing}
+                  />
+                  {!viewing && (
+                    <button type="button" onClick={removeOption} style={{ color: '#b00020' }}>
+                      Remove
+                    </button>
+                  )}
+                </div>
+              )}
+            />
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              {!viewing && <button onClick={saveForm} disabled={hasErrors || submitting}>{submitting ? 'Submitting…' : 'Save'}</button>}
+              <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
+            </div>
+
+            {/* Validation errors */}
+            {Object.values(errors).some(Boolean) && (
+              <div style={{ marginTop: 12, color: '#b00020' }}>
+                <h4 style={{ margin: '0 0 4px' }}>Please fix the following errors:</h4>
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  {Object.entries(errors).map(([field, error]) =>
+                    error ? <li key={field}>{error}</li> : null
+                  )}
+                </ul>
               </div>
             )}
-          />
-
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            {!viewing && (
-              <button onClick={saveForm} disabled={hasErrors}>
-                Save
-              </button>
-            )}
-            <button onClick={cancelForm} type="button">
-              {viewing ? 'Close' : 'Cancel'}
-            </button>
           </div>
         </div>
       )}
 
       {!showForm && (
-        <DataTable<Race>
+        <DataTable
           ref={dtRef}
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}
-          initialSort={{ colId: 'name', dir: 'asc' }}
+          initialSort={{ colId: 'name', dir: 'asc' }} //
+          // search
           searchQuery={query}
           globalFilter={globalFilter}
+          // pagination (client)
           mode="client"
           page={page}
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
-          pageSizeOptions={[5, 10, 20, 50, 100]}
-          tableMinWidth={1200}
-          zebra
-          hover
-          resizable
+          // styles
+          tableMinWidth={0} // allow table to shrink below container width (for better mobile support)
           persistKey="dt.race.v1"
           ariaLabel="Races"
         />
