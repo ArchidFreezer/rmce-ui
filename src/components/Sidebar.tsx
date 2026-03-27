@@ -169,7 +169,7 @@ export function Sidebar({
 
       {/* Sidebar header */}
       <div className="sidebar__header">
-        <div className="sidebar__title">RMCE Objects</div>
+        <div className="sidebar__title">RMCE</div>
         <button
           aria-label="Refresh resource counts"
           title="Refresh counts"
