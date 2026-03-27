@@ -13,8 +13,8 @@ import {
   LabeledInput,
   LabeledSelect,
   MarkupPreview,
-  useConfirm,
-  useToast,
+  Spinner,
+  useConfirm, useToast,
 } from '../../components';
 
 import type {
@@ -30,15 +30,15 @@ import {
 
 import {
   isValidID, makeIDOnChange,
-  isValidSignedInt, sanitizeSignedInt,
+  isValidSignedInt, makeSignedIntOnChange, sanitizeSignedInt,
   isValidUnsignedInt, makeUnsignedIntOnChange, sanitizeUnsignedInt,
 } from '../../utils';
 
 const prefix = 'WEAPONTYPE_';
 
-// ------------------------
-// Form VM (strings for numbers while typing)
-// ------------------------
+/* ------------------------------------------------------------------ */
+/* VM types                                                           */
+/* ------------------------------------------------------------------ */
 type CriticalVM = { critical: CriticalType | ''; modifier: string };
 type RangeVM = { min: string; max: string; modifier: string };
 
@@ -67,6 +67,24 @@ type FormState = {
 
   criticals: CriticalVM[];
   ranges: RangeVM[];
+};
+
+type FormErrors = {
+  id?: string;
+  name?: string;
+  skill?: string;
+  book?: string;
+  attackTable?: string;
+  fumble?: string;
+  breakage?: string;
+  minLength?: string;
+  maxLength?: string;
+  minStrength?: string;
+  maxStrength?: string;
+  minWeight?: string;
+  maxWeight?: string;
+  criticals?: string;
+  ranges?: string;
 };
 
 const emptyVM = (): FormState => ({
@@ -150,19 +168,21 @@ const fromVM = (vm: FormState): WeaponType => ({
   ranges: vm.ranges.map(r => ({ min: Number(r.min), max: Number(r.max), modifier: Number(r.modifier) })),
 });
 
+/* ------------------------------------------------------------------ */
+/* View                                                               */
+/* ------------------------------------------------------------------ */
 export default function WeaponTypeView() {
   const dtRef = useRef<DataTableHandle>(null);
 
   const [rows, setRows] = useState<WeaponType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const hasErrors = Object.values(errors).some(Boolean);
 
   const [skills, setSkills] = useState<Skill[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
-  const [skillLoading, setSkillLoading] = useState(true);
-  const [bookLoading, setBookLoading] = useState(true);
   const [attackTables, setAttackTables] = useState<AttackTable[]>([]);
-  const [attackTablesLoading, setAttackTablesLoading] = useState(true);
 
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -171,89 +191,45 @@ export default function WeaponTypeView() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<FormState>(emptyVM());
 
-  const [errors, setErrors] = useState<{
-    id?: string | undefined;
-    name?: string | undefined;
-    skill?: string | undefined;
-    book?: string | undefined;
-    attackTable?: string | undefined;
-    fumble?: string | undefined;
-    breakage?: string | undefined;
-    minLength?: string | undefined;
-    maxLength?: string | undefined;
-    minStrength?: string | undefined;
-    maxStrength?: string | undefined;
-    minWeight?: string | undefined;
-    maxWeight?: string | undefined;
-    criticals?: string | undefined;
-    ranges?: string | undefined;
-  }>({});
-
-  // HTML preview toggles
+  // Markup preview toggles
   const [previewAll, setPreviewAll] = useState(false);
-  const [showPreview, setShowPreview] = useState<{
-    notes: boolean;
-  }>({ notes: false });
+  const [showPreview, setShowPreview] = useState<{ notes: boolean; }>({ notes: false });
 
   const toast = useToast();
   const confirm = useConfirm();
 
-  // Load list
+  /* ------------------------------------------------------------------ */
+  /* Load data                                                          */
+  /* ------------------------------------------------------------------ */
+
   useEffect(() => {
-    let mounted = true;
     (async () => {
       try {
-        const list = await fetchWeaponTypes();
-        if (!mounted) return;
-        setRows(list);
+        const [wt, b, s, at] = await Promise.all([
+          fetchWeaponTypes(),
+          fetchBooks(),
+          fetchSkills(),
+          fetchAttacktables(),
+        ]);
+        setRows(wt);
+        setBooks(b);
+        setSkills(s);
+        setAttackTables(at);
       } catch (e) {
-        if (!mounted) return;
-        setError(e instanceof Error ? e.message : String(e));
+        setError(String(e));
       } finally {
-        if (mounted) setLoading(false);
+        setLoading(false);
       }
     })();
-    return () => { mounted = false; };
   }, []);
 
-  // Load reference lists
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const list = await fetchSkills();
-        if (!mounted) return;
-        setSkills(list);
-      } finally { if (mounted) setSkillLoading(false); }
-    })();
-    return () => { mounted = false; };
-  }, []);
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const list = await fetchBooks();
-        if (!mounted) return;
-        setBooks(list);
-      } finally { if (mounted) setBookLoading(false); }
-    })();
-    return () => { mounted = false; };
-  }, []);
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const list = await fetchAttacktables();
-        if (!mounted) return;
-        setAttackTables(list);
-      } finally { if (mounted) setAttackTablesLoading(false); }
-    })();
-    return () => { mounted = false; };
-  }, []);
+  /* ------------------------------------------------------------------ */
+  /* Helpers                                                            */
+  /* ------------------------------------------------------------------ */
 
-  // Display labels
   const skillNameById = useMemo(() => {
     const m = new Map<string, string>();
     for (const s of skills) m.set(s.id, s.name);
@@ -270,10 +246,11 @@ export default function WeaponTypeView() {
     return m;
   }, [attackTables]);
 
-  const skillOptions = useMemo(
-    () => skills.map(s => ({ value: s.id, label: s.name })),
+  const weaponSkillOptions = useMemo(
+    () => skills.filter(s => s.name.startsWith('Weapon -')).map(s => ({ value: s.id, label: s.name })),
     [skills]
   );
+
   const bookOptions = useMemo(
     () => books.map(b => ({ value: b.id, label: b.name })),
     [books]
@@ -287,8 +264,10 @@ export default function WeaponTypeView() {
     []
   );
 
-  // Validation
-  const computeErrors = (draft = form) => {
+  /* ------------------------------------------------------------------ */
+  /* Validation                                                         */
+  /* ------------------------------------------------------------------ */
+  const computeErrors = (draft: FormState): FormErrors => {
     const e: typeof errors = {};
     const id = draft.id.trim();
     const nm = draft.name.trim();
@@ -314,14 +293,28 @@ export default function WeaponTypeView() {
       else if (!isValidUnsignedInt(v)) e[key as keyof typeof e] = `${label} must be a non-negative integer`;
     };
 
-    checkInt('fumble', 'Fumble');
-    checkInt('breakage', 'Breakage');
-    checkInt('minLength', 'Min length');
-    checkInt('maxLength', 'Max length');
-    checkInt('minStrength', 'Min strength');
-    checkInt('maxStrength', 'Max strength');
-    checkInt('minWeight', 'Min weight');
-    checkInt('maxWeight', 'Max weight');
+    const checkRangeIntUnsigned = (key: keyof FormState, label: string, min: number, max: number) => {
+      const v = (draft[key] as string).trim();
+      if (!v) e[key as keyof typeof e] = `${label} is required`;
+      else if (!isValidUnsignedInt(v)) e[key as keyof typeof e] = `${label} must be a non-negative integer`;
+      else if (Number(v) < min || Number(v) > max) e[key as keyof typeof e] = `${label} must be between ${min} and ${max}`;
+    };
+
+    const checkRangeIntSigned = (key: keyof FormState, label: string, min: number, max: number) => {
+      const v = (draft[key] as string).trim();
+      if (!v) e[key as keyof typeof e] = `${label} is required`;
+      else if (!isValidSignedInt(v)) e[key as keyof typeof e] = `${label} must be an integer`;
+      else if (Number(v) < min || Number(v) > max) e[key as keyof typeof e] = `${label} must be between ${min} and ${max}`;
+    };
+
+    checkRangeIntUnsigned('fumble', 'Fumble', 0, 50);
+    checkRangeIntSigned('breakage', 'Breakage', -1, 50);
+    checkRangeIntUnsigned('minLength', 'Min length', 1, 50);
+    checkRangeIntUnsigned('maxLength', 'Max length', 1, 50);
+    checkRangeIntUnsigned('minStrength', 'Min strength', 1, 100);
+    checkRangeIntUnsigned('maxStrength', 'Max strength', 1, 100);
+    checkRangeIntUnsigned('minWeight', 'Min weight', 0, 50);
+    checkRangeIntUnsigned('maxWeight', 'Max weight', 0, 50);
 
     // Ranges
     for (let i = 0; i < draft.ranges.length; i++) {
@@ -362,118 +355,14 @@ export default function WeaponTypeView() {
     return e;
   };
 
-  const hasErrors = Boolean(Object.values(errors).some(Boolean));
-
   useEffect(() => {
     if (!showForm || viewing) return;
-    setErrors(computeErrors());
+    setErrors(computeErrors(form));
   }, [form, showForm, viewing, skillNameById, bookNameById, attackTableNameById]);
 
-  // Actions
-  const startNew = () => {
-    setViewing(false);
-    setEditingId(null);
-    setForm(emptyVM());
-    setErrors({});
-    setShowForm(true);
-  };
-  const startView = (row: WeaponType) => {
-    setViewing(true);
-    setEditingId(row.id);
-    setForm(toVM(row));
-    setErrors({});
-    setShowForm(true);
-  };
-  const startEdit = (row: WeaponType) => {
-    setViewing(false);
-    setEditingId(row.id);
-    setForm(toVM(row));
-    setErrors({});
-    setShowForm(true);
-  };
-  const startDuplicate = (row: WeaponType) => {
-    setViewing(false);
-    setEditingId(null);
-    const vm = toVM(row);
-    vm.id = prefix;
-    vm.name += ' (Copy)';
-    setForm(vm);
-    setErrors({});
-    setShowForm(true);
-  };
-  const cancelForm = () => {
-    setShowForm(false);
-    setViewing(false);
-    setEditingId(null);
-    setErrors({});
-  };
-
-  const saveForm = async () => {
-    const nextErrors = computeErrors(form);
-    setErrors(nextErrors);
-    if (Object.values(nextErrors).some(Boolean)) return;
-
-    const payload = fromVM(form);
-    const isEditing = Boolean(editingId);
-    try {
-      const opts = isEditing
-        ? { method: 'PUT' as const, useResourceIdPath: true }
-        : { method: 'POST' as const, useResourceIdPath: false };
-      await upsertWeaponType(payload, opts);
-
-      setRows(prev => {
-        if (isEditing) {
-          const idx = prev.findIndex(r => r.id === payload.id);
-          if (idx >= 0) {
-            const copy = [...prev];
-            copy[idx] = { ...copy[idx], ...payload };
-            return copy;
-          }
-          return [payload, ...prev];
-        }
-        return [payload, ...prev];
-      });
-
-      setShowForm(false);
-      setViewing(false);
-      setEditingId(null);
-      toast({
-        variant: 'success',
-        title: isEditing ? 'Updated' : 'Saved',
-        description: `Weapon type "${payload.id}" ${isEditing ? 'updated' : 'created'}.`,
-      });
-    } catch (err) {
-      toast({
-        variant: 'danger',
-        title: 'Save failed',
-        description: String(err instanceof Error ? err.message : err),
-      });
-    }
-  };
-
-  const onDelete = async (row: WeaponType) => {
-    const ok = await confirm({
-      title: 'Delete Weapon Type',
-      body: `Delete "${row.id}"? This cannot be undone.`,
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
-      tone: 'danger',
-    });
-    if (!ok) return;
-
-    const prev = rows;
-    setRows(prev.filter(r => r.id !== row.id));
-    try {
-      await deleteWeaponType(row.id);
-      if (editingId === row.id || viewing) cancelForm();
-      toast({ variant: 'success', title: 'Deleted', description: `Weapon type "${row.id}" deleted.` });
-    } catch (err) {
-      setRows(prev);
-      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err) });
-    }
-  };
-
-  // Columns
+  /* ------------------------------------------------------------------ */
+  /* Table                                                              */
+  /* ------------------------------------------------------------------ */
   const columns: ColumnDef<WeaponType>[] = useMemo(() => [
     { id: 'id', header: 'ID', accessor: r => r.id, sortType: 'string', minWidth: 260 },
     { id: 'name', header: 'Name', accessor: r => r.name, sortType: 'string', minWidth: 180 },
@@ -518,6 +407,140 @@ export default function WeaponTypeView() {
     ].some(v => String(v ?? '').toLowerCase().includes(s));
   };
 
+  /* ------------------------------------------------------------------ */
+  /* Actions                                                            */
+  /* ------------------------------------------------------------------ */
+
+  const startNew = () => {
+    setViewing(false);
+    setEditingId(null);
+    setForm(emptyVM());
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const startView = (row: WeaponType) => {
+    setViewing(true);
+    setEditingId(row.id);
+    setForm(toVM(row));
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const startEdit = (row: WeaponType) => {
+    setViewing(false);
+    setEditingId(row.id);
+    setForm(toVM(row));
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const startDuplicate = (row: WeaponType) => {
+    setViewing(false);
+    setEditingId(null);
+    const vm = toVM(row);
+    vm.id = prefix;
+    vm.name += ' (Copy)';
+    setForm(vm);
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const cancelForm = () => {
+    setViewing(false);
+    setEditingId(null);
+    setErrors({});
+    setShowForm(false);
+  };
+
+  const saveForm = async () => {
+
+    if (submitting) return;
+
+    const nextErrors = computeErrors(form);
+    setErrors(nextErrors);
+    if (Object.values(nextErrors).some(Boolean)) {
+      return;
+    }
+
+    setSubmitting(true);
+
+    const payload = fromVM(form);
+    const isEditing = Boolean(editingId);
+
+    try {
+      const opts = isEditing
+        ? { method: 'PUT' as const, useResourceIdPath: true }
+        : { method: 'POST' as const, useResourceIdPath: false };
+
+      await upsertWeaponType(payload, opts);
+
+      setRows((prev) => {
+        if (isEditing) {
+          const idx = prev.findIndex((r) => r.id === payload.id);
+          if (idx >= 0) {
+            const copy = [...prev];
+            copy[idx] = { ...copy[idx], ...payload };
+            return copy;
+          }
+          return [payload, ...prev];
+        }
+        return [payload, ...prev];
+      });
+
+      setShowForm(false);
+      setViewing(false);
+      setEditingId(null);
+
+      toast({
+        variant: 'success',
+        title: isEditing ? 'Updated' : 'Saved',
+        description: `Weapon Type "${payload.id}" ${isEditing ? 'updated' : 'created'}.`,
+      });
+    } catch (err) {
+      toast({
+        variant: 'danger',
+        title: 'Save failed',
+        description: String(err instanceof Error ? err.message : err),
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onDelete = async (row: WeaponType) => {
+
+    if (submitting) return;
+    setSubmitting(true);
+
+    const ok = await confirm({
+      title: 'Delete Weapon Type',
+      body: `Delete "${row.id}"? This cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      tone: 'danger',
+    });
+    if (!ok) return;
+
+    const prev = rows;
+    setRows(prev.filter((r) => r.id !== row.id));
+
+    try {
+      await deleteWeaponType(row.id);
+      if (editingId === row.id || viewing) cancelForm();
+      toast({ variant: 'success', title: 'Deleted', description: `Weapon Type "${row.id}" deleted.` });
+    } catch (err) {
+      setRows(prev);
+      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err), });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Render                                                             */
+  /* ------------------------------------------------------------------ */
+
   if (loading) return <div>Loading…</div>;
   if (error) return <div style={{ color: 'crimson' }}>Error: {error}</div>;
 
@@ -557,8 +580,9 @@ export default function WeaponTypeView() {
     <>
       <h2>Weapon Types</h2>
 
+      {/* Toolbar hidden while form visible */}
       {!showForm && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <button onClick={startNew}>New Weapon Type</button>
           <DataTableSearchInput
             value={query}
@@ -566,247 +590,265 @@ export default function WeaponTypeView() {
             placeholder="Search weapon types…"
             aria-label="Search weapon types"
           />
+
           {/* Reset and auto-fit column widths */}
           <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
           <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
         </div>
       )}
 
+      {/* Display main Form */}
       {showForm && (
-        <div
-          className={`form-panel ${viewing ? 'form-panel--view' : ''}`}
-          style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}
-        >
-          <h3 style={{ marginTop: 0 }}>
-            {viewing ? 'View Weapon Type' : (editingId ? 'Edit Weapon Type' : 'New Weapon Type')}
-          </h3>
+        <div className="form-container">
+          {/* Simple overlay while submitting */}
+          {submitting && (<div className="overlay"><Spinner size={24} /> <span>Saving…</span> </div>)}
 
-          <button
-            type="button"
-            onClick={() => {
-              setPreviewAll(p => !p);
-              setShowPreview({ notes: !previewAll });
-            }}
-          >
-            {previewAll ? 'Hide Previews' : 'Show Previews'}
-          </button>
+          <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`}>
+            <h3>{viewing ? 'View' : editingId ? 'Edit' : 'New'} Weapon Type</h3>
 
-          {/* Basics */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <LabeledInput
-              label="ID"
-              value={form.id}
-              onChange={makeIDOnChange<typeof form>('id', setForm, prefix)}
-              disabled={!!editingId || viewing}
-              error={viewing ? undefined : errors.id}
-            />
-            <LabeledInput
-              label="Name"
-              value={form.name}
-              onChange={(v) => setForm(s => ({ ...s, name: v }))}
-              disabled={viewing}
-              error={viewing ? undefined : errors.name}
-            />
-            <LabeledSelect
-              label="Skill"
-              value={form.skill}
-              onChange={(v) => setForm(s => ({ ...s, skill: v }))}
-              options={skillOptions}
-              disabled={skillLoading || viewing}
-              error={viewing ? undefined : errors.skill}
-              helperText={skillLoading ? 'Loading skills…' : undefined}
-            />
-            <LabeledSelect
-              label="Book"
-              value={form.book}
-              onChange={(v) => setForm(s => ({ ...s, book: v }))}
-              options={bookOptions}
-              disabled={bookLoading || viewing}
-              error={viewing ? undefined : errors.book}
-              helperText={bookLoading ? 'Loading books…' : undefined}
-            />
-            <LabeledSelect
-              label="Attack Table"
-              value={form.attackTable}
-              onChange={(v) => setForm(s => ({ ...s, attackTable: v }))}
-              options={attackTableOptions}
-              disabled={viewing || attackTablesLoading}
-              error={viewing ? undefined : errors.attackTable}
-              helperText={attackTablesLoading ? 'Loading attack tables…' : undefined}
-            />
-          </div>
+            <button
+              type="button"
+              onClick={() => {
+                setPreviewAll(p => !p);
+                setShowPreview({ notes: !previewAll });
+              }}
+            >
+              {previewAll ? 'Hide Previews' : 'Show Previews'}
+            </button>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginTop: 12 }}>
-            {/* Notes */}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <label style={{ display: 'grid', gap: 6 }}>Notes (HTML allowed)</label>
-                {!viewing && (
-                  <button type="button" onClick={() => setShowPreview(s => ({ ...s, notes: !s.notes }))}>
-                    {showPreview.notes ? 'Edit' : 'Preview'}
-                  </button>
+            {/* Basics */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <LabeledInput
+                label="ID"
+                value={form.id}
+                onChange={makeIDOnChange<typeof form>('id', setForm, prefix)}
+                disabled={!!editingId || viewing}
+                error={viewing ? undefined : errors.id}
+              />
+              <LabeledInput
+                label="Name"
+                value={form.name}
+                onChange={(v) => setForm(s => ({ ...s, name: v }))}
+                disabled={viewing}
+                error={viewing ? undefined : errors.name}
+              />
+              <LabeledSelect
+                label="Skill"
+                value={form.skill}
+                onChange={(v) => setForm(s => ({ ...s, skill: v }))}
+                options={weaponSkillOptions}
+                disabled={loading || viewing}
+                error={viewing ? undefined : errors.skill}
+                helperText={loading ? 'Loading skills…' : undefined}
+              />
+              <LabeledSelect
+                label="Book"
+                value={form.book}
+                onChange={(v) => setForm(s => ({ ...s, book: v }))}
+                options={bookOptions}
+                disabled={loading || viewing}
+                error={viewing ? undefined : errors.book}
+                helperText={loading ? 'Loading books…' : undefined}
+              />
+              <LabeledSelect
+                label="Attack Table"
+                value={form.attackTable}
+                onChange={(v) => setForm(s => ({ ...s, attackTable: v }))}
+                options={attackTableOptions}
+                disabled={loading || viewing}
+                error={viewing ? undefined : errors.attackTable}
+                helperText={loading ? 'Loading attack tables…' : undefined}
+              />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginTop: 12 }}>
+              {/* Notes */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <label style={{ display: 'grid', gap: 6 }}>Notes (HTML allowed)</label>
+                  {!viewing && (
+                    <button type="button" onClick={() => setShowPreview(s => ({ ...s, notes: !s.notes }))}>
+                      {showPreview.notes ? 'Edit' : 'Preview'}
+                    </button>
+                  )}
+                </div>
+
+                {(showPreview.notes || viewing) ? (
+                  <MarkupPreview
+                    content={form.notes}
+                    emptyHint="No notes"
+                    className="preview-html"
+                    style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
+                  />
+                ) : (
+                  <label style={{ display: 'grid', gap: 6 }}>
+                    <textarea
+                      value={form.notes}
+                      onChange={(e) => setForm(s => ({ ...s, notes: e.target.value }))}
+                      disabled={viewing}
+                      rows={5}
+                    />
+                  </label>
                 )}
               </div>
+            </div>
 
-              {(showPreview.notes || viewing) ? (
-                <MarkupPreview
-                  content={form.notes}
-                  emptyHint="No notes"
-                  className="preview-html"
-                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
+            {/* Numbers */}
+            <h4 style={{ margin: '12px 0 4px' }}>Stats</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+              <LabeledInput label="Fumble" value={form.fumble} onChange={makeUnsignedIntOnChange<typeof form>('fumble', setForm)} disabled={viewing} width={90} />
+              <LabeledInput label="Breakage" value={form.breakage} onChange={makeSignedIntOnChange<typeof form>('breakage', setForm)} disabled={viewing} width={90} />
+              <LabeledInput label="Min Length" value={form.minLength} onChange={makeUnsignedIntOnChange<typeof form>('minLength', setForm)} disabled={viewing} width={110} />
+              <LabeledInput label="Max Length" value={form.maxLength} onChange={makeUnsignedIntOnChange<typeof form>('maxLength', setForm)} disabled={viewing} width={110} />
+              <LabeledInput label="Min Strength" value={form.minStrength} onChange={makeUnsignedIntOnChange<typeof form>('minStrength', setForm)} disabled={viewing} width={110} />
+              <LabeledInput label="Max Strength" value={form.maxStrength} onChange={makeUnsignedIntOnChange<typeof form>('maxStrength', setForm)} disabled={viewing} width={110} />
+              <LabeledInput label="Min Weight" value={form.minWeight} onChange={makeUnsignedIntOnChange<typeof form>('minWeight', setForm)} disabled={viewing} width={110} />
+              <LabeledInput label="Max Weight" value={form.maxWeight} onChange={makeUnsignedIntOnChange<typeof form>('maxWeight', setForm)} disabled={viewing} width={110} />
+            </div>
+
+            {/* Wooden Haft */}
+            <div style={{ marginTop: 8 }}>
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={form.woodenHaft}
+                  onChange={(e) => setForm(s => ({ ...s, woodenHaft: e.target.checked }))}
+                  disabled={viewing}
                 />
-              ) : (
-                <label style={{ display: 'grid', gap: 6 }}>
-                  <textarea
-                    value={form.notes}
-                    onChange={(e) => setForm(s => ({ ...s, notes: e.target.value }))}
-                    disabled={viewing}
-                    rows={5}
-                  />
-                </label>
+                <span>Wooden haft</span>
+              </label>
+            </div>
+
+            {/* Criticals */}
+            <section style={{ marginTop: 12 }}>
+              <h4 style={{ margin: '8px 0' }}>Criticals</h4>
+              {!viewing && <button type="button" onClick={addCritical} style={{ marginBottom: 8 }}>+ Add critical</button>}
+              {form.criticals.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: '240px 140px 120px', gap: 8 }}>
+                  <div style={{ fontWeight: 600 }}>Critical</div>
+                  <div style={{ fontWeight: 600 }}>Modifier</div>
+                  <div />
+                  {form.criticals.map((c, i) => (
+                    <React.Fragment key={`c-${i}`}>
+                      <LabeledSelect
+                        label="Critical"
+                        hideLabel
+                        value={c.critical}
+                        onChange={(v) => updateCritical(i, { critical: v as CriticalType })}
+                        options={criticalTypeOptions}
+                        disabled={viewing}
+                      />
+                      <LabeledInput
+                        label="Modifier"
+                        hideLabel
+                        ariaLabel="Modifier"
+                        value={c.modifier}
+                        onChange={(v) => updateCritical(i, { modifier: sanitizeSignedInt(v) })}
+                        disabled={viewing}
+                        width={120}
+                      />
+                      {!viewing && (
+                        <button type="button" onClick={() => removeCritical(i)} style={{ color: '#b00020' }}>
+                          Remove
+                        </button>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </div>
               )}
+              {errors.criticals && <div style={{ color: '#b00020', marginTop: 6 }}>{errors.criticals}</div>}
+            </section>
+
+            {/* Ranges */}
+            <section style={{ marginTop: 12 }}>
+              <h4 style={{ margin: '8px 0' }}>Ranges</h4>
+              {!viewing && <button type="button" onClick={addRange} style={{ marginBottom: 8 }}>+ Add range</button>}
+              {form.ranges.length > 0 && (
+                <div style={{ display: 'grid', gridTemplateColumns: viewing ? '120px 120px 140px' : '120px 120px 140px 120px', gap: 8 }}>
+                  <div style={{ fontWeight: 600 }}>Min</div>
+                  <div style={{ fontWeight: 600 }}>Max</div>
+                  <div style={{ fontWeight: 600 }}>Modifier</div>
+                  {!viewing && <div />}
+                  {form.ranges.map((r, i) => (
+                    <React.Fragment key={`r-${i}`}>
+                      <LabeledInput
+                        label="Min"
+                        hideLabel
+                        ariaLabel="Min"
+                        value={r.min}
+                        onChange={(v) => updateRange(i, { min: sanitizeUnsignedInt(v) })}
+                        disabled={viewing}
+                        width={100}
+                      />
+                      <LabeledInput
+                        label="Max"
+                        hideLabel
+                        ariaLabel="Max"
+                        value={r.max}
+                        onChange={(v) => updateRange(i, { max: sanitizeUnsignedInt(v) })}
+                        disabled={viewing}
+                        width={100}
+                      />
+                      <LabeledInput
+                        label="Modifier"
+                        hideLabel
+                        ariaLabel="Modifier"
+                        value={r.modifier}
+                        onChange={(v) => updateRange(i, { modifier: sanitizeSignedInt(v) })}
+                        disabled={viewing}
+                        width={120}
+                      />
+                      {!viewing && (
+                        <button type="button" onClick={() => removeRange(i)} style={{ color: '#b00020' }}>
+                          Remove
+                        </button>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </div>
+              )}
+              {errors.ranges && <div style={{ color: '#b00020', marginTop: 6 }}>{errors.ranges}</div>}
+            </section>
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              {!viewing && <button onClick={saveForm} disabled={hasErrors || submitting}>{submitting ? 'Submitting…' : 'Save'}</button>}
+              <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
             </div>
-          </div>
 
-          {/* Numbers */}
-          <h4 style={{ margin: '12px 0 4px' }}>Stats</h4>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
-            <LabeledInput label="Fumble" value={form.fumble} onChange={makeUnsignedIntOnChange<typeof form>('fumble', setForm)} disabled={viewing} width={90} />
-            <LabeledInput label="Breakage" value={form.breakage} onChange={makeUnsignedIntOnChange<typeof form>('breakage', setForm)} disabled={viewing} width={90} />
-            <LabeledInput label="Min Length" value={form.minLength} onChange={makeUnsignedIntOnChange<typeof form>('minLength', setForm)} disabled={viewing} width={110} />
-            <LabeledInput label="Max Length" value={form.maxLength} onChange={makeUnsignedIntOnChange<typeof form>('maxLength', setForm)} disabled={viewing} width={110} />
-            <LabeledInput label="Min Strength" value={form.minStrength} onChange={makeUnsignedIntOnChange<typeof form>('minStrength', setForm)} disabled={viewing} width={110} />
-            <LabeledInput label="Max Strength" value={form.maxStrength} onChange={makeUnsignedIntOnChange<typeof form>('maxStrength', setForm)} disabled={viewing} width={110} />
-            <LabeledInput label="Min Weight" value={form.minWeight} onChange={makeUnsignedIntOnChange<typeof form>('minWeight', setForm)} disabled={viewing} width={110} />
-            <LabeledInput label="Max Weight" value={form.maxWeight} onChange={makeUnsignedIntOnChange<typeof form>('maxWeight', setForm)} disabled={viewing} width={110} />
-          </div>
-
-          {/* Wooden Haft */}
-          <div style={{ marginTop: 8 }}>
-            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              <input
-                type="checkbox"
-                checked={form.woodenHaft}
-                onChange={(e) => setForm(s => ({ ...s, woodenHaft: e.target.checked }))}
-                disabled={viewing}
-              />
-              <span>Wooden haft</span>
-            </label>
-          </div>
-
-          {/* Criticals */}
-          <section style={{ marginTop: 12 }}>
-            <h4 style={{ margin: '8px 0' }}>Criticals</h4>
-            {!viewing && <button type="button" onClick={addCritical} style={{ marginBottom: 8 }}>+ Add critical</button>}
-            <div style={{ display: 'grid', gridTemplateColumns: '240px 140px auto', gap: 8 }}>
-              <div style={{ fontWeight: 600 }}>Critical</div>
-              <div style={{ fontWeight: 600 }}>Modifier</div>
-              <div />
-              {form.criticals.map((c, i) => (
-                <React.Fragment key={`c-${i}`}>
-                  <LabeledSelect
-                    label="Critical"
-                    hideLabel
-                    value={c.critical}
-                    onChange={(v) => updateCritical(i, { critical: v as CriticalType })}
-                    options={criticalTypeOptions}
-                    disabled={viewing}
-                  />
-                  <LabeledInput
-                    label="Modifier"
-                    hideLabel
-                    ariaLabel="Modifier"
-                    value={c.modifier}
-                    onChange={(v) => updateCritical(i, { modifier: sanitizeSignedInt(v) })}
-                    disabled={viewing}
-                    width={120}
-                  />
-                  {!viewing && (
-                    <button type="button" onClick={() => removeCritical(i)} style={{ color: '#b00020' }}>
-                      Remove
-                    </button>
+            {/* Validation errors */}
+            {Object.values(errors).some(Boolean) && (
+              <div style={{ marginTop: 12, color: '#b00020' }}>
+                <h4 style={{ margin: '0 0 4px' }}>Please fix the following errors:</h4>
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  {Object.entries(errors).map(([field, error]) =>
+                    error ? <li key={field}>{error}</li> : null
                   )}
-                </React.Fragment>
-              ))}
-            </div>
-            {errors.criticals && <div style={{ color: '#b00020', marginTop: 6 }}>{errors.criticals}</div>}
-          </section>
-
-          {/* Ranges */}
-          <section style={{ marginTop: 12 }}>
-            <h4 style={{ margin: '8px 0' }}>Ranges</h4>
-            {!viewing && <button type="button" onClick={addRange} style={{ marginBottom: 8 }}>+ Add range</button>}
-            <div style={{ display: 'grid', gridTemplateColumns: viewing ? '120px 120px 140px' : '120px 120px 140px auto', gap: 8 }}>
-              <div style={{ fontWeight: 600 }}>Min</div>
-              <div style={{ fontWeight: 600 }}>Max</div>
-              <div style={{ fontWeight: 600 }}>Modifier</div>
-              {!viewing && <div />}
-              {form.ranges.map((r, i) => (
-                <React.Fragment key={`r-${i}`}>
-                  <LabeledInput
-                    label="Min"
-                    hideLabel
-                    ariaLabel="Min"
-                    value={r.min}
-                    onChange={(v) => updateRange(i, { min: sanitizeUnsignedInt(v) })}
-                    disabled={viewing}
-                    width={100}
-                  />
-                  <LabeledInput
-                    label="Max"
-                    hideLabel
-                    ariaLabel="Max"
-                    value={r.max}
-                    onChange={(v) => updateRange(i, { max: sanitizeUnsignedInt(v) })}
-                    disabled={viewing}
-                    width={100}
-                  />
-                  <LabeledInput
-                    label="Modifier"
-                    hideLabel
-                    ariaLabel="Modifier"
-                    value={r.modifier}
-                    onChange={(v) => updateRange(i, { modifier: sanitizeSignedInt(v) })}
-                    disabled={viewing}
-                    width={120}
-                  />
-                  {!viewing && (
-                    <button type="button" onClick={() => removeRange(i)} style={{ color: '#b00020' }}>
-                      Remove
-                    </button>
-                  )}
-                </React.Fragment>
-              ))}
-            </div>
-            {errors.ranges && <div style={{ color: '#b00020', marginTop: 6 }}>{errors.ranges}</div>}
-          </section>
-
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
-            <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {!showForm && (
-        <DataTable<WeaponType>
+        <DataTable
           ref={dtRef}
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}
-          initialSort={{ colId: 'name', dir: 'asc' }}
+          initialSort={{ colId: 'name', dir: 'asc' }} //
+          // search
           searchQuery={query}
           globalFilter={globalFilter}
+          // pagination (client)
           mode="client"
           page={page}
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
-          pageSizeOptions={[5, 10, 20, 50, 100]}
-          tableMinWidth={1200}
-          zebra
-          hover
-          resizable
+          // styles
+          tableMinWidth={0} // allow table to shrink below container width (for better mobile support)
           persistKey="dt.weapontype.v1"
           ariaLabel="Weapon types"
         />
