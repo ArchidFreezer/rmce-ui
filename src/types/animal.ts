@@ -71,6 +71,7 @@ export interface Animal {
   levelVarianceType: LevelVarianceType;
   treasureCode?: string | undefined;
   size: CreatureSize;
+  /** references ArmourType.type */
   armourType?: string | undefined;
   movementSpeed: CreatureMovementSpeedType;
   attackQuickness: CreatureMovementSpeedType;

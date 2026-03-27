@@ -428,9 +428,9 @@ export default function AnimalView() {
     })();
   }, []);
 
-  const armourNameById = useMemo(() => {
+  const armourNameByType = useMemo(() => {
     const map = new Map<string, string>();
-    for (const row of armours) map.set(row.id, row.name);
+    for (const row of armours) map.set(row.type, `${row.name} (${row.type})`);
     return map;
   }, [armours]);
 
@@ -447,7 +447,7 @@ export default function AnimalView() {
   }, [treasureCodes]);
 
   const armourOptions = useMemo(
-    () => armours.map((row) => ({ value: row.id, label: `${row.name} (${row.type})` })),
+    () => armours.map((row) => ({ value: row.type, label: `${row.name} (${row.type})` })),
     [armours],
   );
   const attackTableOptions = useMemo(
@@ -1274,7 +1274,7 @@ export default function AnimalView() {
               <section style={{ marginTop: 16, display: 'grid', gap: 8 }}>
                 <h4 style={{ margin: 0 }}>Summary</h4>
                 <div>Treasure Code: {(treasureNameById.get(form.treasureCode) ?? form.treasureCode) || 'None'}</div>
-                <div>Armour Type: {(armourNameById.get(form.armourType) ?? form.armourType) || 'None'}</div>
+                <div>Armour Type: {(armourNameByType.get(form.armourType) ?? form.armourType) || 'None'}</div>
                 <div>Max Pace: {(paceNameById.get(form.maxPace) ?? form.maxPace) || 'None'}</div>
               </section>
             )}
