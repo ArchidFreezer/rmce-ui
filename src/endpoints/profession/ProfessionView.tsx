@@ -4,7 +4,7 @@ import {
   fetchBooks,
   fetchProfessions, upsertProfession, deleteProfession,
   fetchSkills,
-  fetchSkillcategories,
+  fetchSkillCategories,
   fetchSkillgroups,
   fetchSpelllists,
   deleteTrainingPackage,
@@ -350,7 +350,7 @@ export default function ProfessionView() {
           fetchProfessions(),
           fetchBooks(),
           fetchSkills(),
-          fetchSkillcategories(),
+          fetchSkillCategories(),
           fetchSkillgroups(),
           fetchSpelllists(),
         ]);

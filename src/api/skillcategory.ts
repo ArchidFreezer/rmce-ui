@@ -26,7 +26,7 @@ function asStatArray(v: unknown): Stat[] {
 }
 
 /** GET /rmce/objects/skillcategory → { skillcategories: SkillCategory[] } */
-export async function fetchSkillcategories(): Promise<SkillCategory[]> {
+export async function fetchSkillCategories(): Promise<SkillCategory[]> {
   const data = await fetchJson<SkillCategoriesPayload>(BASE);
   if (!data || !Array.isArray((data as any).skillcategories)) {
     throw new Error('Unexpected response: expected { skillcategories: [...] }');
@@ -43,7 +43,7 @@ export async function fetchSkillcategories(): Promise<SkillCategory[]> {
 }
 
 /** Create or update a single skill category. */
-export async function upsertSkillcategory(
+export async function upsertSkillCategory(
   sc: SkillCategory,
   opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {},
 ) {
@@ -55,7 +55,7 @@ export async function upsertSkillcategory(
 }
 
 /** DELETE /rmce/objects/skillcategory/{id} */
-export async function deleteSkillcategory(id: string) {
-  if (!id) throw new Error('deleteSkillcategory: id is required');
+export async function deleteSkillCategory(id: string) {
+  if (!id) throw new Error('deleteSkillCategory: id is required');
   await fetchJson<void>(`${BASE}/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }

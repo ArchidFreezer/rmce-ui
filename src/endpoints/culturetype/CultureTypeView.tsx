@@ -5,7 +5,7 @@ import {
   fetchClimates,
   fetchCultureTypes, upsertCultureType, deleteCultureType,
   fetchSkills,
-  fetchSkillcategories,
+  fetchSkillCategories,
   fetchSkillgroups,
   fetchWeaponTypes,
 } from '../../api';
@@ -236,7 +236,7 @@ export default function CultureTypeView() {
           fetchArmourTypes(),
           fetchWeaponTypes(),
           fetchSkills(),
-          fetchSkillcategories(),
+          fetchSkillCategories(),
           fetchSkillgroups(),
           fetchClimates(),
         ]);

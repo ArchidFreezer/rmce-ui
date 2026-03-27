@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-  fetchSkillcategories, upsertSkillcategory, deleteSkillcategory,
+  fetchSkillCategories, upsertSkillcategory, deleteSkillcategory,
   fetchSkillgroups,
   fetchSkillprogressiontypes,
 } from '../../api';
@@ -134,7 +134,7 @@ export default function SkillCategoryView() {
     (async () => {
       try {
         const [sc, g, spt] = await Promise.all([
-          fetchSkillcategories(),
+          fetchSkillCategories(),
           fetchSkillgroups(),
           fetchSkillprogressiontypes(),
         ]);
