@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-  fetchDiseasetypes, upsertDiseasetype, deleteDiseasetype,
+  fetchDiseaseTypes, upsertDiseasetype, deleteDiseasetype,
   deleteTrainingPackage
 } from '../../api';
 
@@ -123,7 +123,7 @@ export default function DiseaseTypeView() {
     (async () => {
       try {
         const [tp] = await Promise.all([
-          fetchDiseasetypes(),
+          fetchDiseaseTypes(),
 
         ]);
         setRows(tp);

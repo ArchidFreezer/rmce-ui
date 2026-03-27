@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-  fetchSkillgroups, upsertSkillgroup, deleteSkillgroup,
+  fetchSkillGroups, upsertSkillGroup, deleteSkillGroup,
 } from '../../api';
 
 import {
@@ -77,7 +77,7 @@ export default function SkillGroupView() {
     (async () => {
       try {
         const [sg] = await Promise.all([
-          fetchSkillgroups(),
+          fetchSkillGroups(),
         ]);
         setRows(sg);
       } catch (e) {
@@ -199,7 +199,7 @@ export default function SkillGroupView() {
         ? { method: 'PUT' as const, useResourceIdPath: true }
         : { method: 'POST' as const, useResourceIdPath: false };
 
-      await upsertSkillgroup(payload, opts);
+      await upsertSkillGroup(payload, opts);
 
       setRows((prev) => {
         if (isEditing) {
@@ -253,7 +253,7 @@ export default function SkillGroupView() {
     setPage(1);
 
     try {
-      await deleteSkillgroup(row.id);
+      await deleteSkillGroup(row.id);
       if (editingId === row.id || viewing) cancelForm();
       toast({ variant: 'success', title: 'Deleted', description: `Skill Group "${row.id}" deleted.` });
     } catch (err) {

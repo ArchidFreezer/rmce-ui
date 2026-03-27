@@ -35,7 +35,7 @@ function rowFromJson(r: any): AttackTableRow {
 }
 
 /** GET /rmce/objects/attacktable → { attacktables: AttackTable[] } */
-export async function fetchAttacktables(): Promise<AttackTable[]> {
+export async function fetchAttackTables(): Promise<AttackTable[]> {
   const data = await fetchJson<AttackTablesPayload>(BASE);
   if (!data || !Array.isArray((data as any).attacktables)) {
     throw new Error('Unexpected response: expected { attacktables: [...] }');
@@ -50,7 +50,7 @@ export async function fetchAttacktables(): Promise<AttackTable[]> {
 }
 
 /** Create or update a single attack table. */
-export async function upsertAttacktable(
+export async function upsertAttackTable(
   at: AttackTable,
   opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {},
 ) {
@@ -62,7 +62,7 @@ export async function upsertAttacktable(
 }
 
 /** DELETE /rmce/objects/attacktable/{id} */
-export async function deleteAttacktable(id: string) {
-  if (!id) throw new Error('deleteAttacktable: id is required');
+export async function deleteAttackTable(id: string) {
+  if (!id) throw new Error('deleteAttackTable: id is required');
   await fetchJson<void>(`${BASE}/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }

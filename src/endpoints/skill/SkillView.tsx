@@ -3,8 +3,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   fetchBooks,
   fetchSkills, upsertSkill, deleteSkill,
-  fetchSkillcategories,
-  fetchSkillgroups,
+  fetchSkillCategories,
+  fetchSkillGroups,
 } from '../../api';
 
 import {
@@ -216,8 +216,8 @@ export default function SkillView() {
       try {
         const [s, c, g, b] = await Promise.all([
           fetchSkills(),
-          fetchSkillcategories(),
-          fetchSkillgroups(),
+          fetchSkillCategories(),
+          fetchSkillGroups(),
           fetchBooks(),
         ]);
         setRows(s);

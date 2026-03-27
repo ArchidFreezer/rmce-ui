@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-  fetchSkillprogressiontypes, upsertSkillprogressiontype, deleteSkillprogressiontype,
+  fetchSkillProgressionTypes, upsertSkillProgressionType, deleteSkillProgressionType,
 } from '../../api';
 
 import {
@@ -107,7 +107,7 @@ export default function SkillProgressionTypeView() {
     (async () => {
       try {
         const [spt] = await Promise.all([
-          fetchSkillprogressiontypes(),
+          fetchSkillProgressionTypes(),
         ]);
         setRows(spt);
       } catch (e) {
@@ -249,7 +249,7 @@ export default function SkillProgressionTypeView() {
         ? { method: 'PUT' as const, useResourceIdPath: true }
         : { method: 'POST' as const, useResourceIdPath: false };
 
-      await upsertSkillprogressiontype(payload, opts);
+      await upsertSkillProgressionType(payload, opts);
 
       setRows((prev) => {
         if (isEditing) {
@@ -303,7 +303,7 @@ export default function SkillProgressionTypeView() {
     setPage(1);
 
     try {
-      await deleteSkillprogressiontype(row.id);
+      await deleteSkillProgressionType(row.id);
       if (editingId === row.id || viewing) cancelForm();
       toast({ variant: 'success', title: 'Deleted', description: `Skill Progression Type "${row.id}" deleted.` });
     } catch (err) {

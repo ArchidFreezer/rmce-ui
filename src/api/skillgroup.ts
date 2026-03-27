@@ -11,7 +11,7 @@ function asString(v: unknown): string {
 }
 
 /** GET /rmce/objects/skillgroup → { skillgroups: SkillGroup[] } */
-export async function fetchSkillgroups(): Promise<SkillGroup[]> {
+export async function fetchSkillGroups(): Promise<SkillGroup[]> {
   const data = await fetchJson<SkillGroupsPayload>(BASE);
   if (!data || !Array.isArray((data as any).skillgroups)) {
     throw new Error('Unexpected response: expected { skillgroups: [...] }');
@@ -23,7 +23,7 @@ export async function fetchSkillgroups(): Promise<SkillGroup[]> {
 }
 
 /** Create or update a single skill group. */
-export async function upsertSkillgroup(
+export async function upsertSkillGroup(
   sg: SkillGroup,
   opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {},
 ): Promise<unknown> {
@@ -35,7 +35,7 @@ export async function upsertSkillgroup(
 }
 
 /** DELETE /rmce/objects/skillgroup/{id} */
-export async function deleteSkillgroup(id: string): Promise<void> {
-  if (!id) throw new Error('deleteSkillgroup: id is required');
+export async function deleteSkillGroup(id: string): Promise<void> {
+  if (!id) throw new Error('deleteSkillGroup: id is required');
   await fetchJson<void>(`${BASE}/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }

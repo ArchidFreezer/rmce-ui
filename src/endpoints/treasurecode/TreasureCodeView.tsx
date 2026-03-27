@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-  fetchTreasurecodes, upsertTreasurecode, deleteTreasurecode,
+  fetchTreasureCodes, upsertTreasureCode, deleteTreasureCode,
 } from '../../api';
 
 import {
@@ -94,7 +94,7 @@ export default function TreasureCodeView() {
     (async () => {
       try {
         const [tc] = await Promise.all([
-          fetchTreasurecodes(),
+          fetchTreasureCodes(),
         ]);
         setRows(tc);
       } catch (e) {
@@ -222,7 +222,7 @@ export default function TreasureCodeView() {
         ? { method: 'PUT' as const, useResourceIdPath: true }
         : { method: 'POST' as const, useResourceIdPath: false };
 
-      await upsertTreasurecode(payload, opts);
+      await upsertTreasureCode(payload, opts);
 
       setRows((prev) => {
         if (isEditing) {
@@ -276,7 +276,7 @@ export default function TreasureCodeView() {
     setPage(1);
 
     try {
-      await deleteTreasurecode(row.id);
+      await deleteTreasureCode(row.id);
       if (editingId === row.id || viewing) cancelForm();
       toast({ variant: 'success', title: 'Deleted', description: `Treasure Code "${row.id}" deleted.` });
     } catch (err) {

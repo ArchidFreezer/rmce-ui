@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   fetchDiseases, upsertDisease, deleteDisease,
-  fetchDiseasetypes,
+  fetchDiseaseTypes,
 } from '../../api';
 
 import {
@@ -104,7 +104,7 @@ export default function DiseaseView() {
       try {
         const [tp, d] = await Promise.all([
           fetchDiseases(),
-          fetchDiseasetypes(),
+          fetchDiseaseTypes(),
         ]);
         setRows(tp);
         setDiseaseTypes(d);

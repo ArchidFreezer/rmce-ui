@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-  fetchSkillcategories, upsertSkillcategory, deleteSkillcategory,
-  fetchSkillgroups,
-  fetchSkillprogressiontypes,
+  fetchSkillCategories, upsertSkillCategory, deleteSkillCategory,
+  fetchSkillGroups,
+  fetchSkillProgressionTypes,
 } from '../../api';
 
 import {
@@ -134,9 +134,9 @@ export default function SkillCategoryView() {
     (async () => {
       try {
         const [sc, g, spt] = await Promise.all([
-          fetchSkillcategories(),
-          fetchSkillgroups(),
-          fetchSkillprogressiontypes(),
+          fetchSkillCategories(),
+          fetchSkillGroups(),
+          fetchSkillProgressionTypes(),
         ]);
         setRows(sc);
         setGroups(g);
@@ -408,7 +408,7 @@ export default function SkillCategoryView() {
         ? { method: 'PUT' as const, useResourceIdPath: true }
         : { method: 'POST' as const, useResourceIdPath: false };
 
-      await upsertSkillcategory(payload, opts);
+      await upsertSkillCategory(payload, opts);
 
       setRows((prev) => {
         if (isEditing) {
@@ -462,7 +462,7 @@ export default function SkillCategoryView() {
     setPage(1);
 
     try {
-      await deleteSkillcategory(row.id);
+      await deleteSkillCategory(row.id);
       if (editingId === row.id || viewing) cancelForm();
       toast({ variant: 'success', title: 'Deleted', description: `Skill Category "${row.id}" deleted.` });
     } catch (err) {

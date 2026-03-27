@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-  fetchAttacktables, upsertAttacktable, deleteAttacktable,
+  fetchAttackTables, upsertAttackTable, deleteAttackTable,
 } from '../../api';
 
 import {
@@ -100,7 +100,7 @@ function fromVM(vm: FormState): AttackTable {
 /* View                                                               */
 /* ------------------------------------------------------------------ */
 
-export default function AttacktablesView() {
+export default function AttackTablesView() {
   const dtRef = useRef<DataTableHandle>(null);
 
   const [rows, setRows] = useState<AttackTable[]>([]);
@@ -131,7 +131,7 @@ export default function AttacktablesView() {
     (async () => {
       try {
         const [at] = await Promise.all([
-          fetchAttacktables(),
+          fetchAttackTables(),
 
         ]);
         setRows(at);
@@ -309,7 +309,7 @@ export default function AttacktablesView() {
         ? { method: 'PUT' as const, useResourceIdPath: true }
         : { method: 'POST' as const, useResourceIdPath: false };
 
-      await upsertAttacktable(payload, opts);
+      await upsertAttackTable(payload, opts);
 
       setRows((prev) => {
         if (isEditing) {
@@ -363,7 +363,7 @@ export default function AttacktablesView() {
     setPage(1);
 
     try {
-      await deleteAttacktable(row.id);
+      await deleteAttackTable(row.id);
       if (editingId === row.id || viewing) cancelForm();
       toast({ variant: 'success', title: 'Deleted', description: `Attack Table "${row.id}" deleted.` });
     } catch (err) {
