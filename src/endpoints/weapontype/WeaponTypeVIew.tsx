@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-  fetchAttacktables,
+  fetchAttackTables,
   fetchBooks,
   fetchSkills,
   fetchWeaponTypes, upsertWeaponType, deleteWeaponType,
@@ -212,7 +212,7 @@ export default function WeaponTypeView() {
           fetchWeaponTypes(),
           fetchBooks(),
           fetchSkills(),
-          fetchAttacktables(),
+          fetchAttackTables(),
         ]);
         setRows(wt);
         setBooks(b);
