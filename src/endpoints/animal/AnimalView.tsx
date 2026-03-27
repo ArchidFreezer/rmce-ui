@@ -1496,14 +1496,6 @@ export default function AnimalView() {
               </div>
             )}
 
-            {viewing && (
-              <section style={{ marginTop: 16, display: 'grid', gap: 8 }}>
-                <h4 style={{ margin: 0 }}>Summary</h4>
-                <div>Treasure Code: {(treasureNameById.get(form.treasureCode) ?? form.treasureCode) || 'None'}</div>
-                <div>Armour Type: {(armourNameByType.get(form.armourType) ?? form.armourType) || 'None'}</div>
-                <div>Max Pace: {(paceNameById.get(form.maxPace) ?? form.maxPace) || 'None'}</div>
-              </section>
-            )}
           </div>
         </div>
       )}
