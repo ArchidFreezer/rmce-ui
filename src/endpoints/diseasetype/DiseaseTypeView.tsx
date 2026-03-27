@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-  fetchDiseaseTypes, upsertDiseasetype, deleteDiseasetype,
+  fetchDiseaseTypes, upsertDiseaseType, deleteDiseaseType,
   deleteTrainingPackage
 } from '../../api';
 
@@ -278,7 +278,7 @@ export default function DiseaseTypeView() {
         ? { method: 'PUT' as const, useResourceIdPath: true }
         : { method: 'POST' as const, useResourceIdPath: false };
 
-      await upsertDiseasetype(payload, opts);
+      await upsertDiseaseType(payload, opts);
 
       setRows((prev) => {
         if (isEditing) {
@@ -332,7 +332,7 @@ export default function DiseaseTypeView() {
     setPage(1);
 
     try {
-      await deleteDiseasetype(row.id);
+      await deleteDiseaseType(row.id);
       if (editingId === row.id || viewing) cancelForm();
       toast({ variant: 'success', title: 'Deleted', description: `Disease Type "${row.id}" deleted.` });
     } catch (err) {
