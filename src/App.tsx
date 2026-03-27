@@ -77,7 +77,7 @@ function Shell() {
           ☰
         </button>
         <div className="topbar__brand" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>RMCE Objects</span>
+          <span>RMCE</span>
           {/* <ThemeSwitch /> if you added it */}
         </div>
       </header>
