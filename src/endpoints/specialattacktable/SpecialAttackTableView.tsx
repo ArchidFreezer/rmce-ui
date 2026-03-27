@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-  fetchSpecialattacktables, upsertSpecialattacktable, deleteSpecialattacktable,
+  fetchSpecialAttackTables, upsertSpecialAttackTable, deleteSpecialAttackTable,
 } from '../../api';
 
 import {
@@ -142,7 +142,7 @@ export default function SpecialattacktablesView() {
     (async () => {
       try {
         const [at] = await Promise.all([
-          fetchSpecialattacktables(),
+          fetchSpecialAttackTables(),
         ]);
         setRows(at);
       } catch (e) {
@@ -314,7 +314,7 @@ export default function SpecialattacktablesView() {
         ? { method: 'PUT' as const, useResourceIdPath: true }
         : { method: 'POST' as const, useResourceIdPath: false };
 
-      await upsertSpecialattacktable(payload, opts);
+      await upsertSpecialAttackTable(payload, opts);
 
       setRows((prev) => {
         if (isEditing) {
@@ -368,7 +368,7 @@ export default function SpecialattacktablesView() {
     setPage(1);
 
     try {
-      await deleteSpecialattacktable(row.id);
+      await deleteSpecialAttackTable(row.id);
       if (editingId === row.id || viewing) cancelForm();
       toast({ variant: 'success', title: 'Deleted', description: `Special Attack Table "${row.id}" deleted.` });
     } catch (err) {
