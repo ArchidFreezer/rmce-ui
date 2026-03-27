@@ -3,6 +3,7 @@ export * from './attacktable';
 export * from './book';
 export * from './climate';
 export * from './creaturepace';
+export * from './culture';
 export * from './culturetype';
 export * from './disease';
 export * from './diseasetype';

@@ -5,6 +5,7 @@ const AttackTableView = lazy(() => import('../endpoints/attacktable/AttackTableV
 const BookView = lazy(() => import('../endpoints/book/BookView'));
 const ClimateView = lazy(() => import('../endpoints/climate/ClimateView'));
 const CreaturePaceView = lazy(() => import('../endpoints/creaturepace/CreaturePaceView'));
+const CultureView = lazy(() => import('../endpoints/culture/CultureView'));
 const CultureTypeView = lazy(() => import('../endpoints/culturetype/CultureTypeView'));
 const DiseaseView = lazy(() => import('../endpoints/disease/DiseaseView'));
 const DiseaseTypeView = lazy(() => import('../endpoints/diseasetype/DiseaseTypeView'));
@@ -39,6 +40,7 @@ const known: Record<string, ResourceDef> = {
   book: { prefix: 'book', label: 'Books', path: '/books', Component: BookView },
   climate: { prefix: 'climate', label: 'Climates', path: '/climates', Component: ClimateView },
   creaturepace: { prefix: 'creaturepace', label: 'Creature Paces', path: '/creaturepaces', Component: CreaturePaceView },
+  culture: { prefix: 'culture', label: 'Cultures', path: '/cultures', Component: CultureView },
   culturetype: { prefix: 'culturetype', label: 'Culture Types', path: '/culturetypes', Component: CultureTypeView },
   disease: { prefix: 'disease', label: 'Diseases', path: '/diseases', Component: DiseaseView },
   diseasetype: { prefix: 'diseasetype', label: 'Disease Types', path: '/diseasetypes', Component: DiseaseTypeView },
