@@ -25,6 +25,7 @@ import {
   LabeledInput,
   LabeledSelect,
   MarkupPreview,
+  PillList,
   Spinner,
   useConfirm,
   useToast,
@@ -1170,38 +1171,55 @@ export default function AnimalView() {
                 addButtonLabel="+ Add climate"
                 viewing={viewing}
               />
-              <CheckboxGroup
-                label="Features"
-                value={form.locationFeatures}
-                onChange={(next) => setForm((state) => ({ ...state, locationFeatures: next as EnvironmentFeature[] }))}
-                options={featureOptions}
-                disabled={viewing}
-                columns={2}
-              />
-              <CheckboxGroup
-                label="Terrains"
-                value={form.locationTerrains}
-                onChange={(next) => setForm((state) => ({ ...state, locationTerrains: next as EnvironmentTerrain[] }))}
-                options={terrainOptions}
-                disabled={viewing}
-                columns={2}
-              />
-              <CheckboxGroup
-                label="Vegetation"
-                value={form.locationVegetation}
-                onChange={(next) => setForm((state) => ({ ...state, locationVegetation: next as EnvironmentVegetation[] }))}
-                options={vegetationOptions}
-                disabled={viewing}
-                columns={2}
-              />
-              <CheckboxGroup
-                label="Water Sources"
-                value={form.locationWaterSources}
-                onChange={(next) => setForm((state) => ({ ...state, locationWaterSources: next as EnvironmentWaterBody[] }))}
-                options={waterBodyOptions}
-                disabled={viewing}
-                columns={2}
-              />
+              {viewing ? (
+                <div style={{ display: 'grid', gap: 6 }}>
+                  <span style={{ fontSize: 14 }}>Environment Tags</span>
+                  <PillList
+                    values={[
+                      ...form.locationFeatures.map((value) => `Feature: ${value}`),
+                      ...form.locationTerrains.map((value) => `Terrain: ${value}`),
+                      ...form.locationVegetation.map((value) => `Vegetation: ${value}`),
+                      ...form.locationWaterSources.map((value) => `Water Source: ${value}`),
+                    ]}
+                    emptyLabel="No environment tags"
+                  />
+                </div>
+              ) : (
+                <>
+                  <CheckboxGroup
+                    label="Features"
+                    value={form.locationFeatures}
+                    onChange={(next) => setForm((state) => ({ ...state, locationFeatures: next as EnvironmentFeature[] }))}
+                    options={featureOptions}
+                    disabled={viewing}
+                    columns={2}
+                  />
+                  <CheckboxGroup
+                    label="Terrains"
+                    value={form.locationTerrains}
+                    onChange={(next) => setForm((state) => ({ ...state, locationTerrains: next as EnvironmentTerrain[] }))}
+                    options={terrainOptions}
+                    disabled={viewing}
+                    columns={2}
+                  />
+                  <CheckboxGroup
+                    label="Vegetation"
+                    value={form.locationVegetation}
+                    onChange={(next) => setForm((state) => ({ ...state, locationVegetation: next as EnvironmentVegetation[] }))}
+                    options={vegetationOptions}
+                    disabled={viewing}
+                    columns={2}
+                  />
+                  <CheckboxGroup
+                    label="Water Sources"
+                    value={form.locationWaterSources}
+                    onChange={(next) => setForm((state) => ({ ...state, locationWaterSources: next as EnvironmentWaterBody[] }))}
+                    options={waterBodyOptions}
+                    disabled={viewing}
+                    columns={2}
+                  />
+                </>
+              )}
             </section>
 
             {renderAttackSection(
