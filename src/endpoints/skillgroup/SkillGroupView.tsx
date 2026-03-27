@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-  fetchSkillgroups, upsertSkillgroup, deleteSkillgroup,
+  fetchSkillGroups, upsertSkillgroup, deleteSkillgroup,
 } from '../../api';
 
 import {
@@ -77,7 +77,7 @@ export default function SkillGroupView() {
     (async () => {
       try {
         const [sg] = await Promise.all([
-          fetchSkillgroups(),
+          fetchSkillGroups(),
         ]);
         setRows(sg);
       } catch (e) {

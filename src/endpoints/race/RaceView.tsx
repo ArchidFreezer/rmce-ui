@@ -6,7 +6,7 @@ import {
   fetchRaces, upsertRace, deleteRace,
   fetchSkills,
   fetchSkillCategories,
-  fetchSkillgroups,
+  fetchSkillGroups,
   fetchSkillprogressiontypes,
 } from '../../api';
 
@@ -401,7 +401,7 @@ export default function RaceView() {
           fetchLanguages(),
           fetchSkills(),
           fetchSkillCategories(),
-          fetchSkillgroups(),
+          fetchSkillGroups(),
         ]);
         setRows(r);
         setBooks(b);

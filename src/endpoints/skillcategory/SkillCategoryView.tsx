@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   fetchSkillCategories, upsertSkillcategory, deleteSkillcategory,
-  fetchSkillgroups,
+  fetchSkillGroups,
   fetchSkillprogressiontypes,
 } from '../../api';
 
@@ -135,7 +135,7 @@ export default function SkillCategoryView() {
       try {
         const [sc, g, spt] = await Promise.all([
           fetchSkillCategories(),
-          fetchSkillgroups(),
+          fetchSkillGroups(),
           fetchSkillprogressiontypes(),
         ]);
         setRows(sc);

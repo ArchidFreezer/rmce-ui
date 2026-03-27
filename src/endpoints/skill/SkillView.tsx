@@ -4,7 +4,7 @@ import {
   fetchBooks,
   fetchSkills, upsertSkill, deleteSkill,
   fetchSkillCategories,
-  fetchSkillgroups,
+  fetchSkillGroups,
 } from '../../api';
 
 import {
@@ -217,7 +217,7 @@ export default function SkillView() {
         const [s, c, g, b] = await Promise.all([
           fetchSkills(),
           fetchSkillCategories(),
-          fetchSkillgroups(),
+          fetchSkillGroups(),
           fetchBooks(),
         ]);
         setRows(s);

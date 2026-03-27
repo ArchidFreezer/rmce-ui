@@ -7,7 +7,7 @@ import {
   fetchRaces,
   fetchSkills,
   fetchSkillCategories,
-  fetchSkillgroups,
+  fetchSkillGroups,
   fetchSpelllists,
   fetchLanguages,
 } from '../../api';
@@ -530,7 +530,7 @@ export default function TrainingPackagesView() {
           fetchRaces(),
           fetchSkills(),
           fetchSkillCategories(),
-          fetchSkillgroups(),
+          fetchSkillGroups(),
           fetchSpelllists(),
           fetchLanguages(),
         ]);
