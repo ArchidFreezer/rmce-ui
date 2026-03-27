@@ -434,7 +434,21 @@ export default function RaceView() {
   }, [books]);
 
   const progressionOptions = useMemo(
-    () => progressions.map((p) => ({ value: p.id, label: p.name })),
+    () => {
+      const sorted = [...progressions].sort((a, b) =>
+        a.zero - b.zero
+        || a.ten - b.ten
+        || a.twenty - b.twenty
+        || a.thirty - b.thirty
+        || a.remaining - b.remaining
+        || a.name.localeCompare(b.name)
+      );
+
+      return sorted.map((p) => ({
+        value: p.id,
+        label: `[${p.zero} : ${p.ten} : ${p.twenty} : ${p.thirty} : ${p.remaining}] - ${p.name}`,
+      }));
+    },
     [progressions],
   );
 
