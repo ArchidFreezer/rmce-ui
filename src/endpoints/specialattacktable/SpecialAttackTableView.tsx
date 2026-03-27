@@ -8,6 +8,7 @@ import {
   DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
   AttackTableEditor, type AttackTableRowVM,
   LabeledInput,
+  Spinner,
   useConfirm, useToast,
 } from '../../components';
 
@@ -18,11 +19,14 @@ import type {
 
 import {
   isValidID, makeIDOnChange,
+  isValidUnsignedInt, makeUnsignedIntOnChange,
 } from '../../utils';
 
 const prefix = 'SPECIALATTACKTABLE_';
 
-// ---- VM conversions for the row grid (20 cells) ----
+/* ------------------------------------------------------------------ */
+/* VM types                                                           */
+/* ------------------------------------------------------------------ */
 const ensure20 = (a: string[]) => {
   const out = a.slice(0, 20);
   while (out.length < 20) out.push('-');
@@ -54,6 +58,18 @@ type FormState = {
   maxRow: string;
   modified: AttackTableRowVM[];
   unmodified: AttackTableRowVM[];
+};
+
+type FormErrors = {
+  id?: string;
+  name?: string;
+  small?: string;
+  medium?: string;
+  large?: string;
+  huge?: string;
+  maxRow?: string;
+  modified?: string;
+  unmodified?: string;
 };
 
 const emptyVM = (): FormState => ({
@@ -92,15 +108,17 @@ const fromVM = (vm: FormState): SpecialAttackTable => ({
   unmodifiedRows: vm.unmodified.length ? vm.unmodified.map(vmToRow) : undefined,
 });
 
-// Helpers (non-negative int sanitizer & validator)
-const INT_RE = /^\d+$/;
-const sanitizeInt = (s: string) => s.replace(/[^\d]/g, '');
+/* ------------------------------------------------------------------ */
+/* View                                                               */
+/* ------------------------------------------------------------------ */
 
 export default function SpecialattacktablesView() {
   const dtRef = useRef<DataTableHandle>(null);
   const [rows, setRows] = useState<SpecialAttackTable[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const hasErrors = Object.values(errors).some(Boolean);
 
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -109,43 +127,37 @@ export default function SpecialattacktablesView() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [viewing, setViewing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<FormState>(emptyVM());
-  const [errors, setErrors] = useState<{
-    id?: string | undefined;
-    name?: string | undefined;
-    small?: string | undefined;
-    medium?: string | undefined;
-    large?: string | undefined;
-    huge?: string | undefined;
-    maxRow?: string | undefined;
-    modified?: string | undefined;
-    unmodified?: string | undefined;
-  }>({});
+
 
   const toast = useToast();
   const confirm = useConfirm();
 
-  // Load list
+  /* ------------------------------------------------------------------ */
+  /* Load data                                                          */
+  /* ------------------------------------------------------------------ */
+
   useEffect(() => {
-    let mounted = true;
     (async () => {
       try {
-        const list = await fetchSpecialattacktables();
-        if (!mounted) return;
-        setRows(list);
+        const [at] = await Promise.all([
+          fetchSpecialattacktables(),
+        ]);
+        setRows(at);
       } catch (e) {
-        if (!mounted) return;
-        setError(e instanceof Error ? e.message : String(e));
+        setError(String(e));
       } finally {
-        if (mounted) setLoading(false);
+        setLoading(false);
       }
     })();
-    return () => { mounted = false; };
   }, []);
 
-  // Validation
-  const computeErrors = (draft = form) => {
-    const e: typeof errors = {};
+  /* ------------------------------------------------------------------ */
+  /* Validation                                                         */
+  /* ------------------------------------------------------------------ */
+  const computeErrors = (draft: FormState): FormErrors => {
+    const e: FormErrors = {};
     const id = draft.id.trim();
     const name = draft.name.trim();
 
@@ -159,7 +171,7 @@ export default function SpecialattacktablesView() {
       const v = (draft[k] ?? '');
       if (typeof v !== 'string') return; // Guard against non-string, to avoid processing the AttackTableRowVM arrays
       if (!v) e[k as keyof typeof e] = `${label} is required`;
-      else if (!INT_RE.test(v)) e[k as keyof typeof e] = `${label} must be a non-negative integer`;
+      else if (!isValidUnsignedInt(v)) e[k as keyof typeof e] = `${label} must be a non-negative integer`;
     };
     check('small', 'Small');
     check('medium', 'Medium');
@@ -172,7 +184,7 @@ export default function SpecialattacktablesView() {
       for (let i = 0; i < arr.length; i++) {
         const r = arr[i];
         if (!r) return; // Guard against null/undefined, should not happen
-        if (!INT_RE.test(r.min) || !INT_RE.test(r.max)) {
+        if (!isValidUnsignedInt(r.min) || !isValidUnsignedInt(r.max)) {
           e[label] = `${label}[${i + 1}]: min/max must be non-negative integers`; break;
         }
         if (Number(r.min) > Number(r.max)) {
@@ -194,124 +206,14 @@ export default function SpecialattacktablesView() {
     return e;
   };
 
-  const hasErrors = Boolean(
-    errors.id || errors.name || errors.small || errors.medium || errors.large || errors.huge ||
-    errors.maxRow || errors.modified || errors.unmodified
-  );
-
   useEffect(() => {
     if (!showForm || viewing) return;
-    setErrors(computeErrors());
+    setErrors(computeErrors(form));
   }, [form, showForm, viewing]);
 
-  // Actions
-  const startNew = () => {
-    setViewing(false);
-    setEditingId(null);
-    setForm(emptyVM());
-    setErrors({});
-    setShowForm(true);
-  };
-  const startView = (row: SpecialAttackTable) => {
-    setViewing(true);
-    setEditingId(row.id);
-    setForm(toVM(row));
-    setErrors({});
-    setShowForm(true);
-  };
-  const startEdit = (row: SpecialAttackTable) => {
-    setViewing(false);
-    setEditingId(row.id);
-    setForm(toVM(row));
-    setErrors({});
-    setShowForm(true);
-  };
-  const startDuplicate = (row: SpecialAttackTable) => {
-    setViewing(false);
-    setEditingId(null);
-    const vm = toVM(row);
-    vm.id = prefix;
-    vm.name += ' (Copy)';
-    setForm(vm);
-    setErrors({});
-    setShowForm(true);
-  };
-  const cancelForm = () => {
-    setShowForm(false);
-    setViewing(false);
-    setEditingId(null);
-    setErrors({});
-  };
-
-  const saveForm = async () => {
-    const nextErrors = computeErrors(form);
-    setErrors(nextErrors);
-    const anyError = nextErrors.id || nextErrors.name || nextErrors.small || nextErrors.medium ||
-      nextErrors.large || nextErrors.huge || nextErrors.maxRow || nextErrors.modified || nextErrors.unmodified;
-    if (anyError) return;
-
-    const payload = fromVM(form);
-    const isEditing = Boolean(editingId);
-
-    try {
-      const opts = isEditing
-        ? { method: 'PUT' as const, useResourceIdPath: true }
-        : { method: 'POST' as const, useResourceIdPath: false };
-      await upsertSpecialattacktable(payload, opts);
-
-      setRows(prev => {
-        if (isEditing) {
-          const idx = prev.findIndex(r => r.id === payload.id);
-          if (idx >= 0) {
-            const copy = [...prev];
-            copy[idx] = { ...copy[idx], ...payload };
-            return copy;
-          }
-          return [payload, ...prev];
-        }
-        return [payload, ...prev];
-      });
-
-      setShowForm(false);
-      setViewing(false);
-      setEditingId(null);
-      toast({
-        variant: 'success',
-        title: isEditing ? 'Updated' : 'Saved',
-        description: `Special attack table "${payload.id}" ${isEditing ? 'updated' : 'created'}.`,
-      });
-    } catch (err) {
-      toast({
-        variant: 'danger',
-        title: 'Save failed',
-        description: String(err instanceof Error ? err.message : err),
-      });
-    }
-  };
-
-  const onDelete = async (row: SpecialAttackTable) => {
-    const ok = await confirm({
-      title: 'Delete Special Attack Table',
-      body: `Delete "${row.id}"? This cannot be undone.`,
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
-      tone: 'danger',
-    });
-    if (!ok) return;
-
-    const prev = rows;
-    setRows(prev.filter(r => r.id !== row.id));
-    try {
-      await deleteSpecialattacktable(row.id);
-      if (editingId === row.id || viewing) cancelForm();
-      toast({ variant: 'success', title: 'Deleted', description: `Special attack table "${row.id}" deleted.` });
-    } catch (err) {
-      setRows(prev);
-      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err) });
-    }
-  };
-
-  // Columns
+  /* ------------------------------------------------------------------ */
+  /* Table                                                              */
+  /* ------------------------------------------------------------------ */
   const columns: ColumnDef<SpecialAttackTable>[] = useMemo(() => [
     { id: 'id', header: 'ID', accessor: r => r.id, sortType: 'string', minWidth: 280 },
     { id: 'name', header: 'Name', accessor: r => r.name, sortType: 'string', minWidth: 180 },
@@ -346,6 +248,140 @@ export default function SpecialattacktablesView() {
     ].some(v => String(v ?? '').toLowerCase().includes(s));
   };
 
+  /* ------------------------------------------------------------------ */
+  /* Actions                                                            */
+  /* ------------------------------------------------------------------ */
+
+  const startNew = () => {
+    setViewing(false);
+    setEditingId(null);
+    setForm(emptyVM());
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const startView = (row: SpecialAttackTable) => {
+    setViewing(true);
+    setEditingId(row.id);
+    setForm(toVM(row));
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const startEdit = (row: SpecialAttackTable) => {
+    setViewing(false);
+    setEditingId(row.id);
+    setForm(toVM(row));
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const startDuplicate = (row: SpecialAttackTable) => {
+    setViewing(false);
+    setEditingId(null);
+    const vm = toVM(row);
+    vm.id = prefix;
+    vm.name += ' (Copy)';
+    setForm(vm);
+    setErrors({});
+    setShowForm(true);
+  };
+
+  const cancelForm = () => {
+    setViewing(false);
+    setEditingId(null);
+    setErrors({});
+    setShowForm(false);
+  };
+
+  const saveForm = async () => {
+
+    if (submitting) return;
+
+    const nextErrors = computeErrors(form);
+    setErrors(nextErrors);
+    if (Object.values(nextErrors).some(Boolean)) {
+      return;
+    }
+
+    setSubmitting(true);
+
+    const payload = fromVM(form);
+    const isEditing = Boolean(editingId);
+
+    try {
+      const opts = isEditing
+        ? { method: 'PUT' as const, useResourceIdPath: true }
+        : { method: 'POST' as const, useResourceIdPath: false };
+
+      await upsertSpecialattacktable(payload, opts);
+
+      setRows((prev) => {
+        if (isEditing) {
+          const idx = prev.findIndex((r) => r.id === payload.id);
+          if (idx >= 0) {
+            const copy = [...prev];
+            copy[idx] = { ...copy[idx], ...payload };
+            return copy;
+          }
+          return [payload, ...prev];
+        }
+        return [payload, ...prev];
+      });
+
+      setShowForm(false);
+      setViewing(false);
+      setEditingId(null);
+
+      toast({
+        variant: 'success',
+        title: isEditing ? 'Updated' : 'Saved',
+        description: `Training Package "${payload.id}" ${isEditing ? 'updated' : 'created'}.`,
+      });
+    } catch (err) {
+      toast({
+        variant: 'danger',
+        title: 'Save failed',
+        description: String(err instanceof Error ? err.message : err),
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onDelete = async (row: SpecialAttackTable) => {
+
+    if (submitting) return;
+    setSubmitting(true);
+
+    const ok = await confirm({
+      title: 'Delete Special Attack Table',
+      body: `Delete "${row.id}"? This cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      tone: 'danger',
+    });
+    if (!ok) return;
+
+    const prev = rows;
+    setRows(prev.filter((r) => r.id !== row.id));
+
+    try {
+      await deleteSpecialattacktable(row.id);
+      if (editingId === row.id || viewing) cancelForm();
+      toast({ variant: 'success', title: 'Deleted', description: `Special Attack Table "${row.id}" deleted.` });
+    } catch (err) {
+      setRows(prev);
+      toast({ variant: 'danger', title: 'Delete failed', description: String(err instanceof Error ? err.message : err), });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Render                                                             */
+  /* ------------------------------------------------------------------ */
+
   if (loading) return <div>Loading…</div>;
   if (error) return <div style={{ color: 'crimson' }}>Error: {error}</div>;
 
@@ -353,8 +389,9 @@ export default function SpecialattacktablesView() {
     <>
       <h2>Special Attack Tables</h2>
 
+      {/* Toolbar hidden while form visible */}
       {!showForm && (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <button onClick={startNew}>New Special Attack Table</button>
           <DataTableSearchInput
             value={query}
@@ -369,125 +406,138 @@ export default function SpecialattacktablesView() {
         </div>
       )}
 
+      {/* Display main Form */}
       {showForm && (
-        <div
-          className={`form-panel ${viewing ? 'form-panel--view' : ''}`}
-          style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, background: 'var(--panel)' }}
-        >
-          <h3 style={{ marginTop: 0 }}>
-            {viewing ? 'View Special Attack Table' : (editingId ? 'Edit Special Attack Table' : 'New Special Attack Table')}
-          </h3>
+        <div className="form-container">
+          {/* Simple overlay while submitting */}
+          {submitting && (<div className="overlay"><Spinner size={24} /> <span>Saving…</span> </div>)}
 
-          {/* Basics */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
-            <LabeledInput
-              label="ID"
-              value={form.id}
-              onChange={makeIDOnChange<typeof form>('id', setForm, prefix)}
-              disabled={!!editingId || viewing}
-              error={viewing ? undefined : errors.id}
-            />
-            <LabeledInput
-              label="Name"
-              value={form.name}
-              onChange={(v) => setForm(s => ({ ...s, name: v }))}
-              disabled={viewing}
-              error={viewing ? undefined : errors.name}
-            />
-            <LabeledInput
-              label="Max Small Attack"
-              value={form.small}
-              onChange={(v) => setForm(s => ({ ...s, small: sanitizeInt(v) }))}
-              disabled={viewing}
-              width={90}
-              inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
-              error={viewing ? undefined : errors.small}
-            />
-            <LabeledInput
-              label="Max Medium Attack"
-              value={form.medium}
-              onChange={(v) => setForm(s => ({ ...s, medium: sanitizeInt(v) }))}
-              disabled={viewing}
-              width={90}
-              inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
-              error={viewing ? undefined : errors.medium}
-            />
-            <LabeledInput
-              label="Max Large Attack"
-              value={form.large}
-              onChange={(v) => setForm(s => ({ ...s, large: sanitizeInt(v) }))}
-              disabled={viewing}
-              width={90}
-              inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
-              error={viewing ? undefined : errors.large}
-            />
-            <LabeledInput
-              label="Max Huge Attack"
-              value={form.huge}
-              onChange={(v) => setForm(s => ({ ...s, huge: sanitizeInt(v) }))}
-              disabled={viewing}
-              width={90}
-              inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
-              error={viewing ? undefined : errors.huge}
-            />
-            <LabeledInput
-              label="Max Row"
-              value={form.maxRow}
-              onChange={(v) => setForm(s => ({ ...s, maxRow: sanitizeInt(v) }))}
-              disabled={viewing}
-              width={110}
-              inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
-              error={viewing ? undefined : errors.maxRow}
-            />
-          </div>
+          <div className={`form-panel ${viewing ? 'form-panel--view' : ''}`}>
+            <h3>{viewing ? 'View' : editingId ? 'Edit' : 'New'} Special Attack Table</h3>
 
-          {/* Reuse shared grid editor */}
-          <AttackTableEditor
-            sectionKey="modified"
-            title="Modified Rows"
-            rows={form.modified}
-            onChangeRows={(next) => setForm(s => ({ ...s, modified: next }))}
-            viewing={viewing}
-            error={errors.modified}
-            minMaxWidth={72}
-          />
+            {/* Basics */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 8 }}>
+              <LabeledInput
+                label="ID"
+                value={form.id}
+                onChange={makeIDOnChange<typeof form>('id', setForm, prefix)}
+                disabled={!!editingId || viewing}
+                error={viewing ? undefined : errors.id}
+              />
+              <LabeledInput
+                label="Name"
+                value={form.name}
+                onChange={(v) => setForm(s => ({ ...s, name: v }))}
+                disabled={viewing}
+                error={viewing ? undefined : errors.name}
+              />
+              <LabeledInput
+                label="Max Small Attack"
+                value={form.small}
+                onChange={makeUnsignedIntOnChange<typeof form>('small', setForm)}
+                disabled={viewing}
+                width={90}
+                inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
+                error={viewing ? undefined : errors.small}
+              />
+              <LabeledInput
+                label="Max Medium Attack"
+                value={form.medium}
+                onChange={makeUnsignedIntOnChange<typeof form>('medium', setForm)}
+                disabled={viewing}
+                width={90}
+                inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
+                error={viewing ? undefined : errors.medium}
+              />
+              <LabeledInput
+                label="Max Large Attack"
+                value={form.large}
+                onChange={makeUnsignedIntOnChange<typeof form>('large', setForm)}
+                disabled={viewing}
+                width={90}
+                inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
+                error={viewing ? undefined : errors.large}
+              />
+              <LabeledInput
+                label="Max Huge Attack"
+                value={form.huge}
+                onChange={makeUnsignedIntOnChange<typeof form>('huge', setForm)}
+                disabled={viewing}
+                width={90}
+                inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
+                error={viewing ? undefined : errors.huge}
+              />
+              <LabeledInput
+                label="Max Row"
+                value={form.maxRow}
+                onChange={makeUnsignedIntOnChange<typeof form>('maxRow', setForm)}
+                disabled={viewing}
+                width={110}
+                inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
+                error={viewing ? undefined : errors.maxRow}
+              />
+            </div>
 
-          <AttackTableEditor
-            sectionKey="unmodified"
-            title="Unmodified Rows (optional)"
-            rows={form.unmodified}
-            onChangeRows={(next) => setForm(s => ({ ...s, unmodified: next }))}
-            viewing={viewing}
-            error={errors.unmodified}
-            minMaxWidth={72}
-          />
+            {/* Reuse shared grid editor */}
+            <AttackTableEditor
+              sectionKey="modified"
+              title="Modified Rows"
+              rows={form.modified}
+              onChangeRows={(next) => setForm(s => ({ ...s, modified: next }))}
+              viewing={viewing}
+              error={errors.modified}
+              minMaxWidth={72}
+            />
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            {!viewing && <button onClick={saveForm} disabled={hasErrors}>Save</button>}
-            <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
+            <AttackTableEditor
+              sectionKey="unmodified"
+              title="Unmodified Rows (optional)"
+              rows={form.unmodified}
+              onChangeRows={(next) => setForm(s => ({ ...s, unmodified: next }))}
+              viewing={viewing}
+              error={errors.unmodified}
+              minMaxWidth={72}
+            />
+
+            {/* Action buttons */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              {!viewing && <button onClick={saveForm} disabled={hasErrors || submitting}>{submitting ? 'Submitting…' : 'Save'}</button>}
+              <button onClick={cancelForm} type="button">{viewing ? 'Close' : 'Cancel'}</button>
+            </div>
+
+            {/* Validation errors */}
+            {Object.values(errors).some(Boolean) && (
+              <div style={{ marginTop: 12, color: '#b00020' }}>
+                <h4 style={{ margin: '0 0 4px' }}>Please fix the following errors:</h4>
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  {Object.entries(errors).map(([field, error]) =>
+                    error ? <li key={field}>{error}</li> : null
+                  )}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       )}
 
       {!showForm && (
-        <DataTable<SpecialAttackTable>
+        <DataTable
           ref={dtRef}
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}
-          initialSort={{ colId: 'name', dir: 'asc' }}
+          initialSort={{ colId: 'name', dir: 'asc' }} //
+          // search
           searchQuery={query}
           globalFilter={globalFilter}
+          // pagination (client)
           mode="client"
           page={page}
           pageSize={pageSize}
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
-          pageSizeOptions={[5, 10, 20, 50, 100]}
-          tableMinWidth={1100}
-          zebra
-          hover
-          resizable
+          // styles
+          tableMinWidth={0} // allow table to shrink below container width (for better mobile support)
           persistKey="dt.specialattacktable.v1"
           ariaLabel="Special attack tables"
         />
