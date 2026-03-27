@@ -272,7 +272,8 @@ export default function TreasureCodeView() {
     if (!ok) return;
 
     const prev = rows;
-    setRows(prev.filter((r) => r.id !== row.id));
+    setRows((current) => current.filter((r) => r.id !== row.id));
+    setPage(1);
 
     try {
       await deleteTreasurecode(row.id);
@@ -372,7 +373,7 @@ export default function TreasureCodeView() {
           rows={rows}
           columns={columns}
           rowId={(r) => r.id}
-          initialSort={{ colId: 'name', dir: 'asc' }} //
+          initialSort={{ colId: 'id', dir: 'asc' }}
           // search
           searchQuery={query}
           globalFilter={globalFilter}

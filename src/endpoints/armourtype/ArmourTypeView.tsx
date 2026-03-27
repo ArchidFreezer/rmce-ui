@@ -267,7 +267,8 @@ export default function ArmourTypeView() {
     if (!ok) return;
 
     const prev = rows;
-    setRows(prev.filter(a => a.id !== id));
+    setRows((current) => current.filter((a) => a.id !== id));
+    setPage(1);
     try {
       await deleteArmourType(id);
       // if currently editing this item, close the form
