@@ -208,7 +208,7 @@ export function AttackTableEditor({
       )}
       {!canAdd && error && <div style={{ color: '#b00020' }}>{error}</div>}
 
-      {header}
+      {rows.length > 0 && header}
 
       <div role="grid" aria-label={`${title} grid`} style={{ display: 'grid', gap: 6 }}>
         {rows.map((r, rowIdx) => (
