@@ -197,7 +197,7 @@ const DataTableInner = <T,>(
     pageSize: pageSizeProp,
     totalRows: totalRowsProp,
     initialPage = 1,
-    initialPageSize = 10,
+    initialPageSize = 20,
     onPageChange,
     onPageSizeChange,
     pageSizeOptions = [5, 10, 20, 50, 100],

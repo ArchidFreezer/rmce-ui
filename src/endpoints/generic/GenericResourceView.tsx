@@ -16,7 +16,7 @@ export default function GenericResourceView() {
   // table UX
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
   const [showRaw, setShowRaw] = useState(false);
 
   const title = prefixTitle(prefix);
@@ -141,7 +141,7 @@ export default function GenericResourceView() {
       {/* Raw JSON toggle */}
       {showRaw && (
         <pre style={{ background: 'var(--panel)', border: '1px solid var(--border)', padding: 12, borderRadius: 8, overflow: 'auto' }}>
-{JSON.stringify(payload, null, 2)}
+          {JSON.stringify(payload, null, 2)}
         </pre>
       )}
 
