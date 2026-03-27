@@ -68,13 +68,15 @@ export function Sidebar({
 
   React.useEffect(() => {
     setCollapsedSections((current) => {
+      let changed = false;
       const next = { ...current };
       for (const section of normalizedSections) {
         if (!(section._key in next)) {
           next[section._key] = !!section.defaultCollapsed;
+          changed = true;
         }
       }
-      return next;
+      return changed ? next : current;
     });
   }, [normalizedSections]);
 
