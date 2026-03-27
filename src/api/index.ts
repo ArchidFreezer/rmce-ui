@@ -1,4 +1,5 @@
 export * from './armourtype';
+export * from './animal';
 export * from './attacktable';
 export * from './book';
 export * from './client';

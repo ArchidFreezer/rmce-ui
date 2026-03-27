@@ -120,6 +120,42 @@ export const SKILL_DEVELOPMENT_TYPES: ReadonlyArray<SkillDevelopmentType> = ['Ev
 export type CreatureSize = 'Tiny' | 'Small' | 'Medium' | 'Large' | 'Huge';
 export const CREATURE_SIZES: ReadonlyArray<CreatureSize> = ['Tiny', 'Small', 'Medium', 'Large', 'Huge'] as const;
 
+/** Enum for Animal bonus XP code */
+export type CreatureBonusXpType = 'None' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J' | 'K' | 'L';
+export const CREATURE_BONUS_XP_TYPES: ReadonlyArray<CreatureBonusXpType> = ['None', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'] as const;
+
+/** Enum for constitution variance */
+export type CreatureConstitutionVarianceType = 'None' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H';
+export const CREATURE_CONSTITUTION_VARIANCE_TYPES: ReadonlyArray<CreatureConstitutionVarianceType> = ['None', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] as const;
+
+/** Enum for level variance */
+export type LevelVarianceType = 'None' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H';
+export const LEVEL_VARIANCE_TYPES: ReadonlyArray<LevelVarianceType> = ['None', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] as const;
+
+/** Enum for creature movement speed */
+export type CreatureMovementSpeedType = 'Immobile' | 'Inching' | 'Creeping' | 'Very Slow' | 'Slow' | 'Medium' | 'Moderately Fast' | 'Fast' | 'Very Fast' | 'Blindingly Fast';
+export const CREATURE_MOVEMENT_SPEED_TYPES: ReadonlyArray<CreatureMovementSpeedType> = ['Immobile', 'Inching', 'Creeping', 'Very Slow', 'Slow', 'Medium', 'Moderately Fast', 'Fast', 'Very Fast', 'Blindingly Fast'] as const;
+
+/** Enum for animal outlook */
+export type AnimalOutlookType = 'Aggressive' | 'Aloof' | 'Altruistic' | 'Belligerent' | 'Berserk' | 'Carefree' | 'Cruel' | 'Domineering' | 'Good' | 'Greedy' | 'Hostile' | 'Hungry' | 'Inquisitive' | 'Jumpy' | 'Normal' | 'Passive' | 'Playful' | 'Protective' | 'Timid';
+export const ANIMAL_OUTLOOK_TYPES: ReadonlyArray<AnimalOutlookType> = ['Aggressive', 'Aloof', 'Altruistic', 'Belligerent', 'Berserk', 'Carefree', 'Cruel', 'Domineering', 'Good', 'Greedy', 'Hostile', 'Hungry', 'Inquisitive', 'Jumpy', 'Normal', 'Passive', 'Playful', 'Protective', 'Timid'] as const;
+
+/** Enum for critical size table */
+export type CriticalSizeTableType = 'Normal' | 'Large' | 'Huge';
+export const CRITICAL_SIZE_TABLE_TYPES: ReadonlyArray<CriticalSizeTableType> = ['Normal', 'Large', 'Huge'] as const;
+
+/** Enum for critical modifier */
+export type CriticalModifierType = 'Decrease Severity I' | 'Decrease Severity II' | 'No Bleed' | 'No Stun';
+export const CRITICAL_MODIFIER_TYPES: ReadonlyArray<CriticalModifierType> = ['Decrease Severity I', 'Decrease Severity II', 'No Bleed', 'No Stun'] as const;
+
+/** Enum for special attack size */
+export type AttackSizeType = 'Small' | 'Medium' | 'Large' | 'Huge';
+export const ATTACK_SIZE_TYPES: ReadonlyArray<AttackSizeType> = ['Small', 'Medium', 'Large', 'Huge'] as const;
+
+/** Enum for critical size */
+export type CriticalSize = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H';
+export const CRITICAL_SIZES: ReadonlyArray<CriticalSize> = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'] as const;
+
 /** Enum for CriticalTableType */
 export type CriticalTableType = 'Normal' | 'Large Creature Physical' | 'Huge Creature Physical' | 'Large Creature Spell' | 'Huge Creature Spell';
 export const CRITICAL_TABLE_TYPES: ReadonlyArray<CriticalTableType> = ['Normal', 'Large Creature Physical', 'Huge Creature Physical', 'Large Creature Spell', 'Huge Creature Spell'] as const;
