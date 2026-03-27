@@ -7,7 +7,7 @@ import {
   fetchSkills,
   fetchSkillCategories,
   fetchSkillGroups,
-  fetchSkillprogressiontypes,
+  fetchSkillProgressionTypes,
 } from '../../api';
 
 
@@ -397,7 +397,7 @@ export default function RaceView() {
         const [r, b, sp, l, s, c, g] = await Promise.all([
           fetchRaces(),
           fetchBooks(),
-          fetchSkillprogressiontypes(),
+          fetchSkillProgressionTypes(),
           fetchLanguages(),
           fetchSkills(),
           fetchSkillCategories(),

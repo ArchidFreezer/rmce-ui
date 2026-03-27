@@ -12,7 +12,7 @@ function asInt(v: unknown): number {
 }
 const asString = (v: unknown) => String(v ?? '');
 
-export async function fetchSkillprogressiontypes(): Promise<SkillProgressionType[]> {
+export async function fetchSkillProgressionTypes(): Promise<SkillProgressionType[]> {
   const data = await fetchJson<SkillProgressionTypesPayload>(BASE);
   if (!data || !Array.isArray((data as any).skillprogressiontypes)) {
     throw new Error('Unexpected response: expected { skillprogressiontypes: [...] }');
@@ -28,7 +28,7 @@ export async function fetchSkillprogressiontypes(): Promise<SkillProgressionType
   }));
 }
 
-export async function upsertSkillprogressiontype(
+export async function upsertSkillProgressionType(
   spt: SkillProgressionType,
   opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {},
 ): Promise<unknown> {
@@ -39,7 +39,7 @@ export async function upsertSkillprogressiontype(
   return sendJson(url, method, spt);
 }
 
-export async function deleteSkillprogressiontype(id: string): Promise<void> {
-  if (!id) throw new Error('deleteSkillprogressiontype: id is required');
+export async function deleteSkillProgressionType(id: string): Promise<void> {
+  if (!id) throw new Error('deleteSkillProgressionType: id is required');
   await fetchJson<void>(`${BASE}/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
