@@ -114,7 +114,7 @@ export default function SkillCategoryView() {
   // table
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
 
   // form
   const [showForm, setShowForm] = useState(false);

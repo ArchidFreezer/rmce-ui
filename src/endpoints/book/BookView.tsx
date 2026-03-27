@@ -84,7 +84,7 @@ export default function BookView() {
 
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
 
   // Form state
   const [showForm, setShowForm] = useState(false);
