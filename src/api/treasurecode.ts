@@ -20,7 +20,7 @@ function asTreasureValueType(v: unknown): TreasureValueType {
 }
 
 /** GET /rmce/objects/treasurecode → { treasurecodes: TreasureCode[] } */
-export async function fetchTreasurecodes(): Promise<TreasureCode[]> {
+export async function fetchTreasureCodes(): Promise<TreasureCode[]> {
   const data = await fetchJson<TreasureCodesPayload>(BASE);
   if (!data || !Array.isArray((data as any).treasurecodes)) {
     throw new Error('Unexpected response: expected { treasurecodes: [...] }');
@@ -33,7 +33,7 @@ export async function fetchTreasurecodes(): Promise<TreasureCode[]> {
 }
 
 /** Create or update a single treasure code. */
-export async function upsertTreasurecode(
+export async function upsertTreasureCode(
   tc: TreasureCode,
   opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {},
 ) {
@@ -45,7 +45,7 @@ export async function upsertTreasurecode(
 }
 
 /** DELETE /rmce/objects/treasurecode/{id} */
-export async function deleteTreasurecode(id: string) {
-  if (!id) throw new Error('deleteTreasurecode: id is required');
+export async function deleteTreasureCode(id: string) {
+  if (!id) throw new Error('deleteTreasureCode: id is required');
   await fetchJson<void>(`${BASE}/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
