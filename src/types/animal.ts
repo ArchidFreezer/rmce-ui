@@ -24,6 +24,11 @@ export interface AnimalLocation {
   climates: string[];
 }
 
+export interface AnimalRange {
+  min: number;
+  max: number;
+}
+
 export interface AnimalNonWeaponAttack {
   table: string;
   size: AttackSizeType;
@@ -65,10 +70,16 @@ export interface Animal {
   id: string;
   name: string;
   description?: string | undefined;
+  baseHits: number;
+  baseMovement: number;
+  defensiveBonus: number;
   frequencyCode: number;
+  carryCapacity?: number | undefined;
+  ridingBonus?: number | undefined;
   bonusXpCode: CreatureBonusXpType;
   constitutionVarianceType: CreatureConstitutionVarianceType;
   levelVarianceType: LevelVarianceType;
+  averageLevel: number;
   treasureCode?: string | undefined;
   size: CreatureSize;
   /** references ArmourType.type */
@@ -79,6 +90,8 @@ export interface Animal {
   outlook: AnimalOutlookType;
   criticalTable: CriticalSizeTableType;
   criticalModifiers: CriticalModifierType[];
+  encounterRange?: AnimalRange | undefined;
+  numberYoungRange?: AnimalRange | undefined;
   location?: AnimalLocation | undefined;
   standardAttacks: AnimalStandardAttack[];
   rangedAttacks: AnimalRangedAttack[];

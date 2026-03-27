@@ -46,6 +46,20 @@ const asBool = (v: unknown) => v === true || v === 'true' || v === 1 || v === '1
 const asStringArray = (v: unknown): string[] =>
   Array.isArray(v) ? v.map((x) => String(x ?? '')).filter(Boolean) : [];
 
+function asOptionalInt(v: unknown): number | undefined {
+  if (v == null || v === '') return undefined;
+  const n = asInt(v);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function rangeFromJson(x: any): Animal['encounterRange'] {
+  if (x == null) return undefined;
+  return {
+    min: asInt(x?.min),
+    max: asInt(x?.max),
+  };
+}
+
 function asEnumValue<T extends string>(values: readonly T[], v: unknown, fallback: T): T {
   const s = asString(v);
   return (values as readonly string[]).includes(s) ? (s as T) : fallback;
@@ -64,7 +78,7 @@ function attackBaseFromJson(x: any): AnimalAttackBase {
     weaponAttack: x?.weaponAttack != null ? asString(x.weaponAttack) : undefined,
     nonWeaponAttack: x?.nonWeaponAttack != null ? nonWeaponAttackFromJson(x.nonWeaponAttack) : undefined,
     useAllAttacks: asBool(x?.useAllAttacks),
-    attacksPerRound: asInt(x?.attacksPerRound),
+    attacksPerRound: asOptionalInt(x?.attacksPerRound) ?? 1,
     special: x?.special != null ? asString(x.special) : undefined,
     poison: x?.poison != null ? asString(x.poison) : undefined,
     disease: x?.disease != null ? asString(x.disease) : undefined,
@@ -107,8 +121,23 @@ function groupAttackFromJson(x: any): Animal['groupAttacks'][number] {
   const base = attackBaseFromJson(x);
   return {
     ...base,
-    minGroupSize: asInt(x?.minGroupSize),
+    minGroupSize: asInt(x?.minGroupSize ?? x?.['min-group-size']),
   };
+}
+
+function criticalModifiersFromJson(v: unknown): CriticalModifierType[] {
+  if (Array.isArray(v)) {
+    return v
+      .map((value: unknown) => asString(value))
+      .filter((value: string): value is CriticalModifierType => (CRITICAL_MODIFIER_TYPES as readonly string[]).includes(value));
+  }
+  if (v != null) {
+    const value = asString(v);
+    return (CRITICAL_MODIFIER_TYPES as readonly string[]).includes(value)
+      ? [value as CriticalModifierType]
+      : [];
+  }
+  return [];
 }
 
 function fromJson(x: any): Animal {
@@ -116,10 +145,16 @@ function fromJson(x: any): Animal {
     id: asString(x?.id),
     name: asString(x?.name),
     description: x?.description != null ? asString(x.description) : undefined,
+    baseHits: asInt(x?.baseHits),
+    baseMovement: asInt(x?.baseMovement),
+    defensiveBonus: asInt(x?.defensiveBonus),
     frequencyCode: asInt(x?.frequencyCode),
+    carryCapacity: asOptionalInt(x?.carryCapacity),
+    ridingBonus: asOptionalInt(x?.ridingBonus),
     bonusXpCode: asEnumValue(CREATURE_BONUS_XP_TYPES, x?.bonusXpCode, 'None' as CreatureBonusXpType),
     constitutionVarianceType: asEnumValue(CREATURE_CONSTITUTION_VARIANCE_TYPES, x?.constitutionVarianceType, 'None' as CreatureConstitutionVarianceType),
     levelVarianceType: asEnumValue(LEVEL_VARIANCE_TYPES, x?.levelVarianceType, 'None' as LevelVarianceType),
+    averageLevel: asInt(x?.averageLevel),
     treasureCode: x?.treasureCode != null ? asString(x.treasureCode) : undefined,
     size: asEnumValue(CREATURE_SIZES, x?.size, 'Medium' as CreatureSize),
     armourType: x?.armourType != null ? asString(x.armourType) : undefined,
@@ -128,11 +163,9 @@ function fromJson(x: any): Animal {
     maxPace: x?.maxPace != null ? asString(x.maxPace) : undefined,
     outlook: asEnumValue(ANIMAL_OUTLOOK_TYPES, x?.outlook, 'Normal' as AnimalOutlookType),
     criticalTable: asEnumValue(CRITICAL_SIZE_TABLE_TYPES, x?.criticalTable, 'Normal' as CriticalSizeTableType),
-    criticalModifiers: Array.isArray(x?.criticalModifiers)
-      ? x.criticalModifiers
-        .map((value: unknown) => asString(value))
-        .filter((value: string): value is CriticalModifierType => (CRITICAL_MODIFIER_TYPES as readonly string[]).includes(value))
-      : [],
+    criticalModifiers: criticalModifiersFromJson(x?.criticalModifiers),
+    encounterRange: rangeFromJson(x?.encounterRange),
+    numberYoungRange: rangeFromJson(x?.numberYoungRange),
     location: x?.location != null
       ? {
           features: asFeatureArray(x.location.features),

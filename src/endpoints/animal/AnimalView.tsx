@@ -131,10 +131,16 @@ type FormState = {
   id: string;
   name: string;
   description: string;
+  baseHits: string;
+  baseMovement: string;
+  defensiveBonus: string;
   frequencyCode: string;
+  carryCapacity: string;
+  ridingBonus: string;
   bonusXpCode: CreatureBonusXpType;
   constitutionVarianceType: CreatureConstitutionVarianceType;
   levelVarianceType: LevelVarianceType;
+  averageLevel: string;
   treasureCode: string;
   size: CreatureSize;
   armourType: string;
@@ -144,6 +150,10 @@ type FormState = {
   outlook: AnimalOutlookType;
   criticalTable: CriticalSizeTableType;
   criticalModifiers: CriticalModifierType[];
+  encounterRangeMin: string;
+  encounterRangeMax: string;
+  numberYoungRangeMin: string;
+  numberYoungRangeMax: string;
   locationFeatures: EnvironmentFeature[];
   locationTerrains: EnvironmentTerrain[];
   locationVegetation: EnvironmentVegetation[];
@@ -158,7 +168,18 @@ type FormState = {
 type FormErrors = {
   id?: string | undefined;
   name?: string | undefined;
+  baseHits?: string | undefined;
+  baseMovement?: string | undefined;
+  defensiveBonus?: string | undefined;
   frequencyCode?: string | undefined;
+  averageLevel?: string | undefined;
+  size?: string | undefined;
+  armourType?: string | undefined;
+  movementSpeed?: string | undefined;
+  attackQuickness?: string | undefined;
+  maxPace?: string | undefined;
+  outlook?: string | undefined;
+  criticalTable?: string | undefined;
   standardAttacks?: string | undefined;
   rangedAttacks?: string | undefined;
   conditionalAttacks?: string | undefined;
@@ -199,10 +220,16 @@ const emptyVM = (): FormState => ({
   id: prefix,
   name: '',
   description: '',
+  baseHits: '',
+  baseMovement: '',
+  defensiveBonus: '',
   frequencyCode: '',
+  carryCapacity: '',
+  ridingBonus: '',
   bonusXpCode: 'None',
   constitutionVarianceType: 'None',
   levelVarianceType: 'None',
+  averageLevel: '',
   treasureCode: '',
   size: 'Medium',
   armourType: '',
@@ -212,6 +239,10 @@ const emptyVM = (): FormState => ({
   outlook: 'Normal',
   criticalTable: 'Normal',
   criticalModifiers: [],
+  encounterRangeMin: '',
+  encounterRangeMax: '',
+  numberYoungRangeMin: '',
+  numberYoungRangeMax: '',
   locationFeatures: [],
   locationTerrains: [],
   locationVegetation: [],
@@ -223,17 +254,21 @@ const emptyVM = (): FormState => ({
   groupAttacks: [],
 });
 
-function toAttackBaseVM<T extends AnimalAttackBase>(x: T): AttackBaseVM {
+function toAttackBaseVM<T extends AnimalAttackBase>(
+  x: T,
+  opts: { includePoisonDisease?: boolean; includeUseAllAttacks?: boolean } = {},
+): AttackBaseVM {
+  const { includePoisonDisease = false, includeUseAllAttacks = true } = opts;
   return {
     offensiveBonus: String(x.offensiveBonus),
     weaponAttack: x.weaponAttack ?? '',
     nonWeaponAttackTable: x.nonWeaponAttack?.table ?? '',
     nonWeaponAttackSize: x.nonWeaponAttack?.size ?? '',
-    useAllAttacks: !!x.useAllAttacks,
+    useAllAttacks: includeUseAllAttacks ? !!x.useAllAttacks : false,
     attacksPerRound: String(x.attacksPerRound),
     special: x.special ?? '',
-    poison: x.poison ?? '',
-    disease: x.disease ?? '',
+    poison: includePoisonDisease ? (x.poison ?? '') : '',
+    disease: includePoisonDisease ? (x.disease ?? '') : '',
     autoCriticalType: x.autoCriticalType ?? '',
     autoCriticalSize: x.autoCriticalSize ?? '',
     sameRoundConditionalAttackId: x.sameRoundConditionalAttackId != null ? String(x.sameRoundConditionalAttackId) : '',
@@ -245,10 +280,16 @@ const toVM = (x: Animal): FormState => ({
   id: x.id,
   name: x.name,
   description: x.description ?? '',
+  baseHits: String(x.baseHits),
+  baseMovement: String(x.baseMovement),
+  defensiveBonus: String(x.defensiveBonus),
   frequencyCode: String(x.frequencyCode),
+  carryCapacity: x.carryCapacity != null ? String(x.carryCapacity) : '',
+  ridingBonus: x.ridingBonus != null ? String(x.ridingBonus) : '',
   bonusXpCode: x.bonusXpCode,
   constitutionVarianceType: x.constitutionVarianceType,
   levelVarianceType: x.levelVarianceType,
+  averageLevel: String(x.averageLevel),
   treasureCode: x.treasureCode ?? '',
   size: x.size,
   armourType: x.armourType ?? '',
@@ -258,31 +299,39 @@ const toVM = (x: Animal): FormState => ({
   outlook: x.outlook,
   criticalTable: x.criticalTable,
   criticalModifiers: x.criticalModifiers ?? [],
+  encounterRangeMin: x.encounterRange != null ? String(x.encounterRange.min) : '',
+  encounterRangeMax: x.encounterRange != null ? String(x.encounterRange.max) : '',
+  numberYoungRangeMin: x.numberYoungRange != null ? String(x.numberYoungRange.min) : '',
+  numberYoungRangeMax: x.numberYoungRange != null ? String(x.numberYoungRange.max) : '',
   locationFeatures: x.location?.features ?? [],
   locationTerrains: x.location?.terrains ?? [],
   locationVegetation: x.location?.vegetation ?? [],
   locationWaterSources: x.location?.waterSources ?? [],
   locationClimates: x.location?.climates ?? [],
   standardAttacks: (x.standardAttacks ?? []).map((attack) => ({
-    ...toAttackBaseVM(attack),
+    ...toAttackBaseVM(attack, { includePoisonDisease: false, includeUseAllAttacks: true }),
     chanceMin: String(attack.chanceMin),
     chanceMax: String(attack.chanceMax),
   })),
   rangedAttacks: (x.rangedAttacks ?? []).map((attack) => ({
-    ...toAttackBaseVM(attack),
+    ...toAttackBaseVM(attack, { includePoisonDisease: false, includeUseAllAttacks: true }),
     range: String(attack.range),
   })),
   conditionalAttacks: (x.conditionalAttacks ?? []).map((attack) => ({
-    ...toAttackBaseVM(attack),
+    ...toAttackBaseVM(attack, { includePoisonDisease: true, includeUseAllAttacks: false }),
     id: String(attack.id),
   })),
   groupAttacks: (x.groupAttacks ?? []).map((attack) => ({
-    ...toAttackBaseVM(attack),
+    ...toAttackBaseVM(attack, { includePoisonDisease: false, includeUseAllAttacks: true }),
     minGroupSize: String(attack.minGroupSize),
   })),
 });
 
-function fromAttackBaseVM<T extends AttackBaseVM>(x: T): AnimalAttackBase {
+function fromAttackBaseVM<T extends AttackBaseVM>(
+  x: T,
+  opts: { includePoisonDisease?: boolean; includeUseAllAttacks?: boolean } = {},
+): AnimalAttackBase {
+  const { includePoisonDisease = false, includeUseAllAttacks = true } = opts;
   return {
     offensiveBonus: Number(x.offensiveBonus),
     weaponAttack: x.weaponAttack || undefined,
@@ -292,11 +341,11 @@ function fromAttackBaseVM<T extends AttackBaseVM>(x: T): AnimalAttackBase {
         size: x.nonWeaponAttackSize as AttackSizeType,
       }
       : undefined,
-    useAllAttacks: !!x.useAllAttacks,
+    useAllAttacks: includeUseAllAttacks ? !!x.useAllAttacks : false,
     attacksPerRound: Number(x.attacksPerRound),
     special: x.special.trim() || undefined,
-    poison: x.poison || undefined,
-    disease: x.disease || undefined,
+    poison: includePoisonDisease ? (x.poison || undefined) : undefined,
+    disease: includePoisonDisease ? (x.disease || undefined) : undefined,
     autoCriticalType: (x.autoCriticalType || undefined) as CriticalType | undefined,
     autoCriticalSize: (x.autoCriticalSize || undefined) as CriticalSize | undefined,
     sameRoundConditionalAttackId: x.sameRoundConditionalAttackId ? Number(x.sameRoundConditionalAttackId) : undefined,
@@ -312,14 +361,26 @@ const fromVM = (vm: FormState): Animal => {
     vm.locationWaterSources.length > 0 ||
     vm.locationClimates.length > 0;
 
+  const hasEncounterRange =
+    vm.encounterRangeMin.length > 0 || vm.encounterRangeMax.length > 0;
+
+  const hasNumberYoungRange =
+    vm.numberYoungRangeMin.length > 0 || vm.numberYoungRangeMax.length > 0;
+
   return {
     id: vm.id.trim(),
     name: vm.name.trim(),
     description: vm.description.trim() || undefined,
+    baseHits: Number(vm.baseHits),
+    baseMovement: Number(vm.baseMovement),
+    defensiveBonus: Number(vm.defensiveBonus),
     frequencyCode: Number(vm.frequencyCode),
+    carryCapacity: vm.carryCapacity ? Number(vm.carryCapacity) : undefined,
+    ridingBonus: vm.ridingBonus ? Number(vm.ridingBonus) : undefined,
     bonusXpCode: vm.bonusXpCode,
     constitutionVarianceType: vm.constitutionVarianceType,
     levelVarianceType: vm.levelVarianceType,
+    averageLevel: Number(vm.averageLevel),
     treasureCode: vm.treasureCode || undefined,
     size: vm.size,
     armourType: vm.armourType || undefined,
@@ -329,6 +390,18 @@ const fromVM = (vm: FormState): Animal => {
     outlook: vm.outlook,
     criticalTable: vm.criticalTable,
     criticalModifiers: vm.criticalModifiers.slice(),
+    encounterRange: hasEncounterRange
+      ? {
+        min: Number(vm.encounterRangeMin),
+        max: Number(vm.encounterRangeMax),
+      }
+      : undefined,
+    numberYoungRange: hasNumberYoungRange
+      ? {
+        min: Number(vm.numberYoungRangeMin),
+        max: Number(vm.numberYoungRangeMax),
+      }
+      : undefined,
     location: hasLocation
       ? {
         features: vm.locationFeatures.slice(),
@@ -339,20 +412,20 @@ const fromVM = (vm: FormState): Animal => {
       }
       : undefined,
     standardAttacks: vm.standardAttacks.map((attack) => ({
-      ...fromAttackBaseVM(attack),
+      ...fromAttackBaseVM(attack, { includePoisonDisease: false, includeUseAllAttacks: true }),
       chanceMin: Number(attack.chanceMin),
       chanceMax: Number(attack.chanceMax),
     })),
     rangedAttacks: vm.rangedAttacks.map((attack) => ({
-      ...fromAttackBaseVM(attack),
+      ...fromAttackBaseVM(attack, { includePoisonDisease: false, includeUseAllAttacks: true }),
       range: Number(attack.range),
     })),
     conditionalAttacks: vm.conditionalAttacks.map((attack) => ({
-      ...fromAttackBaseVM(attack),
+      ...fromAttackBaseVM(attack, { includePoisonDisease: true, includeUseAllAttacks: false }),
       id: Number(attack.id),
     })),
     groupAttacks: vm.groupAttacks.map((attack) => ({
-      ...fromAttackBaseVM(attack),
+      ...fromAttackBaseVM(attack, { includePoisonDisease: false, includeUseAllAttacks: true }),
       minGroupSize: Number(attack.minGroupSize),
     })),
   };
@@ -495,18 +568,31 @@ export default function AnimalView() {
   const vegetationOptions = useMemo(() => ENVIRONMENT_VEGETATIONS.map((value) => ({ value, label: value })), []);
   const waterBodyOptions = useMemo(() => ENVIRONMENT_WATER_BODIES.map((value) => ({ value, label: value })), []);
 
-  const validateAttackBase = (label: string, row: AttackBaseVM, conditionalIds: Set<number>): string | undefined => {
+  const validateAttackBase = (
+    label: string,
+    row: AttackBaseVM,
+    conditionalIds: Set<number>,
+    opts: { requireAttackSource: boolean; allowPoisonDisease: boolean; allowUseAllAttacks: boolean },
+  ): string | undefined => {
+    const { requireAttackSource, allowPoisonDisease, allowUseAllAttacks } = opts;
+
     if (!isValidSignedInt(row.offensiveBonus)) {
       return `${label}: offensive bonus must be an integer`;
     }
     if (!isValidUnsignedInt(row.attacksPerRound) || Number(row.attacksPerRound) <= 0) {
       return `${label}: attacks per round must be a positive integer`;
     }
-    if (!row.weaponAttack && !row.nonWeaponAttackTable) {
+    if (requireAttackSource && !row.weaponAttack && !row.nonWeaponAttackTable) {
       return `${label}: select either a weapon attack or a non-weapon attack table`;
     }
     if (row.nonWeaponAttackTable && !row.nonWeaponAttackSize) {
       return `${label}: non-weapon attack size is required when a non-weapon attack table is selected`;
+    }
+    if (!allowPoisonDisease && (row.poison || row.disease)) {
+      return `${label}: poison and disease are only available for conditional attacks`;
+    }
+    if (!allowUseAllAttacks && row.useAllAttacks) {
+      return `${label}: use-all-attacks is not available for conditional attacks`;
     }
     if ((row.autoCriticalType && !row.autoCriticalSize) || (!row.autoCriticalType && row.autoCriticalSize)) {
       return `${label}: auto critical type and size must either both be set or both be empty`;
@@ -540,12 +626,36 @@ export default function AnimalView() {
 
     if (!draft.name.trim()) next.name = 'Name is required';
 
+    if (!isValidUnsignedInt(draft.baseHits) || Number(draft.baseHits) <= 0) {
+      next.baseHits = 'Base hits is required and must be a positive integer';
+    }
+
+    if (!isValidUnsignedInt(draft.baseMovement) || Number(draft.baseMovement) <= 0) {
+      next.baseMovement = 'Base movement is required and must be a positive integer';
+    }
+
+    if (!isValidSignedInt(draft.defensiveBonus)) {
+      next.defensiveBonus = 'Defensive bonus is required and must be an integer';
+    }
+
     if (!isValidUnsignedInt(draft.frequencyCode)) {
       next.frequencyCode = 'Frequency code must be an integer from 1 to 9';
     } else {
       const value = Number(draft.frequencyCode);
       if (value < 1 || value > 9) next.frequencyCode = 'Frequency code must be an integer from 1 to 9';
     }
+
+    if (!isValidUnsignedInt(draft.averageLevel) || Number(draft.averageLevel) <= 0) {
+      next.averageLevel = 'Average level is required and must be a positive integer';
+    }
+
+    if (!draft.size) next.size = 'Size is required';
+    if (!draft.armourType) next.armourType = 'Armour type is required';
+    if (!draft.movementSpeed) next.movementSpeed = 'Movement speed is required';
+    if (!draft.attackQuickness) next.attackQuickness = 'Attack quickness is required';
+    if (!draft.maxPace) next.maxPace = 'Max pace is required';
+    if (!draft.outlook) next.outlook = 'Outlook is required';
+    if (!draft.criticalTable) next.criticalTable = 'Critical table is required';
 
     const conditionalIdSet = new Set<number>();
     for (let index = 0; index < draft.conditionalAttacks.length; index++) {
@@ -567,7 +677,12 @@ export default function AnimalView() {
       for (let index = 0; index < draft.conditionalAttacks.length; index++) {
         const attack = draft.conditionalAttacks[index];
         if (!attack) continue;
-        const message = validateAttackBase(`Conditional Attack ${index + 1}`, attack, conditionalIdSet);
+        const message = validateAttackBase(
+          `Conditional Attack ${index + 1}`,
+          attack,
+          conditionalIdSet,
+          { requireAttackSource: false, allowPoisonDisease: true, allowUseAllAttacks: false },
+        );
         if (message) {
           next.conditionalAttacks = message;
           break;
@@ -588,7 +703,12 @@ export default function AnimalView() {
         next.standardAttacks = `Standard Attack ${index + 1}: chance range must be between 1 and 100 and min cannot exceed max`;
         break;
       }
-      const message = validateAttackBase(`Standard Attack ${index + 1}`, attack, conditionalIdSet);
+      const message = validateAttackBase(
+        `Standard Attack ${index + 1}`,
+        attack,
+        conditionalIdSet,
+        { requireAttackSource: true, allowPoisonDisease: false, allowUseAllAttacks: true },
+      );
       if (message) {
         next.standardAttacks = message;
         break;
@@ -602,7 +722,12 @@ export default function AnimalView() {
         next.rangedAttacks = `Ranged Attack ${index + 1}: range must be a positive integer`;
         break;
       }
-      const message = validateAttackBase(`Ranged Attack ${index + 1}`, attack, conditionalIdSet);
+      const message = validateAttackBase(
+        `Ranged Attack ${index + 1}`,
+        attack,
+        conditionalIdSet,
+        { requireAttackSource: true, allowPoisonDisease: false, allowUseAllAttacks: true },
+      );
       if (message) {
         next.rangedAttacks = message;
         break;
@@ -616,7 +741,12 @@ export default function AnimalView() {
         next.groupAttacks = `Group Attack ${index + 1}: minimum group size must be a positive integer`;
         break;
       }
-      const message = validateAttackBase(`Group Attack ${index + 1}`, attack, conditionalIdSet);
+      const message = validateAttackBase(
+        `Group Attack ${index + 1}`,
+        attack,
+        conditionalIdSet,
+        { requireAttackSource: true, allowPoisonDisease: false, allowUseAllAttacks: true },
+      );
       if (message) {
         next.groupAttacks = message;
         break;
@@ -891,12 +1021,14 @@ export default function AnimalView() {
               />
             </div>
 
-            <CheckboxInput
-              label="Use All Attacks"
-              checked={row.useAllAttacks}
-              onChange={(checked) => updateRow(index, { useAllAttacks: checked })}
-              disabled={viewing}
-            />
+            {kind !== 'conditional' && (
+              <CheckboxInput
+                label="Use All Attacks"
+                checked={row.useAllAttacks}
+                onChange={(checked) => updateRow(index, { useAllAttacks: checked })}
+                disabled={viewing}
+              />
+            )}
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
               <LabeledSelect
@@ -923,20 +1055,24 @@ export default function AnimalView() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-              <LabeledSelect
-                label="Poison"
-                value={row.poison}
-                onChange={(value) => updateRow(index, { poison: value })}
-                options={poisonOptions}
-                disabled={viewing}
-              />
-              <LabeledSelect
-                label="Disease"
-                value={row.disease}
-                onChange={(value) => updateRow(index, { disease: value })}
-                options={diseaseOptions}
-                disabled={viewing}
-              />
+              {kind === 'conditional' && (
+                <>
+                  <LabeledSelect
+                    label="Poison"
+                    value={row.poison}
+                    onChange={(value) => updateRow(index, { poison: value })}
+                    options={poisonOptions}
+                    disabled={viewing}
+                  />
+                  <LabeledSelect
+                    label="Disease"
+                    value={row.disease}
+                    onChange={(value) => updateRow(index, { disease: value })}
+                    options={diseaseOptions}
+                    disabled={viewing}
+                  />
+                </>
+              )}
               <LabeledSelect
                 label="Auto Critical Type"
                 value={row.autoCriticalType}
@@ -1036,11 +1172,37 @@ export default function AnimalView() {
                 error={viewing ? undefined : errors.name}
               />
               <LabeledInput
+                label="Base Hits"
+                value={form.baseHits}
+                onChange={(value) => setForm((state) => ({ ...state, baseHits: sanitizeUnsignedInt(value) }))}
+                disabled={viewing}
+                error={viewing ? undefined : errors.baseHits}
+              />
+              <LabeledInput
+                label="Defensive Bonus"
+                value={form.defensiveBonus}
+                onChange={(value) => setForm((state) => ({ ...state, defensiveBonus: sanitizeSignedInt(value) }))}
+                disabled={viewing}
+                error={viewing ? undefined : errors.defensiveBonus}
+              />
+              <LabeledInput
                 label="Frequency Code"
                 value={form.frequencyCode}
                 onChange={(value) => setForm((state) => ({ ...state, frequencyCode: sanitizeUnsignedInt(value) }))}
                 disabled={viewing}
                 error={viewing ? undefined : errors.frequencyCode}
+              />
+              <LabeledInput
+                label="Carry Capacity"
+                value={form.carryCapacity}
+                onChange={(value) => setForm((state) => ({ ...state, carryCapacity: sanitizeUnsignedInt(value) }))}
+                disabled={viewing}
+              />
+              <LabeledInput
+                label="Riding Bonus"
+                value={form.ridingBonus}
+                onChange={(value) => setForm((state) => ({ ...state, ridingBonus: sanitizeSignedInt(value) }))}
+                disabled={viewing}
               />
               <LabeledSelect
                 label="Bonus XP Code"
@@ -1050,17 +1212,24 @@ export default function AnimalView() {
                 disabled={viewing}
               />
               <LabeledSelect
-                label="Constitution Variance"
-                value={form.constitutionVarianceType}
-                onChange={(value) => setForm((state) => ({ ...state, constitutionVarianceType: value as CreatureConstitutionVarianceType }))}
-                options={constitutionVarianceOptions}
-                disabled={viewing}
-              />
-              <LabeledSelect
                 label="Level Variance"
                 value={form.levelVarianceType}
                 onChange={(value) => setForm((state) => ({ ...state, levelVarianceType: value as LevelVarianceType }))}
                 options={levelVarianceOptions}
+                disabled={viewing}
+              />
+              <LabeledInput
+                label="Average Level"
+                value={form.averageLevel}
+                onChange={(value) => setForm((state) => ({ ...state, averageLevel: sanitizeUnsignedInt(value) }))}
+                disabled={viewing}
+                error={viewing ? undefined : errors.averageLevel}
+              />
+              <LabeledSelect
+                label="Constitution Variance"
+                value={form.constitutionVarianceType}
+                onChange={(value) => setForm((state) => ({ ...state, constitutionVarianceType: value as CreatureConstitutionVarianceType }))}
+                options={constitutionVarianceOptions}
                 disabled={viewing}
               />
               <LabeledSelect
@@ -1076,6 +1245,7 @@ export default function AnimalView() {
                 onChange={(value) => setForm((state) => ({ ...state, size: value as CreatureSize }))}
                 options={sizeOptions}
                 disabled={viewing}
+                error={viewing ? undefined : errors.size}
               />
               <LabeledSelect
                 label="Armour Type"
@@ -1083,6 +1253,7 @@ export default function AnimalView() {
                 onChange={(value) => setForm((state) => ({ ...state, armourType: value }))}
                 options={armourOptions}
                 disabled={viewing}
+                error={viewing ? undefined : errors.armourType}
               />
               <LabeledSelect
                 label="Movement Speed"
@@ -1090,6 +1261,14 @@ export default function AnimalView() {
                 onChange={(value) => setForm((state) => ({ ...state, movementSpeed: value as CreatureMovementSpeedType }))}
                 options={movementSpeedOptions}
                 disabled={viewing}
+                error={viewing ? undefined : errors.movementSpeed}
+              />
+              <LabeledInput
+                label="Base Movement"
+                value={form.baseMovement}
+                onChange={(value) => setForm((state) => ({ ...state, baseMovement: sanitizeUnsignedInt(value) }))}
+                disabled={viewing}
+                error={viewing ? undefined : errors.baseMovement}
               />
               <LabeledSelect
                 label="Attack Quickness"
@@ -1097,6 +1276,7 @@ export default function AnimalView() {
                 onChange={(value) => setForm((state) => ({ ...state, attackQuickness: value as CreatureMovementSpeedType }))}
                 options={movementSpeedOptions}
                 disabled={viewing}
+                error={viewing ? undefined : errors.attackQuickness}
               />
               <LabeledSelect
                 label="Max Pace"
@@ -1104,6 +1284,7 @@ export default function AnimalView() {
                 onChange={(value) => setForm((state) => ({ ...state, maxPace: value }))}
                 options={paceOptions}
                 disabled={viewing}
+                error={viewing ? undefined : errors.maxPace}
               />
               <LabeledSelect
                 label="Outlook"
@@ -1111,12 +1292,38 @@ export default function AnimalView() {
                 onChange={(value) => setForm((state) => ({ ...state, outlook: value as AnimalOutlookType }))}
                 options={outlookOptions}
                 disabled={viewing}
+                error={viewing ? undefined : errors.outlook}
               />
               <LabeledSelect
                 label="Critical Table"
                 value={form.criticalTable}
                 onChange={(value) => setForm((state) => ({ ...state, criticalTable: value as CriticalSizeTableType }))}
                 options={criticalTableOptions}
+                disabled={viewing}
+                error={viewing ? undefined : errors.criticalTable}
+              />
+              <LabeledInput
+                label="Encounter Range Min"
+                value={form.encounterRangeMin}
+                onChange={(value) => setForm((state) => ({ ...state, encounterRangeMin: sanitizeUnsignedInt(value) }))}
+                disabled={viewing}
+              />
+              <LabeledInput
+                label="Encounter Range Max"
+                value={form.encounterRangeMax}
+                onChange={(value) => setForm((state) => ({ ...state, encounterRangeMax: sanitizeUnsignedInt(value) }))}
+                disabled={viewing}
+              />
+              <LabeledInput
+                label="Number Young Range Min"
+                value={form.numberYoungRangeMin}
+                onChange={(value) => setForm((state) => ({ ...state, numberYoungRangeMin: sanitizeUnsignedInt(value) }))}
+                disabled={viewing}
+              />
+              <LabeledInput
+                label="Number Young Range Max"
+                value={form.numberYoungRangeMax}
+                onChange={(value) => setForm((state) => ({ ...state, numberYoungRangeMax: sanitizeUnsignedInt(value) }))}
                 disabled={viewing}
               />
             </div>
