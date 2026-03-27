@@ -27,7 +27,7 @@ function sanitizeSymptoms(arr: unknown): DiseaseType['severitySymptoms'] {
 }
 
 /** GET /rmce/objects/diseasetype → { diseasetypes: DiseaseType[] } */
-export async function fetchDiseasetypes(): Promise<DiseaseType[]> {
+export async function fetchDiseaseTypes(): Promise<DiseaseType[]> {
   const data = await fetchJson<DiseaseTypesPayload>(BASE);
   if (!data || !Array.isArray(data.diseasetypes)) {
     throw new Error('Unexpected response: expected { diseasetypes: [...] }');
@@ -42,7 +42,7 @@ export async function fetchDiseasetypes(): Promise<DiseaseType[]> {
 }
 
 /** Create or update a single disease type. */
-export async function upsertDiseasetype(
+export async function upsertDiseaseType(
   dt: DiseaseType,
   opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {}
 ): Promise<unknown> {
@@ -54,8 +54,8 @@ export async function upsertDiseasetype(
 }
 
 /** DELETE /rmce/objects/diseasetype/{id} */
-export async function deleteDiseasetype(id: string): Promise<void> {
-  if (!id) throw new Error('deleteDiseasetype: id is required');
+export async function deleteDiseaseType(id: string): Promise<void> {
+  if (!id) throw new Error('deleteDiseaseType: id is required');
   const url = `${BASE}/${encodeURIComponent(id)}`;
   await fetchJson<void>(url, { method: 'DELETE' });
 }
