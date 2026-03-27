@@ -83,7 +83,9 @@ function Shell() {
       </header>
 
       <Sidebar
-        items={sidebarItems}
+        sections={[
+          { heading: 'Resources', items: sidebarItems, collapsible: true },
+        ]}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />

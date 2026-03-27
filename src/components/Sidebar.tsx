@@ -11,8 +11,29 @@ export type SidebarItem = {
   prefix?: string;
 };
 
+export type SidebarSection = {
+  id?: string;
+  heading?: string;
+  items: SidebarItem[];
+  collapsible?: boolean;
+  defaultCollapsed?: boolean;
+};
+
+type SidebarProps = {
+  items?: SidebarItem[];
+  sections?: SidebarSection[];
+  open: boolean;
+  onClose?: () => void;
+  sortInside?: boolean;
+  enableResize?: boolean;
+  minWidth?: number;
+  maxWidth?: number;
+  persistKey?: string;
+};
+
 export function Sidebar({
-  items,
+  items = [],
+  sections,
   open,
   onClose,
   sortInside = false,
@@ -20,21 +41,42 @@ export function Sidebar({
   minWidth = 140,
   maxWidth = 420,
   persistKey = 'ui.sidebar.w',
-}: {
-  items: SidebarItem[];
-  open: boolean;
-  onClose?: () => void;
-  sortInside?: boolean; // whether to sort items inside the sidebar (default: false, i.e. rely on pre-sorted input)
-  enableResize?: boolean;
-  minWidth?: number;
-  maxWidth?: number;
-  persistKey?: string;
-}) {
+}: SidebarProps) {
 
+  const normalizedSections = React.useMemo(() => {
+    const sourceSections = sections?.length
+      ? sections
+      : [{ id: 'default', items } satisfies SidebarSection];
 
-  const list = sortInside
-    ? [...items].sort((a, b) => a.label.localeCompare(b.label))
-    : items;
+    return sourceSections.map((section, index) => ({
+      ...section,
+      _key: section.id ?? section.heading ?? `section-${index}`,
+      items: sortInside
+        ? [...section.items].sort((a, b) => a.label.localeCompare(b.label))
+        : section.items,
+    }));
+  }, [items, sections, sortInside]);
+
+  const [collapsedSections, setCollapsedSections] = React.useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    for (const section of (sections?.length ? sections : [{ id: 'default', items }])) {
+      const key = section.id ?? section.heading ?? 'default';
+      initial[key] = !!section.defaultCollapsed;
+    }
+    return initial;
+  });
+
+  React.useEffect(() => {
+    setCollapsedSections((current) => {
+      const next = { ...current };
+      for (const section of normalizedSections) {
+        if (!(section._key in next)) {
+          next[section._key] = !!section.defaultCollapsed;
+        }
+      }
+      return next;
+    });
+  }, [normalizedSections]);
 
   React.useEffect(() => {
     const raw = localStorage.getItem(persistKey);
@@ -90,8 +132,10 @@ export function Sidebar({
 
   // Build a lightweight list with "path" and "prefix" only for the hook
   const countTargets = React.useMemo(
-    () => list.map(({ path, prefix }: { path: `/${string}`; prefix?: string }) => ({ path, prefix })),
-    [list]
+    () => normalizedSections.flatMap((section) =>
+      section.items.map(({ path, prefix }: { path: `/${string}`; prefix?: string }) => ({ path, prefix }))
+    ),
+    [normalizedSections]
   );
 
   const counts = useResourceCounts(countTargets); // Map<prefix, CountEntry>
@@ -108,6 +152,13 @@ export function Sidebar({
       return <span className="sidebar__count sidebar__count--error" title="Unable to load count">—</span>;
     }
     return <span className="sidebar__count" aria-label={`${it.label} items`}>{entry.count}</span>;
+  };
+
+  const toggleSection = (key: string) => {
+    setCollapsedSections((current) => ({
+      ...current,
+      [key]: !current[key],
+    }));
   };
 
   return (
@@ -131,27 +182,56 @@ export function Sidebar({
       </div>
 
       <nav className="sidebar__nav" role="navigation" aria-label="Resources">
-        <ul className="sidebar__list">
-          {list.map((it) => (
-            <li key={it.path} className="sidebar__item">
-              <NavLink
-                to={it.path}
-                className={({ isActive }) =>
-                  [
-                    'sidebar__link',
-                    isActive ? 'active' : '',
-                    it.isKnown ? 'sidebar__link--known' : 'sidebar__link--unknown', // color by kind
-                  ].join(' ').trim()
-                }
-                onClick={onClose}
-                title={it.isKnown ? 'Known resource' : 'Discovered resource'}
-              >
-                <span>{it.label}</span>
-                {getBadge(it)}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
+        {normalizedSections.map((section) => {
+          const isCollapsed = !!collapsedSections[section._key];
+          const isCollapsible = !!section.collapsible;
+
+          return (
+            <section key={section._key} className="sidebar__section">
+              {section.heading && (
+                isCollapsible ? (
+                  <button
+                    type="button"
+                    className="sidebar__section-heading sidebar__section-heading--button"
+                    onClick={() => toggleSection(section._key)}
+                    aria-expanded={!isCollapsed}
+                  >
+                    <span>{section.heading}</span>
+                    <span className="sidebar__section-chevron" aria-hidden="true">{isCollapsed ? '▸' : '▾'}</span>
+                  </button>
+                ) : (
+                  <div className="sidebar__section-heading">
+                    <span>{section.heading}</span>
+                  </div>
+                )
+              )}
+
+              {!isCollapsed && (
+                <ul className="sidebar__list">
+                  {section.items.map((it) => (
+                    <li key={it.path} className="sidebar__item">
+                      <NavLink
+                        to={it.path}
+                        className={({ isActive }) =>
+                          [
+                            'sidebar__link',
+                            isActive ? 'active' : '',
+                            it.isKnown ? 'sidebar__link--known' : 'sidebar__link--unknown',
+                          ].join(' ').trim()
+                        }
+                        onClick={onClose}
+                        title={it.isKnown ? 'Known resource' : 'Discovered resource'}
+                      >
+                        <span>{it.label}</span>
+                        {getBadge(it)}
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          );
+        })}
       </nav>
 
       <div className="sidebar__footer">

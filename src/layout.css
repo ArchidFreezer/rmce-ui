@@ -232,6 +232,31 @@ button:hover {
 .sidebar__nav {
   overflow: auto;
 }
+.sidebar__section + .sidebar__section {
+  margin-top: 12px;
+}
+.sidebar__section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin: 0 0 8px;
+  padding: 4px 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.sidebar__section-heading--button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+.sidebar__section-chevron {
+  font-size: 12px;
+}
 .sidebar__list {
   list-style: none;
   margin: 0;
