@@ -313,7 +313,8 @@ export default function ClimateView() {
     if (!ok) return;
 
     const prev = rows;
-    setRows(prev.filter((r) => r.id !== row.id));
+    setRows((current) => current.filter((r) => r.id !== row.id));
+    setPage(1);
 
     try {
       await deleteClimate(row.id);
