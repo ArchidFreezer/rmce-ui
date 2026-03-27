@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   fetchArmourTypes,
   fetchClimates,
-  fetchCulturetypes, upsertCulturetype, deleteCulturetype,
+  fetchCultureTypes, upsertCultureType, deleteCultureType,
   fetchSkills,
   fetchSkillcategories,
   fetchSkillgroups,
@@ -232,7 +232,7 @@ export default function CultureTypeView() {
     (async () => {
       try {
         const [tp, at, wt, s, c, g, cl] = await Promise.all([
-          fetchCulturetypes(),
+          fetchCultureTypes(),
           fetchArmourTypes(),
           fetchWeaponTypes(),
           fetchSkills(),
@@ -518,7 +518,7 @@ export default function CultureTypeView() {
         ? { method: 'PUT' as const, useResourceIdPath: true }
         : { method: 'POST' as const, useResourceIdPath: false };
 
-      await upsertCulturetype(payload, opts);
+      await upsertCultureType(payload, opts);
 
       setRows((prev) => {
         if (isEditing) {
@@ -572,7 +572,7 @@ export default function CultureTypeView() {
     setPage(1);
 
     try {
-      await deleteCulturetype(row.id);
+      await deleteCultureType(row.id);
       if (editingId === row.id || viewing) cancelForm();
       toast({ variant: 'success', title: 'Deleted', description: `Culture Type "${row.id}" deleted.` });
     } catch (err) {

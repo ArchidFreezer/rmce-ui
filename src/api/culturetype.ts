@@ -77,7 +77,7 @@ function fromJson(x: any): CultureType {
 }
 
 // ---------- API surface ----------
-export async function fetchCulturetypes(): Promise<CultureType[]> {
+export async function fetchCultureTypes(): Promise<CultureType[]> {
   const data = await fetchJson<CultureTypesPayload>(BASE);
   if (!data || !Array.isArray((data as any).culturetypes)) {
     throw new Error('Unexpected response: expected { culturetypes: [...] }');
@@ -85,7 +85,7 @@ export async function fetchCulturetypes(): Promise<CultureType[]> {
   return (data as CultureTypesPayload).culturetypes.map(fromJson);
 }
 
-export async function upsertCulturetype(
+export async function upsertCultureType(
   c: CultureType,
   opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {},
 ) {
@@ -97,7 +97,7 @@ export async function upsertCulturetype(
   return sendJson(url, method, c);
 }
 
-export async function deleteCulturetype(id: string) {
-  if (!id) throw new Error('deleteCulturetype: id is required');
+export async function deleteCultureType(id: string) {
+  if (!id) throw new Error('deleteCultureType: id is required');
   await fetchJson<void>(`${BASE}/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }
