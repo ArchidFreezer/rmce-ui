@@ -8,7 +8,7 @@ import {
   fetchSkills,
   fetchSkillCategories,
   fetchSkillGroups,
-  fetchSpelllists,
+  fetchSpellLists,
   fetchLanguages,
 } from '../../api';
 
@@ -531,7 +531,7 @@ export default function TrainingPackagesView() {
           fetchSkills(),
           fetchSkillCategories(),
           fetchSkillGroups(),
-          fetchSpelllists(),
+          fetchSpellLists(),
           fetchLanguages(),
         ]);
         setRows(tp);

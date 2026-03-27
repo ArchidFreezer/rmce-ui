@@ -28,7 +28,7 @@ function asBool(v: unknown): boolean {
 }
 
 /** GET /rmce/objects/spelllist → { spelllists: SpellList[] } */
-export async function fetchSpelllists(): Promise<SpellList[]> {
+export async function fetchSpellLists(): Promise<SpellList[]> {
   const data = await fetchJson<SpellListsPayload>(BASE);
   if (!data || !Array.isArray(data.spelllists)) {
     throw new Error('Unexpected response: expected { spelllists: [...] }');
@@ -45,7 +45,7 @@ export async function fetchSpelllists(): Promise<SpellList[]> {
 }
 
 /** Create/Update one SpellList */
-export async function upsertSpelllist(
+export async function upsertSpellList(
   sl: SpellList,
   opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {}
 ): Promise<unknown> {
@@ -57,7 +57,7 @@ export async function upsertSpelllist(
 }
 
 /** DELETE /rmce/objects/spelllist/{id} */
-export async function deleteSpelllist(id: string): Promise<void> {
-  if (!id) throw new Error('deleteSpelllist: id is required');
+export async function deleteSpellList(id: string): Promise<void> {
+  if (!id) throw new Error('deleteSpellList: id is required');
   await fetchJson<void>(`${BASE}/${encodeURIComponent(id)}`, { method: 'DELETE' });
 }

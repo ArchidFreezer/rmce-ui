@@ -6,7 +6,7 @@ import {
   fetchSkills,
   fetchSkillCategories,
   fetchSkillGroups,
-  fetchSpelllists,
+  fetchSpellLists,
   deleteTrainingPackage,
 } from '../../api';
 
@@ -352,7 +352,7 @@ export default function ProfessionView() {
           fetchSkills(),
           fetchSkillCategories(),
           fetchSkillGroups(),
-          fetchSpelllists(),
+          fetchSpellLists(),
         ]);
         setRows(p);
         setBooks(b);

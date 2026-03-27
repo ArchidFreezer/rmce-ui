@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   fetchBooks,
-  fetchSpelllists, upsertSpelllist, deleteSpelllist,
+  fetchSpellLists, upsertSpellList, deleteSpellList,
 } from '../../api';
 
 import {
@@ -105,7 +105,7 @@ export default function SpellListView() {
     (async () => {
       try {
         const [sl, b] = await Promise.all([
-          fetchSpelllists(),
+          fetchSpellLists(),
           fetchBooks(),
         ]);
         setRows(sl);
@@ -293,7 +293,7 @@ export default function SpellListView() {
         ? { method: 'PUT' as const, useResourceIdPath: true }
         : { method: 'POST' as const, useResourceIdPath: false };
 
-      await upsertSpelllist(payload, opts);
+      await upsertSpellList(payload, opts);
 
       setRows((prev) => {
         if (isEditing) {
@@ -347,7 +347,7 @@ export default function SpellListView() {
     setPage(1);
 
     try {
-      await deleteSpelllist(row.id);
+      await deleteSpellList(row.id);
       if (editingId === row.id || viewing) cancelForm();
       toast({ variant: 'success', title: 'Deleted', description: `Spell List "${row.id}" deleted.` });
     } catch (err) {
