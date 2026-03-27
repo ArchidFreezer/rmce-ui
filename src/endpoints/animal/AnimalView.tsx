@@ -513,6 +513,12 @@ export default function AnimalView() {
     return map;
   }, [paces]);
 
+  const climateNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const row of climates) map.set(row.id, row.name);
+    return map;
+  }, [climates]);
+
   const treasureNameById = useMemo(() => {
     const map = new Map<string, string>();
     for (const row of treasureCodes) map.set(row.id, row.id);
@@ -1369,15 +1375,26 @@ export default function AnimalView() {
 
             <section style={{ marginTop: 16, display: 'grid', gap: 16 }}>
               <h4 style={{ margin: 0 }}>Location</h4>
-              <IdListEditor
-                title="Climates"
-                rows={form.locationClimates}
-                onChangeRows={(next) => setForm((state) => ({ ...state, locationClimates: next }))}
-                options={climateOptions}
-                columnLabel="Climate"
-                addButtonLabel="+ Add climate"
-                viewing={viewing}
-              />
+              {viewing ? (
+                <div style={{ display: 'grid', gap: 6 }}>
+                  <span style={{ fontSize: 14 }}>Climates</span>
+                  <PillList
+                    values={form.locationClimates}
+                    getLabel={(value) => climateNameById.get(value) ?? value}
+                    emptyLabel="No climates"
+                  />
+                </div>
+              ) : (
+                <IdListEditor
+                  title="Climates"
+                  rows={form.locationClimates}
+                  onChangeRows={(next) => setForm((state) => ({ ...state, locationClimates: next }))}
+                  options={climateOptions}
+                  columnLabel="Climate"
+                  addButtonLabel="+ Add climate"
+                  viewing={viewing}
+                />
+              )}
               {viewing ? (
                 <div style={{ display: 'grid', gap: 6 }}>
                   <span style={{ fontSize: 14 }}>Environment Tags</span>
