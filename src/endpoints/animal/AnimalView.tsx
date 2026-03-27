@@ -1110,15 +1110,17 @@ export default function AnimalView() {
               />
             </div>
 
-            <label style={{ display: 'grid', gap: 6 }}>
-              <span>Special</span>
-              <textarea
-                value={row.special}
-                onChange={(e) => updateRow(index, { special: e.target.value })}
-                disabled={viewing}
-                rows={4}
-              />
-            </label>
+            {(!viewing || row.special.trim().length > 0) && (
+              <label style={{ display: 'grid', gap: 6 }}>
+                <span>Special</span>
+                <textarea
+                  value={row.special}
+                  onChange={(e) => updateRow(index, { special: e.target.value })}
+                  disabled={viewing}
+                  rows={4}
+                />
+              </label>
+            )}
           </div>
         ))}
 
