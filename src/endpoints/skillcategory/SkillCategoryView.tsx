@@ -113,6 +113,7 @@ export default function SkillCategoryView() {
 
   // table
   const [query, setQuery] = useState('');
+  const [groupFilter, setGroupFilter] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
@@ -328,6 +329,15 @@ export default function SkillCategoryView() {
     // re-memoize when names arrive
   ], [groupNameById, sptNameById]);
 
+  const filteredRows = useMemo(
+    () => rows.filter((r) => !groupFilter || r.group === groupFilter),
+    [rows, groupFilter]
+  );
+
+  const hasActiveFilters = groupFilter !== '';
+
+  useEffect(() => { setPage(1); }, [groupFilter]);
+
   const globalFilter = (r: SkillCategory, q: string) => {
     const s = q.toLowerCase();
     const gLabel = groupNameById.get(r.group) ?? '';
@@ -486,18 +496,31 @@ export default function SkillCategoryView() {
 
       {/* Toolbar hidden while form visible */}
       {!showForm && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          <button onClick={startNew}>New Skill Category</button>
-          <DataTableSearchInput
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search skill categories…"
-            aria-label="Search skill categories"
-          />
-
-          {/* Reset and auto-fit column widths */}
-          <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
-          <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
+        <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={startNew}>New Skill Category</button>
+            <DataTableSearchInput
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search skill categories…"
+              aria-label="Search skill categories"
+            />
+            <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              Group:
+              <select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)}>
+                <option value="">All</option>
+                {groupOptions.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </label>
+            {hasActiveFilters && (
+              <button onClick={() => setGroupFilter('')}>Clear filters</button>
+            )}
+            {/* Reset and auto-fit column widths */}
+            <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
+            <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
+          </div>
         </div>
       )}
 
@@ -608,7 +631,7 @@ export default function SkillCategoryView() {
       {!showForm && (
         <DataTable
           ref={dtRef}
-          rows={rows}
+          rows={filteredRows}
           columns={columns}
           rowId={(r) => r.id}
           initialSort={{ colId: 'name', dir: 'asc' }} //
