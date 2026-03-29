@@ -459,6 +459,8 @@ export default function AnimalView() {
   const [treasureCodes, setTreasureCodes] = useState<TreasureCode[]>([]);
 
   const [query, setQuery] = useState('');
+  const [sizeFilter, setSizeFilter] = useState<CreatureSize | ''>('');
+  const [outlookFilter, setOutlookFilter] = useState<AnimalOutlookType | ''>('');
   const [showDescriptionTooltip, setShowDescriptionTooltip] = useState<boolean>(() => {
     try {
       const raw = localStorage.getItem(showDescriptionTooltipStorageKey);
@@ -809,6 +811,21 @@ export default function AnimalView() {
   const globalFilter = (row: Animal, q: string) =>
     [row.id, row.name, row.description ?? '', row.outlook, row.size]
       .some((value) => String(value).toLowerCase().includes(q.toLowerCase()));
+
+  const filteredRows = useMemo(
+    () => rows.filter((row) => {
+      const matchesSize = !sizeFilter || row.size === sizeFilter;
+      const matchesOutlook = !outlookFilter || row.outlook === outlookFilter;
+      return matchesSize && matchesOutlook;
+    }),
+    [rows, sizeFilter, outlookFilter]
+  );
+
+  const hasActiveFilters = sizeFilter !== '' || outlookFilter !== '';
+
+  useEffect(() => {
+    setPage(1);
+  }, [sizeFilter, outlookFilter]);
 
   const startNew = () => {
     setViewing(false);
@@ -1164,6 +1181,39 @@ export default function AnimalView() {
             placeholder="Search animals…"
             aria-label="Search animals"
           />
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 14 }}>Size</span>
+            <select
+              value={sizeFilter}
+              onChange={(e) => setSizeFilter(e.target.value as CreatureSize | '')}
+              aria-label="Filter by size"
+              style={{ padding: '6px 8px' }}
+            >
+              <option value="">All</option>
+              {CREATURE_SIZES.map((value) => (
+                <option key={value} value={value}>{value}</option>
+              ))}
+            </select>
+          </label>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 14 }}>Outlook</span>
+            <select
+              value={outlookFilter}
+              onChange={(e) => setOutlookFilter(e.target.value as AnimalOutlookType | '')}
+              aria-label="Filter by outlook"
+              style={{ padding: '6px 8px' }}
+            >
+              <option value="">All</option>
+              {ANIMAL_OUTLOOK_TYPES.map((value) => (
+                <option key={value} value={value}>{value}</option>
+              ))}
+            </select>
+          </label>
+          {hasActiveFilters && (
+            <button type="button" onClick={() => { setSizeFilter(''); setOutlookFilter(''); }}>
+              Clear filters
+            </button>
+          )}
           <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <input
               type="checkbox"
@@ -1528,7 +1578,7 @@ export default function AnimalView() {
       {!showForm && (
         <DataTable
           ref={dtRef}
-          rows={rows}
+          rows={filteredRows}
           columns={columns}
           rowId={(row) => row.id}
           rowHoverTooltip={(row) => {
