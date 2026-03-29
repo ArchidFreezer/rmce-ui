@@ -606,6 +606,12 @@ const DataTableInner = <T,>(
     y: number;
   } | null>(null);
   const [suppressRowHoverTooltip, setSuppressRowHoverTooltip] = useState(false);
+  const suppressRowHoverTooltipRef = useRef(false);
+
+  const updateRowHoverTooltipSuppression = (value: boolean) => {
+    suppressRowHoverTooltipRef.current = value;
+    setSuppressRowHoverTooltip(value);
+  };
 
   const setTooltipPosition = (x: number, y: number) => {
     setHoverTooltip((prev) => (prev ? { ...prev, x, y } : prev));
@@ -617,7 +623,7 @@ const DataTableInner = <T,>(
         className={`dt__wrap ${className ?? ''}`.trim()}
         onMouseLeave={() => {
           setHoverTooltip(null);
-          setSuppressRowHoverTooltip(false);
+          updateRowHoverTooltipSuppression(false);
         }}
       >
         <table
@@ -673,14 +679,14 @@ const DataTableInner = <T,>(
                         return;
                       }
                       label.title = headerTooltipText;
-                      setSuppressRowHoverTooltip(true);
+                      updateRowHoverTooltipSuppression(true);
                       setHoverTooltip(null);
                     }}
                     onMouseLeave={(e) => {
                       const label = e.currentTarget.querySelector('.dt__head-label');
                       if (label instanceof HTMLElement) label.removeAttribute('title');
                       if (!headerTooltipText?.trim()) return;
-                      setSuppressRowHoverTooltip(false);
+                      updateRowHoverTooltipSuppression(false);
                     }}
                   >
                     <div className="dt__head-inner">
@@ -726,11 +732,11 @@ const DataTableInner = <T,>(
                     key={key}
                     className="dt__row dt__row--body"
                     onMouseEnter={(e) => {
-                      if (!rowTooltip || suppressRowHoverTooltip) return;
+                      if (!rowTooltip || suppressRowHoverTooltipRef.current) return;
                       setHoverTooltip({ content: rowTooltip, x: e.clientX + 12, y: e.clientY + 12 });
                     }}
                     onMouseMove={(e) => {
-                      if (!rowTooltip || suppressRowHoverTooltip) return;
+                      if (!rowTooltip || suppressRowHoverTooltipRef.current) return;
                       setHoverTooltip((prev) => (
                         prev
                           ? { ...prev, x: e.clientX + 12, y: e.clientY + 12 }
@@ -753,13 +759,13 @@ const DataTableInner = <T,>(
                                 return;
                               }
                               e.currentTarget.title = cellTooltipText;
-                              setSuppressRowHoverTooltip(true);
+                              updateRowHoverTooltipSuppression(true);
                               setHoverTooltip(null);
                             }}
                             onMouseLeave={(e) => {
                               e.currentTarget.removeAttribute('title');
                               if (!cellTooltipText.trim()) return;
-                              setSuppressRowHoverTooltip(false);
+                              updateRowHoverTooltipSuppression(false);
                             }}
                           >
                             {content}
