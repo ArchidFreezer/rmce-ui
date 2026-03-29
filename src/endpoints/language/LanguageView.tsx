@@ -94,6 +94,7 @@ export default function LanguagesView() {
   const [categories, setCategories] = useState<LanguageCategory[]>([]);
 
   const [query, setQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
@@ -244,6 +245,17 @@ export default function LanguagesView() {
     ].some((v) => String(v ?? '').toLowerCase().includes(s));
   };
 
+  const filteredRows = useMemo(
+    () => rows.filter((r) => !categoryFilter || r.category === categoryFilter),
+    [rows, categoryFilter],
+  );
+
+  const hasActiveFilters = categoryFilter !== '';
+
+  useEffect(() => {
+    setPage(1);
+  }, [categoryFilter]);
+
   /* ------------------------------------------------------------------ */
   /* Actions                                                            */
   /* ------------------------------------------------------------------ */
@@ -387,18 +399,41 @@ export default function LanguagesView() {
 
       {/* Toolbar hidden while form visible */}
       {!showForm && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          <button onClick={startNew}>New Language</button>
-          <DataTableSearchInput
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search languages…"
-            aria-label="Search languages"
-          />
+        <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <button onClick={startNew}>New Language</button>
+            <DataTableSearchInput
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search languages…"
+              aria-label="Search languages"
+            />
 
-          {/* Reset and auto-fit column widths */}
-          <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
-          <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 14 }}>Category</span>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                aria-label="Filter by category"
+                style={{ padding: '6px 8px' }}
+              >
+                <option value="">All</option>
+                {categoryOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </label>
+
+            {hasActiveFilters && (
+              <button type="button" onClick={() => setCategoryFilter('')}>
+                Clear filters
+              </button>
+            )}
+
+            {/* Reset and auto-fit column widths */}
+            <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
+            <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
+          </div>
         </div>
       )}
 
@@ -464,7 +499,7 @@ export default function LanguagesView() {
       {!showForm && (
         <DataTable
           ref={dtRef}
-          rows={rows}
+          rows={filteredRows}
           columns={columns}
           rowId={(r) => r.id}
           initialSort={{ colId: 'name', dir: 'asc' }} //

@@ -141,6 +141,8 @@ export interface DataTableProps<T> {
   zebra?: boolean;
   /** Optional table ARIA label */
   ariaLabel?: string;
+  /** Optional tooltip content shown while hovering a row */
+  rowHoverTooltip?: (row: T, rowIndex: number) => React.ReactNode;
 
   // **** NEW: Column resizing ****
   /** Enable resizers for header columns (default: true) */
@@ -211,6 +213,7 @@ const DataTableInner = <T,>(
     emptyMessage = 'No results.',
     tableMinWidth = 800,
     ariaLabel,
+    rowHoverTooltip,
 
     // resizing
     resizable = true,
@@ -579,9 +582,19 @@ const DataTableInner = <T,>(
   const fromRow = totalRows === 0 ? 0 : (page - 1) * pageSize + 1;
   const toRow = totalRows === 0 ? 0 : Math.min(page * pageSize, totalRows);
 
+  const [hoverTooltip, setHoverTooltip] = useState<{
+    content: React.ReactNode;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  const setTooltipPosition = (x: number, y: number) => {
+    setHoverTooltip((prev) => (prev ? { ...prev, x, y } : prev));
+  };
+
   return (
     <>
-      <div className={`dt__wrap ${className ?? ''}`.trim()}>
+      <div className={`dt__wrap ${className ?? ''}`.trim()} onMouseLeave={() => setHoverTooltip(null)}>
         <table
           className={[
             'dt',
@@ -662,8 +675,21 @@ const DataTableInner = <T,>(
             ) : (
               (mode === 'client' ? pagedRows : sorted).map((row, idx) => {
                 const key = rowId(row, idx);
+                const rowTooltip = rowHoverTooltip ? rowHoverTooltip(row, idx) : null;
                 return (
-                  <tr key={key} className="dt__row dt__row--body">
+                  <tr
+                    key={key}
+                    className="dt__row dt__row--body"
+                    onMouseEnter={(e) => {
+                      if (!rowTooltip) return;
+                      setHoverTooltip({ content: rowTooltip, x: e.clientX + 12, y: e.clientY + 12 });
+                    }}
+                    onMouseMove={(e) => {
+                      if (!rowTooltip) return;
+                      setTooltipPosition(e.clientX + 12, e.clientY + 12);
+                    }}
+                    onMouseLeave={() => setHoverTooltip(null)}
+                  >
                     {columns.map((c) => {
                       const content = c.render ? c.render(row, idx) : String(c.accessor ? c.accessor(row) ?? '' : '');
                       return (
@@ -678,6 +704,16 @@ const DataTableInner = <T,>(
             )}
           </tbody>
         </table>
+
+        {hoverTooltip && (
+          <div
+            className="dt__row-hover-tooltip"
+            style={{ left: hoverTooltip.x, top: hoverTooltip.y }}
+            role="tooltip"
+          >
+            {hoverTooltip.content}
+          </div>
+        )}
       </div>
 
       {showPagination && (

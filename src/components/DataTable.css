@@ -3,6 +3,21 @@
   overflow-x: auto;
 }
 
+.dt__row-hover-tooltip {
+  position: fixed;
+  z-index: 1200;
+  max-width: min(560px, calc(100vw - 24px));
+  max-height: 60vh;
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+
 /* Table */
 .dt {
   background: var(--bg);

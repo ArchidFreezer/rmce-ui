@@ -181,6 +181,7 @@ export default function CultureView() {
   const [skills, setSkills] = useState<Skill[]>([]);
 
   const [query, setQuery] = useState('');
+  const [cultureTypeFilter, setCultureTypeFilter] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
@@ -382,6 +383,17 @@ export default function CultureView() {
     [r.id, r.name, r.description ?? '']
       .some((v) => String(v).toLowerCase().includes(q.toLowerCase()));
 
+  const filteredRows = useMemo(() =>
+    rows.filter((r) => !cultureTypeFilter || r.cultureType === cultureTypeFilter),
+    [rows, cultureTypeFilter],
+  );
+
+  const hasActiveFilters = cultureTypeFilter !== '';
+
+  useEffect(() => {
+    setPage(1);
+  }, [cultureTypeFilter]);
+
   /* ------------------------------------------------------------------ */
   /* Actions                                                           */
   /* ------------------------------------------------------------------ */
@@ -525,16 +537,40 @@ export default function CultureView() {
       <h2>Cultures</h2>
 
       {!showForm && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          <button onClick={startNew}>New Culture</button>
-          <DataTableSearchInput
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search cultures…"
-            aria-label="Search cultures"
-          />
-          <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
-          <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
+        <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <button onClick={startNew}>New Culture</button>
+            <DataTableSearchInput
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search cultures…"
+              aria-label="Search cultures"
+            />
+
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 14 }}>Culture Type</span>
+              <select
+                value={cultureTypeFilter}
+                onChange={(e) => setCultureTypeFilter(e.target.value)}
+                aria-label="Filter by culture type"
+                style={{ padding: '6px 8px' }}
+              >
+                <option value="">All</option>
+                {cultureTypeOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </label>
+
+            {hasActiveFilters && (
+              <button type="button" onClick={() => setCultureTypeFilter('')}>
+                Clear filters
+              </button>
+            )}
+
+            <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
+            <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
+          </div>
         </div>
       )}
 
@@ -716,7 +752,7 @@ export default function CultureView() {
       {!showForm && (
         <DataTable
           ref={dtRef}
-          rows={rows}
+          rows={filteredRows}
           columns={columns}
           rowId={(r) => r.id}
           initialSort={{ colId: 'name', dir: 'asc' }}

@@ -7,11 +7,11 @@ import {
   fetchSkillCategories,
   fetchSkillGroups,
   fetchSpellLists,
-  deleteTrainingPackage,
 } from '../../api';
 
 import {
   DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
+  CheckboxGroup,
   CheckboxInput,
   ChoiceListEditor,
   IdCostListEditor,
@@ -62,6 +62,7 @@ import {
 } from '../../utils';
 
 const prefix = 'PROFESSION_';
+const showDescriptionTooltipStorageKey = 'profession.showDescriptionTooltip';
 
 /* ------------------------------------------------------------------ */
 /* VM types                                                           */
@@ -325,6 +326,16 @@ export default function ProfessionView() {
   const [groups, setGroups] = useState<SkillGroup[]>([]);
 
   const [query, setQuery] = useState('');
+  const [spellUserTypeFilter, setSpellUserTypeFilter] = useState<SpellUserType | ''>('');
+  const [realmFilters, setRealmFilters] = useState<Realm[]>([]);
+  const [showDescriptionTooltip, setShowDescriptionTooltip] = useState<boolean>(() => {
+    try {
+      const raw = localStorage.getItem(showDescriptionTooltipStorageKey);
+      return raw === null ? true : raw === 'true';
+    } catch {
+      return true;
+    }
+  });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
@@ -615,6 +626,28 @@ export default function ProfessionView() {
     ].some(v => String(v ?? '').toLowerCase().includes(s));
   };
 
+  const filteredRows = useMemo(() => {
+    return rows.filter((r) => {
+      const matchesSpellUserType = !spellUserTypeFilter || r.spellUserType === spellUserTypeFilter;
+      const matchesRealms = realmFilters.length === 0 || realmFilters.every((realm) => r.realms.includes(realm));
+      return matchesSpellUserType && matchesRealms;
+    });
+  }, [rows, spellUserTypeFilter, realmFilters]);
+
+  const hasActiveFilters = spellUserTypeFilter !== '' || realmFilters.length > 0;
+
+  useEffect(() => {
+    setPage(1);
+  }, [spellUserTypeFilter, realmFilters]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(showDescriptionTooltipStorageKey, String(showDescriptionTooltip));
+    } catch {
+      // ignore persistence failures
+    }
+  }, [showDescriptionTooltip]);
+
   /* ------------------------------------------------------------------ */
   /* Actions                                                            */
   /* ------------------------------------------------------------------ */
@@ -787,18 +820,67 @@ export default function ProfessionView() {
 
       {/* Toolbar hidden while form visible */}
       {!showForm && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          <button onClick={startNew}>New Profession</button>
-          <DataTableSearchInput
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search professions…"
-            aria-label="Search professions"
-          />
+        <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <button onClick={startNew}>New Profession</button>
+            <DataTableSearchInput
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search professions…"
+              aria-label="Search professions"
+            />
 
-          {/* Reset and auto-fit column widths */}
-          <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
-          <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 14 }}>Spell User Type</span>
+              <select
+                value={spellUserTypeFilter}
+                onChange={(e) => setSpellUserTypeFilter(e.target.value as SpellUserType | '')}
+                aria-label="Filter by spell user type"
+                style={{ padding: '6px 8px' }}
+              >
+                <option value="">All</option>
+                {SPELL_USER_TYPES.map((v) => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
+            </label>
+
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <input
+                type="checkbox"
+                checked={showDescriptionTooltip}
+                onChange={(e) => setShowDescriptionTooltip(e.target.checked)}
+              />
+              <span style={{ fontSize: 14 }}>Show description tooltip</span>
+            </label>
+
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSpellUserTypeFilter('');
+                  setRealmFilters([]);
+                }}
+              >
+                Clear filters
+              </button>
+            )}
+
+            {/* Reset and auto-fit column widths */}
+            <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
+            <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+            <CheckboxGroup<Realm>
+              label="Realms"
+              value={realmFilters}
+              options={realmOptions}
+              onChange={setRealmFilters}
+              inline
+              showSelectAll
+            />
+          </div>
         </div>
       )}
 
@@ -1220,9 +1302,21 @@ export default function ProfessionView() {
       {!showForm && (
         <DataTable
           ref={dtRef}
-          rows={rows}
+          rows={filteredRows}
           columns={columns}
           rowId={(r) => r.id}
+          rowHoverTooltip={(row) => {
+            if (!showDescriptionTooltip) return null;
+            if (!row.description?.trim()) return null;
+            return (
+              <MarkupPreview
+                content={row.description}
+                format="html"
+                emptyHint=""
+                className="preview-html"
+              />
+            );
+          }}
           initialSort={{ colId: 'name', dir: 'asc' }} //
           // search
           searchQuery={query}

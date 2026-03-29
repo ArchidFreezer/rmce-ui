@@ -81,6 +81,10 @@ export default function SpellListView() {
   const hasErrors = Object.values(errors).some(Boolean);
 
   const [query, setQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState<SpellType | ''>('');
+  const [evilFilter, setEvilFilter] = useState('');
+  const [summoningFilter, setSummoningFilter] = useState('');
+  const [realmFilters, setRealmFilters] = useState<Realm[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
@@ -214,6 +218,21 @@ export default function SpellListView() {
       },
     ]
   }, [bookNameById]);
+
+  const filteredRows = useMemo(
+    () => rows.filter((r) => {
+      if (typeFilter && r.type !== typeFilter) return false;
+      if (evilFilter !== '' && r.evil !== (evilFilter === 'true')) return false;
+      if (summoningFilter !== '' && r.summoning !== (summoningFilter === 'true')) return false;
+      if (realmFilters.length > 0 && !realmFilters.every((realm) => r.realms.includes(realm))) return false;
+      return true;
+    }),
+    [rows, typeFilter, evilFilter, summoningFilter, realmFilters]
+  );
+
+  const hasActiveFilters = typeFilter !== '' || evilFilter !== '' || summoningFilter !== '' || realmFilters.length > 0;
+
+  useEffect(() => { setPage(1); }, [typeFilter, evilFilter, summoningFilter, realmFilters]);
 
   const globalFilter = (r: SpellList, q: string) => {
     const s = q.toLowerCase();
@@ -371,18 +390,56 @@ export default function SpellListView() {
 
       {/* Toolbar hidden while form visible */}
       {!showForm && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          <button onClick={startNew}>New Spell List</button>
-          <DataTableSearchInput
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search spell lists…"
-            aria-label="Search spell lists"
+        <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={startNew}>New Spell List</button>
+            <DataTableSearchInput
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search spell lists…"
+              aria-label="Search spell lists"
+            />
+            <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              Type:
+              <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as SpellType | '')}>
+                <option value="">All</option>
+                {SPELL_TYPES.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              Evil:
+              <select value={evilFilter} onChange={(e) => setEvilFilter(e.target.value)}>
+                <option value="">All</option>
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </select>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              Summoning:
+              <select value={summoningFilter} onChange={(e) => setSummoningFilter(e.target.value)}>
+                <option value="">All</option>
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </select>
+            </label>
+            {hasActiveFilters && (
+              <button onClick={() => { setTypeFilter(''); setEvilFilter(''); setSummoningFilter(''); setRealmFilters([]); }}>Clear filters</button>
+            )}
+            {/* Reset and auto-fit column widths */}
+            <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
+            <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
+          </div>
+          <CheckboxGroup<Realm>
+            label="Realms"
+            value={realmFilters}
+            options={SPELL_REALMS}
+            onChange={setRealmFilters}
+            inline
+            showSelectAll
+            columns={4}
           />
-
-          {/* Reset and auto-fit column widths */}
-          <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
-          <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
         </div>
       )}
 
@@ -460,7 +517,7 @@ export default function SpellListView() {
       {!showForm && (
         <DataTable
           ref={dtRef}
-          rows={rows}
+          rows={filteredRows}
           columns={columns}
           rowId={(r) => r.id}
           initialSort={{ colId: 'name', dir: 'asc' }} //
