@@ -91,6 +91,7 @@ import {
 } from '../../utils';
 
 const prefix = 'ANIMAL_';
+const showDescriptionTooltipStorageKey = 'animal.showDescriptionTooltip';
 
 type AttackKind = 'standard' | 'ranged' | 'conditional' | 'group';
 
@@ -458,6 +459,14 @@ export default function AnimalView() {
   const [treasureCodes, setTreasureCodes] = useState<TreasureCode[]>([]);
 
   const [query, setQuery] = useState('');
+  const [showDescriptionTooltip, setShowDescriptionTooltip] = useState<boolean>(() => {
+    try {
+      const raw = localStorage.getItem(showDescriptionTooltipStorageKey);
+      return raw === null ? true : raw === 'true';
+    } catch {
+      return true;
+    }
+  });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [showForm, setShowForm] = useState(false);
@@ -500,6 +509,14 @@ export default function AnimalView() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(showDescriptionTooltipStorageKey, String(showDescriptionTooltip));
+    } catch {
+      // ignore persistence failures
+    }
+  }, [showDescriptionTooltip]);
 
   const armourNameByType = useMemo(() => {
     const map = new Map<string, string>();
@@ -1139,7 +1156,7 @@ export default function AnimalView() {
       <h2>Animals</h2>
 
       {!showForm && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           <button onClick={startNew}>New Animal</button>
           <DataTableSearchInput
             value={query}
@@ -1147,6 +1164,14 @@ export default function AnimalView() {
             placeholder="Search animals…"
             aria-label="Search animals"
           />
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <input
+              type="checkbox"
+              checked={showDescriptionTooltip}
+              onChange={(e) => setShowDescriptionTooltip(e.target.checked)}
+            />
+            <span style={{ fontSize: 14 }}>Show description tooltip</span>
+          </label>
           <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
           <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
         </div>
@@ -1506,6 +1531,18 @@ export default function AnimalView() {
           rows={rows}
           columns={columns}
           rowId={(row) => row.id}
+          rowHoverTooltip={(row) => {
+            if (!showDescriptionTooltip) return null;
+            if (!row.description?.trim()) return null;
+            return (
+              <MarkupPreview
+                content={row.description}
+                format="html"
+                emptyHint=""
+                className="preview-html"
+              />
+            );
+          }}
           initialSort={{ colId: 'name', dir: 'asc' }}
           searchQuery={query}
           globalFilter={globalFilter}
