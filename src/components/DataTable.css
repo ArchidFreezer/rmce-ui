@@ -121,11 +121,19 @@ body.theme-dark .dt--zebra .dt__row--body:nth-child(even) .dt__cell--body {
 
 /* The label text (kept separate so handle doesn't block clicks) */
 .dt__head-label {
-  display: inline-block;
+  display: block;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: normal;
+  white-space: nowrap;
+}
+
+.dt__cell-content {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Resize handle (right edge of header cell) */

@@ -179,6 +179,21 @@ const DataTableInner = <T,>(
   ref: React.Ref<DataTableHandle | undefined>
 ) => {
 
+  const nodeToPlainText = (node: React.ReactNode): string => {
+    if (node === null || node === undefined || typeof node === 'boolean') return '';
+    if (typeof node === 'string' || typeof node === 'number' || typeof node === 'bigint') {
+      return String(node);
+    }
+    if (Array.isArray(node)) {
+      return node.map((child) => nodeToPlainText(child)).join(' ').trim();
+    }
+    if (React.isValidElement(node)) {
+      const element = node as React.ReactElement<{ children?: React.ReactNode }>;
+      return nodeToPlainText(element.props?.children);
+    }
+    return '';
+  };
+
   const {
     rows,
     columns,
@@ -406,6 +421,9 @@ const DataTableInner = <T,>(
     return Math.ceil(cell.scrollWidth);
   };
 
+  const isElementTruncated = (el: HTMLElement) =>
+    el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight;
+
   // Find column index by id
   const findColIndex = (id: string) => columns.findIndex(c => c.id === id);
 
@@ -587,6 +605,13 @@ const DataTableInner = <T,>(
     x: number;
     y: number;
   } | null>(null);
+  const [suppressRowHoverTooltip, setSuppressRowHoverTooltip] = useState(false);
+  const suppressRowHoverTooltipRef = useRef(false);
+
+  const updateRowHoverTooltipSuppression = (value: boolean) => {
+    suppressRowHoverTooltipRef.current = value;
+    setSuppressRowHoverTooltip(value);
+  };
 
   const setTooltipPosition = (x: number, y: number) => {
     setHoverTooltip((prev) => (prev ? { ...prev, x, y } : prev));
@@ -594,7 +619,13 @@ const DataTableInner = <T,>(
 
   return (
     <>
-      <div className={`dt__wrap ${className ?? ''}`.trim()} onMouseLeave={() => setHoverTooltip(null)}>
+      <div
+        className={`dt__wrap ${className ?? ''}`.trim()}
+        onMouseLeave={() => {
+          setHoverTooltip(null);
+          updateRowHoverTooltipSuppression(false);
+        }}
+      >
         <table
           className={[
             'dt',
@@ -625,6 +656,8 @@ const DataTableInner = <T,>(
                 const active = sortState?.colId === c.id;
                 const arrow = active ? (sortState?.dir === 'asc' ? ' ▲' : ' ▼') : '';
                 const colIsResizable = (c.resizable ?? resizable) && columns.length > 1; // don't resize if single col
+                const headerText = nodeToPlainText(c.header);
+                const headerTooltipText = c.headerTitle ?? headerText;
                 return (
                   <th
                     key={c.id}
@@ -636,12 +669,30 @@ const DataTableInner = <T,>(
                       active ? 'dt__cell--sorted' : '',
                       alignClass(c.align),
                     ].join(' ').trim()}
-                    title={c.headerTitle ?? (typeof c.header === 'string' ? c.header : undefined)}
                     onClick={(ev) => handleHeaderClick(c, ev)}
                     scope="col"
+                    onMouseEnter={(e) => {
+                      if (!headerTooltipText?.trim()) return;
+                      const label = e.currentTarget.querySelector('.dt__head-label');
+                      if (!(label instanceof HTMLElement) || !isElementTruncated(label)) {
+                        label?.removeAttribute('title');
+                        return;
+                      }
+                      label.title = headerTooltipText;
+                      updateRowHoverTooltipSuppression(true);
+                      setHoverTooltip(null);
+                    }}
+                    onMouseLeave={(e) => {
+                      const label = e.currentTarget.querySelector('.dt__head-label');
+                      if (label instanceof HTMLElement) label.removeAttribute('title');
+                      if (!headerTooltipText?.trim()) return;
+                      updateRowHoverTooltipSuppression(false);
+                    }}
                   >
                     <div className="dt__head-inner">
-                      <span className="dt__head-label">{c.header}{sortable ? arrow : null}</span>
+                      <span className="dt__head-label">
+                        {c.header}{sortable ? arrow : null}
+                      </span>
 
                       {/* **** NEW: Resize handle **** */}
                       {colIsResizable && (
@@ -681,20 +732,44 @@ const DataTableInner = <T,>(
                     key={key}
                     className="dt__row dt__row--body"
                     onMouseEnter={(e) => {
-                      if (!rowTooltip) return;
+                      if (!rowTooltip || suppressRowHoverTooltipRef.current) return;
                       setHoverTooltip({ content: rowTooltip, x: e.clientX + 12, y: e.clientY + 12 });
                     }}
                     onMouseMove={(e) => {
-                      if (!rowTooltip) return;
-                      setTooltipPosition(e.clientX + 12, e.clientY + 12);
+                      if (!rowTooltip || suppressRowHoverTooltipRef.current) return;
+                      setHoverTooltip((prev) => (
+                        prev
+                          ? { ...prev, x: e.clientX + 12, y: e.clientY + 12 }
+                          : { content: rowTooltip, x: e.clientX + 12, y: e.clientY + 12 }
+                      ));
                     }}
                     onMouseLeave={() => setHoverTooltip(null)}
                   >
                     {columns.map((c) => {
                       const content = c.render ? c.render(row, idx) : String(c.accessor ? c.accessor(row) ?? '' : '');
+                      const cellTooltipText = nodeToPlainText(content);
                       return (
                         <td className={['dt__cell', 'dt__cell--body', alignClass(c.align)].join(' ')} key={c.id} style={{ verticalAlign: 'top' }}>
-                          {content}
+                          <div
+                            className="dt__cell-content"
+                            onMouseEnter={(e) => {
+                              if (!cellTooltipText.trim()) return;
+                              if (!isElementTruncated(e.currentTarget)) {
+                                e.currentTarget.removeAttribute('title');
+                                return;
+                              }
+                              e.currentTarget.title = cellTooltipText;
+                              updateRowHoverTooltipSuppression(true);
+                              setHoverTooltip(null);
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.removeAttribute('title');
+                              if (!cellTooltipText.trim()) return;
+                              updateRowHoverTooltipSuppression(false);
+                            }}
+                          >
+                            {content}
+                          </div>
                         </td>
                       );
                     })}
