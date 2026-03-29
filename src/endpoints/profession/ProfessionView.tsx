@@ -62,6 +62,7 @@ import {
 } from '../../utils';
 
 const prefix = 'PROFESSION_';
+const showDescriptionTooltipStorageKey = 'profession.showDescriptionTooltip';
 
 /* ------------------------------------------------------------------ */
 /* VM types                                                           */
@@ -327,6 +328,14 @@ export default function ProfessionView() {
   const [query, setQuery] = useState('');
   const [spellUserTypeFilter, setSpellUserTypeFilter] = useState<SpellUserType | ''>('');
   const [realmFilters, setRealmFilters] = useState<Realm[]>([]);
+  const [showDescriptionTooltip, setShowDescriptionTooltip] = useState<boolean>(() => {
+    try {
+      const raw = localStorage.getItem(showDescriptionTooltipStorageKey);
+      return raw === null ? true : raw === 'true';
+    } catch {
+      return true;
+    }
+  });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
@@ -631,6 +640,14 @@ export default function ProfessionView() {
     setPage(1);
   }, [spellUserTypeFilter, realmFilters]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(showDescriptionTooltipStorageKey, String(showDescriptionTooltip));
+    } catch {
+      // ignore persistence failures
+    }
+  }, [showDescriptionTooltip]);
+
   /* ------------------------------------------------------------------ */
   /* Actions                                                            */
   /* ------------------------------------------------------------------ */
@@ -826,6 +843,15 @@ export default function ProfessionView() {
                   <option key={v} value={v}>{v}</option>
                 ))}
               </select>
+            </label>
+
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <input
+                type="checkbox"
+                checked={showDescriptionTooltip}
+                onChange={(e) => setShowDescriptionTooltip(e.target.checked)}
+              />
+              <span style={{ fontSize: 14 }}>Show description tooltip</span>
             </label>
 
             {hasActiveFilters && (
@@ -1279,6 +1305,18 @@ export default function ProfessionView() {
           rows={filteredRows}
           columns={columns}
           rowId={(r) => r.id}
+          rowHoverTooltip={(row) => {
+            if (!showDescriptionTooltip) return null;
+            if (!row.description?.trim()) return null;
+            return (
+              <MarkupPreview
+                content={row.description}
+                format="html"
+                emptyHint=""
+                className="preview-html"
+              />
+            );
+          }}
           initialSort={{ colId: 'name', dir: 'asc' }} //
           // search
           searchQuery={query}
