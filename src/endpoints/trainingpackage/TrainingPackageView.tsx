@@ -14,6 +14,7 @@ import {
 
 import {
   DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
+  CheckboxGroup,
   CheckboxInput,
   ChoiceListEditor,
   IdListEditor,
@@ -502,6 +503,8 @@ export default function TrainingPackagesView() {
   const [languages, setLanguages] = useState<Language[]>([]);
 
   const [query, setQuery] = useState('');
+  const [lifestyleFilter, setLifestyleFilter] = useState('');
+  const [raceFilters, setRaceFilters] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
@@ -534,7 +537,10 @@ export default function TrainingPackagesView() {
           fetchSpellLists(),
           fetchLanguages(),
         ]);
-        setRows(tp);
+        setRows(tp.map((pkg) => ({
+          ...pkg,
+          races: Array.isArray(pkg.races) ? pkg.races : [],
+        })));
         setBooks(b);
         setRaces(r);
         setSkills(s);
@@ -575,6 +581,12 @@ export default function TrainingPackagesView() {
     () => races.map((r) => ({ value: r.id, label: r.name })),
     [races],
   );
+
+  const raceNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const r of races) m.set(r.id, r.name);
+    return m;
+  }, [races]);
 
   const skillOptions = useMemo(
     () => skills.map((s) => ({ value: s.id, label: s.name })),
@@ -1006,6 +1018,8 @@ export default function TrainingPackagesView() {
   /* Table                                                             */
   /* ------------------------------------------------------------------ */
 
+  const getRowRaces = (r: TrainingPackage): string[] => (Array.isArray(r.races) ? r.races : []);
+
   const columns: ColumnDef<TrainingPackage>[] = [
     { id: 'id', header: 'ID', accessor: (r) => r.id, minWidth: 260 },
     { id: 'name', header: 'Name', accessor: (r) => r.name, minWidth: 180 },
@@ -1019,6 +1033,22 @@ export default function TrainingPackagesView() {
         const label = bookNameById.get(r.book);
         return label ? label : r.book;
       },
+    },
+    {
+      id: 'lifestyle',
+      header: 'Lifestyle',
+      accessor: (r) => Number(r.lifestyle),
+      sortType: 'number',
+      minWidth: 110,
+      render: (r) => (r.lifestyle ? 'Yes' : 'No'),
+    },
+    {
+      id: 'races',
+      header: 'Races',
+      accessor: (r) => getRowRaces(r).length,
+      sortType: 'number',
+      minWidth: 280,
+      render: (r) => getRowRaces(r).map((id) => raceNameById.get(id) ?? id).join(', '),
     },
     {
       id: 'actions',
@@ -1038,9 +1068,32 @@ export default function TrainingPackagesView() {
     },
   ];
 
-  const globalFilter = (r: TrainingPackage, q: string) =>
-    [r.id, r.name, r.description ?? '']
+  const filteredRows = useMemo(
+    () => rows.filter((r) => {
+      const rowRaces = getRowRaces(r);
+      if (lifestyleFilter !== '' && r.lifestyle !== (lifestyleFilter === 'true')) return false;
+      if (raceFilters.length > 0 && !raceFilters.every((raceId) => rowRaces.includes(raceId))) return false;
+      return true;
+    }),
+    [rows, lifestyleFilter, raceFilters]
+  );
+
+  const hasActiveFilters = lifestyleFilter !== '' || raceFilters.length > 0;
+
+  useEffect(() => { setPage(1); }, [lifestyleFilter, raceFilters]);
+
+  const globalFilter = (r: TrainingPackage, q: string) => {
+    const rowRaces = getRowRaces(r);
+    return [
+      r.id,
+      r.name,
+      r.description ?? '',
+      r.lifestyle ? 'yes' : 'no',
+      rowRaces.join(','),
+      rowRaces.map((id) => raceNameById.get(id) ?? id).join(','),
+    ]
       .some((v) => String(v).toLowerCase().includes(q.toLowerCase()));
+  };
 
   /* ------------------------------------------------------------------ */
   /* Actions                                                           */
@@ -1204,18 +1257,41 @@ export default function TrainingPackagesView() {
       <h2>Training Packages</h2>
 
       {!showForm && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          <button onClick={startNew}>New Training Package</button>
-          <DataTableSearchInput
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search training packages…"
-            aria-label="Search training packages"
-          />
+        <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={startNew}>New Training Package</button>
+            <DataTableSearchInput
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search training packages…"
+              aria-label="Search training packages"
+            />
+            <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              Lifestyle:
+              <select value={lifestyleFilter} onChange={(e) => setLifestyleFilter(e.target.value)}>
+                <option value="">All</option>
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </select>
+            </label>
+            {hasActiveFilters && (
+              <button onClick={() => { setLifestyleFilter(''); setRaceFilters([]); }}>Clear filters</button>
+            )}
 
-          {/* Reset and auto-fit column widths */}
-          <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
-          <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
+            {/* Reset and auto-fit column widths */}
+            <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
+            <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
+          </div>
+
+          <CheckboxGroup<string>
+            label="Races"
+            value={raceFilters}
+            options={raceOptions}
+            onChange={setRaceFilters}
+            inline
+            showSelectAll
+            columns={4}
+          />
         </div>
       )}
 
@@ -1667,7 +1743,7 @@ export default function TrainingPackagesView() {
       {!showForm && (
         <DataTable
           ref={dtRef}
-          rows={rows}
+          rows={filteredRows}
           columns={columns}
           rowId={(r) => r.id}
           initialSort={{ colId: 'name', dir: 'asc' }} //
