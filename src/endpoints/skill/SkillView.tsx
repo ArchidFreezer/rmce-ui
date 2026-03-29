@@ -37,6 +37,7 @@ import {
 
 
 const prefix = 'SKILL_';
+const showDescriptionTooltipStorageKey = 'skill.showDescriptionTooltip';
 
 /* ------------------------------------------------------------------ */
 /* VM types                                                           */
@@ -189,6 +190,14 @@ export default function SkillView() {
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [actionFilter, setActionFilter] = useState<SkillActionType | ''>('');
+  const [showDescriptionTooltip, setShowDescriptionTooltip] = useState<boolean>(() => {
+    try {
+      const raw = localStorage.getItem(showDescriptionTooltipStorageKey);
+      return raw === null ? true : raw === 'true';
+    } catch {
+      return true;
+    }
+  });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
@@ -419,6 +428,14 @@ export default function SkillView() {
     setPage(1);
   }, [categoryFilter, actionFilter]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(showDescriptionTooltipStorageKey, String(showDescriptionTooltip));
+    } catch {
+      // ignore persistence failures
+    }
+  }, [showDescriptionTooltip]);
+
   /* ------------------------------------------------------------------ */
   /* Actions                                                            */
   /* ------------------------------------------------------------------ */
@@ -615,6 +632,15 @@ export default function SkillView() {
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
+            </label>
+
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <input
+                type="checkbox"
+                checked={showDescriptionTooltip}
+                onChange={(e) => setShowDescriptionTooltip(e.target.checked)}
+              />
+              <span style={{ fontSize: 14 }}>Show description tooltip</span>
             </label>
 
             {hasActiveFilters && (
@@ -918,6 +944,18 @@ export default function SkillView() {
           rows={filteredRows}
           columns={columns}
           rowId={(r) => r.id}
+          rowHoverTooltip={(row) => {
+            if (!showDescriptionTooltip) return null;
+            if (!row.description?.trim()) return null;
+            return (
+              <MarkupPreview
+                content={row.description}
+                format="html"
+                emptyHint=""
+                className="preview-html"
+              />
+            );
+          }}
           initialSort={{ colId: 'name', dir: 'asc' }} //
           // search
           searchQuery={query}
