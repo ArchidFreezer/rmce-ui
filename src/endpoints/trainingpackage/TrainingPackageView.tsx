@@ -1765,6 +1765,17 @@ export default function TrainingPackagesView() {
           rows={filteredRows}
           columns={columns}
           rowId={(r) => r.id}
+          rowHoverTooltip={(row) => {
+            if (!row.description?.trim()) return null;
+            return (
+              <MarkupPreview
+                content={row.description}
+                format="html"
+                emptyHint=""
+                className="preview-html"
+              />
+            );
+          }}
           initialSort={{ colId: 'name', dir: 'asc' }} //
           // search
           searchQuery={query}
