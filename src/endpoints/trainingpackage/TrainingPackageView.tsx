@@ -588,6 +588,25 @@ export default function TrainingPackagesView() {
     return m;
   }, [races]);
 
+  const raceFilterOptions = useMemo(() => {
+    const ids = new Set<string>();
+    for (const row of rows) {
+      if (!Array.isArray(row.races)) continue;
+      for (const raceId of row.races) {
+        if (raceId) ids.add(raceId);
+      }
+    }
+
+    return Array.from(ids)
+      .map((id) => ({ value: id, label: raceNameById.get(id) ?? id }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [rows, raceNameById]);
+
+  useEffect(() => {
+    const allowed = new Set(raceFilterOptions.map((o) => o.value));
+    setRaceFilters((prev) => prev.filter((id) => allowed.has(id)));
+  }, [raceFilterOptions]);
+
   const skillOptions = useMemo(
     () => skills.map((s) => ({ value: s.id, label: s.name })),
     [skills],
@@ -1286,7 +1305,7 @@ export default function TrainingPackagesView() {
           <CheckboxGroup<string>
             label="Races"
             value={raceFilters}
-            options={raceOptions}
+            options={raceFilterOptions}
             onChange={setRaceFilters}
             inline
             showSelectAll
