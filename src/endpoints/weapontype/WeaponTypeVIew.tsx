@@ -35,6 +35,7 @@ import {
 } from '../../utils';
 
 const prefix = 'WEAPONTYPE_';
+const showNotesTooltipStorageKey = 'weapontype.showNotesTooltip';
 
 /* ------------------------------------------------------------------ */
 /* VM types                                                           */
@@ -185,6 +186,15 @@ export default function WeaponTypeView() {
   const [attackTables, setAttackTables] = useState<AttackTable[]>([]);
 
   const [query, setQuery] = useState('');
+  const [skillFilter, setSkillFilter] = useState('');
+  const [showNotesTooltip, setShowNotesTooltip] = useState<boolean>(() => {
+    try {
+      const raw = localStorage.getItem(showNotesTooltipStorageKey);
+      return raw === null ? true : raw === 'true';
+    } catch {
+      return true;
+    }
+  });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
@@ -407,6 +417,25 @@ export default function WeaponTypeView() {
     ].some(v => String(v ?? '').toLowerCase().includes(s));
   };
 
+  const filteredRows = useMemo(
+    () => rows.filter((r) => !skillFilter || r.skill === skillFilter),
+    [rows, skillFilter]
+  );
+
+  const hasActiveFilters = skillFilter !== '';
+
+  useEffect(() => {
+    setPage(1);
+  }, [skillFilter]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(showNotesTooltipStorageKey, String(showNotesTooltip));
+    } catch {
+      // ignore persistence failures
+    }
+  }, [showNotesTooltip]);
+
   /* ------------------------------------------------------------------ */
   /* Actions                                                            */
   /* ------------------------------------------------------------------ */
@@ -583,18 +612,48 @@ export default function WeaponTypeView() {
 
       {/* Toolbar hidden while form visible */}
       {!showForm && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          <button onClick={startNew}>New Weapon Type</button>
-          <DataTableSearchInput
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search weapon types…"
-            aria-label="Search weapon types"
-          />
+        <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <button onClick={startNew}>New Weapon Type</button>
+            <DataTableSearchInput
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search weapon types…"
+              aria-label="Search weapon types"
+            />
 
-          {/* Reset and auto-fit column widths */}
-          <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
-          <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 14 }}>Skill</span>
+              <select
+                value={skillFilter}
+                onChange={(e) => setSkillFilter(e.target.value)}
+                aria-label="Filter by skill"
+                style={{ padding: '6px 8px' }}
+              >
+                <option value="">All</option>
+                {weaponSkillOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </label>
+
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <input
+                type="checkbox"
+                checked={showNotesTooltip}
+                onChange={(e) => setShowNotesTooltip(e.target.checked)}
+              />
+              <span style={{ fontSize: 14 }}>Show notes tooltip</span>
+            </label>
+
+            {hasActiveFilters && (
+              <button type="button" onClick={() => setSkillFilter('')}>Clear filters</button>
+            )}
+
+            {/* Reset and auto-fit column widths */}
+            <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
+            <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
+          </div>
         </div>
       )}
 
@@ -835,9 +894,21 @@ export default function WeaponTypeView() {
       {!showForm && (
         <DataTable
           ref={dtRef}
-          rows={rows}
+          rows={filteredRows}
           columns={columns}
           rowId={(r) => r.id}
+          rowHoverTooltip={(row) => {
+            if (!showNotesTooltip) return null;
+            if (!row.notes?.trim()) return null;
+            return (
+              <MarkupPreview
+                content={row.notes}
+                format="html"
+                emptyHint=""
+                className="preview-html"
+              />
+            );
+          }}
           initialSort={{ colId: 'name', dir: 'asc' }} //
           // search
           searchQuery={query}
