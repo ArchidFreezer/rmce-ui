@@ -59,6 +59,7 @@ import {
 
 
 const prefix = 'TRAININGPACKAGE_';
+const showDescriptionTooltipStorageKey = 'trainingPackages.showDescriptionTooltip';
 
 /* ------------------------------------------------------------------ */
 /* VM types                                                           */
@@ -505,6 +506,14 @@ export default function TrainingPackagesView() {
   const [query, setQuery] = useState('');
   const [lifestyleFilter, setLifestyleFilter] = useState('');
   const [raceFilters, setRaceFilters] = useState<string[]>([]);
+  const [showDescriptionTooltip, setShowDescriptionTooltip] = useState<boolean>(() => {
+    try {
+      const raw = localStorage.getItem(showDescriptionTooltipStorageKey);
+      return raw === null ? true : raw === 'true';
+    } catch {
+      return true;
+    }
+  });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
@@ -606,6 +615,14 @@ export default function TrainingPackagesView() {
     const allowed = new Set(raceFilterOptions.map((o) => o.value));
     setRaceFilters((prev) => prev.filter((id) => allowed.has(id)));
   }, [raceFilterOptions]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(showDescriptionTooltipStorageKey, String(showDescriptionTooltip));
+    } catch {
+      // ignore persistence failures (e.g. private mode)
+    }
+  }, [showDescriptionTooltip]);
 
   const skillOptions = useMemo(
     () => skills.map((s) => ({ value: s.id, label: s.name })),
@@ -1293,6 +1310,14 @@ export default function TrainingPackagesView() {
                 <option value="false">No</option>
               </select>
             </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input
+                type="checkbox"
+                checked={showDescriptionTooltip}
+                onChange={(e) => setShowDescriptionTooltip(e.target.checked)}
+              />
+              Show description tooltip
+            </label>
             {hasActiveFilters && (
               <button onClick={() => { setLifestyleFilter(''); setRaceFilters([]); }}>Clear filters</button>
             )}
@@ -1766,6 +1791,7 @@ export default function TrainingPackagesView() {
           columns={columns}
           rowId={(r) => r.id}
           rowHoverTooltip={(row) => {
+            if (!showDescriptionTooltip) return null;
             if (!row.description?.trim()) return null;
             return (
               <MarkupPreview
