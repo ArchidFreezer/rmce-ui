@@ -7,7 +7,6 @@ import {
   fetchSkillCategories,
   fetchSkillGroups,
   fetchSpellLists,
-  deleteTrainingPackage,
 } from '../../api';
 
 import {
@@ -621,7 +620,7 @@ export default function ProfessionView() {
   const filteredRows = useMemo(() => {
     return rows.filter((r) => {
       const matchesSpellUserType = !spellUserTypeFilter || r.spellUserType === spellUserTypeFilter;
-      const matchesRealms = realmFilters.length === 0 || realmFilters.some((realm) => r.realms.includes(realm));
+      const matchesRealms = realmFilters.length === 0 || realmFilters.every((realm) => r.realms.includes(realm));
       return matchesSpellUserType && matchesRealms;
     });
   }, [rows, spellUserTypeFilter, realmFilters]);
