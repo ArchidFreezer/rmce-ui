@@ -75,7 +75,6 @@ type BackgroundOption = {
 type StatRoll = {
   slot: number;
   temporary: string;
-  potentialRoll: string;
   potential: number | null;
   assignedStat: Stat | '';
 };
@@ -84,7 +83,6 @@ function createEmptyStatRolls(): StatRoll[] {
   return STATS.map((_, index) => ({
     slot: index + 1,
     temporary: '',
-    potentialRoll: '',
     potential: null,
     assignedStat: '',
   }));
@@ -561,28 +559,11 @@ export default function CharacterCreationView() {
     }))));
   };
 
-  const generateAllPotentialRolls = () => {
-    if (statRollsLocked) return;
-    setStatRolls((prev) => prev.map((roll) => ({
-      ...roll,
-      potentialRoll: String(randomD100()),
-      potential: null,
-    })));
-  };
-
   const onChangeTemporaryRoll = (slot: number, value: string) => {
     if (statRollsLocked) return;
     const next = sanitizeUnsignedInt(value);
     setStatRolls((prev) => prev.map((roll) =>
       roll.slot === slot ? { ...roll, temporary: next, potential: null } : roll
-    ));
-  };
-
-  const onChangePotentialRoll = (slot: number, value: string) => {
-    if (statRollsLocked) return;
-    const next = sanitizeUnsignedInt(value);
-    setStatRolls((prev) => prev.map((roll) =>
-      roll.slot === slot ? { ...roll, potentialRoll: next, potential: null } : roll
     ));
   };
 
@@ -602,24 +583,12 @@ export default function CharacterCreationView() {
         }
       }
 
-      if (roll.potentialRoll) {
-        if (!isValidUnsignedInt(roll.potentialRoll)) {
-          toast({ variant: 'warning', title: 'Invalid potential roll', description: `Roll ${roll.slot} potential roll must be an integer between 1 and 100.` });
-          return;
-        }
-        const value = Number(roll.potentialRoll);
-        if (value < 1 || value > 100) {
-          toast({ variant: 'warning', title: 'Invalid potential roll', description: `Roll ${roll.slot} potential roll must be between 1 and 100.` });
-          return;
-        }
-      }
     }
 
     setGeneratingStats(true);
     try {
       const payload = statRolls.map((roll) => ({
         temporary: roll.temporary ? Number(roll.temporary) : -1,
-        potentialRoll: roll.potentialRoll ? Number(roll.potentialRoll) : -1,
       }));
 
       const response = await getStatRollPotentials(payload);
@@ -631,7 +600,6 @@ export default function CharacterCreationView() {
       const next = response.map((result, index) => ({
         slot: index + 1,
         temporary: String(result.temporary),
-        potentialRoll: statRolls[index]?.potentialRoll ?? '',
         potential: result.potential,
         assignedStat: statRolls[index]?.assignedStat ?? '',
       } satisfies StatRoll));
@@ -879,7 +847,6 @@ export default function CharacterCreationView() {
             <section style={{ display: 'grid', gap: 10 }}>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button type="button" onClick={generateAllTemporary}>Generate 10 Temporary Rolls (d100)</button>
-                <button type="button" onClick={generateAllPotentialRolls} disabled={statRollsLocked}>Generate 10 Potential roll values (d100)</button>
                 <button type="button" onClick={getPotentials} disabled={statRollsLocked || generatingStats}>Get potentials</button>
               </div>
 
@@ -896,20 +863,12 @@ export default function CharacterCreationView() {
                 );
                 return (
                   <div key={roll.slot} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, background: isPrime ? 'var(--primary-weak)' : 'transparent' }}>
-                    <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'minmax(180px, 1fr) minmax(180px, 1fr) 160px minmax(220px, 1fr)', alignItems: 'end' }}>
+                    <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'minmax(180px, 1fr) 160px minmax(220px, 1fr)', alignItems: 'end' }}>
                       <LabeledInput
                         label={`Roll ${roll.slot} Temporary`}
                         value={roll.temporary}
                         onChange={(v) => onChangeTemporaryRoll(roll.slot, v)}
                         helperText="25-100"
-                        disabled={statRollsLocked}
-                      />
-
-                      <LabeledInput
-                        label="Potential Roll (d100)"
-                        value={roll.potentialRoll}
-                        onChange={(v) => onChangePotentialRoll(roll.slot, v)}
-                        helperText="1-100"
                         disabled={statRollsLocked}
                       />
 
