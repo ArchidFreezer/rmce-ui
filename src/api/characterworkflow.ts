@@ -10,22 +10,22 @@ export type CharacterContext = {
 };
 
 export type PotentialStatRequest = CharacterContext & {
-  stat: Stat;
   temporary?: number | undefined;
   autoGenerate?: boolean | undefined;
+  stat?: Stat | undefined;
 };
 
 export type PotentialStatResult = {
-  stat: Stat;
   temporary: number;
   potential: number;
+  stat?: Stat | undefined;
 };
 
 export type GeneratePotentialStatsRequest = CharacterContext & {
   stats: Array<{
-    stat: Stat;
     temporary?: number | undefined;
     autoGenerate?: boolean | undefined;
+    stat?: Stat | undefined;
   }>;
 };
 
@@ -75,9 +75,9 @@ export async function generatePotentialStat(
     realms: payload.realms,
     stats: [
       {
-        stat: payload.stat,
         temporary: payload.temporary,
         autoGenerate: payload.autoGenerate,
+        stat: payload.stat,
       },
     ],
   } satisfies GeneratePotentialStatsRequest);

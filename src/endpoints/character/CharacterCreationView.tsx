@@ -73,29 +73,48 @@ type BackgroundOption = {
   source: 'Generic' | 'Race' | 'Profession';
 };
 
-function makeStatStringMap(seed = ''): Record<Stat, string> {
-  return STATS.reduce((acc, s) => {
-    acc[s] = seed;
-    return acc;
-  }, {} as Record<Stat, string>);
-}
+type StatRoll = {
+  slot: number;
+  temporary: string;
+  potential: number | null;
+  autoPotential: boolean;
+  assignedStat: Stat | '';
+};
 
-function makeStatBooleanMap(seed = false): Record<Stat, boolean> {
-  return STATS.reduce((acc, s) => {
-    acc[s] = seed;
-    return acc;
-  }, {} as Record<Stat, boolean>);
-}
-
-function makeStatPotentialMap(seed: number | null = null): Record<Stat, number | null> {
-  return STATS.reduce((acc, s) => {
-    acc[s] = seed;
-    return acc;
-  }, {} as Record<Stat, number | null>);
+function createEmptyStatRolls(): StatRoll[] {
+  return STATS.map((_, index) => ({
+    slot: index + 1,
+    temporary: '',
+    potential: null,
+    autoPotential: false,
+    assignedStat: '',
+  }));
 }
 
 function randomD100(): number {
   return Math.floor(Math.random() * 100) + 1;
+}
+
+function rollTemporaryValue(): number {
+  let value = randomD100();
+  while (value < 25) {
+    value = randomD100();
+  }
+  return value;
+}
+
+function sortRollsDescending(rolls: StatRoll[]): StatRoll[] {
+  return [...rolls].sort((a, b) => {
+    const aValue = Number(a.temporary);
+    const bValue = Number(b.temporary);
+    const aIsValid = Number.isFinite(aValue);
+    const bIsValid = Number.isFinite(bValue);
+
+    if (!aIsValid && !bIsValid) return a.slot - b.slot;
+    if (!aIsValid) return 1;
+    if (!bIsValid) return -1;
+    return bValue - aValue || a.slot - b.slot;
+  });
 }
 
 function uniqStrings(values: string[]): string[] {
@@ -138,9 +157,7 @@ export default function CharacterCreationView() {
   const [professionId, setProfessionId] = useState('');
   const [selectedRealms, setSelectedRealms] = useState<Realm[]>([]);
 
-  const [temporaryStats, setTemporaryStats] = useState<Record<Stat, string>>(() => makeStatStringMap(''));
-  const [potentialStats, setPotentialStats] = useState<Record<Stat, number | null>>(() => makeStatPotentialMap(null));
-  const [autoPotentialForStat, setAutoPotentialForStat] = useState<Record<Stat, boolean>>(() => makeStatBooleanMap(false));
+  const [statRolls, setStatRolls] = useState<StatRoll[]>(() => createEmptyStatRolls());
   const [generatingStats, setGeneratingStats] = useState(false);
 
   const [raceCategorySelections, setRaceCategorySelections] = useState<string[][]>([]);
@@ -394,17 +411,34 @@ export default function CharacterCreationView() {
   };
 
   const validateStats = (): string | undefined => {
-    for (const stat of STATS) {
-      const temp = temporaryStats[stat];
+    const assignedStats: Stat[] = [];
+
+    for (const roll of statRolls) {
+      const temp = roll.temporary;
       if (!isValidUnsignedInt(temp)) {
-        return `Temporary value for ${stat} must be an integer between 1 and 100.`;
+        return `Temporary value for roll ${roll.slot} must be an integer between 1 and 100.`;
       }
       const num = Number(temp);
       if (num < 1 || num > 100) {
-        return `Temporary value for ${stat} must be between 1 and 100.`;
+        return `Temporary value for roll ${roll.slot} must be between 1 and 100.`;
       }
-      if (potentialStats[stat] == null) {
-        return `Potential value for ${stat} has not been generated yet.`;
+      if (roll.potential == null) {
+        return `Potential value for roll ${roll.slot} has not been generated yet.`;
+      }
+      if (!roll.assignedStat) {
+        return `Assign roll ${roll.slot} to a stat.`;
+      }
+      assignedStats.push(roll.assignedStat);
+    }
+
+    const uniqueAssigned = new Set(assignedStats);
+    if (uniqueAssigned.size !== STATS.length) {
+      return 'Each stat must receive exactly one generated roll.';
+    }
+
+    for (const stat of STATS) {
+      if (!uniqueAssigned.has(stat)) {
+        return `No generated roll has been assigned to ${stat}.`;
       }
     }
     return undefined;
@@ -483,8 +517,7 @@ export default function CharacterCreationView() {
     cultureId,
     professionId,
     selectedRealms,
-    temporaryStats,
-    potentialStats,
+    statRolls,
     raceCategorySelections,
     professionSkillSelections,
     backgroundSelections,
@@ -515,36 +548,37 @@ export default function CharacterCreationView() {
   };
 
   const generateAllTemporary = () => {
-    setTemporaryStats((prev) => {
-      const next = { ...prev };
-      for (const stat of STATS) {
-        next[stat] = String(randomD100());
-      }
-      return next;
-    });
-    setPotentialStats(makeStatPotentialMap(null));
+    setStatRolls((prev) => sortRollsDescending(prev.map((roll) => ({
+      ...roll,
+      temporary: String(rollTemporaryValue()),
+      potential: null,
+    }))));
   };
 
-  const onChangeTemporaryStat = (stat: Stat, value: string) => {
+  const onChangeTemporaryRoll = (slot: number, value: string) => {
     const next = sanitizeUnsignedInt(value);
-    setTemporaryStats((prev) => ({ ...prev, [stat]: next }));
-    setPotentialStats((prev) => ({ ...prev, [stat]: null }));
+    setStatRolls((prev) => prev.map((roll) =>
+      roll.slot === slot ? { ...roll, temporary: next, potential: null } : roll
+    ));
   };
 
-  const generatePotentialForSingle = async (stat: Stat) => {
+  const generatePotentialForSingle = async (slot: number) => {
     if (!raceId || !cultureId || !professionId || selectedRealms.length === 0) return;
 
-    const autoGenerate = autoPotentialForStat[stat];
-    const temp = temporaryStats[stat];
+    const roll = statRolls.find((entry) => entry.slot === slot);
+    if (!roll) return;
+
+    const autoGenerate = roll.autoPotential;
+    const temp = roll.temporary;
 
     if (!autoGenerate) {
       if (!isValidUnsignedInt(temp)) {
-        toast({ variant: 'warning', title: 'Invalid temporary stat', description: `${stat} must be an integer between 1 and 100.` });
+        toast({ variant: 'warning', title: 'Invalid temporary roll', description: `Roll ${slot} must be an integer between 1 and 100.` });
         return;
       }
       const tempNum = Number(temp);
       if (tempNum < 1 || tempNum > 100) {
-        toast({ variant: 'warning', title: 'Invalid temporary stat', description: `${stat} must be between 1 and 100.` });
+        toast({ variant: 'warning', title: 'Invalid temporary roll', description: `Roll ${slot} must be between 1 and 100.` });
         return;
       }
     }
@@ -556,13 +590,19 @@ export default function CharacterCreationView() {
         cultureId,
         professionId,
         realms: selectedRealms,
-        stat,
         temporary: autoGenerate ? undefined : Number(temp),
         autoGenerate,
       });
 
-      setTemporaryStats((prev) => ({ ...prev, [stat]: String(result.temporary) }));
-      setPotentialStats((prev) => ({ ...prev, [stat]: result.potential }));
+      setStatRolls((prev) => sortRollsDescending(prev.map((entry) =>
+        entry.slot === slot
+          ? {
+            ...entry,
+            temporary: String(result.temporary),
+            potential: result.potential,
+          }
+          : entry
+      )));
     } catch (e) {
       toast({
         variant: 'danger',
@@ -577,10 +617,10 @@ export default function CharacterCreationView() {
   const generatePotentialForAll = async () => {
     if (!raceId || !cultureId || !professionId || selectedRealms.length === 0) return;
 
-    for (const stat of STATS) {
-      const autoGenerate = autoPotentialForStat[stat];
+    for (const roll of statRolls) {
+      const autoGenerate = roll.autoPotential;
       if (!autoGenerate) {
-        const temp = temporaryStats[stat];
+        const temp = roll.temporary;
         if (!isValidUnsignedInt(temp) || Number(temp) < 1 || Number(temp) > 100) {
           toast({
             variant: 'warning',
@@ -599,31 +639,24 @@ export default function CharacterCreationView() {
         cultureId,
         professionId,
         realms: selectedRealms,
-        stats: STATS.map((stat) => {
-          const autoGenerate = autoPotentialForStat[stat];
+        stats: statRolls.map((roll) => {
+          const autoGenerate = roll.autoPotential;
           return {
-            stat,
-            temporary: autoGenerate ? undefined : Number(temporaryStats[stat]),
+            temporary: autoGenerate ? undefined : Number(roll.temporary),
             autoGenerate,
           };
         }),
       });
 
-      setTemporaryStats((prev) => {
-        const next = { ...prev };
-        for (const r of response.results) {
-          next[r.stat] = String(r.temporary);
-        }
-        return next;
-      });
-
-      setPotentialStats((prev) => {
-        const next = { ...prev };
-        for (const r of response.results) {
-          next[r.stat] = r.potential;
-        }
-        return next;
-      });
+      setStatRolls((prev) => sortRollsDescending(prev.map((roll, index) => {
+        const result = response.results[index];
+        if (!result) return roll;
+        return {
+          ...roll,
+          temporary: String(result.temporary),
+          potential: result.potential,
+        };
+      })));
 
       toast({ variant: 'success', title: 'Potential stats generated', description: 'All potential values were generated from the server.' });
     } catch (e) {
@@ -663,9 +696,7 @@ export default function CharacterCreationView() {
     setCultureId('');
     setProfessionId('');
     setSelectedRealms([]);
-    setTemporaryStats(makeStatStringMap(''));
-    setPotentialStats(makeStatPotentialMap(null));
-    setAutoPotentialForStat(makeStatBooleanMap(false));
+    setStatRolls(createEmptyStatRolls());
     setRaceCategorySelections([]);
     setProfessionSkillSelections([]);
     setBackgroundSelections([]);
@@ -688,15 +719,13 @@ export default function CharacterCreationView() {
       return;
     }
 
-    const tempStatsAsNumbers = STATS.reduce((acc, stat) => {
-      acc[stat] = Number(temporaryStats[stat]);
-      return acc;
-    }, {} as Record<Stat, number>);
-
-    const potentialStatsAsNumbers = STATS.reduce((acc, stat) => {
-      acc[stat] = potentialStats[stat] ?? 0;
-      return acc;
-    }, {} as Record<Stat, number>);
+    const tempStatsAsNumbers = {} as Record<Stat, number>;
+    const potentialStatsAsNumbers = {} as Record<Stat, number>;
+    for (const roll of statRolls) {
+      if (!roll.assignedStat) continue;
+      tempStatsAsNumbers[roll.assignedStat] = Number(roll.temporary);
+      potentialStatsAsNumbers[roll.assignedStat] = roll.potential ?? 0;
+    }
 
     setApplying(true);
     try {
@@ -867,30 +896,34 @@ export default function CharacterCreationView() {
           {step === 'stats' && (
             <section style={{ display: 'grid', gap: 10 }}>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <button type="button" onClick={generateAllTemporary}>Randomize All Temporary (d100)</button>
-                <button type="button" onClick={generatePotentialForAll} disabled={generatingStats}>Generate All Potentials (REST)</button>
+                <button type="button" onClick={generateAllTemporary}>Generate 10 Temporary Rolls (d100)</button>
+                <button type="button" onClick={generatePotentialForAll} disabled={generatingStats}>Generate 10 Potential Rolls (REST)</button>
               </div>
 
               <div style={{ color: 'var(--muted)' }}>
-                Prime stats from profession: {primeStats.length ? primeStats.join(', ') : 'None defined'}
+                Generate the roll pool first, then assign each generated result to a stat. Prime stats from profession: {primeStats.length ? primeStats.join(', ') : 'None defined'}
               </div>
 
-              {STATS.map((stat) => {
-                const isPrime = primeStats.includes(stat);
-                const potentialValue = potentialStats[stat];
+              {statRolls.map((roll) => {
+                const isPrime = roll.assignedStat ? primeStats.includes(roll.assignedStat) : false;
+                const assignedStats = new Set(
+                  statRolls
+                    .filter((entry) => entry.assignedStat && entry.slot !== roll.slot)
+                    .map((entry) => entry.assignedStat)
+                );
                 return (
-                  <div key={stat} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, background: isPrime ? 'var(--primary-weak)' : 'transparent' }}>
+                  <div key={roll.slot} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, background: isPrime ? 'var(--primary-weak)' : 'transparent' }}>
                     <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'minmax(180px, 1fr) 160px 180px auto', alignItems: 'end' }}>
                       <LabeledInput
-                        label={isPrime ? `${stat} (Prime)` : stat}
-                        value={temporaryStats[stat]}
-                        onChange={(v) => onChangeTemporaryStat(stat, v)}
+                        label={`Roll ${roll.slot} Temporary`}
+                        value={roll.temporary}
+                        onChange={(v) => onChangeTemporaryRoll(roll.slot, v)}
                         helperText="Temporary d100"
                       />
 
                       <LabeledInput
                         label="Potential"
-                        value={potentialValue == null ? '' : String(potentialValue)}
+                        value={roll.potential == null ? '' : String(roll.potential)}
                         onChange={() => { }}
                         disabled
                         helperText="From REST"
@@ -898,17 +931,36 @@ export default function CharacterCreationView() {
 
                       <CheckboxInput
                         label="Auto on server"
-                        checked={autoPotentialForStat[stat]}
-                        onChange={(checked) => setAutoPotentialForStat((prev) => ({ ...prev, [stat]: checked }))}
+                        checked={roll.autoPotential}
+                        onChange={(checked) => setStatRolls((prev) => prev.map((entry) =>
+                          entry.slot === roll.slot ? { ...entry, autoPotential: checked } : entry
+                        ))}
                       />
 
                       <button
                         type="button"
-                        onClick={() => generatePotentialForSingle(stat)}
+                        onClick={() => generatePotentialForSingle(roll.slot)}
                         disabled={generatingStats}
                       >
                         Generate
                       </button>
+                    </div>
+
+                    <div style={{ marginTop: 8, maxWidth: 320 }}>
+                      <LabeledSelect
+                        label="Assign To Stat"
+                        value={roll.assignedStat}
+                        onChange={(value) => setStatRolls((prev) => prev.map((entry) =>
+                          entry.slot === roll.slot ? { ...entry, assignedStat: value as Stat | '' } : entry
+                        ))}
+                        options={STATS.map((stat) => ({
+                          value: stat,
+                          label: primeStats.includes(stat) ? `${stat} (Prime)` : stat,
+                          disabled: assignedStats.has(stat),
+                        }))}
+                        placeholderOption="— Assign stat —"
+                        helperText={roll.assignedStat && primeStats.includes(roll.assignedStat) ? 'Prime stat assignment' : undefined}
+                      />
                     </div>
                   </div>
                 );
