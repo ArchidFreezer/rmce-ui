@@ -158,6 +158,8 @@ export default function CharacterCreationView() {
   const [statRollsLocked, setStatRollsLocked] = useState(false);
   const [generatingStats, setGeneratingStats] = useState(false);
 
+  const [characterName, setCharacterName] = useState('');
+
   const [raceCategorySelections, setRaceCategorySelections] = useState<string[][]>([]);
   const [professionSkillSelections, setProfessionSkillSelections] = useState<string[][]>([]);
 
@@ -683,6 +685,7 @@ export default function CharacterCreationView() {
     try {
       const payload = {
         character: {
+          name: characterName,
           raceId,
           cultureId,
           professionId,
@@ -773,6 +776,14 @@ export default function CharacterCreationView() {
           {step === 'initial' && (
             <section style={{ display: 'grid', gap: 12 }}>
               <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr' }}>
+                <LabeledInput
+                  label="Name"
+                  value={characterName}
+                  onChange={(v) => setCharacterName(v)}
+                  placeholder="Character name"
+                  containerStyle={{ gridColumn: '1 / -1' }}
+                />
+
                 <LabeledSelect
                   label="Race"
                   value={raceId}
