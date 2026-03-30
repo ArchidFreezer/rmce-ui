@@ -57,7 +57,24 @@ export type ApplyLevelUpgradeResponse = {
 };
 
 const POTENTIAL_ENDPOINT = '/rmce/operations/character/potential-stats';
+const STAT_ROLLS_ENDPOINT = '/rmce/operations/character/stat-rolls';
 const APPLY_LEVEL_ENDPOINT = '/rmce/operations/character/apply-level-upgrade';
+
+export type StatRollRequest = {
+  temporary: number;
+  potentialRoll: number;
+};
+
+export type StatRollResponse = {
+  temporary: number;
+  potential: number;
+};
+
+export async function getStatRollPotentials(
+  payload: StatRollRequest[],
+): Promise<StatRollResponse[]> {
+  return sendJson<StatRollResponse[]>(STAT_ROLLS_ENDPOINT, 'POST', payload);
+}
 
 export async function generatePotentialStats(
   payload: GeneratePotentialStatsRequest,
