@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfirmProvider } from './components/ConfirmDialog';
 import { ToastProvider } from './components/Toast';
@@ -7,6 +7,8 @@ import { Sidebar, SidebarItem } from './components/Sidebar';
 import { fetchPrefixes } from './api/prefix';
 import { splitResources, FALLBACK_RESOURCES, type ResourceDef } from './resources/registry';
 import GenericResourceView from './endpoints/generic/GenericResourceView'; // <-- generic
+
+const CharacterCreationView = lazy(() => import('./endpoints/character/CharacterCreationView'));
 
 import './layout.css';
 
@@ -58,6 +60,15 @@ function Shell() {
     return [...knownItems, ...unknownItems].sort((a, b) => a.label.localeCompare(b.label));
   }, [resources, unknown]);
 
+  const workflowItems: SidebarItem[] = useMemo(() => ([
+    {
+      label: 'Character Creation',
+      path: '/character/create',
+      isKnown: true,
+      prefix: '',
+    },
+  ]), []);
+
 
   // Default redirect path
   const defaultPath = useMemo(() => {
@@ -84,6 +95,7 @@ function Shell() {
 
       <Sidebar
         sections={[
+          { heading: 'Workflow', items: workflowItems, collapsible: true },
           { heading: 'Resources', items: sidebarItems, collapsible: true },
         ]}
         open={sidebarOpen}
@@ -104,6 +116,7 @@ function Shell() {
         ) : (
           <Suspense fallback={<div>Loading view…</div>}>
             <Routes>
+              <Route path="/character/create" element={<CharacterCreationView />} />
               {/* Known resource screens */}
               {resources.map((r) => (
                 <Route key={r.path} path={r.path} element={<r.Component />} />
