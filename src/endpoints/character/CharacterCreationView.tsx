@@ -28,7 +28,7 @@ import type {
   TrainingPackage,
 } from '../../types';
 
-import { SPELL_REALMS, STATS, type Realm, type Stat } from '../../types/enum';
+import { DEVELOPMENT_STATS, SPELL_REALMS, STATS, type Realm, type Stat } from '../../types/enum';
 import { isValidUnsignedInt, sanitizeUnsignedInt } from '../../utils';
 
 type CharacterStep =
@@ -262,6 +262,8 @@ export default function CharacterCreationView() {
     if (!profession) return [];
     return uniqStrings(profession.stats).slice(0, 10) as Stat[];
   }, [profession]);
+
+  const developmentStats = useMemo(() => new Set(DEVELOPMENT_STATS), []);
 
   const predefinedAdolescentSkillIds = useMemo(() => {
     const fromRace = (race?.everymanSkills ?? []).map((x) => x.id);
@@ -888,7 +890,7 @@ export default function CharacterCreationView() {
                         ))}
                         options={STATS.map((stat) => ({
                           value: stat,
-                          label: primeStats.includes(stat) ? `${stat} (Prime)` : stat,
+                          label: `${stat}${developmentStats.has(stat) ? ' *' : ''}${primeStats.includes(stat) ? ' (Prime)' : ''}`,
                           disabled: assignedStats.has(stat),
                         }))}
                         placeholderOption="— Assign stat —"
