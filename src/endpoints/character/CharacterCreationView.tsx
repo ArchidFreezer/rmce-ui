@@ -20,7 +20,10 @@ import {
   useToast,
 } from '../../components';
 
+import { createEmptyCharacterBuilder } from '../../types';
+
 import type {
+  CharacterBuilder,
   Culture,
   Profession,
   Race,
@@ -169,7 +172,7 @@ export default function CharacterCreationView() {
   const [trainingPackageId, setTrainingPackageId] = useState('');
   const [tpStatGainChoices, setTpStatGainChoices] = useState<Stat[]>([]);
   const [tpSkillRankChoiceSelections, setTpSkillRankChoiceSelections] = useState<string[][]>([]);
-  const [characterBuilderId, setCharacterBuilderId] = useState('');
+  const [characterBuilder, setCharacterBuilder] = useState<CharacterBuilder>(() => createEmptyCharacterBuilder());
   const [savingInitialChoices, setSavingInitialChoices] = useState(false);
   const [applying, setApplying] = useState(false);
 
@@ -394,6 +397,26 @@ export default function CharacterCreationView() {
     setBackgroundSelections((prev) => prev.slice(0, backgroundBudget));
   }, [backgroundSelections, backgroundBudget]);
 
+  useEffect(() => {
+    setCharacterBuilder((prev) => ({
+      ...prev,
+      name: characterName,
+      race: raceId,
+      culture: cultureId,
+      culture_type: culture?.cultureType ?? '',
+      profession: professionId,
+      magical_realms: selectedRealms,
+      stats: statRolls
+        .filter((roll): roll is StatRoll & { assignedStat: Stat } => Boolean(roll.assignedStat))
+        .map((roll) => ({
+          stat: roll.assignedStat,
+          temporary: Number(roll.temporary) || 0,
+          potential: roll.potential ?? 0,
+          bonus: 0,
+        })),
+    }));
+  }, [characterName, raceId, cultureId, culture, professionId, selectedRealms, statRolls]);
+
   const validateInitial = (): string | undefined => {
     if (!characterName.trim()) return 'Name is required.';
     if (!raceId) return 'Race is required.';
@@ -571,7 +594,10 @@ export default function CharacterCreationView() {
           throw new Error('Initial choices response did not include a builder id.');
         }
 
-        setCharacterBuilderId(response.id);
+        setCharacterBuilder((prev) => ({
+          ...prev,
+          id: response.id,
+        }));
       } catch (e) {
         toast({
           variant: 'danger',
@@ -692,7 +718,7 @@ export default function CharacterCreationView() {
     setTrainingPackageId('');
     setTpStatGainChoices([]);
     setTpSkillRankChoiceSelections([]);
-    setCharacterBuilderId('');
+    setCharacterBuilder(createEmptyCharacterBuilder());
     setErrors({});
   };
 
@@ -1181,7 +1207,7 @@ export default function CharacterCreationView() {
                   <li>Culture: {culture?.name ?? cultureId}</li>
                   <li>Profession: {profession?.name ?? professionId}</li>
                   <li>Realms: {selectedRealms.join(', ') || 'None'}</li>
-                  <li>Builder ID: {characterBuilderId || 'Not generated yet'}</li>
+                  <li>Builder ID: {characterBuilder.id || 'Not generated yet'}</li>
                   <li>Prime Stats: {primeStats.join(', ') || 'None'}</li>
                   <li>Background selections: {backgroundSelections.length}</li>
                   <li>Training package: {selectedTrainingPackage?.name ?? trainingPackageId}</li>
