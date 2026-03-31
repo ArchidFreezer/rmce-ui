@@ -9,6 +9,7 @@ import {
   fetchSkills,
   fetchTrainingPackages,
   getStatRollPotentials,
+  submitInitialChoices,
 } from '../../api';
 
 import {
@@ -168,6 +169,8 @@ export default function CharacterCreationView() {
   const [trainingPackageId, setTrainingPackageId] = useState('');
   const [tpStatGainChoices, setTpStatGainChoices] = useState<Stat[]>([]);
   const [tpSkillRankChoiceSelections, setTpSkillRankChoiceSelections] = useState<string[][]>([]);
+  const [characterBuilderId, setCharacterBuilderId] = useState('');
+  const [savingInitialChoices, setSavingInitialChoices] = useState(false);
   const [applying, setApplying] = useState(false);
 
   useEffect(() => {
@@ -392,6 +395,7 @@ export default function CharacterCreationView() {
   }, [backgroundSelections, backgroundBudget]);
 
   const validateInitial = (): string | undefined => {
+    if (!characterName.trim()) return 'Name is required.';
     if (!raceId) return 'Race is required.';
     if (!cultureId) return 'Culture is required.';
     if (!professionId) return 'Profession is required.';
@@ -520,6 +524,7 @@ export default function CharacterCreationView() {
     recomputeErrors();
   }, [
     raceId,
+    characterName,
     cultureId,
     professionId,
     selectedRealms,
@@ -546,10 +551,39 @@ export default function CharacterCreationView() {
     if (prev) setStep(prev);
   };
 
-  const goNext = () => {
+  const goNext = async () => {
     const idx = STEP_ORDER.indexOf(step);
     if (idx < 0 || idx >= STEP_ORDER.length - 1) return;
     if (!canGoNext) return;
+
+    if (step === 'initial') {
+      setSavingInitialChoices(true);
+      try {
+        const response = await submitInitialChoices({
+          name: characterName.trim(),
+          race: raceId,
+          culture: cultureId,
+          profession: professionId,
+          realms: selectedRealms,
+        });
+
+        if (!response.id) {
+          throw new Error('Initial choices response did not include a builder id.');
+        }
+
+        setCharacterBuilderId(response.id);
+      } catch (e) {
+        toast({
+          variant: 'danger',
+          title: 'Save initial choices failed',
+          description: String(e instanceof Error ? e.message : e),
+        });
+        return;
+      } finally {
+        setSavingInitialChoices(false);
+      }
+    }
+
     const next = STEP_ORDER[idx + 1];
     if (next) setStep(next);
   };
@@ -645,6 +679,7 @@ export default function CharacterCreationView() {
 
   const resetWorkflow = () => {
     setStep('initial');
+    setCharacterName('');
     setRaceId('');
     setCultureId('');
     setProfessionId('');
@@ -657,6 +692,7 @@ export default function CharacterCreationView() {
     setTrainingPackageId('');
     setTpStatGainChoices([]);
     setTpSkillRankChoiceSelections([]);
+    setCharacterBuilderId('');
     setErrors({});
   };
 
@@ -763,10 +799,16 @@ export default function CharacterCreationView() {
       </div>
 
       <div className="form-container">
-        {(generatingStats || applying) && (
+        {(generatingStats || applying || savingInitialChoices) && (
           <div className="overlay">
             <Spinner size={24} />
-            <span>{applying ? 'Applying level upgrade…' : 'Generating stats…'}</span>
+            <span>
+              {savingInitialChoices
+                ? 'Saving initial choices…'
+                : applying
+                  ? 'Applying level upgrade…'
+                  : 'Generating stats…'}
+            </span>
           </div>
         )}
 
@@ -782,6 +824,7 @@ export default function CharacterCreationView() {
                   onChange={(v) => setCharacterName(v)}
                   placeholder="Character name"
                   containerStyle={{ gridColumn: '1 / -1' }}
+                  error={errors.initial && !characterName.trim() ? 'Required' : undefined}
                 />
 
                 <LabeledSelect
@@ -1133,10 +1176,12 @@ export default function CharacterCreationView() {
               <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
                 <h4 style={{ margin: '0 0 8px' }}>Summary</h4>
                 <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  <li>Name: {characterName || 'None'}</li>
                   <li>Race: {race?.name ?? raceId}</li>
                   <li>Culture: {culture?.name ?? cultureId}</li>
                   <li>Profession: {profession?.name ?? professionId}</li>
                   <li>Realms: {selectedRealms.join(', ') || 'None'}</li>
+                  <li>Builder ID: {characterBuilderId || 'Not generated yet'}</li>
                   <li>Prime Stats: {primeStats.join(', ') || 'None'}</li>
                   <li>Background selections: {backgroundSelections.length}</li>
                   <li>Training package: {selectedTrainingPackage?.name ?? trainingPackageId}</li>
@@ -1166,7 +1211,7 @@ export default function CharacterCreationView() {
 
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" onClick={goPrev} disabled={step === 'initial'}>Back</button>
-            <button type="button" onClick={goNext} disabled={!canGoNext || step === 'apply'}>Next</button>
+            <button type="button" onClick={goNext} disabled={!canGoNext || step === 'apply' || savingInitialChoices}>Next</button>
           </div>
         </div>
       </div>
