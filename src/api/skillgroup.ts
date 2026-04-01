@@ -25,12 +25,10 @@ export async function fetchSkillGroups(): Promise<SkillGroup[]> {
 /** Create or update a single skill group. */
 export async function upsertSkillGroup(
   sg: SkillGroup,
-  opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {},
+  opts: { method?: 'POST' | 'PUT' } = {},
 ): Promise<unknown> {
-  const { method = 'POST', useResourceIdPath = false } = opts;
-  const url = useResourceIdPath && sg?.id
-    ? `${BASE}/${encodeURIComponent(sg.id)}`
-    : `${BASE}/`;
+  const { method = 'POST' } = opts;
+  const url = BASE;
   return sendJson(url, method, sg);
 }
 

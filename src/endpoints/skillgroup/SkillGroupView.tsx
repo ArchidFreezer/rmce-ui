@@ -196,8 +196,8 @@ export default function SkillGroupView() {
 
     try {
       const opts = isEditing
-        ? { method: 'PUT' as const, useResourceIdPath: true }
-        : { method: 'POST' as const, useResourceIdPath: false };
+        ? { method: 'PUT' as const }
+        : { method: 'POST' as const };
 
       await upsertSkillGroup(payload, opts);
 

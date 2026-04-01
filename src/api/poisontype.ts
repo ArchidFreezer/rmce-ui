@@ -58,12 +58,10 @@ export async function fetchPoisonTypes(): Promise<PoisonType[]> {
 /** Create or update a single poison type. */
 export async function upsertPoisonType(
   pt: PoisonType,
-  opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {}
+  opts: { method?: 'POST' | 'PUT' } = {}
 ): Promise<unknown> {
-  const { method = 'POST', useResourceIdPath = false } = opts;
-  const url = useResourceIdPath && pt?.id
-    ? `${BASE}/${encodeURIComponent(pt.id)}`
-    : `${BASE}/`;
+  const { method = 'POST' } = opts;
+  const url = BASE;
   return sendJson(url, method, pt);
 }
 

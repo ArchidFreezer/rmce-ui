@@ -23,12 +23,10 @@ export async function fetchLanguageCategories(): Promise<LanguageCategory[]> {
 /** Create or update a single language category. */
 export async function upsertLanguageCategory(
   lc: LanguageCategory,
-  opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {},
+  opts: { method?: 'POST' | 'PUT' } = {},
 ) {
-  const { method = 'POST', useResourceIdPath = false } = opts;
-  const url = useResourceIdPath && lc?.id
-    ? `${BASE}/${encodeURIComponent(lc.id)}`
-    : `${BASE}/`;
+  const { method = 'POST' } = opts;
+  const url = BASE;
   return sendJson(url, method, lc);
 }
 

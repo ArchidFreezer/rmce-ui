@@ -16,13 +16,10 @@ export async function fetchDiseases(): Promise<Disease[]> {
 
 export async function upsertDisease(
   disease: Disease,
-  opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {}
+  opts: { method?: 'POST' | 'PUT' } = {}
 ): Promise<unknown> {
-  const { method = 'POST', useResourceIdPath = false } = opts;
-  const url =
-    useResourceIdPath && disease?.id
-      ? `${BASE}/${encodeURIComponent(disease.id)}`
-      : `${BASE}/`;
+  const { method = 'POST' } = opts;
+  const url = BASE;
   return sendJson(url, method, disease);
 }
 

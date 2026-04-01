@@ -1,13 +1,15 @@
 import { fetchJson, sendJson } from './client';
 
-import type { 
+import type {
   Climate, ClimatesPayload,
- } from '../types';
+} from '../types';
 
- import { 
-  PRECIPITATIONS, Precipitation, 
+import {
+  PRECIPITATIONS, Precipitation,
   TEMPERATURES, Temperature,
- } from '../types/enum';
+} from '../types/enum';
+
+const BASE = '/rmce/objects/climate';
 
 const PRECIP_ENUM: ReadonlySet<Precipitation> = new Set(PRECIPITATIONS);
 
@@ -32,7 +34,7 @@ function sanitizeTemperature(v: unknown): Temperature {
  * GET /rmce/objects/climate  ->  { climates: Climate[] }
  */
 export async function fetchClimates(): Promise<Climate[]> {
-  const data = await fetchJson<ClimatesPayload>('/rmce/objects/climate');
+  const data = await fetchJson<ClimatesPayload>(BASE);
   if (!data || !Array.isArray(data.climates)) {
     throw new Error('Unexpected response: expected { climates: Climate[] }');
   }
@@ -46,17 +48,15 @@ export async function fetchClimates(): Promise<Climate[]> {
 
 /**
  * Create or update a single climate.
- * - Create: POST /rmce/objects/climate/   (body = Climate)
- * - Edit:   PUT  /rmce/objects/climate/{id}
+ * - Create: POST /rmce/objects/climate   (body = Climate)
+ * - Edit:   PUT  /rmce/objects/climate   (body = Climate)
  */
 export async function upsertClimate(
   climate: Climate,
-  opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {}
+  opts: { method?: 'POST' | 'PUT' } = {}
 ): Promise<unknown> {
-  const { method = 'POST', useResourceIdPath = false } = opts;
-  const url = useResourceIdPath && climate?.id
-    ? `/rmce/objects/climate/${encodeURIComponent(climate.id)}`
-    : `/rmce/objects/climate/`;
+  const { method = 'POST' } = opts;
+  const url = BASE;
   return sendJson(url, method, climate);
 }
 
@@ -65,6 +65,6 @@ export async function upsertClimate(
  */
 export async function deleteClimate(id: string): Promise<void> {
   if (!id) throw new Error('deleteClimate: id is required');
-  const url = `/rmce/objects/climate/${encodeURIComponent(id)}`;
+  const url = `${BASE}/${encodeURIComponent(id)}`;
   await fetchJson<void>(url, { method: 'DELETE' });
 }

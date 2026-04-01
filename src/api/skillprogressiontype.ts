@@ -30,12 +30,10 @@ export async function fetchSkillProgressionTypes(): Promise<SkillProgressionType
 
 export async function upsertSkillProgressionType(
   spt: SkillProgressionType,
-  opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {},
+  opts: { method?: 'POST' | 'PUT' } = {},
 ): Promise<unknown> {
-  const { method = 'POST', useResourceIdPath = false } = opts;
-  const url = useResourceIdPath && spt?.id
-    ? `${BASE}/${encodeURIComponent(spt.id)}`
-    : `${BASE}/`;
+  const { method = 'POST' } = opts;
+  const url = BASE;
   return sendJson(url, method, spt);
 }
 

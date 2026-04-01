@@ -87,13 +87,10 @@ export async function fetchCultureTypes(): Promise<CultureType[]> {
 
 export async function upsertCultureType(
   c: CultureType,
-  opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {},
+  opts: { method?: 'POST' | 'PUT' } = {},
 ) {
-  const { method = 'POST', useResourceIdPath = false } = opts;
-  const url =
-    useResourceIdPath && c?.id
-      ? `${BASE}/${encodeURIComponent(c.id)}`
-      : `${BASE}/`;
+  const { method = 'POST' } = opts;
+  const url = BASE;
   return sendJson(url, method, c);
 }
 
