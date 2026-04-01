@@ -25,13 +25,10 @@ export async function fetchTrainingPackages(): Promise<TrainingPackage[]> {
 
 export async function upsertTrainingPackage(
   tp: TrainingPackage,
-  opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {},
+  opts: { method?: 'POST' | 'PUT' } = {},
 ) {
-  const { method = 'POST', useResourceIdPath = false } = opts;
-  const url =
-    useResourceIdPath && tp.id
-      ? `${BASE}/${encodeURIComponent(tp.id)}`
-      : `${BASE}/`;
+  const { method = 'POST' } = opts;
+  const url = BASE;
   return sendJson(url, method, tp);
 }
 

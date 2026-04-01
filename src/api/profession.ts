@@ -205,13 +205,10 @@ export async function fetchProfessions(): Promise<Profession[]> {
 
 export async function upsertProfession(
   p: Profession,
-  opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {},
+  opts: { method?: 'POST' | 'PUT' } = {},
 ) {
-  const { method = 'POST', useResourceIdPath = false } = opts;
-  const url =
-    useResourceIdPath && p?.id
-      ? `${BASE}/${encodeURIComponent(p.id)}`
-      : `${BASE}/`;
+  const { method = 'POST' } = opts;
+  const url = BASE;
   return sendJson(url, method, p);
 }
 

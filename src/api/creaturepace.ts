@@ -41,12 +41,10 @@ export async function fetchCreaturePaces(): Promise<CreaturePace[]> {
 /** Create or update a single CreaturePace. */
 export async function upsertCreaturePace(
   cp: CreaturePace,
-  opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {},
+  opts: { method?: 'POST' | 'PUT' } = {},
 ): Promise<unknown> {
-  const { method = 'POST', useResourceIdPath = false } = opts;
-  const url = useResourceIdPath && cp?.id
-    ? `${BASE}/${encodeURIComponent(cp.id)}`
-    : `${BASE}/`;
+  const { method = 'POST' } = opts;
+  const url = BASE;
   // cp is already strongly typed; no extra casting
   return sendJson(url, method, cp);
 }

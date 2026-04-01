@@ -17,13 +17,10 @@ export async function fetchArmourTypes(): Promise<ArmourType[]> {
 /** Create or update a single armourtype (POST to collection by default). */
 export async function upsertArmourType(
   armourtype: ArmourType,
-  opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {}
+  opts: { method?: 'POST' | 'PUT' } = {}
 ): Promise<unknown> {
-  const { method = 'POST', useResourceIdPath = false } = opts;
-  const url =
-    useResourceIdPath && armourtype?.id
-      ? `${BASE}/${encodeURIComponent(armourtype.id)}`
-      : `${BASE}/`;
+  const { method = 'POST' } = opts;
+  const url = BASE;
   return sendJson(url, method, armourtype);
 }
 

@@ -53,12 +53,10 @@ export async function fetchSpecialAttackTables(): Promise<SpecialAttackTable[]> 
 /** Create or update a single special attack table. */
 export async function upsertSpecialAttackTable(
   at: SpecialAttackTable,
-  opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {},
+  opts: { method?: 'POST' | 'PUT' } = {},
 ) {
-  const { method = 'POST', useResourceIdPath = false } = opts;
-  const url = useResourceIdPath && at?.id
-    ? `${BASE}/${encodeURIComponent(at.id)}`
-    : `${BASE}/`;
+  const { method = 'POST' } = opts;
+  const url = BASE;
   return sendJson(url, method, at);
 }
 

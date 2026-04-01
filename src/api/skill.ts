@@ -43,12 +43,10 @@ export async function fetchSkills(): Promise<Skill[]> {
 
 export async function upsertSkill(
   skill: Skill,
-  opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {},
+  opts: { method?: 'POST' | 'PUT' } = {},
 ) {
-  const { method = 'POST', useResourceIdPath = false } = opts;
-  const url = useResourceIdPath && skill?.id
-    ? `${BASE}/${encodeURIComponent(skill.id)}`
-    : `${BASE}/`;
+  const { method = 'POST' } = opts;
+  const url = BASE;
   return sendJson(url, method, skill);
 }
 

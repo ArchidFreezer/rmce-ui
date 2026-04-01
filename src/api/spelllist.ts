@@ -47,12 +47,10 @@ export async function fetchSpellLists(): Promise<SpellList[]> {
 /** Create/Update one SpellList */
 export async function upsertSpellList(
   sl: SpellList,
-  opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {}
+  opts: { method?: 'POST' | 'PUT' } = {}
 ): Promise<unknown> {
-  const { method = 'POST', useResourceIdPath = false } = opts;
-  const url = useResourceIdPath && sl?.id
-    ? `${BASE}/${encodeURIComponent(sl.id)}`
-    : `${BASE}/`;
+  const { method = 'POST' } = opts;
+  const url = BASE;
   return sendJson(url, method, sl);
 }
 

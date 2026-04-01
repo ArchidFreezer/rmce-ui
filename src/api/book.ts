@@ -17,13 +17,10 @@ export async function fetchBooks(): Promise<Book[]> {
 /** Create or update a single book. Default: POST to collection with trailing slash. */
 export async function upsertBook(
   book: Book,
-  opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {}
+  opts: { method?: 'POST' | 'PUT' } = {}
 ): Promise<unknown> {
-  const { method = 'POST', useResourceIdPath = false } = opts;
-  const url =
-    useResourceIdPath && book?.id
-      ? `${BASE}/${encodeURIComponent(book.id)}`
-      : `${BASE}/`;
+  const { method = 'POST' } = opts;
+  const url = BASE;
   return sendJson(url, method, book);
 }
 

@@ -11,8 +11,8 @@ import type {
 /**
  * REST base for WeaponType
  * GET    /rmce/objects/weapontype
- * POST   /rmce/objects/weapontype/
- * PUT    /rmce/objects/weapontype/{id}
+ * POST   /rmce/objects/weapontype
+ * PUT    /rmce/objects/weapontype
  * DELETE /rmce/objects/weapontype/{id}
  */
 const BASE = '/rmce/objects/weapontype';
@@ -95,18 +95,15 @@ export async function fetchWeaponTypes(): Promise<WeaponType[]> {
 
 /**
  * Create or update a weapon type.
- * - POST to /rmce/objects/weapontype/   (useResourceIdPath=false)
- * - PUT  to /rmce/objects/weapontype/{id} (useResourceIdPath=true)
+ * - POST to /rmce/objects/weapontype
+ * - PUT  to /rmce/objects/weapontype
  */
 export async function upsertWeaponType(
   w: WeaponType,
-  opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {},
+  opts: { method?: 'POST' | 'PUT' } = {},
 ) {
-  const { method = 'POST', useResourceIdPath = false } = opts;
-  const url =
-    useResourceIdPath && w?.id
-      ? `${BASE}/${encodeURIComponent(w.id)}`
-      : `${BASE}/`;
+  const { method = 'POST' } = opts;
+  const url = BASE;
   // sendJson handles JSON stringify + headers
   return sendJson(url, method, w);
 }

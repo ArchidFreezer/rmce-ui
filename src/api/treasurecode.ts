@@ -35,12 +35,10 @@ export async function fetchTreasureCodes(): Promise<TreasureCode[]> {
 /** Create or update a single treasure code. */
 export async function upsertTreasureCode(
   tc: TreasureCode,
-  opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {},
+  opts: { method?: 'POST' | 'PUT' } = {},
 ) {
-  const { method = 'POST', useResourceIdPath = false } = opts;
-  const url = useResourceIdPath && tc?.id
-    ? `${BASE}/${encodeURIComponent(tc.id)}`
-    : `${BASE}/`;
+  const { method = 'POST' } = opts;
+  const url = BASE;
   return sendJson(url, method, tc);
 }
 

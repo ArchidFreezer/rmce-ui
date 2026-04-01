@@ -45,12 +45,10 @@ export async function fetchSkillCategories(): Promise<SkillCategory[]> {
 /** Create or update a single skill category. */
 export async function upsertSkillCategory(
   sc: SkillCategory,
-  opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {},
+  opts: { method?: 'POST' | 'PUT' } = {},
 ) {
-  const { method = 'POST', useResourceIdPath = false } = opts;
-  const url = useResourceIdPath && sc?.id
-    ? `${BASE}/${encodeURIComponent(sc.id)}`
-    : `${BASE}/`;
+  const { method = 'POST' } = opts;
+  const url = BASE;
   return sendJson(url, method, sc);
 }
 

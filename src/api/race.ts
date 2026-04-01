@@ -140,13 +140,10 @@ export async function fetchRaces(): Promise<Race[]> {
 
 export async function upsertRace(
   r: Race,
-  opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {},
+  opts: { method?: 'POST' | 'PUT' } = {},
 ) {
-  const { method = 'POST', useResourceIdPath = false } = opts;
-  const url =
-    useResourceIdPath && r?.id
-      ? `${BASE}/${encodeURIComponent(r.id)}`
-      : `${BASE}/`;
+  const { method = 'POST' } = opts;
+  const url = BASE;
   return sendJson(url, method, r);
 }
 

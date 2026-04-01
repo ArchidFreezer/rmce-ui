@@ -29,12 +29,10 @@ export async function fetchLanguages(): Promise<Language[]> {
 /** Create or update a single language. */
 export async function upsertLanguage(
   lang: Language,
-  opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {},
+  opts: { method?: 'POST' | 'PUT' } = {},
 ) {
-  const { method = 'POST', useResourceIdPath = false } = opts;
-  const url = useResourceIdPath && lang?.id
-    ? `${BASE}/${encodeURIComponent(lang.id)}`
-    : `${BASE}/`;
+  const { method = 'POST' } = opts;
+  const url = BASE;
   return sendJson(url, method, lang);
 }
 

@@ -192,13 +192,10 @@ export async function fetchAnimals(): Promise<Animal[]> {
 
 export async function upsertAnimal(
   animal: Animal,
-  opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {},
+  opts: { method?: 'POST' | 'PUT' } = {},
 ) {
-  const { method = 'POST', useResourceIdPath = false } = opts;
-  const url =
-    useResourceIdPath && animal.id
-      ? `${BASE}/${encodeURIComponent(animal.id)}`
-      : `${BASE}/`;
+  const { method = 'POST' } = opts;
+  const url = BASE;
   return sendJson(url, method, animal);
 }
 

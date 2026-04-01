@@ -44,12 +44,10 @@ export async function fetchDiseaseTypes(): Promise<DiseaseType[]> {
 /** Create or update a single disease type. */
 export async function upsertDiseaseType(
   dt: DiseaseType,
-  opts: { method?: 'POST' | 'PUT'; useResourceIdPath?: boolean } = {}
+  opts: { method?: 'POST' | 'PUT' } = {}
 ): Promise<unknown> {
-  const { method = 'POST', useResourceIdPath = false } = opts;
-  const url = useResourceIdPath && dt?.id
-    ? `${BASE}/${encodeURIComponent(dt.id)}`
-    : `${BASE}/`;
+  const { method = 'POST' } = opts;
+  const url = BASE;
   return sendJson(url, method, dt);
 }
 
