@@ -1,12 +1,25 @@
-import { sendJson } from './client';
+import { fetchJson, sendJson } from './client';
 
 import type { Realm, Stat } from '../types/enum';
 
 export type CharacterContext = {
+  name?: string;
   raceId: string;
   cultureId: string;
   professionId: string;
   realms: Realm[];
+};
+
+export type InitialChoicesRequest = {
+  name: string;
+  race: string;
+  culture: string;
+  profession: string;
+  realms: Realm[];
+};
+
+export type InitialChoicesResponse = {
+  id: string;
 };
 
 export type ApplyLevelUpgradeRequest = {
@@ -33,6 +46,7 @@ export type ApplyLevelUpgradeResponse = {
 };
 
 const STAT_ROLLS_ENDPOINT = '/rmce/operations/character/stat-rolls';
+const INITIAL_CHOICES_ENDPOINT = '/rmce/operations/character/initial-choices';
 const APPLY_LEVEL_ENDPOINT = '/rmce/operations/character/apply-level-upgrade';
 
 export type StatRollRequest = {
@@ -48,6 +62,18 @@ export async function getStatRollPotentials(
   payload: StatRollRequest[],
 ): Promise<StatRollResponse[]> {
   return sendJson<StatRollResponse[]>(STAT_ROLLS_ENDPOINT, 'POST', payload);
+}
+
+export async function submitInitialChoices(
+  payload: InitialChoicesRequest,
+): Promise<InitialChoicesResponse> {
+  return fetchJson<InitialChoicesResponse>(INITIAL_CHOICES_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function applyLevelUpgrade(
