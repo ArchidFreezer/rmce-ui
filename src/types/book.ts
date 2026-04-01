@@ -5,7 +5,7 @@
  */
 export interface Book {
   id: string;
-  code: number;
+  code: string;
   name: string;
   abbreviation: string;
   isbn: string;

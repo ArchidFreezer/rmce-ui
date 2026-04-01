@@ -24,7 +24,7 @@ import {
 const prefix = 'BOOK_';
 
 function emptyBook(): Book {
-  return { id: prefix, code: 1234, name: '', abbreviation: '', isbn: '' };
+  return { id: prefix, code: '', name: '', abbreviation: '', isbn: '' };
 }
 
 /* ------------------------------------------------------------------ */
@@ -33,7 +33,7 @@ function emptyBook(): Book {
 type FormState = {
   id: string;
   name: string;
-  code: number | '';
+  code: string;
   abbreviation: string;
   isbn: string;
 }
@@ -65,7 +65,7 @@ const toVM = (b: Book): FormState => ({
 const fromVM = (vm: FormState): Book => ({
   id: String(vm.id).trim(),
   name: String(vm.name).trim(),
-  code: Number(vm.code),
+  code: String(vm.code).trim(),
   abbreviation: String(vm.abbreviation).trim(),
   isbn: String(vm.isbn).trim(),
 });
@@ -128,8 +128,8 @@ export default function BookView() {
 
     // Code
     const code = (draft.code);
-    if (!code) e.code = 'Code is required';
-    else if (!isValidUnsignedInt(String(code))) e.code = 'Code must be a positive integer';
+    if (!code.trim()) e.code = 'Code is required';
+    else if (!isValidUnsignedInt(code.trim())) e.code = 'Code must be a positive integer';
 
     // Abbreviation
     if (!draft.abbreviation.trim()) e.abbreviation = 'Abbreviation is required';
