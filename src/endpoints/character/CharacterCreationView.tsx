@@ -406,16 +406,260 @@ export default function CharacterCreationView() {
       culture_type: culture?.cultureType ?? '',
       profession: professionId,
       magical_realms: selectedRealms,
+      everyman_skills: race?.everymanSkills ?? [],
+      restricted_skills: race?.restrictedSkills ?? [],
+      everyman_skill_categories: race?.everymanCategories ?? [],
+      restricted_skill_categories: race?.restrictedCategories ?? [],
+      realm_progressions: selectedRealms.map((realm) => ({
+        id: realm,
+        value:
+          realm === 'Arcane' ? (race?.arcaneProgression ?? '')
+            : realm === 'Arms' ? (race?.armsProgression ?? '')
+              : realm === 'Channeling' ? (race?.channelingProgression ?? '')
+                : realm === 'Essence' ? (race?.essenceProgression ?? '')
+                  : realm === 'Mentalism' ? (race?.mentalismProgression ?? '')
+                    : '',
+      })),
       stats: statRolls
         .filter((roll): roll is StatRoll & { assignedStat: Stat } => Boolean(roll.assignedStat))
         .map((roll) => ({
           stat: roll.assignedStat,
           temporary: Number(roll.temporary) || 0,
           potential: roll.potential ?? 0,
-          bonus: 0,
+          bonus: (race?.statBonuses.find((b) => b.id === roll.assignedStat)?.value ?? 0)
+            + tpStatGainChoices.filter((s) => s === roll.assignedStat).length,
         })),
     }));
-  }, [characterName, raceId, cultureId, culture, professionId, selectedRealms, statRolls]);
+  }, [characterName, raceId, cultureId, culture, professionId, selectedRealms, statRolls, race, tpStatGainChoices]);
+
+  useEffect(() => {
+    const raceCategorySelectionsFlat = uniqStrings(raceCategorySelections.flat());
+    const profSkillDevTypeChoices = professionSkillChoiceDefs.flatMap((choice, i) => {
+      const selected = professionSkillSelections[i] ?? [];
+      return selected.map((key) => {
+        const parsed = parseSkillChoiceKey(key);
+        return {
+          id: parsed.id,
+          subcategory: parsed.subcategory,
+          value: choice.type,
+        };
+      });
+    });
+
+    setCharacterBuilder((prev) => ({
+      ...prev,
+      race_category_everyman_choices: raceCategorySelectionsFlat,
+      race_adolescent_language_choices: (race?.adolescentLanguages ?? []).map((lang) => ({
+        language: lang.language,
+        spoken: lang.spoken ?? 0,
+        written: lang.written ?? 0,
+        somatic: lang.somatic ?? 0,
+      })),
+      prof_skill_development_type_choices: profSkillDevTypeChoices,
+      hobby_skill_ranks: (culture?.hobbySkills ?? []).map((skill) => ({
+        id: skill.id,
+        subcategory: skill.subcategory,
+        value: 1,
+      })),
+    }));
+  }, [raceCategorySelections, professionSkillChoiceDefs, professionSkillSelections, race, culture]);
+
+  useEffect(() => {
+    if (!profession) {
+      setCharacterBuilder((prev) => ({
+        ...prev,
+        base_spell_list_choices: [],
+        prof_skill_subcategory_development_type_choices: [],
+        prof_category_development_type_choices: [],
+        prof_group_development_type_choices: [],
+        skillsub_development_types: [],
+        skill_development_types: [],
+        category_special_bonuses: [],
+        category_development_types: [],
+        group_special_bonuses: [],
+        group_development_types: [],
+      }));
+      return;
+    }
+
+    const defaultBaseSpellListChoices = uniqStrings(
+      profession.baseSpellListChoices.flatMap((choice) => choice.options.slice(0, choice.numChoices)),
+    );
+
+    const defaultSkillSubcategoryDevelopmentChoices = profession.skillSubcategoryDevelopmentTypeChoices
+      .flatMap((choice) => choice.options.slice(0, choice.numChoices).map((id) => ({
+        id,
+        subcategory: undefined,
+        value: choice.type,
+      })));
+
+    const defaultCategoryDevelopmentChoices = profession.skillCategorySkillDevelopmentTypeChoices
+      .flatMap((choice) => choice.options.slice(0, choice.numChoices).map((id) => ({
+        id,
+        value: choice.type,
+      })));
+
+    const defaultGroupDevelopmentChoices = profession.skillGroupSkillDevelopmentTypeChoices
+      .flatMap((choice) => choice.options.slice(0, choice.numChoices).map((id) => ({
+        id,
+        value: choice.type,
+      })));
+
+    setCharacterBuilder((prev) => ({
+      ...prev,
+      base_spell_list_choices: defaultBaseSpellListChoices,
+      prof_skill_subcategory_development_type_choices: defaultSkillSubcategoryDevelopmentChoices,
+      prof_category_development_type_choices: defaultCategoryDevelopmentChoices,
+      prof_group_development_type_choices: defaultGroupDevelopmentChoices,
+      skillsub_development_types: profession.skillDevelopmentTypes.map((item) => ({
+        id: item.id,
+        subcategory: item.subcategory,
+        value: item.value,
+      })),
+      skill_development_types: profession.skillDevelopmentTypes.map((item) => ({
+        id: item.id,
+        value: item.value,
+      })),
+      category_special_bonuses: profession.skillCategorySpecialBonuses.map((item) => ({
+        id: item.id,
+        value: item.value,
+      })),
+      category_development_types: profession.skillCategorySkillDevelopmentTypes.map((item) => ({
+        id: item.id,
+        value: item.value,
+      })),
+      group_special_bonuses: profession.skillGroupSpecialBonuses.map((item) => ({
+        id: item.id,
+        value: item.value,
+      })),
+      group_development_types: profession.skillGroupSkillDevelopmentTypes.map((item) => ({
+        id: item.id,
+        value: item.value,
+      })),
+    }));
+  }, [profession]);
+
+  useEffect(() => {
+    const selected = new Set(backgroundSelections);
+
+    const selectedRaceEverymanSkillIds = backgroundSelections
+      .filter((id) => id.startsWith('RACE_SKILL_'))
+      .map((id) => id.replace('RACE_SKILL_', ''));
+
+    const selectedRaceSkillBonusIds = backgroundSelections
+      .filter((id) => id.startsWith('RACE_BONUS_'))
+      .map((id) => id.replace('RACE_BONUS_', ''));
+
+    const selectedProfessionSkillBonusKeys = backgroundSelections
+      .filter((id) => id.startsWith('PROF_SKILL_'))
+      .map((id) => id.replace('PROF_SKILL_', ''));
+
+    const selectedProfessionCategoryBonusIds = backgroundSelections
+      .filter((id) => id.startsWith('PROF_CATEGORY_'))
+      .map((id) => id.replace('PROF_CATEGORY_', ''));
+
+    const raceSkillBonuses = (race?.skillBonuses ?? [])
+      .filter((bonus) => selectedRaceSkillBonusIds.includes(bonus.id))
+      .map((bonus) => ({
+        id: bonus.id,
+        subcategory: bonus.subcategory,
+        value: bonus.value,
+      }));
+
+    const professionSkillBonuses = (profession?.skillBonuses ?? [])
+      .filter((bonus) => selectedProfessionSkillBonusKeys.includes(skillChoiceKey(bonus.id, bonus.subcategory)))
+      .map((bonus) => ({
+        id: bonus.id,
+        subcategory: bonus.subcategory,
+        value: bonus.value,
+      }));
+
+    const selectedRaceSkills = (race?.everymanSkills ?? [])
+      .filter((skill) => selectedRaceEverymanSkillIds.includes(skill.id));
+
+    const selectedCategoryBonuses = (profession?.skillCategoryProfessionBonuses ?? [])
+      .filter((bonus) => selectedProfessionCategoryBonusIds.includes(bonus.id));
+
+    const includeBackgroundLanguages = selected.has('GENERIC_LANGUAGE');
+    const mappedBackgroundLanguages = includeBackgroundLanguages
+      ? (culture?.backgroundLanguages ?? []).map((lang) => ({
+        language: lang.language,
+        spoken: lang.spoken ?? 0,
+        written: lang.written ?? 0,
+        somatic: lang.somatic ?? 0,
+      }))
+      : [];
+
+    setCharacterBuilder((prev) => ({
+      ...prev,
+      everyman_skills: uniqStrings([
+        ...prev.everyman_skills.map((s) => skillChoiceKey(s.id, s.subcategory)),
+        ...selectedRaceSkills.map((s) => skillChoiceKey(s.id, s.subcategory)),
+      ]).map(parseSkillChoiceKey),
+      skill_professional_bonuses: [...raceSkillBonuses, ...professionSkillBonuses],
+      category_professional_bonuses: selectedCategoryBonuses,
+      background_language_choices: mappedBackgroundLanguages,
+      language_abilities: mappedBackgroundLanguages,
+    }));
+  }, [backgroundSelections, race, profession, culture]);
+
+  useEffect(() => {
+    const trainingPackage = selectedTrainingPackage;
+    if (!trainingPackage) {
+      setCharacterBuilder((prev) => ({
+        ...prev,
+        skill_ranks: [],
+        category_ranks: [],
+        spell_list_ranks: [],
+        num_hobby_skill_ranks: prev.hobby_skill_ranks.reduce((sum, row) => sum + row.value, 0),
+        num_spell_list_ranks: 0,
+      }));
+      return;
+    }
+
+    const selectedChoiceSkillRanks = trainingPackage.skillRankChoices.flatMap((choice, i) => {
+      const selected = tpSkillRankChoiceSelections[i] ?? [];
+      return selected.map((key) => {
+        const parsed = parseSkillChoiceKey(key);
+        return {
+          id: parsed.id,
+          subcategory: parsed.subcategory,
+          value: choice.value,
+        };
+      });
+    });
+
+    const skillRanks = [
+      ...trainingPackage.skillRanks.map((rank) => ({
+        id: rank.id,
+        subcategory: rank.subcategory,
+        value: rank.value,
+      })),
+      ...selectedChoiceSkillRanks,
+    ];
+
+    const categoryRanks = trainingPackage.categoryRanks.map((rank) => ({
+      id: rank.id,
+      value: rank.value,
+    }));
+
+    const spellListRanks = trainingPackage.spellListRanks
+      .filter((rank) => rank.numChoices <= 0)
+      .map((rank) => ({
+        id: rank.optionalCategory ?? '',
+        value: rank.value,
+      }))
+      .filter((rank) => Boolean(rank.id));
+
+    setCharacterBuilder((prev) => ({
+      ...prev,
+      skill_ranks: skillRanks,
+      category_ranks: categoryRanks,
+      spell_list_ranks: spellListRanks,
+      num_hobby_skill_ranks: prev.hobby_skill_ranks.reduce((sum, row) => sum + row.value, 0),
+      num_spell_list_ranks: spellListRanks.reduce((sum, row) => sum + row.value, 0),
+    }));
+  }, [selectedTrainingPackage, tpSkillRankChoiceSelections]);
 
   const validateInitial = (): string | undefined => {
     if (!characterName.trim()) return 'Name is required.';
