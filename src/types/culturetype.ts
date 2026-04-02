@@ -22,6 +22,9 @@ export interface CultureType {
   /** total adolescent language ranks to distribute */
   adolescentLanguageRanks: number;
 
+  /** total spell list ranks to distribute for Own Realm Open Lists */
+  spellListRanks?: number | undefined;
+
   /** references ArmourType.id */
   preferredArmours: string[];
   /** references WeaponType.id */
