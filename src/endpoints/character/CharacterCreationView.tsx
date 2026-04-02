@@ -253,18 +253,23 @@ export default function CharacterCreationView() {
   );
 
   const professionOptions = useMemo(() => {
-    return professions
-      .slice()
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((p) => {
-        const isRestricted = restrictedProfessions.has(p.id);
-        const isPreferred = preferredProfessions.has(p.id);
-        return {
-          value: p.id,
-          label: isPreferred ? `${p.name} (Preferred)` : p.name,
-          disabled: isRestricted,
-        };
-      });
+    const preferred = professions
+      .filter((p) => preferredProfessions.has(p.id))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    const nonPreferred = professions
+      .filter((p) => !preferredProfessions.has(p.id))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return [...preferred, ...nonPreferred].map((p) => {
+      const isRestricted = restrictedProfessions.has(p.id);
+      const isPreferred = preferredProfessions.has(p.id);
+      return {
+        value: p.id,
+        label: isPreferred ? `${p.name} (Preferred)` : p.name,
+        disabled: isRestricted,
+      };
+    });
   }, [professions, preferredProfessions, restrictedProfessions]);
 
   const predefinedSpellRealms = useMemo(() => {
