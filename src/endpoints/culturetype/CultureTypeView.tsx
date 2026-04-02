@@ -67,6 +67,7 @@ type FormState = {
 
   hobbySkillRanks: string;
   adolescentLanguageRanks: string;
+  spellListRanks: string;
 
   preferredArmours: string[]; // ArmourType.id
   preferredWeapons: string[]; // WeaponType.id
@@ -87,6 +88,7 @@ type FormErrors = {
   name?: string | undefined;
   hobbySkillRanks?: string | undefined;
   adolescentLanguageRanks?: string | undefined;
+  spellListRanks?: string | undefined;
 
   preferredArmours?: string | undefined;
   preferredWeapons?: string | undefined;
@@ -117,7 +119,7 @@ const emptyVM = (): FormState => ({
 
   hobbySkillRanks: '',
   adolescentLanguageRanks: '',
-
+  spellListRanks: '',
   preferredArmours: [],
   preferredWeapons: [],
 
@@ -147,6 +149,7 @@ const toVM = (x: CultureType): FormState => ({
 
   hobbySkillRanks: String(x.hobbySkillRanks),
   adolescentLanguageRanks: String(x.adolescentLanguageRanks),
+  spellListRanks: x.spellListRanks != null ? String(x.spellListRanks) : '',
 
   preferredArmours: x.preferredArmours ?? [],
   preferredWeapons: x.preferredWeapons ?? [],
@@ -690,6 +693,17 @@ export default function CultureTypeView() {
                 inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
                 error={viewing ? undefined : errors.adolescentLanguageRanks}
               />
+              {form.spellListRanks !== '' && (
+                <LabeledInput
+                  label="Own Realm Open Spell List Ranks"
+                  value={form.spellListRanks}
+                  onChange={makeUnsignedIntOnChange<typeof form>('spellListRanks', setForm)}
+                  disabled={viewing}
+                  width={160}
+                  inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
+                  error={viewing ? undefined : errors.spellListRanks}
+                />
+              )}
             </div>
 
             {/* Long text fields */}

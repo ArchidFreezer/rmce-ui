@@ -57,6 +57,7 @@ function fromJson(x: any): CultureType {
 
     hobbySkillRanks: asInt(x?.hobbySkillRanks),
     adolescentLanguageRanks: asInt(x?.adolescentLanguageRanks),
+    spellListRanks: x?.spellListRanks != null ? asInt(x?.spellListRanks) : undefined,
 
     preferredArmours: asStringArray(x?.preferredArmours),
     preferredWeapons: asStringArray(x?.preferredWeapons),
