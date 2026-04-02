@@ -59,7 +59,7 @@ const known: Record<string, ResourceDef> = {
   specialattacktable: { prefix: 'specialattacktable', label: 'Special Attack Tables', path: '/specialattacktables', Component: SpecialAttackTableView },
   spelllist: { prefix: 'spelllist', label: 'Spell Lists', path: '/spelllists', Component: SpellListView },
   trainingpackage: { prefix: 'trainingpackage', label: 'Training Packages', path: '/trainingpackages', Component: TrainingPackageView },
-  treasurecode: { prefix: 'treasurecode', label: 'Treasure Codes', path: '/treasurecodes', Component:TreasureCodeView },
+  treasurecode: { prefix: 'treasurecode', label: 'Treasure Codes', path: '/treasurecodes', Component: TreasureCodeView },
   weapontype: { prefix: 'weapontype', label: 'Weapon Types', path: '/weapontypes', Component: WeaponTypeView },
 }
 
@@ -84,6 +84,7 @@ export const FALLBACK_RESOURCES: ResourceDef[] = [
   known.book,
   known.climate,
   known.creaturepace,
+  known.culture,
   known.culturetype,
   known.disease,
   known.diseasetype,
