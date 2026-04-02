@@ -66,6 +66,7 @@ type FormState = {
   religiousBeliefs: string;
 
   hobbySkillRanks: string;
+  adolescentLanguageRanks: string;
 
   preferredArmours: string[]; // ArmourType.id
   preferredWeapons: string[]; // WeaponType.id
@@ -85,6 +86,7 @@ type FormErrors = {
   id?: string | undefined;
   name?: string | undefined;
   hobbySkillRanks?: string | undefined;
+  adolescentLanguageRanks?: string | undefined;
 
   preferredArmours?: string | undefined;
   preferredWeapons?: string | undefined;
@@ -114,6 +116,7 @@ const emptyVM = (): FormState => ({
   religiousBeliefs: '',
 
   hobbySkillRanks: '',
+  adolescentLanguageRanks: '',
 
   preferredArmours: [],
   preferredWeapons: [],
@@ -143,6 +146,7 @@ const toVM = (x: CultureType): FormState => ({
   religiousBeliefs: x.religiousBeliefs ?? '',
 
   hobbySkillRanks: String(x.hobbySkillRanks),
+  adolescentLanguageRanks: String(x.adolescentLanguageRanks),
 
   preferredArmours: x.preferredArmours ?? [],
   preferredWeapons: x.preferredWeapons ?? [],
@@ -172,6 +176,7 @@ const fromVM = (vm: FormState): CultureType => ({
   religiousBeliefs: vm.religiousBeliefs.trim() || undefined,
 
   hobbySkillRanks: Number(vm.hobbySkillRanks),
+  adolescentLanguageRanks: Number(vm.adolescentLanguageRanks),
 
   preferredArmours: vm.preferredArmours.slice(),
   preferredWeapons: vm.preferredWeapons.slice(),
@@ -675,6 +680,15 @@ export default function CultureTypeView() {
                 width={160}
                 inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
                 error={viewing ? undefined : errors.hobbySkillRanks}
+              />
+              <LabeledInput
+                label="Adolescent Language Ranks"
+                value={form.adolescentLanguageRanks}
+                onChange={makeUnsignedIntOnChange<typeof form>('adolescentLanguageRanks', setForm)}
+                disabled={viewing}
+                width={160}
+                inputProps={{ inputMode: 'numeric', pattern: '^\\d+$' }}
+                error={viewing ? undefined : errors.adolescentLanguageRanks}
               />
             </div>
 
