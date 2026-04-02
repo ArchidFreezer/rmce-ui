@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import {
   applyLevelUpgrade,
+  fetchCultureTypes,
   fetchCultures,
   fetchProfessions,
   fetchRaces,
@@ -26,6 +27,7 @@ import { createEmptyCharacterBuilder } from '../../types';
 import type {
   CharacterBuilder,
   Culture,
+  CultureType,
   Profession,
   Race,
   Skill,
@@ -145,6 +147,7 @@ export default function CharacterCreationView() {
   const [error, setError] = useState<string | null>(null);
 
   const [races, setRaces] = useState<Race[]>([]);
+  const [cultureTypes, setCultureTypes] = useState<CultureType[]>([]);
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [professions, setProfessions] = useState<Profession[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
@@ -155,6 +158,7 @@ export default function CharacterCreationView() {
   const [errors, setErrors] = useState<StepErrors>({});
 
   const [raceId, setRaceId] = useState('');
+  const [cultureTypeId, setCultureTypeId] = useState('');
   const [cultureId, setCultureId] = useState('');
   const [professionId, setProfessionId] = useState('');
   const [selectedRealms, setSelectedRealms] = useState<Realm[]>([]);
@@ -181,8 +185,9 @@ export default function CharacterCreationView() {
   useEffect(() => {
     (async () => {
       try {
-        const [raceData, cultureData, professionData, skillData, categoryData, tpData] = await Promise.all([
+        const [raceData, cultureTypeData, cultureData, professionData, skillData, categoryData, tpData] = await Promise.all([
           fetchRaces(),
+          fetchCultureTypes(),
           fetchCultures(),
           fetchProfessions(),
           fetchSkills(),
@@ -191,6 +196,7 @@ export default function CharacterCreationView() {
         ]);
 
         setRaces(raceData);
+        setCultureTypes(cultureTypeData);
         setCultures(cultureData);
         setProfessions(professionData);
         setSkills(skillData);
@@ -212,6 +218,11 @@ export default function CharacterCreationView() {
   const culture = useMemo(
     () => cultures.find((x) => x.id === cultureId),
     [cultures, cultureId],
+  );
+
+  const availableCultures = useMemo(
+    () => cultures.filter((x) => x.cultureType === cultureTypeId),
+    [cultures, cultureTypeId],
   );
 
   const profession = useMemo(
@@ -345,6 +356,16 @@ export default function CharacterCreationView() {
   );
 
   useEffect(() => {
+    if (!cultureTypeId) {
+      if (cultureId) setCultureId('');
+      return;
+    }
+    if (cultureId && !availableCultures.some((x) => x.id === cultureId)) {
+      setCultureId('');
+    }
+  }, [cultureTypeId, cultureId, availableCultures]);
+
+  useEffect(() => {
     if (!culture) return;
     if (professionId && restrictedProfessions.has(professionId)) {
       setProfessionId('');
@@ -405,7 +426,7 @@ export default function CharacterCreationView() {
       name: characterName,
       race: raceId,
       culture: cultureId,
-      culture_type: culture?.cultureType ?? '',
+      culture_type: cultureTypeId,
       profession: professionId,
       magical_realms: selectedRealms,
       everyman_skills: race?.everymanSkills ?? [],
@@ -432,7 +453,7 @@ export default function CharacterCreationView() {
             + tpStatGainChoices.filter((s) => s === roll.assignedStat).length,
         })),
     }));
-  }, [characterName, raceId, cultureId, culture, professionId, selectedRealms, statRolls, race, tpStatGainChoices]);
+  }, [characterName, raceId, cultureTypeId, cultureId, professionId, selectedRealms, statRolls, race, tpStatGainChoices]);
 
   useEffect(() => {
     const raceCategorySelectionsFlat = uniqStrings(raceCategorySelections.flat());
@@ -666,6 +687,7 @@ export default function CharacterCreationView() {
   const validateInitial = (): string | undefined => {
     if (!characterName.trim()) return 'Name is required.';
     if (!raceId) return 'Race is required.';
+    if (!cultureTypeId) return 'Culture Type is required.';
     if (!cultureId) return 'Culture is required.';
     if (!professionId) return 'Profession is required.';
     if (restrictedProfessions.has(professionId)) {
@@ -794,6 +816,7 @@ export default function CharacterCreationView() {
   }, [
     raceId,
     characterName,
+    cultureTypeId,
     cultureId,
     professionId,
     selectedRealms,
@@ -994,6 +1017,7 @@ export default function CharacterCreationView() {
     setStep('initial');
     setCharacterName('');
     setRaceId('');
+    setCultureTypeId('');
     setCultureId('');
     setProfessionId('');
     setSelectedRealms([]);
@@ -1158,16 +1182,33 @@ export default function CharacterCreationView() {
                 />
 
                 <LabeledSelect
+                  label="Culture Type"
+                  value={cultureTypeId}
+                  onChange={(v) => {
+                    setCultureTypeId(v);
+                    setTrainingPackageId('');
+                    setBackgroundSelections([]);
+                  }}
+                  options={cultureTypes
+                    .slice()
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((ct) => ({ value: ct.id, label: ct.name }))}
+                  error={errors.initial && !cultureTypeId ? 'Required' : undefined}
+                />
+
+                <LabeledSelect
                   label="Culture"
                   value={cultureId}
                   onChange={(v) => {
                     setCultureId(v);
                     setTrainingPackageId('');
                   }}
-                  options={cultures
+                  options={availableCultures
                     .slice()
                     .sort((a, b) => a.name.localeCompare(b.name))
                     .map((c) => ({ value: c.id, label: c.name }))}
+                  disabled={!cultureTypeId}
+                  helperText={!cultureTypeId ? 'Select a Culture Type first.' : undefined}
                   error={errors.initial && !cultureId ? 'Required' : undefined}
                 />
 
