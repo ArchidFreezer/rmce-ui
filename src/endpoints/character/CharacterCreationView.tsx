@@ -9,6 +9,7 @@ import {
   fetchSkills,
   fetchTrainingPackages,
   getStatRollPotentials,
+  setCharacterBuilderStats,
   submitInitialChoices,
 } from '../../api';
 
@@ -174,6 +175,7 @@ export default function CharacterCreationView() {
   const [tpSkillRankChoiceSelections, setTpSkillRankChoiceSelections] = useState<string[][]>([]);
   const [characterBuilder, setCharacterBuilder] = useState<CharacterBuilder>(() => createEmptyCharacterBuilder());
   const [savingInitialChoices, setSavingInitialChoices] = useState(false);
+  const [savingStats, setSavingStats] = useState(false);
   const [applying, setApplying] = useState(false);
 
   useEffect(() => {
@@ -854,6 +856,47 @@ export default function CharacterCreationView() {
       }
     }
 
+    if (step === 'stats') {
+      if (!characterBuilder.id) {
+        toast({
+          variant: 'danger',
+          title: 'Save stats failed',
+          description: 'Character builder id is missing. Complete initial choices first.',
+        });
+        return;
+      }
+
+      setSavingStats(true);
+      try {
+        const statsPayload = STATS.map((stat) => {
+          const assigned = statRolls.find((roll) => roll.assignedStat === stat);
+          if (!assigned) {
+            throw new Error(`Missing assigned roll for stat ${stat}.`);
+          }
+
+          return {
+            stat,
+            temporary: Number(assigned.temporary) || 0,
+            potential: assigned.potential ?? 0,
+          };
+        });
+
+        await setCharacterBuilderStats({
+          id: characterBuilder.id,
+          stats: statsPayload,
+        });
+      } catch (e) {
+        toast({
+          variant: 'danger',
+          title: 'Save stats failed',
+          description: String(e instanceof Error ? e.message : e),
+        });
+        return;
+      } finally {
+        setSavingStats(false);
+      }
+    }
+
     const next = STEP_ORDER[idx + 1];
     if (next) setStep(next);
   };
@@ -1069,15 +1112,17 @@ export default function CharacterCreationView() {
       </div>
 
       <div className="form-container">
-        {(generatingStats || applying || savingInitialChoices) && (
+        {(generatingStats || applying || savingInitialChoices || savingStats) && (
           <div className="overlay">
             <Spinner size={24} />
             <span>
               {savingInitialChoices
                 ? 'Saving initial choices…'
-                : applying
-                  ? 'Applying level upgrade…'
-                  : 'Generating stats…'}
+                : savingStats
+                  ? 'Saving stats…'
+                  : applying
+                    ? 'Applying level upgrade…'
+                    : 'Generating stats…'}
             </span>
           </div>
         )}
@@ -1481,7 +1526,7 @@ export default function CharacterCreationView() {
 
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" onClick={goPrev} disabled={step === 'initial'}>Back</button>
-            <button type="button" onClick={goNext} disabled={!canGoNext || step === 'apply' || savingInitialChoices}>Next</button>
+            <button type="button" onClick={goNext} disabled={!canGoNext || step === 'apply' || savingInitialChoices || savingStats}>Next</button>
           </div>
         </div>
       </div>
