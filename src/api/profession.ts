@@ -133,6 +133,7 @@ function fromJson(x: any): Profession {
     description: x?.description != null ? asString(x?.description) : undefined,
 
     book: asString(x?.book),
+    allowedRaces: asStringArray(x?.allowedRaces),
     spellUserType: asString(x?.spellUserType) as Profession['spellUserType'],
     realms: asStringArray(x?.realms) as Profession['realms'],
     stats: asStringArray(x?.stats) as Profession['stats'],
