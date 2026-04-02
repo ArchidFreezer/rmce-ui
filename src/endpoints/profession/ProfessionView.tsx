@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   fetchBooks,
   fetchProfessions, upsertProfession, deleteProfession,
+  fetchRaces,
   fetchSkills,
   fetchSkillCategories,
   fetchSkillGroups,
@@ -42,6 +43,7 @@ import type {
   ProfessionCategorySkillDevelopmentTypeChoice,
   ProfessionGroupSkillDevelopmentTypeChoice,
   ProfessionSkillCategoryCost,
+  Race,
   Skill,
   SkillCategory,
   SkillGroup,
@@ -85,6 +87,7 @@ type FormState = {
   description: string;
 
   book: string;
+  allowedRaces: string[];
   spellUserType: SpellUserType | '';
   realms: Realm[];
   stats: Stat[];
@@ -138,6 +141,7 @@ const emptyVM = (): FormState => ({
   description: '',
 
   book: '',
+  allowedRaces: [],
   spellUserType: '',
   realms: [],
   stats: [],
@@ -169,6 +173,7 @@ const toVM = (x: Profession): FormState => ({
   description: x.description ?? '',
 
   book: x.book,
+  allowedRaces: x.allowedRaces ?? [],
   spellUserType: x.spellUserType ?? '',
   realms: (x.realms ?? []) as Realm[],
   stats: (x.stats ?? []) as Stat[],
@@ -229,6 +234,7 @@ const fromVM = (vm: FormState): Profession => ({
   description: vm.description.trim() || undefined,
 
   book: vm.book.trim(),
+  allowedRaces: vm.allowedRaces.slice(),
   spellUserType: vm.spellUserType as SpellUserType,
   realms: vm.realms.slice() as Realm[],
   stats: vm.stats.slice() as Stat[],
@@ -320,6 +326,7 @@ export default function ProfessionView() {
 
   // reference lists
   const [books, setBooks] = useState<Book[]>([]);
+  const [races, setRaces] = useState<Race[]>([]);
   const [spellLists, setSpellLists] = useState<SpellList[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [categories, setCategories] = useState<SkillCategory[]>([]);
@@ -357,9 +364,10 @@ export default function ProfessionView() {
   useEffect(() => {
     (async () => {
       try {
-        const [p, b, s, c, g, sl] = await Promise.all([
+        const [p, b, r, s, c, g, sl] = await Promise.all([
           fetchProfessions(),
           fetchBooks(),
+          fetchRaces(),
           fetchSkills(),
           fetchSkillCategories(),
           fetchSkillGroups(),
@@ -367,6 +375,7 @@ export default function ProfessionView() {
         ]);
         setRows(p);
         setBooks(b);
+        setRaces(r);
         setSkills(s);
         setCategories(c);
         setGroups(g);
@@ -402,6 +411,13 @@ export default function ProfessionView() {
   const spellListOptions = useMemo(
     () => spellLists.map(s => ({ value: s.id, label: s.name })),
     [spellLists]
+  );
+  const raceOptions = useMemo(
+    () => races
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((r) => ({ value: r.id, label: r.name })),
+    [races]
   );
   const skillOptions = useMemo(
     () => skills.map(s => ({ value: s.id, label: s.name })),
@@ -958,6 +974,19 @@ export default function ProfessionView() {
 
             {/* Realms / Stats */}
             <section style={{ marginTop: 12 }}>
+              {form.allowedRaces.length > 0 && (
+                <>
+                  <h4 style={{ margin: '8px 0' }}>Allowed races</h4>
+                  <CheckboxGroup<string>
+                    label="Allowed races"
+                    value={form.allowedRaces}
+                    options={raceOptions}
+                    onChange={(next) => setForm((s) => ({ ...s, allowedRaces: next }))}
+                    disabled={loading || viewing}
+                  />
+                </>
+              )}
+
               <h4 style={{ margin: '8px 0' }}>Realms</h4>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 {realmOptions.map((opt) => (

@@ -252,25 +252,48 @@ export default function CharacterCreationView() {
     [culture],
   );
 
+  const raceMatchedProfessionIds = useMemo(() => {
+    if (!raceId) return new Set<string>();
+    return new Set(
+      professions
+        .filter((p) => (p.allowedRaces?.length ?? 0) > 0 && p.allowedRaces.includes(raceId))
+        .map((p) => p.id),
+    );
+  }, [professions, raceId]);
+
+  const raceDisallowedProfessionIds = useMemo(() => {
+    return new Set(
+      professions
+        .filter((p) => (p.allowedRaces?.length ?? 0) > 0 && !p.allowedRaces.includes(raceId))
+        .map((p) => p.id),
+    );
+  }, [professions, raceId]);
+
   const professionOptions = useMemo(() => {
+    const raceMatched = professions
+      .filter((p) => raceMatchedProfessionIds.has(p.id))
+      .sort((a, b) => a.id.localeCompare(b.id));
+
     const preferred = professions
-      .filter((p) => preferredProfessions.has(p.id))
+      .filter((p) => preferredProfessions.has(p.id) && !raceMatchedProfessionIds.has(p.id))
       .sort((a, b) => a.name.localeCompare(b.name));
 
     const nonPreferred = professions
-      .filter((p) => !preferredProfessions.has(p.id))
+      .filter((p) => !preferredProfessions.has(p.id) && !raceMatchedProfessionIds.has(p.id))
       .sort((a, b) => a.name.localeCompare(b.name));
 
-    return [...preferred, ...nonPreferred].map((p) => {
+    return [...raceMatched, ...preferred, ...nonPreferred].map((p) => {
       const isRestricted = restrictedProfessions.has(p.id);
+      const isRaceMatched = raceMatchedProfessionIds.has(p.id);
+      const isRaceDisallowed = raceDisallowedProfessionIds.has(p.id);
       const isPreferred = preferredProfessions.has(p.id);
       return {
         value: p.id,
-        label: isPreferred ? `${p.name} (Preferred)` : p.name,
-        disabled: isRestricted,
+        label: isRaceMatched ? `${p.name} (Racial)` : (isPreferred ? `${p.name} (Culture Preferred)` : p.name),
+        disabled: isRestricted || isRaceDisallowed,
       };
     });
-  }, [professions, preferredProfessions, restrictedProfessions]);
+  }, [professions, preferredProfessions, raceDisallowedProfessionIds, raceMatchedProfessionIds, restrictedProfessions]);
 
   const predefinedSpellRealms = useMemo(() => {
     if (!profession) return [];
@@ -376,6 +399,12 @@ export default function CharacterCreationView() {
       setProfessionId('');
     }
   }, [culture, professionId, restrictedProfessions]);
+
+  useEffect(() => {
+    if (professionId && raceDisallowedProfessionIds.has(professionId)) {
+      setProfessionId('');
+    }
+  }, [professionId, raceDisallowedProfessionIds]);
 
   useEffect(() => {
     if (!profession) {
@@ -697,6 +726,9 @@ export default function CharacterCreationView() {
     if (!professionId) return 'Profession is required.';
     if (restrictedProfessions.has(professionId)) {
       return 'Selected profession is restricted by the selected culture.';
+    }
+    if (raceDisallowedProfessionIds.has(professionId)) {
+      return 'Selected profession is not allowed for the selected race.';
     }
     if (!profession) {
       return 'Selected profession has no valid realms.';

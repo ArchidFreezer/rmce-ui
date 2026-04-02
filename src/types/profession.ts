@@ -84,6 +84,7 @@ export interface Profession {
   description?: string | undefined;
 
   book: string; // Book.id
+  allowedRaces: string[]; // Race.id[]
   spellUserType: SpellUserType;
   realms: Realm[];
   stats: Stat[];
