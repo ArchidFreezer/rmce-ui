@@ -45,9 +45,19 @@ export type ApplyLevelUpgradeResponse = {
   [key: string]: unknown;
 };
 
+export type SetCharacterBuilderStatsRequest = {
+  id: string;
+  stats: Array<{
+    stat: Stat;
+    temporary: number;
+    potential: number;
+  }>;
+};
+
 const STAT_ROLLS_ENDPOINT = '/rmce/operations/character/stat-rolls';
 const INITIAL_CHOICES_ENDPOINT = '/rmce/operations/character/initial-choices';
 const APPLY_LEVEL_ENDPOINT = '/rmce/operations/character/apply-level-upgrade';
+const SET_STATS_ENDPOINT = '/rmce/operations/character/set-stats';
 
 export type StatRollRequest = {
   temporary: number;
@@ -80,4 +90,10 @@ export async function applyLevelUpgrade(
   payload: ApplyLevelUpgradeRequest,
 ): Promise<ApplyLevelUpgradeResponse> {
   return sendJson<ApplyLevelUpgradeResponse>(APPLY_LEVEL_ENDPOINT, 'POST', payload);
+}
+
+export async function setCharacterBuilderStats(
+  payload: SetCharacterBuilderStatsRequest,
+): Promise<unknown> {
+  return sendJson<unknown>(SET_STATS_ENDPOINT, 'POST', payload);
 }
