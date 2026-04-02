@@ -1,18 +1,18 @@
 // src/api/culturetype.ts
 import { fetchJson, sendJson } from './client';
 
-import type { 
+import type {
   CategoryRankValue,
   CultureType, CultureTypesPayload,
   SkillRankValue,
- } from '../types';
+} from '../types';
 
- import { 
-  asFeatureArray, 
-  asTerrainArray, 
-  asVegetationArray, 
+import {
+  asFeatureArray,
+  asTerrainArray,
+  asVegetationArray,
   asWaterBodyArray,
- } from '../types/enum';
+} from '../types/enum';
 
 const BASE = '/rmce/objects/culturetype';
 
@@ -56,6 +56,7 @@ function fromJson(x: any): CultureType {
     religiousBeliefs: x?.religiousBeliefs != null ? asString(x?.religiousBeliefs) : undefined,
 
     hobbySkillRanks: asInt(x?.hobbySkillRanks),
+    adolescentLanguageRanks: asInt(x?.adolescentLanguageRanks),
 
     preferredArmours: asStringArray(x?.preferredArmours),
     preferredWeapons: asStringArray(x?.preferredWeapons),

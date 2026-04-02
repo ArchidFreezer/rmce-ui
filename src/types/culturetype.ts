@@ -19,6 +19,9 @@ export interface CultureType {
   /** total hobby ranks to distribute */
   hobbySkillRanks: number;
 
+  /** total adolescent language ranks to distribute */
+  adolescentLanguageRanks: number;
+
   /** references ArmourType.id */
   preferredArmours: string[];
   /** references WeaponType.id */
