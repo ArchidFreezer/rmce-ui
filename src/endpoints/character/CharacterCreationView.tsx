@@ -873,6 +873,9 @@ export default function CharacterCreationView() {
     return !e;
   })();
 
+  const showPostStatsSummary = STEP_ORDER.indexOf(step) > STEP_ORDER.indexOf('stats');
+  const postStatsSummaryValue = `${race?.name ?? ''} - ${profession?.name ?? ''} (${characterBuilder.id || ''})`.trim();
+
   const goPrev = () => {
     const idx = STEP_ORDER.indexOf(step);
     if (idx <= 0) return;
@@ -1140,55 +1143,69 @@ export default function CharacterCreationView() {
   return (
     <>
       <h2>Character Creation</h2>
-      <p style={{ color: 'var(--muted)' }}>
-        Complete each step in order. Progression is locked until the current step is valid.
-      </p>
-
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-        {STEP_ORDER.map((s, i) => {
-          const active = s === step;
-          const hasError = !!errors[s];
-          return (
-            <button
-              key={s}
-              type="button"
-              onClick={() => {
-                const targetIndex = STEP_ORDER.indexOf(s);
-                const currentIndex = STEP_ORDER.indexOf(step);
-                if (targetIndex <= currentIndex) setStep(s);
-              }}
-              disabled={STEP_ORDER.indexOf(s) > STEP_ORDER.indexOf(step)}
-              style={{
-                border: active ? '2px solid var(--primary)' : '1px solid var(--border)',
-                background: active ? 'var(--primary-weak)' : undefined,
-                opacity: STEP_ORDER.indexOf(s) > STEP_ORDER.indexOf(step) ? 0.65 : 1,
-              }}
-              title={hasError ? errors[s] : STEP_LABELS[s]}
-            >
-              {i + 1}
-              {hasError ? ' ⚠' : ''}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="form-container">
-        {(generatingStats || applying || savingInitialChoices || savingStats) && (
-          <div className="overlay">
-            <Spinner size={24} />
-            <span>
-              {savingInitialChoices
-                ? 'Saving initial choices…'
-                : savingStats
-                  ? 'Saving stats…'
-                  : applying
-                    ? 'Applying level upgrade…'
-                    : 'Generating stats…'}
-            </span>
-          </div>
+      {/* The form panel is shared across steps, with conditional rendering of step-specific inputs. */}
+      <div className="form-panel" style={{ display: 'grid', gap: 14 }}>
+        {showPostStatsSummary && (
+          <LabeledInput
+            label="Character"
+            hideLabel={true}
+            value={postStatsSummaryValue}
+            onChange={() => { }}
+            inputProps={{ readOnly: true }}
+            disabled
+          />
         )}
 
-        <div className="form-panel" style={{ display: 'grid', gap: 14 }}>
+        <div style={{ color: 'var(--muted)' }}>
+          Complete each step in order. Progression is locked until the current step is valid.
+        </div>
+
+        {/* Step indicators with validation error tooltips and navigation control. */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+          {STEP_ORDER.map((s, i) => {
+            const active = s === step;
+            const hasError = !!errors[s];
+            return (
+              <button
+                key={s}
+                type="button"
+                onClick={() => {
+                  const targetIndex = STEP_ORDER.indexOf(s);
+                  const currentIndex = STEP_ORDER.indexOf(step);
+                  if (targetIndex <= currentIndex) setStep(s);
+                }}
+                disabled={STEP_ORDER.indexOf(s) > STEP_ORDER.indexOf(step)}
+                style={{
+                  border: active ? '2px solid var(--primary)' : '1px solid var(--border)',
+                  background: active ? 'var(--primary-weak)' : undefined,
+                  opacity: STEP_ORDER.indexOf(s) > STEP_ORDER.indexOf(step) ? 0.65 : 1,
+                }}
+                title={hasError ? errors[s] : STEP_LABELS[s]}
+              >
+                {i + 1}
+                {hasError ? ' ⚠' : ''}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Form panels for each step. Only the active step is interactable, but previous steps are shown for context. */}
+        <div className="form-container">
+          {(generatingStats || applying || savingInitialChoices || savingStats) && (
+            <div className="overlay">
+              <Spinner size={24} />
+              <span>
+                {savingInitialChoices
+                  ? 'Saving initial choices…'
+                  : savingStats
+                    ? 'Saving stats…'
+                    : applying
+                      ? 'Applying level upgrade…'
+                      : 'Generating stats…'}
+              </span>
+            </div>
+          )}
+
           <h3>{STEP_LABELS[step]}</h3>
 
           {step === 'initial' && (
