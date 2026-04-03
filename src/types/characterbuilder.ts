@@ -1,7 +1,7 @@
 import type { Realm, SkillDevelopmentType, Stat } from './enum';
 
 export interface CharacterBuilderLanguageRanks {
-  language: string;
+  language: string; // Language.id
   spoken: number;
   written: number;
   somatic: number;
