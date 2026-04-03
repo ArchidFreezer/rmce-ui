@@ -4,10 +4,12 @@ import {
   applyLevelUpgrade,
   fetchCultureTypes,
   fetchCultures,
+  fetchLanguages,
   fetchProfessions,
   fetchRaces,
   fetchSkillCategories,
   fetchSkills,
+  fetchSpellLists,
   fetchTrainingPackages,
   getStatRollPotentials,
   setCharacterBuilderStats,
@@ -30,8 +32,10 @@ import type {
   CultureType,
   Profession,
   Race,
+  Language,
   Skill,
   SkillCategory,
+  SpellList,
   TrainingPackage,
 } from '../../types';
 
@@ -41,7 +45,7 @@ import { isValidUnsignedInt, sanitizeUnsignedInt } from '../../utils';
 type CharacterStep =
   | 'initial'
   | 'stats'
-  | 'adolescent'
+  | 'hobby'
   | 'background'
   | 'apprenticeship'
   | 'apply';
@@ -49,7 +53,7 @@ type CharacterStep =
 const STEP_ORDER: CharacterStep[] = [
   'initial',
   'stats',
-  'adolescent',
+  'hobby',
   'background',
   'apprenticeship',
   'apply',
@@ -58,7 +62,7 @@ const STEP_ORDER: CharacterStep[] = [
 const STEP_LABELS: Record<CharacterStep, string> = {
   initial: '1. Initial Choices',
   stats: '2. Stat Generation',
-  adolescent: '3. Adolescent Skills',
+  hobby: '3. Hobby Ranks',
   background: '4. Background Options',
   apprenticeship: '5. Apprenticeship Skills',
   apply: '6. Apply Level Upgrade',
@@ -67,10 +71,38 @@ const STEP_LABELS: Record<CharacterStep, string> = {
 type StepErrors = {
   initial?: string | undefined;
   stats?: string | undefined;
-  adolescent?: string | undefined;
+  hobby?: string | undefined;
   background?: string | undefined;
   apprenticeship?: string | undefined;
   apply?: string | undefined;
+};
+
+type HobbySkillRow = {
+  id: string;
+  subcategory?: string | undefined;
+  base: number;
+  max: number;
+  value: number;
+};
+
+type HobbyCategoryRow = {
+  id: string;
+  base: number;
+  max: number;
+  value: number;
+};
+
+type HobbyLanguageRow = {
+  language: string;
+  baseSpoken: number;
+  baseWritten: number;
+  baseSomatic: number;
+  maxSpoken: number;
+  maxWritten: number;
+  maxSomatic: number;
+  spoken: number;
+  written: number;
+  somatic: number;
 };
 
 type BackgroundOption = {
@@ -147,11 +179,13 @@ export default function CharacterCreationView() {
   const [error, setError] = useState<string | null>(null);
 
   const [races, setRaces] = useState<Race[]>([]);
+  const [languages, setLanguages] = useState<Language[]>([]);
   const [cultureTypes, setCultureTypes] = useState<CultureType[]>([]);
   const [cultures, setCultures] = useState<Culture[]>([]);
   const [professions, setProfessions] = useState<Profession[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [categories, setCategories] = useState<SkillCategory[]>([]);
+  const [spellLists, setSpellLists] = useState<SpellList[]>([]);
   const [trainingPackages, setTrainingPackages] = useState<TrainingPackage[]>([]);
 
   const [step, setStep] = useState<CharacterStep>('initial');
@@ -169,8 +203,16 @@ export default function CharacterCreationView() {
 
   const [characterName, setCharacterName] = useState('');
 
-  const [raceCategorySelections, setRaceCategorySelections] = useState<string[][]>([]);
-  const [professionSkillSelections, setProfessionSkillSelections] = useState<string[][]>([]);
+  const [hobbyRanksBudget, setHobbyRanksBudget] = useState(0);
+  const [hobbySkillRows, setHobbySkillRows] = useState<HobbySkillRow[]>([]);
+  const [hobbyCategoryRows, setHobbyCategoryRows] = useState<HobbyCategoryRow[]>([]);
+
+  const [languageRanksBudget, setLanguageRanksBudget] = useState(0);
+  const [hobbyLanguageRows, setHobbyLanguageRows] = useState<HobbyLanguageRow[]>([]);
+
+  const [spellListRanksBudget, setSpellListRanksBudget] = useState(0);
+  const [hobbySpellListOptions, setHobbySpellListOptions] = useState<string[]>([]);
+  const [hobbySpellListId, setHobbySpellListId] = useState('');
 
   const [backgroundSelections, setBackgroundSelections] = useState<string[]>([]);
 
@@ -185,22 +227,26 @@ export default function CharacterCreationView() {
   useEffect(() => {
     (async () => {
       try {
-        const [raceData, cultureTypeData, cultureData, professionData, skillData, categoryData, tpData] = await Promise.all([
+        const [raceData, languageData, cultureTypeData, cultureData, professionData, skillData, categoryData, spellListData, tpData] = await Promise.all([
           fetchRaces(),
+          fetchLanguages(),
           fetchCultureTypes(),
           fetchCultures(),
           fetchProfessions(),
           fetchSkills(),
           fetchSkillCategories(),
+          fetchSpellLists(),
           fetchTrainingPackages(),
         ]);
 
         setRaces(raceData);
+        setLanguages(languageData);
         setCultureTypes(cultureTypeData);
         setCultures(cultureData);
         setProfessions(professionData);
         setSkills(skillData);
         setCategories(categoryData);
+        setSpellLists(spellListData);
         setTrainingPackages(tpData);
       } catch (e) {
         setError(String(e));
@@ -241,6 +287,18 @@ export default function CharacterCreationView() {
     for (const c of categories) map.set(c.id, c.name);
     return map;
   }, [categories]);
+
+  const languageNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const l of languages) map.set(l.id, l.name);
+    return map;
+  }, [languages]);
+
+  const spellListNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const s of spellLists) map.set(s.id, s.name);
+    return map;
+  }, [spellLists]);
 
   const restrictedProfessions = useMemo(
     () => new Set(culture?.restrictedProfessions ?? []),
@@ -314,21 +372,45 @@ export default function CharacterCreationView() {
 
   const developmentStats = useMemo(() => new Set(DEVELOPMENT_STATS), []);
 
-  const predefinedAdolescentSkillIds = useMemo(() => {
-    const fromRace = (race?.everymanSkills ?? []).map((x) => x.id);
-    const fromCulture = (culture?.hobbySkills ?? []).map((x) => x.id);
-    return uniqStrings([...fromRace, ...fromCulture]);
-  }, [race, culture]);
-
-  const raceCategoryChoiceDefs = useMemo(
-    () => race?.skillCategoryChoicesEveryman ?? [],
-    [race],
+  const hobbyRankSpent = useMemo(
+    () => [...hobbySkillRows, ...hobbyCategoryRows].reduce((sum, row) => sum + Math.max(0, row.value - row.base), 0),
+    [hobbySkillRows, hobbyCategoryRows],
   );
 
-  const professionSkillChoiceDefs = useMemo(
-    () => profession?.skillDevelopmentTypeChoices ?? [],
-    [profession],
+  const hobbyRankRemaining = hobbyRanksBudget - hobbyRankSpent;
+
+  const languageRankSpent = useMemo(
+    () => hobbyLanguageRows.reduce(
+      (sum, row) => sum
+        + Math.max(0, row.spoken - row.baseSpoken)
+        + Math.max(0, row.written - row.baseWritten)
+        + Math.max(0, row.somatic - row.baseSomatic),
+      0,
+    ),
+    [hobbyLanguageRows],
   );
+
+  const languageRankRemaining = languageRanksBudget - languageRankSpent;
+
+  const sortedHobbySkillRows = useMemo(() => {
+    return hobbySkillRows
+      .map((row, index) => ({
+        row,
+        index,
+        label: `${skillNameById.get(row.id) ?? row.id}${row.subcategory ? ` (${row.subcategory})` : ''}`,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [hobbySkillRows, skillNameById]);
+
+  const sortedHobbyCategoryRows = useMemo(() => {
+    return hobbyCategoryRows
+      .map((row, index) => ({
+        row,
+        index,
+        label: categoryNameById.get(row.id) ?? row.id,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [hobbyCategoryRows, categoryNameById]);
 
   const backgroundBudget = Math.max(0, race?.backgroundOptions ?? 0);
 
@@ -427,20 +509,6 @@ export default function CharacterCreationView() {
   }, [profession, predefinedSpellRealms, requiresRealmSelection]);
 
   useEffect(() => {
-    setRaceCategorySelections((prev) => {
-      const next = raceCategoryChoiceDefs.map((_, i) => prev[i] ?? []);
-      return next;
-    });
-  }, [raceCategoryChoiceDefs]);
-
-  useEffect(() => {
-    setProfessionSkillSelections((prev) => {
-      const next = professionSkillChoiceDefs.map((_, i) => prev[i] ?? []);
-      return next;
-    });
-  }, [professionSkillChoiceDefs]);
-
-  useEffect(() => {
     setTpSkillRankChoiceSelections((prev) => {
       const len = selectedTrainingPackage?.skillRankChoices.length ?? 0;
       const next = Array.from({ length: len }, (_, i) => prev[i] ?? []);
@@ -490,36 +558,31 @@ export default function CharacterCreationView() {
   }, [characterName, raceId, cultureTypeId, cultureId, professionId, selectedRealms, statRolls, race, tpStatGainChoices]);
 
   useEffect(() => {
-    const raceCategorySelectionsFlat = uniqStrings(raceCategorySelections.flat());
-    const profSkillDevTypeChoices = professionSkillChoiceDefs.flatMap((choice, i) => {
-      const selected = professionSkillSelections[i] ?? [];
-      return selected.map((key) => {
-        const parsed = parseSkillChoiceKey(key);
-        return {
-          id: parsed.id,
-          subcategory: parsed.subcategory,
-          value: choice.type,
-        };
-      });
-    });
-
     setCharacterBuilder((prev) => ({
       ...prev,
-      race_category_everyman_choices: raceCategorySelectionsFlat,
-      race_adolescent_language_choices: (race?.adolescentLanguages ?? []).map((lang) => ({
-        language: lang.language,
-        spoken: lang.spoken ?? 0,
-        written: lang.written ?? 0,
-        somatic: lang.somatic ?? 0,
+      hobby_skill_ranks: hobbySkillRows.map((row) => ({
+        id: row.id,
+        subcategory: row.subcategory,
+        value: row.value,
       })),
-      prof_skill_development_type_choices: profSkillDevTypeChoices,
-      hobby_skill_ranks: (culture?.hobbySkills ?? []).map((skill) => ({
-        id: skill.id,
-        subcategory: skill.subcategory,
-        value: 1,
+      hobby_category_ranks: hobbyCategoryRows.map((row) => ({
+        id: row.id,
+        value: row.value,
       })),
+      language_abilities: hobbyLanguageRows.map((row) => ({
+        language: row.language,
+        spoken: row.spoken,
+        written: row.written,
+        somatic: row.somatic,
+      })),
+      spell_list_ranks: spellListRanksBudget > 0 && hobbySpellListId
+        ? [{ id: hobbySpellListId, value: spellListRanksBudget }]
+        : [],
+      num_hobby_skill_ranks: hobbySkillRows.reduce((sum, row) => sum + row.value, 0)
+        + hobbyCategoryRows.reduce((sum, row) => sum + row.value, 0),
+      num_spell_list_ranks: spellListRanksBudget > 0 && hobbySpellListId ? spellListRanksBudget : 0,
     }));
-  }, [raceCategorySelections, professionSkillChoiceDefs, professionSkillSelections, race, culture]);
+  }, [hobbySkillRows, hobbyCategoryRows, hobbyLanguageRows, hobbySpellListId, spellListRanksBudget]);
 
   useEffect(() => {
     if (!profession) {
@@ -782,23 +845,25 @@ export default function CharacterCreationView() {
     return undefined;
   };
 
-  const validateAdolescent = (): string | undefined => {
-    for (let i = 0; i < raceCategoryChoiceDefs.length; i++) {
-      const def = raceCategoryChoiceDefs[i];
-      if (!def) continue;
-      const picked = raceCategorySelections[i] ?? [];
-      if (picked.length !== def.numChoices) {
-        return `Race category choice #${i + 1} requires exactly ${def.numChoices} selections.`;
-      }
+  const validateHobby = (): string | undefined => {
+    if (hobbyRankSpent > hobbyRanksBudget) {
+      return `Hobby ranks over-allocated by ${hobbyRankSpent - hobbyRanksBudget}.`;
     }
 
-    for (let i = 0; i < professionSkillChoiceDefs.length; i++) {
-      const def = professionSkillChoiceDefs[i];
-      if (!def) continue;
-      const picked = professionSkillSelections[i] ?? [];
-      if (picked.length !== def.numChoices) {
-        return `Profession skill choice #${i + 1} requires exactly ${def.numChoices} selections.`;
-      }
+    if (hobbyRankRemaining > 0) {
+      return `Spend all hobby ranks before continuing. Remaining: ${hobbyRankRemaining}.`;
+    }
+
+    if (languageRankSpent > languageRanksBudget) {
+      return `Language ranks over-allocated by ${languageRankSpent - languageRanksBudget}.`;
+    }
+
+    if (languageRankRemaining > 0) {
+      return `Spend all language ranks before continuing. Remaining: ${languageRankRemaining}.`;
+    }
+
+    if (spellListRanksBudget > 0 && !hobbySpellListId) {
+      return 'Select a spell list for hobby spell list ranks.';
     }
 
     return undefined;
@@ -840,7 +905,7 @@ export default function CharacterCreationView() {
     const next: StepErrors = {
       initial: validateInitial(),
       stats: validateStats(),
-      adolescent: validateAdolescent(),
+      hobby: validateHobby(),
       background: validateBackground(),
       apprenticeship: validateApprenticeship(),
     };
@@ -859,8 +924,12 @@ export default function CharacterCreationView() {
     selectedRealms,
     statRolls,
     statRollsLocked,
-    raceCategorySelections,
-    professionSkillSelections,
+    hobbyRankSpent,
+    hobbyRanksBudget,
+    languageRankSpent,
+    languageRanksBudget,
+    spellListRanksBudget,
+    hobbySpellListId,
     backgroundSelections,
     trainingPackageId,
     tpStatGainChoices,
@@ -903,10 +972,7 @@ export default function CharacterCreationView() {
           throw new Error('Initial choices response did not include a builder id.');
         }
 
-        setCharacterBuilder((prev) => ({
-          ...prev,
-          id: response.id,
-        }));
+        setCharacterBuilder(response);
       } catch (e) {
         toast({
           variant: 'danger',
@@ -944,10 +1010,93 @@ export default function CharacterCreationView() {
           };
         });
 
-        await setCharacterBuilderStats({
+        const statsSetup = await setCharacterBuilderStats({
           id: characterBuilder.id,
           stats: statsPayload,
         });
+
+        const baseSkillByKey = new Map<string, number>();
+        for (const row of characterBuilder.skill_ranks ?? []) {
+          const key = skillChoiceKey(row.id, row.subcategory);
+          baseSkillByKey.set(key, (baseSkillByKey.get(key) ?? 0) + (row.value ?? 0));
+        }
+
+        const baseCategoryById = new Map<string, number>();
+        for (const row of characterBuilder.category_ranks ?? []) {
+          baseCategoryById.set(row.id, (baseCategoryById.get(row.id) ?? 0) + (row.value ?? 0));
+        }
+
+        const baseLanguageById = new Map<string, { spoken: number; written: number; somatic: number }>();
+        for (const row of characterBuilder.language_abilities ?? []) {
+          baseLanguageById.set(row.language, {
+            spoken: row.spoken ?? 0,
+            written: row.written ?? 0,
+            somatic: row.somatic ?? 0,
+          });
+        }
+
+        const hobbySkillInit = (statsSetup.hobbySkills ?? []).map((row) => {
+          const key = skillChoiceKey(row.id, row.subcategory);
+          const base = baseSkillByKey.get(key) ?? 0;
+          const max = base + Math.max(0, row.value ?? 0);
+          return {
+            id: row.id,
+            subcategory: row.subcategory,
+            base,
+            max,
+            value: base,
+          };
+        });
+
+        const hobbyCategoryInit = (statsSetup.hobbyCategories ?? []).map((row) => {
+          const base = baseCategoryById.get(row.id) ?? 0;
+          const max = base + Math.max(0, row.value ?? 0);
+          return {
+            id: row.id,
+            base,
+            max,
+            value: base,
+          };
+        });
+
+        const hobbyLanguageInit = (statsSetup.adolescentLanguages ?? []).map((row) => {
+          const base = baseLanguageById.get(row.language);
+          const baseSpoken = base?.spoken ?? 0;
+          const baseWritten = base?.written ?? 0;
+          const baseSomatic = base?.somatic ?? 0;
+          const maxSpoken = Math.max(baseSpoken, row.spoken ?? 0);
+          const maxWritten = Math.max(baseWritten, row.written ?? 0);
+          const maxSomatic = Math.max(baseSomatic, row.somatic ?? 0);
+          return {
+            language: row.language,
+            baseSpoken,
+            baseWritten,
+            baseSomatic,
+            maxSpoken,
+            maxWritten,
+            maxSomatic,
+            spoken: baseSpoken,
+            written: baseWritten,
+            somatic: baseSomatic,
+          };
+        });
+
+        const spellListOptions = (statsSetup.adolescentSpellLists ?? []).map((x) => String(x));
+        const existingSpellListId = characterBuilder.spell_list_ranks?.[0]?.id ?? '';
+        const spellListSelection = spellListOptions.includes(existingSpellListId)
+          ? existingSpellListId
+          : (spellListOptions[0] ?? '');
+
+        setHobbyRanksBudget(Math.max(0, statsSetup.numHobbyRanks ?? 0));
+        setHobbySkillRows(hobbySkillInit);
+        setHobbyCategoryRows(hobbyCategoryInit);
+
+        setLanguageRanksBudget(Math.max(0, statsSetup.numLanguageRanks ?? 0));
+        setHobbyLanguageRows(hobbyLanguageInit);
+
+        setSpellListRanksBudget(Math.max(0, statsSetup.numSpellListRanks ?? 0));
+        setHobbySpellListOptions(spellListOptions);
+        setHobbySpellListId(spellListSelection);
       } catch (e) {
         toast({
           variant: 'danger',
@@ -1063,8 +1212,14 @@ export default function CharacterCreationView() {
     setSelectedRealms([]);
     setStatRolls(createEmptyStatRolls());
     setStatRollsLocked(false);
-    setRaceCategorySelections([]);
-    setProfessionSkillSelections([]);
+    setHobbyRanksBudget(0);
+    setHobbySkillRows([]);
+    setHobbyCategoryRows([]);
+    setLanguageRanksBudget(0);
+    setHobbyLanguageRows([]);
+    setSpellListRanksBudget(0);
+    setHobbySpellListOptions([]);
+    setHobbySpellListId('');
     setBackgroundSelections([]);
     setTrainingPackageId('');
     setTpStatGainChoices([]);
@@ -1107,9 +1262,9 @@ export default function CharacterCreationView() {
         temporaryStats: tempStatsAsNumbers,
         potentialStats: potentialStatsAsNumbers,
         selectedAdolescentSkills: {
-          predefinedSkillIds: predefinedAdolescentSkillIds,
-          selectedRaceCategoryChoices: raceCategorySelections,
-          selectedProfessionSkillChoices: professionSkillSelections,
+          predefinedSkillIds: [],
+          selectedRaceCategoryChoices: [],
+          selectedProfessionSkillChoices: [],
         },
         selectedBackgroundOptions: backgroundSelections,
         apprenticeship: {
@@ -1370,50 +1525,141 @@ export default function CharacterCreationView() {
             </section>
           )}
 
-          {step === 'adolescent' && (
+          {step === 'hobby' && (
             <section style={{ display: 'grid', gap: 14 }}>
               <div>
-                <h4 style={{ margin: '0 0 8px' }}>Predefined Skills</h4>
-                {predefinedAdolescentSkillIds.length === 0 ? (
-                  <div style={{ color: 'var(--muted)' }}>No predefined adolescent skills for the selected combination.</div>
+                <h4 style={{ margin: '0 0 8px' }}>Hobby Skill/Category Ranks</h4>
+                <div style={{ color: hobbyRankRemaining < 0 ? '#b00020' : 'var(--muted)' }}>
+                  Remaining hobby ranks: {hobbyRankRemaining} / {hobbyRanksBudget}
+                </div>
+              </div>
+
+              <div>
+                {sortedHobbySkillRows.length === 0 && sortedHobbyCategoryRows.length === 0 ? (
+                  <div style={{ color: 'var(--muted)' }}>No hobby skill/category rows available.</div>
                 ) : (
-                  <ul style={{ margin: 0, paddingLeft: 20 }}>
-                    {predefinedAdolescentSkillIds.map((id) => (
-                      <li key={id}>{skillNameById.get(id) ?? id}</li>
-                    ))}
-                  </ul>
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    {sortedHobbySkillRows.length > 0 && (
+                      <>
+                        <h4 style={{ margin: '0 0 4px' }}>Hobby Skills</h4>
+                        {sortedHobbySkillRows.map(({ row, index, label }) => (
+                          <div key={`hskill-${row.id}-${row.subcategory ?? ''}-${index}`} style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 1fr) auto auto auto auto', alignItems: 'center', gap: 8 }}>
+                            <span>{label}</span>
+                            <small style={{ color: 'var(--muted)' }}>Base: {row.base}, Max: {row.max}</small>
+                            <button
+                              type="button"
+                              onClick={() => setHobbySkillRows((prev) => prev.map((entry, idx) => (
+                                idx === index ? { ...entry, value: Math.max(entry.base, entry.value - 1) } : entry
+                              )))}
+                              disabled={row.value <= row.base}
+                            >
+                              -
+                            </button>
+                            <span>{row.value}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (hobbyRankRemaining <= 0 || row.value >= row.max) return;
+                                setHobbySkillRows((prev) => prev.map((entry, idx) => (
+                                  idx === index ? { ...entry, value: entry.value + 1 } : entry
+                                )));
+                              }}
+                              disabled={hobbyRankRemaining <= 0 || row.value >= row.max}
+                            >
+                              +
+                            </button>
+                          </div>
+                        ))}
+                      </>
+                    )}
+
+                    {sortedHobbyCategoryRows.length > 0 && (
+                      <>
+                        <h4 style={{ margin: '8px 0 4px' }}>Hobby Categories</h4>
+                        {sortedHobbyCategoryRows.map(({ row, index, label }) => (
+                          <div key={`hcat-${row.id}-${index}`} style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 1fr) auto auto auto auto', alignItems: 'center', gap: 8 }}>
+                            <span>{label}</span>
+                            <small style={{ color: 'var(--muted)' }}>Base: {row.base}, Max: {row.max}</small>
+                            <button
+                              type="button"
+                              onClick={() => setHobbyCategoryRows((prev) => prev.map((entry, idx) => (
+                                idx === index ? { ...entry, value: Math.max(entry.base, entry.value - 1) } : entry
+                              )))}
+                              disabled={row.value <= row.base}
+                            >
+                              -
+                            </button>
+                            <span>{row.value}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (hobbyRankRemaining <= 0 || row.value >= row.max) return;
+                                setHobbyCategoryRows((prev) => prev.map((entry, idx) => (
+                                  idx === index ? { ...entry, value: entry.value + 1 } : entry
+                                )));
+                              }}
+                              disabled={hobbyRankRemaining <= 0 || row.value >= row.max}
+                            >
+                              +
+                            </button>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
 
               <div>
-                <h4 style={{ margin: '0 0 8px' }}>Race Choice Requirements</h4>
-                {raceCategoryChoiceDefs.length === 0 ? (
-                  <div style={{ color: 'var(--muted)' }}>No race-based adolescent choices required.</div>
+                <h4 style={{ margin: '0 0 8px' }}>Hobby Language Ranks</h4>
+                <div style={{ color: languageRankRemaining < 0 ? '#b00020' : 'var(--muted)', marginBottom: 6 }}>
+                  Remaining language ranks: {languageRankRemaining} / {languageRanksBudget}
+                </div>
+                {hobbyLanguageRows.length === 0 ? (
+                  <div style={{ color: 'var(--muted)' }}>No hobby language rows available.</div>
                 ) : (
                   <div style={{ display: 'grid', gap: 10 }}>
-                    {raceCategoryChoiceDefs.map((choice, i) => {
-                      const selected = raceCategorySelections[i] ?? [];
+                    {hobbyLanguageRows.map((row, i) => {
+                      const controls: Array<{ key: 'spoken' | 'written' | 'somatic'; label: string; base: number; value: number; max: number }> = [
+                        { key: 'spoken', label: 'Spoken', base: row.baseSpoken, value: row.spoken, max: row.maxSpoken },
+                        { key: 'written', label: 'Written', base: row.baseWritten, value: row.written, max: row.maxWritten },
+                        { key: 'somatic', label: 'Somatic', base: row.baseSomatic, value: row.somatic, max: row.maxSomatic },
+                      ];
+
                       return (
-                        <div key={`race-choice-${i}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
-                          <strong>Choice #{i + 1}</strong>
-                          <div style={{ color: 'var(--muted)', marginBottom: 6 }}>Pick {choice.numChoices}</div>
-                          <div style={{ display: 'grid', gap: 6 }}>
-                            {choice.options.map((id) => (
-                              <CheckboxInput
-                                key={id}
-                                label={categoryNameById.get(id) ?? id}
-                                checked={selected.includes(id)}
-                                onChange={() => {
-                                  setRaceCategorySelections((prev) => {
-                                    const copy = prev.map((row) => row.slice());
-                                    const row = copy[i] ?? [];
-                                    copy[i] = toggleStringSelection(row, id, choice.numChoices);
-                                    return copy;
-                                  });
+                        <div key={`hlang-${row.language}-${i}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
+                          <strong>{languageNameById.get(row.language) ?? row.language}</strong>
+                          {controls.map((control) => (
+                            <div key={`${row.language}-${control.key}`} style={{ display: 'grid', gridTemplateColumns: '140px auto auto auto auto', alignItems: 'center', gap: 8 }}>
+                              <span>{control.label}</span>
+                              <small style={{ color: 'var(--muted)' }}>Base: {control.base}, Max: {control.max}</small>
+                              <button
+                                type="button"
+                                onClick={() => setHobbyLanguageRows((prev) => prev.map((entry, idx) => {
+                                  if (idx !== i) return entry;
+                                  const nextVal = Math.max(control.base, control.value - 1);
+                                  return { ...entry, [control.key]: nextVal };
+                                }))}
+                                disabled={control.value <= control.base}
+                              >
+                                -
+                              </button>
+                              <span>{control.value}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (languageRankRemaining <= 0 || control.value >= control.max) return;
+                                  setHobbyLanguageRows((prev) => prev.map((entry, idx) => {
+                                    if (idx !== i) return entry;
+                                    return { ...entry, [control.key]: control.value + 1 };
+                                  }));
                                 }}
-                              />
-                            ))}
-                          </div>
+                                disabled={languageRankRemaining <= 0 || control.value >= control.max}
+                              >
+                                +
+                              </button>
+                            </div>
+                          ))}
                         </div>
                       );
                     })}
@@ -1421,47 +1667,17 @@ export default function CharacterCreationView() {
                 )}
               </div>
 
-              <div>
-                <h4 style={{ margin: '0 0 8px' }}>Profession Choice Requirements</h4>
-                {professionSkillChoiceDefs.length === 0 ? (
-                  <div style={{ color: 'var(--muted)' }}>No profession-based adolescent choices required.</div>
-                ) : (
-                  <div style={{ display: 'grid', gap: 10 }}>
-                    {professionSkillChoiceDefs.map((choice, i) => {
-                      const selected = professionSkillSelections[i] ?? [];
-                      return (
-                        <div key={`prof-choice-${i}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
-                          <strong>Choice #{i + 1}</strong>
-                          <div style={{ color: 'var(--muted)', marginBottom: 6 }}>Pick {choice.numChoices}</div>
-                          <div style={{ display: 'grid', gap: 6 }}>
-                            {choice.options.map((opt) => {
-                              const key = skillChoiceKey(opt.id, opt.subcategory);
-                              const label = `${skillNameById.get(opt.id) ?? opt.id}${opt.subcategory ? ` (${opt.subcategory})` : ''}`;
-                              return (
-                                <CheckboxInput
-                                  key={key}
-                                  label={label}
-                                  checked={selected.includes(key)}
-                                  onChange={() => {
-                                    setProfessionSkillSelections((prev) => {
-                                      const copy = prev.map((row) => row.slice());
-                                      const row = copy[i] ?? [];
-                                      copy[i] = toggleStringSelection(row, key, choice.numChoices);
-                                      return copy;
-                                    });
-                                  }}
-                                />
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              {spellListRanksBudget > 0 && (
+                <LabeledSelect
+                  label={`Hobby Spell List (${spellListRanksBudget} ranks)`}
+                  value={hobbySpellListId}
+                  onChange={(v) => setHobbySpellListId(v)}
+                  options={hobbySpellListOptions.map((id) => ({ value: id, label: spellListNameById.get(id) ?? id }))}
+                  error={errors.hobby && !hobbySpellListId ? 'Required' : undefined}
+                />
+              )}
 
-              {errors.adolescent && <div style={{ color: '#b00020' }}>{errors.adolescent}</div>}
+              {errors.hobby && <div style={{ color: '#b00020' }}>{errors.hobby}</div>}
             </section>
           )}
 
@@ -1598,7 +1814,7 @@ export default function CharacterCreationView() {
                 </ul>
               </div>
 
-              {(errors.initial || errors.stats || errors.adolescent || errors.background || errors.apprenticeship) && (
+              {(errors.initial || errors.stats || errors.hobby || errors.background || errors.apprenticeship) && (
                 <div style={{ color: '#b00020' }}>
                   There are validation issues in previous steps. Please go back and correct them before applying level upgrade.
                 </div>
@@ -1608,7 +1824,7 @@ export default function CharacterCreationView() {
                 <button
                   type="button"
                   onClick={submitLevelUpgrade}
-                  disabled={applying || Boolean(errors.initial || errors.stats || errors.adolescent || errors.background || errors.apprenticeship)}
+                  disabled={applying || Boolean(errors.initial || errors.stats || errors.hobby || errors.background || errors.apprenticeship)}
                 >
                   {applying ? 'Applying…' : 'Apply Level Upgrade'}
                 </button>

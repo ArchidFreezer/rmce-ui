@@ -1,7 +1,7 @@
-import { fetchJson, sendJson } from './client';
+import { sendJson } from './client';
 
 import type { Realm, Stat } from '../types/enum';
-import type { CharacterBuilder } from '../types';
+import type { CharacterBuilder, CharacterBuilderIdOptionalSubcategoryValue, CharacterBuilderIdValue, CharacterBuilderLanguageRanks } from '../types';
 
 export type CharacterContext = {
   name?: string;
@@ -51,11 +51,20 @@ export type SetCharacterBuilderStatsRequest = {
   }>;
 };
 
+export type SetCharacterBuilderStatsResponse = {
+  numHobbyRanks: number;
+  hobbySkills: CharacterBuilderIdOptionalSubcategoryValue[]; // Skill.id + optional subcategory
+  hobbyCategories: CharacterBuilderIdValue[]; // SkillCategory.id
+  numLanguageRanks: number;
+  adolescentLanguages: CharacterBuilderLanguageRanks[]; // language + spoken/written/somatic ranks
+  numSpellListRanks: number;
+  adolescentSpellLists: String[]; // SpellList.id[]
+};
+
 const STAT_ROLLS_ENDPOINT = '/rmce/operations/character/stat-rolls';
 const INITIAL_CHOICES_ENDPOINT = '/rmce/operations/character/initial-choices';
 const APPLY_LEVEL_ENDPOINT = '/rmce/operations/character/apply-level-upgrade';
 const SET_STATS_ENDPOINT = '/rmce/operations/character/set-stats';
-
 export type StatRollRequest = {
   temporary: number;
 };
@@ -85,6 +94,6 @@ export async function applyLevelUpgrade(
 
 export async function setCharacterBuilderStats(
   payload: SetCharacterBuilderStatsRequest,
-): Promise<CharacterBuilder> {
-  return sendJson<CharacterBuilder>(SET_STATS_ENDPOINT, 'POST', payload);
+): Promise<SetCharacterBuilderStatsResponse> {
+  return sendJson<SetCharacterBuilderStatsResponse>(SET_STATS_ENDPOINT, 'POST', payload);
 }
