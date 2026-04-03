@@ -1,6 +1,7 @@
 import { fetchJson, sendJson } from './client';
 
 import type { Realm, Stat } from '../types/enum';
+import type { CharacterBuilder } from '../types';
 
 export type CharacterContext = {
   name?: string;
@@ -16,10 +17,6 @@ export type InitialChoicesRequest = {
   culture: string;
   profession: string;
   realms: Realm[];
-};
-
-export type InitialChoicesResponse = {
-  id: string;
 };
 
 export type ApplyLevelUpgradeRequest = {
@@ -68,22 +65,16 @@ export type StatRollResponse = {
   potential: number;
 };
 
+export async function submitInitialChoices(
+  payload: InitialChoicesRequest,
+): Promise<CharacterBuilder> {
+  return sendJson<CharacterBuilder>(INITIAL_CHOICES_ENDPOINT, 'POST', payload);
+}
+
 export async function getStatRollPotentials(
   payload: StatRollRequest[],
 ): Promise<StatRollResponse[]> {
   return sendJson<StatRollResponse[]>(STAT_ROLLS_ENDPOINT, 'POST', payload);
-}
-
-export async function submitInitialChoices(
-  payload: InitialChoicesRequest,
-): Promise<InitialChoicesResponse> {
-  return fetchJson<InitialChoicesResponse>(INITIAL_CHOICES_ENDPOINT, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
-  });
 }
 
 export async function applyLevelUpgrade(
@@ -94,6 +85,6 @@ export async function applyLevelUpgrade(
 
 export async function setCharacterBuilderStats(
   payload: SetCharacterBuilderStatsRequest,
-): Promise<unknown> {
-  return sendJson<unknown>(SET_STATS_ENDPOINT, 'POST', payload);
+): Promise<CharacterBuilder> {
+  return sendJson<CharacterBuilder>(SET_STATS_ENDPOINT, 'POST', payload);
 }
