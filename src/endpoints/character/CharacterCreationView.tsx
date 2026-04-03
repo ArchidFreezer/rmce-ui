@@ -1542,68 +1542,76 @@ export default function CharacterCreationView() {
                     {sortedHobbySkillRows.length > 0 && (
                       <>
                         <h4 style={{ margin: '0 0 4px' }}>Hobby Skills</h4>
-                        {sortedHobbySkillRows.map(({ row, index, label }) => (
-                          <div key={`hskill-${row.id}-${row.subcategory ?? ''}-${index}`} style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 1fr) auto auto auto auto', alignItems: 'center', gap: 8 }}>
-                            <span>{label}</span>
-                            <small style={{ color: 'var(--muted)' }}>Base: {row.base}, Max: {row.max}</small>
-                            <button
-                              type="button"
-                              onClick={() => setHobbySkillRows((prev) => prev.map((entry, idx) => (
-                                idx === index ? { ...entry, value: Math.max(entry.base, entry.value - 1) } : entry
-                              )))}
-                              disabled={row.value <= row.base}
-                            >
-                              -
-                            </button>
-                            <span>{row.value}</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (hobbyRankRemaining <= 0 || row.value >= row.max) return;
-                                setHobbySkillRows((prev) => prev.map((entry, idx) => (
-                                  idx === index ? { ...entry, value: entry.value + 1 } : entry
-                                )));
-                              }}
-                              disabled={hobbyRankRemaining <= 0 || row.value >= row.max}
-                            >
-                              +
-                            </button>
-                          </div>
-                        ))}
+                        <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))' }}>
+                          {sortedHobbySkillRows.map(({ row, index, label }) => (
+                            <div key={`hskill-${row.id}-${row.subcategory ?? ''}-${index}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
+                              <strong style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={label}>{label}</strong>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap' }}>
+                                <small style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>Base: {row.base}, Max: {row.max}</small>
+                                <button
+                                  type="button"
+                                  onClick={() => setHobbySkillRows((prev) => prev.map((entry, idx) => (
+                                    idx === index ? { ...entry, value: Math.max(entry.base, entry.value - 1) } : entry
+                                  )))}
+                                  disabled={row.value <= row.base}
+                                >
+                                  -
+                                </button>
+                                <span style={{ minWidth: 20, textAlign: 'center', whiteSpace: 'nowrap' }}>{row.value}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (hobbyRankRemaining <= 0 || row.value >= row.max) return;
+                                    setHobbySkillRows((prev) => prev.map((entry, idx) => (
+                                      idx === index ? { ...entry, value: entry.value + 1 } : entry
+                                    )));
+                                  }}
+                                  disabled={hobbyRankRemaining <= 0 || row.value >= row.max}
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </>
                     )}
 
                     {sortedHobbyCategoryRows.length > 0 && (
                       <>
                         <h4 style={{ margin: '8px 0 4px' }}>Hobby Categories</h4>
-                        {sortedHobbyCategoryRows.map(({ row, index, label }) => (
-                          <div key={`hcat-${row.id}-${index}`} style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 1fr) auto auto auto auto', alignItems: 'center', gap: 8 }}>
-                            <span>{label}</span>
-                            <small style={{ color: 'var(--muted)' }}>Base: {row.base}, Max: {row.max}</small>
-                            <button
-                              type="button"
-                              onClick={() => setHobbyCategoryRows((prev) => prev.map((entry, idx) => (
-                                idx === index ? { ...entry, value: Math.max(entry.base, entry.value - 1) } : entry
-                              )))}
-                              disabled={row.value <= row.base}
-                            >
-                              -
-                            </button>
-                            <span>{row.value}</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (hobbyRankRemaining <= 0 || row.value >= row.max) return;
-                                setHobbyCategoryRows((prev) => prev.map((entry, idx) => (
-                                  idx === index ? { ...entry, value: entry.value + 1 } : entry
-                                )));
-                              }}
-                              disabled={hobbyRankRemaining <= 0 || row.value >= row.max}
-                            >
-                              +
-                            </button>
-                          </div>
-                        ))}
+                        <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))' }}>
+                          {sortedHobbyCategoryRows.map(({ row, index, label }) => (
+                            <div key={`hcat-${row.id}-${index}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
+                              <strong style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={label}>{label}</strong>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap' }}>
+                                <small style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>Base: {row.base}, Max: {row.max}</small>
+                                <button
+                                  type="button"
+                                  onClick={() => setHobbyCategoryRows((prev) => prev.map((entry, idx) => (
+                                    idx === index ? { ...entry, value: Math.max(entry.base, entry.value - 1) } : entry
+                                  )))}
+                                  disabled={row.value <= row.base}
+                                >
+                                  -
+                                </button>
+                                <span style={{ minWidth: 20, textAlign: 'center', whiteSpace: 'nowrap' }}>{row.value}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (hobbyRankRemaining <= 0 || row.value >= row.max) return;
+                                    setHobbyCategoryRows((prev) => prev.map((entry, idx) => (
+                                      idx === index ? { ...entry, value: entry.value + 1 } : entry
+                                    )));
+                                  }}
+                                  disabled={hobbyRankRemaining <= 0 || row.value >= row.max}
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </>
                     )}
                   </div>
@@ -1618,7 +1626,7 @@ export default function CharacterCreationView() {
                 {hobbyLanguageRows.length === 0 ? (
                   <div style={{ color: 'var(--muted)' }}>No hobby language rows available.</div>
                 ) : (
-                  <div style={{ display: 'grid', gap: 10 }}>
+                  <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))' }}>
                     {hobbyLanguageRows.map((row, i) => {
                       const controls: Array<{ key: 'spoken' | 'written' | 'somatic'; label: string; base: number; value: number; max: number }> = [
                         { key: 'spoken', label: 'Spoken', base: row.baseSpoken, value: row.spoken, max: row.maxSpoken },
@@ -1628,11 +1636,13 @@ export default function CharacterCreationView() {
 
                       return (
                         <div key={`hlang-${row.language}-${i}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
-                          <strong>{languageNameById.get(row.language) ?? row.language}</strong>
+                          <strong style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={languageNameById.get(row.language) ?? row.language}>
+                            {languageNameById.get(row.language) ?? row.language}
+                          </strong>
                           {controls.map((control) => (
-                            <div key={`${row.language}-${control.key}`} style={{ display: 'grid', gridTemplateColumns: '140px auto auto auto auto', alignItems: 'center', gap: 8 }}>
-                              <span>{control.label}</span>
-                              <small style={{ color: 'var(--muted)' }}>Base: {control.base}, Max: {control.max}</small>
+                            <div key={`${row.language}-${control.key}`} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap' }}>
+                              <span style={{ minWidth: 74, whiteSpace: 'nowrap' }}>{control.label}</span>
+                              <small style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>Base: {control.base}, Max: {control.max}</small>
                               <button
                                 type="button"
                                 onClick={() => setHobbyLanguageRows((prev) => prev.map((entry, idx) => {
@@ -1644,7 +1654,7 @@ export default function CharacterCreationView() {
                               >
                                 -
                               </button>
-                              <span>{control.value}</span>
+                              <span style={{ minWidth: 20, textAlign: 'center', whiteSpace: 'nowrap' }}>{control.value}</span>
                               <button
                                 type="button"
                                 onClick={() => {
