@@ -72,6 +72,7 @@ export interface CharacterBuilder {
 
   hobby_skill_ranks: CharacterBuilderIdOptionalSubcategoryValue[];
   hobby_category_ranks: CharacterBuilderIdValue[];
+  adolescent_spell_list_choice: String | null; // SpellList.id
 
   background_language_choices: CharacterBuilderLanguageRanks[];
   language_abilities: CharacterBuilderLanguageRanks[];
@@ -128,7 +129,7 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
 
     hobby_skill_ranks: [],
     hobby_category_ranks: [],
-
+    adolescent_spell_list_choice: null,
     background_language_choices: [],
     language_abilities: [],
 
