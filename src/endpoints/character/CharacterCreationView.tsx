@@ -8,11 +8,13 @@ import {
   fetchProfessions,
   fetchRaces,
   fetchSkillCategories,
+  fetchSkillGroups,
   fetchSkills,
   fetchSpellLists,
   fetchTrainingPackages,
   getStatRollPotentials,
   setCharacterBuilderStats,
+  setCharacterHobbyChoices,
   submitInitialChoices,
 } from '../../api';
 
@@ -35,6 +37,7 @@ import type {
   Language,
   Skill,
   SkillCategory,
+  SkillGroup,
   SpellList,
   TrainingPackage,
 } from '../../types';
@@ -185,6 +188,7 @@ export default function CharacterCreationView() {
   const [professions, setProfessions] = useState<Profession[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [categories, setCategories] = useState<SkillCategory[]>([]);
+  const [groups, setGroups] = useState<SkillGroup[]>([]);
   const [spellLists, setSpellLists] = useState<SpellList[]>([]);
   const [trainingPackages, setTrainingPackages] = useState<TrainingPackage[]>([]);
 
@@ -222,12 +226,13 @@ export default function CharacterCreationView() {
   const [characterBuilder, setCharacterBuilder] = useState<CharacterBuilder>(() => createEmptyCharacterBuilder());
   const [savingInitialChoices, setSavingInitialChoices] = useState(false);
   const [savingStats, setSavingStats] = useState(false);
+  const [savingHobbyChoices, setSavingHobbyChoices] = useState(false);
   const [applying, setApplying] = useState(false);
 
   useEffect(() => {
     (async () => {
       try {
-        const [raceData, languageData, cultureTypeData, cultureData, professionData, skillData, categoryData, spellListData, tpData] = await Promise.all([
+        const [raceData, languageData, cultureTypeData, cultureData, professionData, skillData, categoryData, groupData, spellListData, tpData] = await Promise.all([
           fetchRaces(),
           fetchLanguages(),
           fetchCultureTypes(),
@@ -235,6 +240,7 @@ export default function CharacterCreationView() {
           fetchProfessions(),
           fetchSkills(),
           fetchSkillCategories(),
+          fetchSkillGroups(),
           fetchSpellLists(),
           fetchTrainingPackages(),
         ]);
@@ -246,6 +252,7 @@ export default function CharacterCreationView() {
         setProfessions(professionData);
         setSkills(skillData);
         setCategories(categoryData);
+        setGroups(groupData);
         setSpellLists(spellListData);
         setTrainingPackages(tpData);
       } catch (e) {
@@ -283,10 +290,16 @@ export default function CharacterCreationView() {
   }, [skills]);
 
   const categoryNameById = useMemo(() => {
+    const groupNameById = new Map<string, string>();
+    for (const g of groups) groupNameById.set(g.id, g.name);
+
     const map = new Map<string, string>();
-    for (const c of categories) map.set(c.id, c.name);
+    for (const c of categories) {
+      const groupName = groupNameById.get(c.group) ?? c.group;
+      map.set(c.id, `(${groupName}) - ${c.name}`);
+    }
     return map;
-  }, [categories]);
+  }, [categories, groups]);
 
   const languageNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -580,7 +593,7 @@ export default function CharacterCreationView() {
         : [],
       num_hobby_skill_ranks: hobbySkillRows.reduce((sum, row) => sum + row.value, 0)
         + hobbyCategoryRows.reduce((sum, row) => sum + row.value, 0),
-      num_spell_list_ranks: spellListRanksBudget > 0 && hobbySpellListId ? spellListRanksBudget : 0,
+      num_adolescent_spell_list_ranks: spellListRanksBudget > 0 && hobbySpellListId ? spellListRanksBudget : 0,
     }));
   }, [hobbySkillRows, hobbyCategoryRows, hobbyLanguageRows, hobbySpellListId, spellListRanksBudget]);
 
@@ -732,7 +745,7 @@ export default function CharacterCreationView() {
         category_ranks: [],
         spell_list_ranks: [],
         num_hobby_skill_ranks: prev.hobby_skill_ranks.reduce((sum, row) => sum + row.value, 0),
-        num_spell_list_ranks: 0,
+        num_adolescent_spell_list_ranks: 0,
       }));
       return;
     }
@@ -777,7 +790,7 @@ export default function CharacterCreationView() {
       category_ranks: categoryRanks,
       spell_list_ranks: spellListRanks,
       num_hobby_skill_ranks: prev.hobby_skill_ranks.reduce((sum, row) => sum + row.value, 0),
-      num_spell_list_ranks: spellListRanks.reduce((sum, row) => sum + row.value, 0),
+      num_adolescent_spell_list_ranks: spellListRanks.reduce((sum, row) => sum + row.value, 0),
     }));
   }, [selectedTrainingPackage, tpSkillRankChoiceSelections]);
 
@@ -1082,10 +1095,13 @@ export default function CharacterCreationView() {
         });
 
         const spellListOptions = (statsSetup.adolescentSpellLists ?? []).map((x) => String(x));
-        const existingSpellListId = characterBuilder.spell_list_ranks?.[0]?.id ?? '';
-        const spellListSelection = spellListOptions.includes(existingSpellListId)
-          ? existingSpellListId
-          : (spellListOptions[0] ?? '');
+        const spellListRankBudget = Math.max(0, statsSetup.numSpellListRanks ?? 0);
+        const existingSpellListId = spellListRankBudget > 0
+          ? (characterBuilder.adolescent_spell_list_choice ?? '')
+          : '';
+        const spellListSelection = spellListRankBudget > 0
+          ? (spellListOptions.includes(existingSpellListId) ? existingSpellListId : '')
+          : '';
 
         setHobbyRanksBudget(Math.max(0, statsSetup.numHobbyRanks ?? 0));
         setHobbySkillRows(hobbySkillInit);
@@ -1094,7 +1110,7 @@ export default function CharacterCreationView() {
         setLanguageRanksBudget(Math.max(0, statsSetup.numLanguageRanks ?? 0));
         setHobbyLanguageRows(hobbyLanguageInit);
 
-        setSpellListRanksBudget(Math.max(0, statsSetup.numSpellListRanks ?? 0));
+        setSpellListRanksBudget(spellListRankBudget);
         setHobbySpellListOptions(spellListOptions);
         setHobbySpellListId(spellListSelection);
       } catch (e) {
@@ -1106,6 +1122,63 @@ export default function CharacterCreationView() {
         return;
       } finally {
         setSavingStats(false);
+      }
+    }
+
+    if (step === 'hobby') {
+      if (!characterBuilder.id) {
+        toast({
+          variant: 'danger',
+          title: 'Save hobby choices failed',
+          description: 'Character builder id is missing. Complete initial choices first.',
+        });
+        return;
+      }
+
+      setSavingHobbyChoices(true);
+      try {
+        const hobbyRanks = hobbySkillRows
+          .map((row) => ({
+            id: row.id,
+            subcategory: row.subcategory,
+            value: Math.max(0, row.value - row.base),
+          }))
+          .filter((row) => row.value > 0);
+
+        const hobbyCategoryRanks = hobbyCategoryRows
+          .map((row) => ({
+            id: row.id,
+            value: Math.max(0, row.value - row.base),
+          }))
+          .filter((row) => row.value > 0);
+
+        const adolescentLanguages = hobbyLanguageRows
+          .filter((row) => row.spoken > row.baseSpoken || row.written > row.baseWritten || row.somatic > row.baseSomatic)
+          .map((row) => ({
+            language: row.language,
+            spoken: row.spoken,
+            written: row.written,
+            somatic: row.somatic,
+          }));
+
+        const response = await setCharacterHobbyChoices({
+          id: characterBuilder.id,
+          hobbyRanks,
+          hobbyCategoryRanks,
+          adolescentLanguages,
+          adolescentSpellList: hobbySpellListId || '',
+        });
+
+        setCharacterBuilder(response);
+      } catch (e) {
+        toast({
+          variant: 'danger',
+          title: 'Save hobby choices failed',
+          description: String(e instanceof Error ? e.message : e),
+        });
+        return;
+      } finally {
+        setSavingHobbyChoices(false);
       }
     }
 
@@ -1346,7 +1419,7 @@ export default function CharacterCreationView() {
 
         {/* Form panels for each step. Only the active step is interactable, but previous steps are shown for context. */}
         <div className="form-container">
-          {(generatingStats || applying || savingInitialChoices || savingStats) && (
+          {(generatingStats || applying || savingInitialChoices || savingStats || savingHobbyChoices) && (
             <div className="overlay">
               <Spinner size={24} />
               <span>
@@ -1354,9 +1427,11 @@ export default function CharacterCreationView() {
                   ? 'Saving initial choices…'
                   : savingStats
                     ? 'Saving stats…'
-                    : applying
-                      ? 'Applying level upgrade…'
-                      : 'Generating stats…'}
+                    : savingHobbyChoices
+                      ? 'Saving hobby choices…'
+                      : applying
+                        ? 'Applying level upgrade…'
+                        : 'Generating stats…'}
               </span>
             </div>
           )}
@@ -1847,7 +1922,7 @@ export default function CharacterCreationView() {
 
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" onClick={goPrev} disabled={step === 'initial'}>Back</button>
-            <button type="button" onClick={goNext} disabled={!canGoNext || step === 'apply' || savingInitialChoices || savingStats}>Next</button>
+            <button type="button" onClick={goNext} disabled={!canGoNext || step === 'apply' || savingInitialChoices || savingStats || savingHobbyChoices}>Next</button>
           </div>
         </div>
       </div>
