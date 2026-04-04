@@ -51,7 +51,7 @@ export interface CharacterBuilder {
   name: string;
   built: boolean;
   num_hobby_skill_ranks: number;
-  num_spell_list_ranks: number;
+  num_adolescent_spell_list_ranks: number;
 
   race: string;
   culture: string;
@@ -72,7 +72,7 @@ export interface CharacterBuilder {
 
   hobby_skill_ranks: CharacterBuilderIdOptionalSubcategoryValue[];
   hobby_category_ranks: CharacterBuilderIdValue[];
-  adolescent_spell_list_choice: String | null; // SpellList.id
+  adolescent_spell_list_choice: string | null; // SpellList.id
 
   background_language_choices: CharacterBuilderLanguageRanks[];
   language_abilities: CharacterBuilderLanguageRanks[];
@@ -108,7 +108,7 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
     name: '',
     built: false,
     num_hobby_skill_ranks: 0,
-    num_spell_list_ranks: 0,
+    num_adolescent_spell_list_ranks: 0,
 
     race: '',
     culture: '',
@@ -129,7 +129,7 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
 
     hobby_skill_ranks: [],
     hobby_category_ranks: [],
-    adolescent_spell_list_choice: null,
+    adolescent_spell_list_choice: null, // SpellList.id
     background_language_choices: [],
     language_abilities: [],
 

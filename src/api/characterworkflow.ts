@@ -61,10 +61,19 @@ export type SetCharacterBuilderStatsResponse = {
   adolescentSpellLists: String[]; // SpellList.id[]
 };
 
+export type SetCharacterHobbyChoicesRequest = {
+  id: string;
+  hobbyRanks: CharacterBuilderIdOptionalSubcategoryValue[]; // Skill.id + optional subcategory
+  hobbyCategoryRanks: CharacterBuilderIdValue[]; // SkillCategory.id
+  adolescentLanguages: CharacterBuilderLanguageRanks[]; // language + spoken/written/somatic ranks
+  adolescentSpellList: String | null; // SpellList.id
+};
+
 const STAT_ROLLS_ENDPOINT = '/rmce/operations/character/stat-rolls';
 const INITIAL_CHOICES_ENDPOINT = '/rmce/operations/character/initial-choices';
 const APPLY_LEVEL_ENDPOINT = '/rmce/operations/character/apply-level-upgrade';
 const SET_STATS_ENDPOINT = '/rmce/operations/character/set-stats';
+const SET_HOBBY_CHOICES_ENDPOINT = '/rmce/operations/character/set-hobby-choices';
 export type StatRollRequest = {
   temporary: number;
 };
@@ -96,4 +105,10 @@ export async function setCharacterBuilderStats(
   payload: SetCharacterBuilderStatsRequest,
 ): Promise<SetCharacterBuilderStatsResponse> {
   return sendJson<SetCharacterBuilderStatsResponse>(SET_STATS_ENDPOINT, 'POST', payload);
+}
+
+export async function setCharacterHobbyChoices(
+  payload: SetCharacterHobbyChoicesRequest,
+): Promise<CharacterBuilder> {
+  return sendJson<CharacterBuilder>(SET_HOBBY_CHOICES_ENDPOINT, 'POST', payload);
 }
