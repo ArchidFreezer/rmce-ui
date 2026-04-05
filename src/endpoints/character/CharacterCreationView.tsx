@@ -118,6 +118,16 @@ type BackgroundLanguageRow = {
   somatic: number;
 };
 
+type BackgroundOptionState = {
+  extraStatGainRolls: boolean;
+  extraMoneyPoints: number;
+  extraLanguages: boolean;
+  languageRows: BackgroundLanguageRow[];
+  skillBonusIds: string[];
+  categoryBonusIds: string[];
+  specialItemsPoints: number;
+};
+
 type StatRoll = {
   slot: number;
   temporary: string;
@@ -177,6 +187,54 @@ function parseSkillChoiceKey(key: string): { id: string; subcategory?: string | 
     id,
     subcategory: subcategory || undefined,
   };
+}
+
+function createBackgroundLanguageRows(culture: Culture | undefined): BackgroundLanguageRow[] {
+  return (culture?.backgroundLanguages ?? []).map((row) => ({
+    language: row.language,
+    maxSpoken: Math.max(0, row.spoken ?? 0),
+    maxWritten: Math.max(0, row.written ?? 0),
+    maxSomatic: Math.max(0, row.somatic ?? 0),
+    spoken: 0,
+    written: 0,
+    somatic: 0,
+  }));
+}
+
+function createEmptyBackgroundOptionState(): BackgroundOptionState {
+  return {
+    extraStatGainRolls: false,
+    extraMoneyPoints: 0,
+    extraLanguages: false,
+    languageRows: [],
+    skillBonusIds: [],
+    categoryBonusIds: [],
+    specialItemsPoints: 0,
+  };
+}
+
+function getBackgroundLanguageRankSpent(rows: BackgroundLanguageRow[]): number {
+  return rows.reduce((sum, row) => sum + row.spoken + row.written + row.somatic, 0);
+}
+
+function getSelectedBackgroundPoints(state: BackgroundOptionState): number {
+  return (state.extraStatGainRolls ? 1 : 0)
+    + state.extraMoneyPoints
+    + (state.extraLanguages ? 1 : 0)
+    + state.skillBonusIds.length
+    + state.categoryBonusIds.length
+    + state.specialItemsPoints;
+}
+
+function getSelectedBackgroundOptionsPayload(state: BackgroundOptionState): string[] {
+  const out: string[] = [];
+  if (state.extraStatGainRolls) out.push('EXTRA_STAT_GAIN_ROLLS');
+  for (let i = 0; i < state.extraMoneyPoints; i++) out.push('EXTRA_MONEY');
+  if (state.extraLanguages) out.push('EXTRA_LANGUAGES');
+  for (const id of state.skillBonusIds) out.push(`SKILL_BONUS:${id}`);
+  for (const id of state.categoryBonusIds) out.push(`SKILL_CATEGORY_BONUS:${id}`);
+  for (let i = 0; i < state.specialItemsPoints; i++) out.push('SPECIAL_ITEMS');
+  return out;
 }
 
 export default function CharacterCreationView() {
@@ -438,50 +496,41 @@ export default function CharacterCreationView() {
 
   const backgroundBudget = Math.max(0, race?.backgroundOptions ?? 0);
 
-  const backgroundLanguageRanksBudget = backgroundExtraLanguages ? 20 : 0;
+  const backgroundState = useMemo<BackgroundOptionState>(() => ({
+    extraStatGainRolls: backgroundExtraStatGainRolls,
+    extraMoneyPoints: backgroundExtraMoneyPoints,
+    extraLanguages: backgroundExtraLanguages,
+    languageRows: backgroundLanguageRows,
+    skillBonusIds: backgroundSkillBonusIds,
+    categoryBonusIds: backgroundCategoryBonusIds,
+    specialItemsPoints: backgroundSpecialItemsPoints,
+  }), [
+    backgroundExtraStatGainRolls,
+    backgroundExtraMoneyPoints,
+    backgroundExtraLanguages,
+    backgroundLanguageRows,
+    backgroundSkillBonusIds,
+    backgroundCategoryBonusIds,
+    backgroundSpecialItemsPoints,
+  ]);
+
+  const backgroundLanguageRanksBudget = backgroundState.extraLanguages ? 20 : 0;
 
   const backgroundLanguageRankSpent = useMemo(
-    () => backgroundLanguageRows.reduce((sum, row) => sum + row.spoken + row.written + row.somatic, 0),
-    [backgroundLanguageRows],
+    () => getBackgroundLanguageRankSpent(backgroundState.languageRows),
+    [backgroundState.languageRows],
   );
 
   const backgroundLanguageRankRemaining = backgroundLanguageRanksBudget - backgroundLanguageRankSpent;
 
   const selectedBackgroundPoints = useMemo(
-    () =>
-      (backgroundExtraStatGainRolls ? 1 : 0)
-      + backgroundExtraMoneyPoints
-      + (backgroundExtraLanguages ? 1 : 0)
-      + backgroundSkillBonusIds.length
-      + backgroundCategoryBonusIds.length
-      + backgroundSpecialItemsPoints,
-    [
-      backgroundExtraStatGainRolls,
-      backgroundExtraMoneyPoints,
-      backgroundExtraLanguages,
-      backgroundSkillBonusIds,
-      backgroundCategoryBonusIds,
-      backgroundSpecialItemsPoints,
-    ],
+    () => getSelectedBackgroundPoints(backgroundState),
+    [backgroundState],
   );
 
   const selectedBackgroundOptionsPayload = useMemo(() => {
-    const out: string[] = [];
-    if (backgroundExtraStatGainRolls) out.push('EXTRA_STAT_GAIN_ROLLS');
-    for (let i = 0; i < backgroundExtraMoneyPoints; i++) out.push('EXTRA_MONEY');
-    if (backgroundExtraLanguages) out.push('EXTRA_LANGUAGES');
-    for (const id of backgroundSkillBonusIds) out.push(`SKILL_BONUS:${id}`);
-    for (const id of backgroundCategoryBonusIds) out.push(`SKILL_CATEGORY_BONUS:${id}`);
-    for (let i = 0; i < backgroundSpecialItemsPoints; i++) out.push('SPECIAL_ITEMS');
-    return out;
-  }, [
-    backgroundExtraStatGainRolls,
-    backgroundExtraMoneyPoints,
-    backgroundExtraLanguages,
-    backgroundSkillBonusIds,
-    backgroundCategoryBonusIds,
-    backgroundSpecialItemsPoints,
-  ]);
+    return getSelectedBackgroundOptionsPayload(backgroundState);
+  }, [backgroundState]);
 
   const backgroundSkillBonusOptions = useMemo(
     () =>
@@ -591,12 +640,13 @@ export default function CharacterCreationView() {
   useEffect(() => {
     if (selectedBackgroundPoints <= backgroundBudget) return;
 
-    setBackgroundSpecialItemsPoints(0);
-    setBackgroundCategoryBonusIds([]);
-    setBackgroundSkillBonusIds([]);
-    setBackgroundExtraLanguages(false);
-    setBackgroundExtraMoneyPoints(0);
-    setBackgroundExtraStatGainRolls(false);
+    const reset = createEmptyBackgroundOptionState();
+    setBackgroundSpecialItemsPoints(reset.specialItemsPoints);
+    setBackgroundCategoryBonusIds(reset.categoryBonusIds);
+    setBackgroundSkillBonusIds(reset.skillBonusIds);
+    setBackgroundExtraLanguages(reset.extraLanguages);
+    setBackgroundExtraMoneyPoints(reset.extraMoneyPoints);
+    setBackgroundExtraStatGainRolls(reset.extraStatGainRolls);
   }, [selectedBackgroundPoints, backgroundBudget]);
 
   useEffect(() => {
@@ -605,17 +655,7 @@ export default function CharacterCreationView() {
       return;
     }
 
-    const rows = (culture?.backgroundLanguages ?? []).map((row) => ({
-      language: row.language,
-      maxSpoken: Math.max(0, row.spoken ?? 0),
-      maxWritten: Math.max(0, row.written ?? 0),
-      maxSomatic: Math.max(0, row.somatic ?? 0),
-      spoken: 0,
-      written: 0,
-      somatic: 0,
-    }));
-
-    setBackgroundLanguageRows(rows);
+    setBackgroundLanguageRows(createBackgroundLanguageRows(culture));
   }, [backgroundExtraLanguages, culture]);
 
   useEffect(() => {
@@ -756,8 +796,8 @@ export default function CharacterCreationView() {
   }, [profession]);
 
   useEffect(() => {
-    const mappedBackgroundLanguages = backgroundExtraLanguages
-      ? backgroundLanguageRows.map((row) => ({
+    const mappedBackgroundLanguages = backgroundState.extraLanguages
+      ? backgroundState.languageRows.map((row) => ({
         language: row.language,
         spoken: row.spoken,
         written: row.written,
@@ -767,18 +807,18 @@ export default function CharacterCreationView() {
 
     setCharacterBuilder((prev) => ({
       ...prev,
-      skill_professional_bonuses: backgroundSkillBonusIds.map((id) => ({
+      skill_professional_bonuses: backgroundState.skillBonusIds.map((id) => ({
         id,
         value: 10,
       })),
-      category_professional_bonuses: backgroundCategoryBonusIds.map((id) => ({
+      category_professional_bonuses: backgroundState.categoryBonusIds.map((id) => ({
         id,
         value: 5,
       })),
       background_language_choices: mappedBackgroundLanguages,
       language_abilities: mappedBackgroundLanguages,
     }));
-  }, [backgroundExtraLanguages, backgroundLanguageRows, backgroundSkillBonusIds, backgroundCategoryBonusIds]);
+  }, [backgroundState]);
 
   useEffect(() => {
     const trainingPackage = selectedTrainingPackage;
@@ -1338,6 +1378,68 @@ export default function CharacterCreationView() {
 
   const canSpendBackgroundPoints = (cost: number): boolean => selectedBackgroundPoints + cost <= backgroundBudget;
 
+  const backgroundActions = {
+    toggleExtraStatGainRolls(checked: boolean) {
+      if (!checked) {
+        setBackgroundExtraStatGainRolls(false);
+        return;
+      }
+      if (!canSpendBackgroundPoints(1)) return;
+      setBackgroundExtraStatGainRolls(true);
+    },
+
+    decrementExtraMoneyPoints() {
+      setBackgroundExtraMoneyPoints((v) => Math.max(0, v - 1));
+    },
+
+    incrementExtraMoneyPoints() {
+      if (backgroundExtraMoneyPoints >= 2) return;
+      if (!canSpendBackgroundPoints(1)) return;
+      setBackgroundExtraMoneyPoints((v) => v + 1);
+    },
+
+    toggleExtraLanguages(checked: boolean) {
+      if (!checked) {
+        setBackgroundExtraLanguages(false);
+        return;
+      }
+      if (!canSpendBackgroundPoints(1)) return;
+      setBackgroundExtraLanguages(true);
+    },
+
+    addSkillBonus(id: string) {
+      if (!id) return;
+      if (selectedBackgroundSkillSet.has(id)) return;
+      if (!canSpendBackgroundPoints(1)) return;
+      setBackgroundSkillBonusIds((prev) => [...prev, id]);
+    },
+
+    removeSkillBonus(id: string) {
+      setBackgroundSkillBonusIds((prev) => prev.filter((x) => x !== id));
+    },
+
+    addCategoryBonus(id: string) {
+      if (!id) return;
+      if (selectedBackgroundCategorySet.has(id)) return;
+      if (!canSpendBackgroundPoints(1)) return;
+      setBackgroundCategoryBonusIds((prev) => [...prev, id]);
+    },
+
+    removeCategoryBonus(id: string) {
+      setBackgroundCategoryBonusIds((prev) => prev.filter((x) => x !== id));
+    },
+
+    decrementSpecialItemsPoints() {
+      setBackgroundSpecialItemsPoints((v) => Math.max(0, v - 1));
+    },
+
+    incrementSpecialItemsPoints() {
+      if (backgroundSpecialItemsPoints >= 2) return;
+      if (!canSpendBackgroundPoints(1)) return;
+      setBackgroundSpecialItemsPoints((v) => v + 1);
+    },
+  };
+
   const updateBackgroundLanguageRank = (
     rowIndex: number,
     key: 'spoken' | 'written' | 'somatic',
@@ -1365,13 +1467,20 @@ export default function CharacterCreationView() {
   };
 
   const resetBackgroundState = () => {
-    setBackgroundExtraStatGainRolls(false);
-    setBackgroundExtraMoneyPoints(0);
-    setBackgroundExtraLanguages(false);
-    setBackgroundLanguageRows([]);
-    setBackgroundSkillBonusIds([]);
-    setBackgroundCategoryBonusIds([]);
-    setBackgroundSpecialItemsPoints(0);
+    const reset = createEmptyBackgroundOptionState();
+    setBackgroundExtraStatGainRolls(reset.extraStatGainRolls);
+    setBackgroundExtraMoneyPoints(reset.extraMoneyPoints);
+    setBackgroundExtraLanguages(reset.extraLanguages);
+    setBackgroundLanguageRows(reset.languageRows);
+    setBackgroundSkillBonusIds(reset.skillBonusIds);
+    setBackgroundCategoryBonusIds(reset.categoryBonusIds);
+    setBackgroundSpecialItemsPoints(reset.specialItemsPoints);
+  };
+
+  const backgroundOptionCardShellStyle = {
+    border: '1px solid var(--border)',
+    borderRadius: 8,
+    padding: 10,
   };
 
   const resetWorkflow = () => {
@@ -1877,29 +1986,22 @@ export default function CharacterCreationView() {
               </div>
 
               <div style={{ display: 'grid', gap: 12 }}>
-                <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
+                <div style={backgroundOptionCardShellStyle}>
                   <CheckboxInput
                     label="Extra Stat Gain Rolls"
                     checked={backgroundExtraStatGainRolls}
-                    onChange={(checked) => {
-                      if (!checked) {
-                        setBackgroundExtraStatGainRolls(false);
-                        return;
-                      }
-                      if (!canSpendBackgroundPoints(1)) return;
-                      setBackgroundExtraStatGainRolls(true);
-                    }}
+                    onChange={backgroundActions.toggleExtraStatGainRolls}
                     disabled={!backgroundExtraStatGainRolls && !canSpendBackgroundPoints(1)}
                   />
                 </div>
 
-                <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
+                <div style={{ ...backgroundOptionCardShellStyle, display: 'grid', gap: 8 }}>
                   <strong>Extra Money</strong>
                   <div style={{ color: 'var(--muted)' }}>Spend 1 or 2 points.</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <button
                       type="button"
-                      onClick={() => setBackgroundExtraMoneyPoints((v) => Math.max(0, v - 1))}
+                      onClick={backgroundActions.decrementExtraMoneyPoints}
                       disabled={backgroundExtraMoneyPoints <= 0}
                     >
                       -
@@ -1907,11 +2009,7 @@ export default function CharacterCreationView() {
                     <span style={{ minWidth: 20, textAlign: 'center' }}>{backgroundExtraMoneyPoints}</span>
                     <button
                       type="button"
-                      onClick={() => {
-                        if (backgroundExtraMoneyPoints >= 2) return;
-                        if (!canSpendBackgroundPoints(1)) return;
-                        setBackgroundExtraMoneyPoints((v) => v + 1);
-                      }}
+                      onClick={backgroundActions.incrementExtraMoneyPoints}
                       disabled={backgroundExtraMoneyPoints >= 2 || !canSpendBackgroundPoints(1)}
                     >
                       +
@@ -1919,18 +2017,11 @@ export default function CharacterCreationView() {
                   </div>
                 </div>
 
-                <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 10 }}>
+                <div style={{ ...backgroundOptionCardShellStyle, display: 'grid', gap: 10 }}>
                   <CheckboxInput
                     label="Extra Languages"
                     checked={backgroundExtraLanguages}
-                    onChange={(checked) => {
-                      if (!checked) {
-                        setBackgroundExtraLanguages(false);
-                        return;
-                      }
-                      if (!canSpendBackgroundPoints(1)) return;
-                      setBackgroundExtraLanguages(true);
-                    }}
+                    onChange={backgroundActions.toggleExtraLanguages}
                     disabled={!backgroundExtraLanguages && !canSpendBackgroundPoints(1)}
                   />
 
@@ -1952,7 +2043,7 @@ export default function CharacterCreationView() {
                             ];
 
                             return (
-                              <div key={`bg-lang-${row.language}-${rowIndex}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
+                              <div key={`bg-lang-${row.language}-${rowIndex}`} style={{ ...backgroundOptionCardShellStyle, display: 'grid', gap: 8 }}>
                                 <strong>{languageNameById.get(row.language) ?? row.language}</strong>
                                 {controls.map((control) => (
                                   <div key={`${row.language}-${control.key}`} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap' }}>
@@ -1984,7 +2075,7 @@ export default function CharacterCreationView() {
                   )}
                 </div>
 
-                <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
+                <div style={{ ...backgroundOptionCardShellStyle, display: 'grid', gap: 8 }}>
                   <strong>Skill Bonus</strong>
                   <div style={{ color: 'var(--muted)' }}>Each selected skill grants +10 and costs 1 point.</div>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'end', flexWrap: 'wrap' }}>
@@ -1992,12 +2083,7 @@ export default function CharacterCreationView() {
                       label="Add Skill Bonus"
                       hideLabel={true}
                       value=""
-                      onChange={(value) => {
-                        if (!value) return;
-                        if (selectedBackgroundSkillSet.has(value)) return;
-                        if (!canSpendBackgroundPoints(1)) return;
-                        setBackgroundSkillBonusIds((prev) => [...prev, value]);
-                      }}
+                      onChange={backgroundActions.addSkillBonus}
                       options={availableBackgroundSkillBonusOptions}
                       placeholderOption="— Select skill —"
                       disabled={availableBackgroundSkillBonusOptions.length === 0 || !canSpendBackgroundPoints(1)}
@@ -2010,7 +2096,7 @@ export default function CharacterCreationView() {
                           <span>{skillNameById.get(id) ?? id} (+10)</span>
                           <button
                             type="button"
-                            onClick={() => setBackgroundSkillBonusIds((prev) => prev.filter((x) => x !== id))}
+                            onClick={() => backgroundActions.removeSkillBonus(id)}
                           >
                             Remove
                           </button>
@@ -2020,7 +2106,7 @@ export default function CharacterCreationView() {
                   )}
                 </div>
 
-                <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
+                <div style={{ ...backgroundOptionCardShellStyle, display: 'grid', gap: 8 }}>
                   <strong>Skill Category Bonus</strong>
                   <div style={{ color: 'var(--muted)' }}>Each selected category grants +5 and costs 1 point.</div>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'end', flexWrap: 'wrap' }}>
@@ -2028,12 +2114,7 @@ export default function CharacterCreationView() {
                       label="Add Skill Category Bonus"
                       hideLabel={true}
                       value=""
-                      onChange={(value) => {
-                        if (!value) return;
-                        if (selectedBackgroundCategorySet.has(value)) return;
-                        if (!canSpendBackgroundPoints(1)) return;
-                        setBackgroundCategoryBonusIds((prev) => [...prev, value]);
-                      }}
+                      onChange={backgroundActions.addCategoryBonus}
                       options={availableBackgroundCategoryBonusOptions}
                       placeholderOption="— Select category —"
                       disabled={availableBackgroundCategoryBonusOptions.length === 0 || !canSpendBackgroundPoints(1)}
@@ -2046,7 +2127,7 @@ export default function CharacterCreationView() {
                           <span>{categoryNameById.get(id) ?? id} (+5)</span>
                           <button
                             type="button"
-                            onClick={() => setBackgroundCategoryBonusIds((prev) => prev.filter((x) => x !== id))}
+                            onClick={() => backgroundActions.removeCategoryBonus(id)}
                           >
                             Remove
                           </button>
@@ -2056,13 +2137,13 @@ export default function CharacterCreationView() {
                   )}
                 </div>
 
-                <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
+                <div style={{ ...backgroundOptionCardShellStyle, display: 'grid', gap: 8 }}>
                   <strong>Special Items</strong>
                   <div style={{ color: 'var(--muted)' }}>Spend 1 or 2 points.</div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <button
                       type="button"
-                      onClick={() => setBackgroundSpecialItemsPoints((v) => Math.max(0, v - 1))}
+                      onClick={backgroundActions.decrementSpecialItemsPoints}
                       disabled={backgroundSpecialItemsPoints <= 0}
                     >
                       -
@@ -2070,11 +2151,7 @@ export default function CharacterCreationView() {
                     <span style={{ minWidth: 20, textAlign: 'center' }}>{backgroundSpecialItemsPoints}</span>
                     <button
                       type="button"
-                      onClick={() => {
-                        if (backgroundSpecialItemsPoints >= 2) return;
-                        if (!canSpendBackgroundPoints(1)) return;
-                        setBackgroundSpecialItemsPoints((v) => v + 1);
-                      }}
+                      onClick={backgroundActions.incrementSpecialItemsPoints}
                       disabled={backgroundSpecialItemsPoints >= 2 || !canSpendBackgroundPoints(1)}
                     >
                       +
