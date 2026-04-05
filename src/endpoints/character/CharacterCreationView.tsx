@@ -14,8 +14,10 @@ import {
   fetchTrainingPackages,
   getStatRollPotentials,
   setCharacterBuilderStats,
+  setCharacterBackgroundChoices,
   setCharacterHobbyChoices,
   submitInitialChoices,
+  type SetCharacterBackgroundChoicesRequest,
 } from '../../api';
 
 import {
@@ -110,6 +112,9 @@ type HobbyLanguageRow = {
 
 type BackgroundLanguageRow = {
   language: string;
+  baseSpoken: number;
+  baseWritten: number;
+  baseSomatic: number;
   maxSpoken: number;
   maxWritten: number;
   maxSomatic: number;
@@ -189,16 +194,38 @@ function parseSkillChoiceKey(key: string): { id: string; subcategory?: string | 
   };
 }
 
-function createBackgroundLanguageRows(culture: Culture | undefined): BackgroundLanguageRow[] {
-  return (culture?.backgroundLanguages ?? []).map((row) => ({
-    language: row.language,
-    maxSpoken: Math.max(0, row.spoken ?? 0),
-    maxWritten: Math.max(0, row.written ?? 0),
-    maxSomatic: Math.max(0, row.somatic ?? 0),
-    spoken: 0,
-    written: 0,
-    somatic: 0,
-  }));
+function createBackgroundLanguageRows(
+  culture: Culture | undefined,
+  languageAbilities: CharacterBuilder['language_abilities'] = [],
+): BackgroundLanguageRow[] {
+  const abilityByLanguage = new Map<string, { spoken: number; written: number; somatic: number }>();
+  for (const row of languageAbilities ?? []) {
+    abilityByLanguage.set(row.language, {
+      spoken: Math.max(0, row.spoken ?? 0),
+      written: Math.max(0, row.written ?? 0),
+      somatic: Math.max(0, row.somatic ?? 0),
+    });
+  }
+
+  return (culture?.backgroundLanguages ?? []).map((row) => {
+    const maxSpoken = Math.max(0, row.spoken ?? 0);
+    const maxWritten = Math.max(0, row.written ?? 0);
+    const maxSomatic = Math.max(0, row.somatic ?? 0);
+    const existing = abilityByLanguage.get(row.language);
+
+    return {
+      language: row.language,
+      baseSpoken: Math.min(existing?.spoken ?? 0, maxSpoken),
+      baseWritten: Math.min(existing?.written ?? 0, maxWritten),
+      baseSomatic: Math.min(existing?.somatic ?? 0, maxSomatic),
+      maxSpoken,
+      maxWritten,
+      maxSomatic,
+      spoken: Math.min(existing?.spoken ?? 0, maxSpoken),
+      written: Math.min(existing?.written ?? 0, maxWritten),
+      somatic: Math.min(existing?.somatic ?? 0, maxSomatic),
+    };
+  });
 }
 
 function createEmptyBackgroundOptionState(): BackgroundOptionState {
@@ -214,7 +241,13 @@ function createEmptyBackgroundOptionState(): BackgroundOptionState {
 }
 
 function getBackgroundLanguageRankSpent(rows: BackgroundLanguageRow[]): number {
-  return rows.reduce((sum, row) => sum + row.spoken + row.written + row.somatic, 0);
+  return rows.reduce(
+    (sum, row) => sum
+      + Math.max(0, row.spoken - row.baseSpoken)
+      + Math.max(0, row.written - row.baseWritten)
+      + Math.max(0, row.somatic - row.baseSomatic),
+    0,
+  );
 }
 
 function getSelectedBackgroundPoints(state: BackgroundOptionState): number {
@@ -655,7 +688,7 @@ export default function CharacterCreationView() {
       return;
     }
 
-    setBackgroundLanguageRows(createBackgroundLanguageRows(culture));
+    setBackgroundLanguageRows(createBackgroundLanguageRows(culture, characterBuilder.language_abilities));
   }, [backgroundExtraLanguages, culture]);
 
   useEffect(() => {
@@ -1059,6 +1092,39 @@ export default function CharacterCreationView() {
     if (prev) setStep(prev);
   };
 
+  const buildBackgroundChoicesRequest = (builderId: string): SetCharacterBackgroundChoicesRequest => {
+    const backgroundLanguages = backgroundState.extraLanguages
+      ? backgroundState.languageRows
+        .filter((row) => row.spoken > 0 || row.written > 0 || row.somatic > 0)
+        .map((row) => ({
+          language: row.language,
+          spoken: row.spoken,
+          written: row.written,
+          somatic: row.somatic,
+        }))
+      : [];
+
+    const backgroundSkillBonus = backgroundState.skillBonusIds.map((id) => ({
+      id,
+      value: 10,
+    }));
+
+    const backgroundCategoryBonus = backgroundState.categoryBonusIds.map((id) => ({
+      id,
+      value: 5,
+    }));
+
+    return {
+      id: builderId,
+      statGains: backgroundState.extraStatGainRolls,
+      extraMoney: backgroundState.extraMoneyPoints as 0 | 1 | 2,
+      backgroundLanguages,
+      backgroundSkillBonus,
+      backgroundCategoryBonus,
+      backgroundItemCount: backgroundState.specialItemsPoints as 0 | 1 | 2,
+    };
+  };
+
   const goNext = async () => {
     const idx = STEP_ORDER.indexOf(step);
     if (idx < 0 || idx >= STEP_ORDER.length - 1) return;
@@ -1277,9 +1343,22 @@ export default function CharacterCreationView() {
     }
 
     if (step === 'background') {
+      if (!characterBuilder.id) {
+        toast({
+          variant: 'danger',
+          title: 'Save background choices failed',
+          description: 'Character builder id is missing. Complete initial choices first.',
+        });
+        return;
+      }
+
       setSavingBackgroundChoices(true);
       try {
-        // TODO: Replace with background-choice API call when endpoint contract is finalized.
+        const response = await setCharacterBackgroundChoices(
+          buildBackgroundChoicesRequest(characterBuilder.id),
+        );
+
+        setCharacterBuilder(response);
       } catch (e) {
         toast({
           variant: 'danger',
@@ -1451,6 +1530,7 @@ export default function CharacterCreationView() {
 
       const currentValue = target[key];
       const maxValue = key === 'spoken' ? target.maxSpoken : key === 'written' ? target.maxWritten : target.maxSomatic;
+      const baseValue = key === 'spoken' ? target.baseSpoken : key === 'written' ? target.baseWritten : target.baseSomatic;
       const nextValue = currentValue + delta;
 
       if (delta > 0) {
@@ -1458,7 +1538,7 @@ export default function CharacterCreationView() {
         if (nextValue > maxValue) return prev;
       }
 
-      if (delta < 0 && nextValue < 0) return prev;
+      if (delta < 0 && nextValue < baseValue) return prev;
 
       const copy = prev.slice();
       copy[rowIndex] = { ...target, [key]: nextValue };
@@ -2048,11 +2128,16 @@ export default function CharacterCreationView() {
                                 {controls.map((control) => (
                                   <div key={`${row.language}-${control.key}`} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap' }}>
                                     <span style={{ minWidth: 74, whiteSpace: 'nowrap' }}>{control.label}</span>
-                                    <small style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>Max: {control.max}</small>
+                                    <small style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+                                      Base: {control.key === 'spoken' ? row.baseSpoken : control.key === 'written' ? row.baseWritten : row.baseSomatic}, Max: {control.max}
+                                    </small>
                                     <button
                                       type="button"
                                       onClick={() => updateBackgroundLanguageRank(rowIndex, control.key, -1)}
-                                      disabled={control.value <= 0}
+                                      disabled={
+                                        control.value
+                                        <= (control.key === 'spoken' ? row.baseSpoken : control.key === 'written' ? row.baseWritten : row.baseSomatic)
+                                      }
                                     >
                                       -
                                     </button>
