@@ -1,6 +1,5 @@
 // src/types/culturetype.ts
-import { Named, PersistentIntValue } from './base';
-import { SkillValue } from './skill';
+import { Named, PersistentValue, SkillValue } from './base';
 import { EnvironmentFeature, EnvironmentTerrain, EnvironmentVegetation, EnvironmentWaterBody } from './enum';
 
 export interface CultureType extends Named {
@@ -32,10 +31,10 @@ export interface CultureType extends Named {
   skillRanks: SkillValue[];
 
   /** per category; value is integer */
-  skillCategoryRanks: PersistentIntValue[];
+  skillCategoryRanks: PersistentValue[];
 
   /** per category; value is integer (as provided by your JSON) */
-  skillCategorySkillRanks: PersistentIntValue[];
+  skillCategorySkillRanks: PersistentValue[];
 
   /** optional references to ClimateType.id */
   requiredClimates?: string[] | undefined;

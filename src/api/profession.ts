@@ -2,7 +2,7 @@
 import { fetchJson, sendJson } from './client';
 
 import type {
-  PersistentIntValue,
+  PersistentValue,
   Profession,
   ProfessionsPayload,
   ProfessionSpellListChoice,
@@ -43,14 +43,14 @@ function skillBonusFromJson(x: any): SkillValue {
   };
 }
 
-function categoryBonusFromJson(x: any): PersistentIntValue {
+function categoryBonusFromJson(x: any): PersistentValue {
   return {
     id: asString(x?.id),
     value: asInt(x?.value),
   };
 }
 
-function groupBonusFromJson(x: any): PersistentIntValue {
+function groupBonusFromJson(x: any): PersistentValue {
   return {
     id: asString(x?.id),
     value: asInt(x?.value),

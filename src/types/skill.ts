@@ -43,7 +43,3 @@ export interface SkillBase {
   id: string;
   subcategory?: string | undefined;
 }
-
-export interface SkillValue extends SkillBase {
-  value: number;
-}

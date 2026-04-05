@@ -1,8 +1,7 @@
 // src/types/race.ts
 import type { CreatureSize, CriticalTableType, Stat } from './enum';
-import type { Named } from './base';
+import type { Named, SkillValue } from './base';
 import type { LanguageAbility } from './language';
-import type { SkillValue } from './skill';
 
 export interface RaceSkillRef {
   id: string;                     // Skill.id

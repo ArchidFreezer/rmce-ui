@@ -1,7 +1,7 @@
 import { sendJson } from './client';
 
 import type { Realm, Stat } from '../types/enum';
-import type { CharacterBuilder, PersistentIntValue, LanguageAbility, SkillValue } from '../types';
+import type { CharacterBuilder, PersistentValue, LanguageAbility, SkillValue } from '../types';
 
 export type CharacterContext = {
   name?: string;
@@ -54,7 +54,7 @@ export type SetCharacterBuilderStatsRequest = {
 export type SetCharacterBuilderStatsResponse = {
   numHobbyRanks: number;
   hobbySkills: SkillValue[]; // Skill.id + optional subcategory
-  hobbyCategories: PersistentIntValue[]; // SkillCategory.id
+  hobbyCategories: PersistentValue[]; // SkillCategory.id
   numLanguageRanks: number;
   adolescentLanguages: LanguageAbility[]; // language + spoken/written/somatic ranks
   numSpellListRanks: number;
@@ -64,7 +64,7 @@ export type SetCharacterBuilderStatsResponse = {
 export type SetCharacterHobbyChoicesRequest = {
   id: string;
   hobbyRanks: SkillValue[]; // Skill.id + optional subcategory
-  hobbyCategoryRanks: PersistentIntValue[]; // SkillCategory.id
+  hobbyCategoryRanks: PersistentValue[]; // SkillCategory.id
   adolescentLanguages: LanguageAbility[]; // language + spoken/written/somatic ranks
   adolescentSpellList: string | null; // SpellList.id
 };

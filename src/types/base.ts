@@ -8,17 +8,9 @@ export interface Named extends Persistent {
 }
 
 export interface PersistentValue extends Persistent {
-  value: string;
-}
-
-export interface PersistentIntValue extends Persistent {
   value: number;
 }
 
-export interface PersistentOptionalValue extends Persistent {
-  value?: string | undefined;
-}
-
-export interface PersistentOptionalIntValue extends Persistent {
-  value?: number | undefined;
+export interface SkillValue extends PersistentValue {
+  subcategory?: string | undefined;
 }

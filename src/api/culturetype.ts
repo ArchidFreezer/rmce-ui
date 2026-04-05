@@ -3,7 +3,7 @@ import { fetchJson, sendJson } from './client';
 
 import type {
   CultureType, CultureTypesPayload,
-  SkillValue, PersistentIntValue,
+  SkillValue, PersistentValue,
 } from '../types';
 
 import {
@@ -33,7 +33,7 @@ function rowSkillRankFromJson(r: any): SkillValue {
   if (r?.subcategory != null) out.subcategory = asString(r.subcategory);
   return out;
 }
-function rowCategoryRankFromJson(r: any): PersistentIntValue {
+function rowCategoryRankFromJson(r: any): PersistentValue {
   return {
     id: asString(r?.id),
     value: asInt(r?.value),

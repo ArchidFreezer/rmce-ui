@@ -7,8 +7,7 @@ import type {
   SpellUserType,
 } from './enum';
 
-import type { Named, PersistentIntValue } from './base';
-import type { SkillValue } from './skill';
+import type { Named, PersistentValue, SkillValue } from './base';
 
 export interface ProfessionSpellListChoice {
   numChoices: number;
@@ -78,11 +77,11 @@ export interface Profession extends Named {
 
   skillBonuses: SkillValue[];
 
-  skillCategoryProfessionBonuses: PersistentIntValue[];
-  skillCategorySpecialBonuses: PersistentIntValue[];
+  skillCategoryProfessionBonuses: PersistentValue[];
+  skillCategorySpecialBonuses: PersistentValue[];
 
-  skillGroupProfessionBonuses: PersistentIntValue[];
-  skillGroupSpecialBonuses: PersistentIntValue[];
+  skillGroupProfessionBonuses: PersistentValue[];
+  skillGroupSpecialBonuses: PersistentValue[];
 
   skillDevelopmentTypes: ProfessionSkillDevelopmentType[];
   skillCategorySkillDevelopmentTypes: ProfessionCategorySkillDevelopmentType[];
