@@ -69,11 +69,22 @@ export type SetCharacterHobbyChoicesRequest = {
   adolescentSpellList: string | null; // SpellList.id
 };
 
+export type SetCharacterBackgroundChoicesRequest = {
+  id: string;
+  statGains: boolean;
+  extraMoney: 0 | 1 | 2;
+  backgroundLanguages: LanguageAbility[];
+  backgroundSkillBonus: PersistentValue[];
+  backgroundCategoryBonus: PersistentValue[];
+  backgroundItemCount: 0 | 1 | 2;
+};
+
 const STAT_ROLLS_ENDPOINT = '/rmce/operations/character/stat-rolls';
 const INITIAL_CHOICES_ENDPOINT = '/rmce/operations/character/initial-choices';
 const APPLY_LEVEL_ENDPOINT = '/rmce/operations/character/apply-level-upgrade';
 const SET_STATS_ENDPOINT = '/rmce/operations/character/set-stats';
 const SET_HOBBY_CHOICES_ENDPOINT = '/rmce/operations/character/set-hobby-choices';
+const SET_BACKGROUND_CHOICES_ENDPOINT = '/rmce/operations/character/set-background-choices';
 export type StatRollRequest = {
   temporary: number;
 };
@@ -111,4 +122,10 @@ export async function setCharacterHobbyChoices(
   payload: SetCharacterHobbyChoicesRequest,
 ): Promise<CharacterBuilder> {
   return sendJson<CharacterBuilder>(SET_HOBBY_CHOICES_ENDPOINT, 'POST', payload);
+}
+
+export async function setCharacterBackgroundChoices(
+  payload: SetCharacterBackgroundChoicesRequest,
+): Promise<CharacterBuilder> {
+  return sendJson<CharacterBuilder>(SET_BACKGROUND_CHOICES_ENDPOINT, 'POST', payload);
 }
