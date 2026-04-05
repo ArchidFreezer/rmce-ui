@@ -2,11 +2,10 @@
 // Skill Categories
 // ------------------------
 import type { Stat } from './enum'; // adjust the relative path if needed
+import { Named } from './base';
 
-export interface SkillCategory {
-  id: string;
+export interface SkillCategory extends Named {
   group: string;                 // SkillGroup.id
-  name: string;
   useRealmStats: boolean;
   skillProgression: string;      // SkillProgressionType.id
   categoryProgression: string;   // SkillProgressionType.id

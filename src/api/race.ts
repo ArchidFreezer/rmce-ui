@@ -2,13 +2,13 @@
 import { fetchJson, sendJson } from './client';
 
 import type {
-  LanguageRank,
+  LanguageAbility,
   Race,
   RacesPayload,
   RaceSkillRef,
-  RaceSkillBonus,
   RaceStatBonus,
   RaceSkillCategoryChoice,
+  SkillValue,
 } from '../types';
 
 const BASE = '/rmce/objects/race';
@@ -26,12 +26,12 @@ const asFloat = (v: unknown) => {
 const asStringArray = (v: unknown): string[] =>
   Array.isArray(v) ? v.map((x) => String(x ?? '')).filter(Boolean) : [];
 
-function languageRankFromJson(x: any): LanguageRank {
-  const out: LanguageRank = {
+function languageRankFromJson(x: any): LanguageAbility {
+  const out: LanguageAbility = {
     language: asString(x?.language),
-    spoken: asInt(x?.spoken),
-    written: asInt(x?.written),
   };
+  if (x?.spoken != null) out.spoken = asInt(x.spoken);
+  if (x?.written != null) out.written = asInt(x.written);
   if (x?.somatic != null) out.somatic = asInt(x.somatic);
   return out;
 }
@@ -44,8 +44,8 @@ function skillRefFromJson(x: any): RaceSkillRef {
   return out;
 }
 
-function skillBonusFromJson(x: any): RaceSkillBonus {
-  const out: RaceSkillBonus = {
+function skillBonusFromJson(x: any): SkillValue {
+  const out: SkillValue = {
     id: asString(x?.id),
     value: asInt(x?.value),
   };

@@ -1,9 +1,7 @@
 import { AttackTableRow } from "./attacktable";
+import type { Named } from "./base";
 
-
-export interface SpecialAttackTable {
-  id: string;
-  name: string;
+export interface SpecialAttackTable extends Named {
   small: number;
   medium: number;
   large: number;

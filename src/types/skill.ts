@@ -1,14 +1,10 @@
 // ------------------------
 // Skill
 // ------------------------
-import type { SkillCategory } from './skillcategory'; // reference only (id strings stored)
-import type { Book } from './book';                    // reference only (id strings stored)
 import type { SkillActionType, Stat } from './enum';
+import type { Named } from './base';
 
-export interface Skill {
-  id: string;
-  name: string;
-
+export interface Skill extends Named {
   /** references SkillCategory.id */
   category: string;
 

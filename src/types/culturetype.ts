@@ -1,11 +1,8 @@
 // src/types/culturetype.ts
-import { SkillRankValue, CategoryRankValue } from './skillmodifier';
+import { Named, PersistentValue, SkillValue } from './base';
 import { EnvironmentFeature, EnvironmentTerrain, EnvironmentVegetation, EnvironmentWaterBody } from './enum';
 
-export interface CultureType {
-  id: string;
-  name: string;
-
+export interface CultureType extends Named {
   // Long HTML/text fields
   description?: string | undefined;
   characterConcepts?: string | undefined;
@@ -31,13 +28,13 @@ export interface CultureType {
   preferredWeapons: string[];
 
   /** per skill; value is integer; optional subcategory */
-  skillRanks: SkillRankValue[];
+  skillRanks: SkillValue[];
 
   /** per category; value is integer */
-  skillCategoryRanks: CategoryRankValue[];
+  skillCategoryRanks: PersistentValue[];
 
   /** per category; value is integer (as provided by your JSON) */
-  skillCategorySkillRanks: CategoryRankValue[];
+  skillCategorySkillRanks: PersistentValue[];
 
   /** optional references to ClimateType.id */
   requiredClimates?: string[] | undefined;

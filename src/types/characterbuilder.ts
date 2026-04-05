@@ -1,37 +1,10 @@
-import type { Realm, SkillDevelopmentType, Stat } from './enum';
-
-export interface CharacterBuilderLanguageRanks {
-  language: string; // Language.id
-  spoken: number;
-  written: number;
-  somatic: number;
-}
-
-export interface CharacterBuilderIdValue {
-  id: string;
-  value: number;
-}
+import type { Named, PersistentValue, PersistentDevelopmentTypeValue, SkillValue, SkillDevelopmentTypeValue } from './base';
+import type { Realm, Stat } from './enum';
+import type { LanguageAbility } from './language';
 
 export interface CharacterBuilderIdOptionalSubcategory {
   id: string;
   subcategory?: string | undefined;
-}
-
-export interface CharacterBuilderIdOptionalSubcategoryValue {
-  id: string;
-  subcategory?: string | undefined;
-  value: number;
-}
-
-export interface CharacterBuilderIdOptionalSubcategoryDevelopmentType {
-  id: string;
-  subcategory?: string | undefined;
-  value: SkillDevelopmentType;
-}
-
-export interface CharacterBuilderIdDevelopmentType {
-  id: string;
-  value: SkillDevelopmentType;
 }
 
 export interface CharacterBuilderRealmProgression {
@@ -46,9 +19,7 @@ export interface CharacterBuilderStatValue {
   bonus: number;
 }
 
-export interface CharacterBuilder {
-  id: string;
-  name: string;
+export interface CharacterBuilder extends Named {
   built: boolean;
   num_hobby_skill_ranks: number;
   num_adolescent_spell_list_ranks: number;
@@ -60,22 +31,22 @@ export interface CharacterBuilder {
   magical_realms: Realm[];
 
   race_category_everyman_choices: string[];
-  race_adolescent_language_choices: CharacterBuilderLanguageRanks[];
+  race_adolescent_language_choices: LanguageAbility[];
 
-  culture_type_category_skill_ranks: CharacterBuilderIdOptionalSubcategoryValue[];
+  culture_type_category_skill_ranks: SkillValue[];
   base_spell_list_choices: string[];
 
-  prof_skill_subcategory_development_type_choices: CharacterBuilderIdOptionalSubcategoryDevelopmentType[];
-  prof_skill_development_type_choices: CharacterBuilderIdOptionalSubcategoryDevelopmentType[];
-  prof_category_development_type_choices: CharacterBuilderIdDevelopmentType[];
-  prof_group_development_type_choices: CharacterBuilderIdDevelopmentType[];
+  prof_skill_subcategory_development_type_choices: SkillDevelopmentTypeValue[];
+  prof_skill_development_type_choices: SkillDevelopmentTypeValue[];
+  prof_category_development_type_choices: PersistentDevelopmentTypeValue[];
+  prof_group_development_type_choices: PersistentDevelopmentTypeValue[];
 
-  hobby_skill_ranks: CharacterBuilderIdOptionalSubcategoryValue[];
-  hobby_category_ranks: CharacterBuilderIdValue[];
+  hobby_skill_ranks: SkillValue[];
+  hobby_category_ranks: PersistentValue[];
   adolescent_spell_list_choice: string | null; // SpellList.id
 
-  background_language_choices: CharacterBuilderLanguageRanks[];
-  language_abilities: CharacterBuilderLanguageRanks[];
+  background_language_choices: LanguageAbility[];
+  language_abilities: LanguageAbility[];
 
   realm_progressions: CharacterBuilderRealmProgression[];
   stats: CharacterBuilderStatValue[];
@@ -85,21 +56,21 @@ export interface CharacterBuilder {
   everyman_skill_categories: string[];
   restricted_skill_categories: string[];
 
-  skill_ranks: CharacterBuilderIdOptionalSubcategoryValue[];
-  skill_professional_bonuses: CharacterBuilderIdOptionalSubcategoryValue[];
-  skillsub_development_types: CharacterBuilderIdOptionalSubcategoryDevelopmentType[];
-  skill_development_types: CharacterBuilderIdDevelopmentType[];
+  skill_ranks: SkillValue[];
+  skill_professional_bonuses: SkillValue[];
+  skillsub_development_types: SkillDevelopmentTypeValue[];
+  skill_development_types: PersistentDevelopmentTypeValue[];
 
-  category_ranks: CharacterBuilderIdValue[];
-  category_professional_bonuses: CharacterBuilderIdValue[];
-  category_special_bonuses: CharacterBuilderIdValue[];
-  category_development_types: CharacterBuilderIdDevelopmentType[];
+  category_ranks: PersistentValue[];
+  category_professional_bonuses: PersistentValue[];
+  category_special_bonuses: PersistentValue[];
+  category_development_types: PersistentDevelopmentTypeValue[];
 
-  group_professional_bonuses: CharacterBuilderIdValue[];
-  group_special_bonuses: CharacterBuilderIdValue[];
-  group_development_types: CharacterBuilderIdDevelopmentType[];
+  group_professional_bonuses: PersistentValue[];
+  group_special_bonuses: PersistentValue[];
+  group_development_types: PersistentDevelopmentTypeValue[];
 
-  spell_list_ranks: CharacterBuilderIdValue[];
+  spell_list_ranks: PersistentValue[];
 }
 
 export function createEmptyCharacterBuilder(): CharacterBuilder {

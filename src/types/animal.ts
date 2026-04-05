@@ -1,3 +1,5 @@
+import { Named } from './base';
+
 import type {
   AnimalOutlookType,
   AttackSizeType,
@@ -66,9 +68,7 @@ export interface AnimalGroupAttack extends AnimalAttackBase {
   minGroupSize: number;
 }
 
-export interface Animal {
-  id: string;
-  name: string;
+export interface Animal extends Named {
   description?: string | undefined;
   baseHits: number;
   baseMovement: number;

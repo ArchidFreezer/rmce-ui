@@ -5,8 +5,8 @@ import { sanitizeUnsignedInt } from '../../utils/inputHelpers';
 
 export type LanguageRankRowVM = {
   language: string | '';
-  spoken: string;
-  written: string;
+  spoken?: string | undefined;
+  written?: string | undefined;
   somatic?: string | undefined;
 };
 
@@ -61,6 +61,14 @@ export function LanguageRankListEditor({
   writtenWidth = 100,
   somaticWidth = 100,
 }: LanguageRankListEditorProps) {
+  const normalizeRankInput = React.useCallback(
+    (value: string): string | undefined => {
+      const sanitized = sanitizeUnsignedInt(value);
+      return sanitized === '' ? undefined : sanitized;
+    },
+    [],
+  );
+
   const showActions = !viewing;
 
   const resolvedSpokenWidth =
@@ -81,9 +89,15 @@ export function LanguageRankListEditor({
       if (!current) return;
 
       const nextRow: LanguageRankRowVM = {
-        language: patch.language ?? current.language,
-        spoken: patch.spoken ?? current.spoken,
-        written: patch.written ?? current.written,
+        language: Object.prototype.hasOwnProperty.call(patch, 'language')
+          ? (patch.language ?? '')
+          : current.language,
+        spoken: Object.prototype.hasOwnProperty.call(patch, 'spoken')
+          ? patch.spoken
+          : current.spoken,
+        written: Object.prototype.hasOwnProperty.call(patch, 'written')
+          ? patch.written
+          : current.written,
         somatic: Object.prototype.hasOwnProperty.call(patch, 'somatic')
           ? patch.somatic
           : current.somatic,
@@ -100,9 +114,9 @@ export function LanguageRankListEditor({
       ...rows,
       {
         language: '',
-        spoken: '',
-        written: '',
-        somatic: showSomatic ? '' : undefined,
+        spoken: undefined,
+        written: undefined,
+        somatic: undefined,
       },
     ];
     onChangeRows(next);
@@ -181,8 +195,8 @@ export function LanguageRankListEditor({
               label={spokenColumnLabel}
               hideLabel
               ariaLabel={spokenColumnLabel}
-              value={row.spoken}
-              onChange={(v) => updateRowAt(i, { spoken: sanitizeUnsignedInt(v) })}
+              value={row.spoken ?? ''}
+              onChange={(v) => updateRowAt(i, { spoken: normalizeRankInput(v) })}
               disabled={viewing}
               width={resolvedSpokenWidth}
             />
@@ -191,8 +205,8 @@ export function LanguageRankListEditor({
               label={writtenColumnLabel}
               hideLabel
               ariaLabel={writtenColumnLabel}
-              value={row.written}
-              onChange={(v) => updateRowAt(i, { written: sanitizeUnsignedInt(v) })}
+              value={row.written ?? ''}
+              onChange={(v) => updateRowAt(i, { written: normalizeRankInput(v) })}
               disabled={viewing}
               width={resolvedWrittenWidth}
             />
@@ -203,7 +217,7 @@ export function LanguageRankListEditor({
                 hideLabel
                 ariaLabel={somaticColumnLabel}
                 value={row.somatic ?? ''}
-                onChange={(v) => updateRowAt(i, { somatic: sanitizeUnsignedInt(v) })}
+                onChange={(v) => updateRowAt(i, { somatic: normalizeRankInput(v) })}
                 disabled={viewing}
                 width={resolvedSomaticWidth}
               />

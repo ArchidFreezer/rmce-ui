@@ -1,31 +1,20 @@
 // src/types/culture.ts
+import type { Named, PersistentValue } from './base';
+import type { LanguageAbility } from './language';
 
-export interface CultureBackgroundLanguage {
-  language: string;   // Language.id
-  spoken?: number | undefined;
-  written?: number | undefined;
-  somatic?: number | undefined;
-}
-
-export interface CultureTrainingPackageModifier {
-  id: string;         // TrainingPackage.id
-  value: number;
-}
 
 export interface CultureHobbySkill {
   id: string;         // Skill.id
   subcategory?: string | undefined;
 }
 
-export interface Culture {
-  id: string;
-  name: string;
+export interface Culture extends Named {
   description?: string | undefined;
 
   cultureType: string;        // CultureType.id
   highCulture: boolean;
 
-  backgroundLanguages: CultureBackgroundLanguage[];
+  backgroundLanguages: LanguageAbility[];
 
   hobbySkills: CultureHobbySkill[];
   hobbyCategories: string[];          // SkillCategory.id[]
@@ -33,7 +22,7 @@ export interface Culture {
   preferredProfessions: string[];     // Profession.id[]
   restrictedProfessions: string[];    // Profession.id[]
 
-  trainingPackageModifiers: CultureTrainingPackageModifier[];
+  trainingPackageModifiers: PersistentValue[];
 }
 
 export interface CulturesPayload {

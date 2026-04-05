@@ -1,7 +1,7 @@
 import { sendJson } from './client';
 
 import type { Realm, Stat } from '../types/enum';
-import type { CharacterBuilder, CharacterBuilderIdOptionalSubcategoryValue, CharacterBuilderIdValue, CharacterBuilderLanguageRanks } from '../types';
+import type { CharacterBuilder, PersistentValue, LanguageAbility, SkillValue } from '../types';
 
 export type CharacterContext = {
   name?: string;
@@ -53,20 +53,20 @@ export type SetCharacterBuilderStatsRequest = {
 
 export type SetCharacterBuilderStatsResponse = {
   numHobbyRanks: number;
-  hobbySkills: CharacterBuilderIdOptionalSubcategoryValue[]; // Skill.id + optional subcategory
-  hobbyCategories: CharacterBuilderIdValue[]; // SkillCategory.id
+  hobbySkills: SkillValue[]; // Skill.id + optional subcategory
+  hobbyCategories: PersistentValue[]; // SkillCategory.id
   numLanguageRanks: number;
-  adolescentLanguages: CharacterBuilderLanguageRanks[]; // language + spoken/written/somatic ranks
+  adolescentLanguages: LanguageAbility[]; // language + spoken/written/somatic ranks
   numSpellListRanks: number;
-  adolescentSpellLists: String[]; // SpellList.id[]
+  adolescentSpellLists: string[]; // SpellList.id[]
 };
 
 export type SetCharacterHobbyChoicesRequest = {
   id: string;
-  hobbyRanks: CharacterBuilderIdOptionalSubcategoryValue[]; // Skill.id + optional subcategory
-  hobbyCategoryRanks: CharacterBuilderIdValue[]; // SkillCategory.id
-  adolescentLanguages: CharacterBuilderLanguageRanks[]; // language + spoken/written/somatic ranks
-  adolescentSpellList: String | null; // SpellList.id
+  hobbyRanks: SkillValue[]; // Skill.id + optional subcategory
+  hobbyCategoryRanks: PersistentValue[]; // SkillCategory.id
+  adolescentLanguages: LanguageAbility[]; // language + spoken/written/somatic ranks
+  adolescentSpellList: string | null; // SpellList.id
 };
 
 const STAT_ROLLS_ENDPOINT = '/rmce/operations/character/stat-rolls';

@@ -1,10 +1,9 @@
 // ------------------------
 // Language Categories
 // ------------------------
-export interface LanguageCategory {
-  id: string;
-  name: string;
-}
+
+import { Named } from './base';
+export interface LanguageCategory extends Named { }
 
 export interface LanguageCategoriesPayload {
   languagecategories: LanguageCategory[];

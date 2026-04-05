@@ -29,14 +29,10 @@ import {
 
 import type {
   Book,
+  PersistentDevelopmentTypeValue,
+  PersistentValue,
   Profession,
   ProfessionSpellListChoice,
-  ProfessionSkillBonus,
-  ProfessionCategoryBonus,
-  ProfessionGroupBonus,
-  ProfessionSkillDevelopmentType,
-  ProfessionCategorySkillDevelopmentType,
-  ProfessionGroupSkillDevelopmentType,
   ProfessionSkillSubcategoryDevelopmentTypeChoice,
   ProfessionSkillDevelopmentTypeChoice,
   ProfessionSkillDevelopmentTypeChoiceOption,
@@ -46,7 +42,9 @@ import type {
   Race,
   Skill,
   SkillCategory,
+  SkillDevelopmentTypeValue,
   SkillGroup,
+  SkillValue,
   SpellList,
 } from '../../types';
 
@@ -244,39 +242,39 @@ const fromVM = (vm: FormState): Profession => ({
     options: r.options.slice(),
   })),
 
-  skillBonuses: vm.skillBonuses.map((r): ProfessionSkillBonus => ({
+  skillBonuses: vm.skillBonuses.map((r): SkillValue => ({
     id: r.id,
     subcategory: r.subcategory?.trim() || undefined,
     value: Number(r.value),
   })),
 
-  skillCategoryProfessionBonuses: vm.skillCategoryProfessionBonuses.map((r): ProfessionCategoryBonus => ({
+  skillCategoryProfessionBonuses: vm.skillCategoryProfessionBonuses.map((r): PersistentValue => ({
     id: r.id,
     value: Number(r.value),
   })),
-  skillCategorySpecialBonuses: vm.skillCategorySpecialBonuses.map((r): ProfessionCategoryBonus => ({
+  skillCategorySpecialBonuses: vm.skillCategorySpecialBonuses.map((r): PersistentValue => ({
     id: r.id,
     value: Number(r.value),
   })),
-  skillGroupProfessionBonuses: vm.skillGroupProfessionBonuses.map((r): ProfessionGroupBonus => ({
+  skillGroupProfessionBonuses: vm.skillGroupProfessionBonuses.map((r): PersistentValue => ({
     id: r.id,
     value: Number(r.value),
   })),
-  skillGroupSpecialBonuses: vm.skillGroupSpecialBonuses.map((r): ProfessionGroupBonus => ({
+  skillGroupSpecialBonuses: vm.skillGroupSpecialBonuses.map((r): PersistentValue => ({
     id: r.id,
     value: Number(r.value),
   })),
 
-  skillDevelopmentTypes: vm.skillDevelopmentTypes.map((r): ProfessionSkillDevelopmentType => ({
+  skillDevelopmentTypes: vm.skillDevelopmentTypes.map((r): SkillDevelopmentTypeValue => ({
     id: r.id,
     subcategory: r.subcategory?.trim() || undefined,
     value: r.value as SkillDevelopmentType,
   })),
-  skillCategorySkillDevelopmentTypes: vm.skillCategorySkillDevelopmentTypes.map((r): ProfessionCategorySkillDevelopmentType => ({
+  skillCategorySkillDevelopmentTypes: vm.skillCategorySkillDevelopmentTypes.map((r): PersistentDevelopmentTypeValue => ({
     id: r.id,
     value: r.value as SkillDevelopmentType,
   })),
-  skillGroupSkillDevelopmentTypes: vm.skillGroupSkillDevelopmentTypes.map((r): ProfessionGroupSkillDevelopmentType => ({
+  skillGroupSkillDevelopmentTypes: vm.skillGroupSkillDevelopmentTypes.map((r): PersistentDevelopmentTypeValue => ({
     id: r.id,
     value: r.value as SkillDevelopmentType,
   })),

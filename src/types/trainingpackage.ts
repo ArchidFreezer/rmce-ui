@@ -1,4 +1,5 @@
 import type { Stat } from './enum';
+import type { Named, PersistentValue, SkillValue } from './base';
 
 export interface TrainingPackageQualifier {
   qualifier: string;
@@ -10,12 +11,6 @@ export interface TrainingPackageSpecial {
   chance: number;
 }
 
-export interface TrainingPackageSkillRank {
-  id: string;                       // Skill.id
-  subcategory?: string | undefined;
-  value: number;
-}
-
 export interface TrainingPackageSkillRankChoice {
   numChoices: number;
   value: number;
@@ -23,11 +18,6 @@ export interface TrainingPackageSkillRankChoice {
     id: string;                     // Skill.id
     subcategory?: string | undefined;
   }>;
-}
-
-export interface TrainingPackageCategoryRank {
-  id: string;                       // SkillCategory.id
-  value: number;
 }
 
 export interface TrainingPackageCategoryMultiSkillChoice {
@@ -40,11 +30,6 @@ export interface TrainingPackageGroupMultiSkillChoice {
   id: string;                       // SkillGroup.id
   value: number;
   numChoices: number;
-}
-
-export interface TrainingPackageGroupCategoryAndSkillChoice {
-  id: string;                       // SkillGroup.id
-  value: number;
 }
 
 export interface TrainingPackageSpellListRank {
@@ -66,9 +51,7 @@ export interface TrainingPackageLanguageChoice {
   options: string[];                // Language.id[]
 }
 
-export interface TrainingPackage {
-  id: string;
-  name: string;
+export interface TrainingPackage extends Named {
   description?: string | undefined;
   flavourText?: string | undefined;
 
@@ -93,13 +76,13 @@ export interface TrainingPackage {
     options: Stat[];
   } | undefined;
 
-  skillRanks: TrainingPackageSkillRank[];
+  skillRanks: SkillValue[];
   skillRankChoices: TrainingPackageSkillRankChoice[];
 
-  categoryRanks: TrainingPackageCategoryRank[];
+  categoryRanks: PersistentValue[];
   categoryMultiSkillRankChoices: TrainingPackageCategoryMultiSkillChoice[];
   groupMultiSkillRankChoices: TrainingPackageGroupMultiSkillChoice[];
-  groupCategoryAndSkillRankChoices: TrainingPackageGroupCategoryAndSkillChoice[];
+  groupCategoryAndSkillRankChoices: PersistentValue[];
 
   spellListRanks: TrainingPackageSpellListRank[];
   spellListCategoryRankChoices: TrainingPackageSpellListCategoryRankChoice[];

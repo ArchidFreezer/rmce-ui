@@ -29,11 +29,12 @@ import {
 
 import type {
   Book,
-  Language, LanguageRank,
-  Race, RaceSkillRef, RaceSkillBonus, RaceSkillCategoryChoice,
+  Language, LanguageAbility,
+  Race, RaceSkillRef, RaceSkillCategoryChoice,
   Skill,
   SkillCategory,
   SkillGroup,
+  SkillValue,
   SkillProgressionType,
 } from '../../types';
 
@@ -55,8 +56,8 @@ const prefix = 'RACE_';
 // ---------- VM row types ----------
 type LanguageRankVM = {
   language: string;
-  spoken: string;
-  written: string;
+  spoken?: string | undefined;
+  written?: string | undefined;
   somatic?: string | undefined;
 };
 
@@ -241,15 +242,15 @@ const toVM = (x: Race): FormState => ({
 
   startingLanguages: (x.startingLanguages ?? []).map((r) => ({
     language: r.language,
-    spoken: String(r.spoken),
-    written: String(r.written),
-    somatic: r.somatic != null ? String(r.somatic) : '',
+    spoken: r.spoken != null ? String(r.spoken) : undefined,
+    written: r.written != null ? String(r.written) : undefined,
+    somatic: r.somatic != null ? String(r.somatic) : undefined,
   })),
   adolescentLanguages: (x.adolescentLanguages ?? []).map((r) => ({
     language: r.language,
-    spoken: String(r.spoken),
-    written: String(r.written),
-    somatic: r.somatic != null ? String(r.somatic) : '',
+    spoken: r.spoken != null ? String(r.spoken) : undefined,
+    written: r.written != null ? String(r.written) : undefined,
+    somatic: r.somatic != null ? String(r.somatic) : undefined,
   })),
 
   statBonuses: (x.statBonuses ?? []).map((r) => ({
@@ -312,17 +313,17 @@ const fromVM = (vm: FormState): Race => ({
   essenceProgression: vm.essenceProgression.trim(),
   mentalismProgression: vm.mentalismProgression.trim(),
 
-  startingLanguages: vm.startingLanguages.map((r): LanguageRank => ({
+  startingLanguages: vm.startingLanguages.map((r): LanguageAbility => ({
     language: r.language,
-    spoken: Number(r.spoken),
-    written: Number(r.written),
+    spoken: r.spoken?.trim() ? Number(r.spoken) : undefined,
+    written: r.written?.trim() ? Number(r.written) : undefined,
     somatic: r.somatic?.trim() ? Number(r.somatic) : undefined,
   })),
 
-  adolescentLanguages: vm.adolescentLanguages.map((r): LanguageRank => ({
+  adolescentLanguages: vm.adolescentLanguages.map((r): LanguageAbility => ({
     language: r.language,
-    spoken: Number(r.spoken),
-    written: Number(r.written),
+    spoken: r.spoken?.trim() ? Number(r.spoken) : undefined,
+    written: r.written?.trim() ? Number(r.written) : undefined,
     somatic: r.somatic?.trim() ? Number(r.somatic) : undefined,
   })),
 
@@ -344,7 +345,7 @@ const fromVM = (vm: FormState): Race => ({
   everymanCategories: vm.everymanCategories.slice(),
   restrictedCategories: vm.restrictedCategories.slice(),
 
-  skillBonuses: vm.skillBonuses.map((r): RaceSkillBonus => ({
+  skillBonuses: vm.skillBonuses.map((r): SkillValue => ({
     id: r.id,
     subcategory: r.subcategory?.trim() || undefined,
     value: Number(r.value),
@@ -502,6 +503,31 @@ export default function RaceView() {
   /* ------------------------------------------------------------------ */
   const computeErrors = (draft: FormState): FormErrors => {
     const e: FormErrors = {};
+    const validateLanguageRankRow = (
+      row: LanguageRankVM,
+      fieldLabel: string,
+      rowNumber: number,
+    ): string | undefined => {
+      if (!row.language) return `${fieldLabel}[${rowNumber}]: language required`;
+
+      const hasSpoken = !!row.spoken?.trim();
+      const hasWritten = !!row.written?.trim();
+      const hasSomatic = !!row.somatic?.trim();
+
+      if (!hasSpoken && !hasWritten && !hasSomatic) {
+        return `${fieldLabel}[${rowNumber}]: at least one of spoken/written/somatic is required`;
+      }
+
+      if (
+        (hasSpoken && !isValidUnsignedInt(row.spoken!))
+        || (hasWritten && !isValidUnsignedInt(row.written!))
+        || (hasSomatic && !isValidUnsignedInt(row.somatic!))
+      ) {
+        return `${fieldLabel}[${rowNumber}]: rank values must be unsigned integers`;
+      }
+
+      return undefined;
+    };
 
     const id = draft.id.trim();
     const nm = draft.name.trim();
@@ -543,19 +569,15 @@ export default function RaceView() {
     for (let i = 0; i < draft.startingLanguages.length; i++) {
       const r = draft.startingLanguages[i];
       if (!r) continue
-      if (!r.language) { e.startingLanguages = `StartingLanguages[${i + 1}]: language required`; break; }
-      if (!isValidUnsignedInt(r.spoken) || !isValidUnsignedInt(r.written)) {
-        e.startingLanguages = `StartingLanguages[${i + 1}]: spoken/written must be integers`; break;
-      }
+      const languageError = validateLanguageRankRow(r, 'StartingLanguages', i + 1);
+      if (languageError) { e.startingLanguages = languageError; break; }
     }
 
     for (let i = 0; i < draft.adolescentLanguages.length; i++) {
       const r = draft.adolescentLanguages[i];
       if (!r) continue
-      if (!r.language) { e.adolescentLanguages = `AdolescentLanguages[${i + 1}]: language required`; break; }
-      if (!isValidUnsignedInt(r.spoken) || !isValidUnsignedInt(r.written)) {
-        e.adolescentLanguages = `AdolescentLanguages[${i + 1}]: spoken/written must be integers`; break;
-      }
+      const languageError = validateLanguageRankRow(r, 'AdolescentLanguages', i + 1);
+      if (languageError) { e.adolescentLanguages = languageError; break; }
     }
 
     for (let i = 0; i < draft.statBonuses.length; i++) {

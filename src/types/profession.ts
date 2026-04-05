@@ -7,41 +7,11 @@ import type {
   SpellUserType,
 } from './enum';
 
+import type { Named, PersistentValue, PersistentDevelopmentTypeValue, SkillDevelopmentTypeValue, SkillValue } from './base';
+
 export interface ProfessionSpellListChoice {
   numChoices: number;
   options: string[]; // SpellList.id[]
-}
-
-export interface ProfessionSkillBonus {
-  id: string;                    // Skill.id
-  subcategory?: string | undefined;
-  value: number;
-}
-
-export interface ProfessionCategoryBonus {
-  id: string;                    // SkillCategory.id
-  value: number;
-}
-
-export interface ProfessionGroupBonus {
-  id: string;                    // SkillGroup.id
-  value: number;
-}
-
-export interface ProfessionSkillDevelopmentType {
-  id: string;                    // Skill.id
-  subcategory?: string | undefined;
-  value: SkillDevelopmentType;
-}
-
-export interface ProfessionCategorySkillDevelopmentType {
-  id: string;                    // SkillCategory.id
-  value: SkillDevelopmentType;
-}
-
-export interface ProfessionGroupSkillDevelopmentType {
-  id: string;                    // SkillGroup.id
-  value: SkillDevelopmentType;
 }
 
 export interface ProfessionSkillSubcategoryDevelopmentTypeChoice {
@@ -78,9 +48,7 @@ export interface ProfessionSkillCategoryCost {
   cost: string;     // 1 to 3 colon-separated positive numbers
 }
 
-export interface Profession {
-  id: string;
-  name: string;
+export interface Profession extends Named {
   description?: string | undefined;
 
   book: string; // Book.id
@@ -91,17 +59,17 @@ export interface Profession {
 
   baseSpellListChoices: ProfessionSpellListChoice[];
 
-  skillBonuses: ProfessionSkillBonus[];
+  skillBonuses: SkillValue[];
 
-  skillCategoryProfessionBonuses: ProfessionCategoryBonus[];
-  skillCategorySpecialBonuses: ProfessionCategoryBonus[];
+  skillCategoryProfessionBonuses: PersistentValue[];
+  skillCategorySpecialBonuses: PersistentValue[];
 
-  skillGroupProfessionBonuses: ProfessionGroupBonus[];
-  skillGroupSpecialBonuses: ProfessionGroupBonus[];
+  skillGroupProfessionBonuses: PersistentValue[];
+  skillGroupSpecialBonuses: PersistentValue[];
 
-  skillDevelopmentTypes: ProfessionSkillDevelopmentType[];
-  skillCategorySkillDevelopmentTypes: ProfessionCategorySkillDevelopmentType[];
-  skillGroupSkillDevelopmentTypes: ProfessionGroupSkillDevelopmentType[];
+  skillDevelopmentTypes: SkillDevelopmentTypeValue[];
+  skillCategorySkillDevelopmentTypes: PersistentDevelopmentTypeValue[];
+  skillGroupSkillDevelopmentTypes: PersistentDevelopmentTypeValue[];
 
   skillSubcategoryDevelopmentTypeChoices: ProfessionSkillSubcategoryDevelopmentTypeChoice[];
   skillDevelopmentTypeChoices: ProfessionSkillDevelopmentTypeChoice[];

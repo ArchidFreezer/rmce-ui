@@ -1,10 +1,9 @@
 /**
  * Poison type data
  */
+import type { Named } from './base';
 
-export interface Poison {
-  id: string;
-  name: string;
+export interface Poison extends Named {
   type: string;
   level: number;
   levelVariance: string;

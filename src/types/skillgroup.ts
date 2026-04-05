@@ -1,10 +1,9 @@
 // ------------------------
 // Skill Groups
 // ------------------------
-export interface SkillGroup {
-  id: string;
-  name: string;
-}
+import type { Named } from './base';
+
+export interface SkillGroup extends Named { }
 
 export interface SkillGroupsPayload {
   skillgroups: SkillGroup[];

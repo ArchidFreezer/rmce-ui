@@ -36,6 +36,7 @@ import type {
 
 import {
   isValidID, makeIDOnChange,
+  isValidUnsignedInt,
 } from '../../utils';
 
 const prefix = 'CULTURE_';
@@ -273,6 +274,32 @@ export default function CultureView() {
 
   const computeErrors = (draft: FormState): FormErrors => {
     const e: FormErrors = {};
+    const validateLanguageRankRow = (
+      row: LanguageRankRowVM,
+      rowNumber: number,
+    ): string | undefined => {
+      if (!row.language) {
+        return `Background Language ${rowNumber}: language is required`;
+      }
+
+      const hasSpoken = !!row.spoken?.trim();
+      const hasWritten = !!row.written?.trim();
+      const hasSomatic = !!row.somatic?.trim();
+
+      if (!hasSpoken && !hasWritten && !hasSomatic) {
+        return `Background Language ${rowNumber}: at least one of spoken/written/somatic is required`;
+      }
+
+      if (
+        (hasSpoken && !isValidUnsignedInt(row.spoken!))
+        || (hasWritten && !isValidUnsignedInt(row.written!))
+        || (hasSomatic && !isValidUnsignedInt(row.somatic!))
+      ) {
+        return `Background Language ${rowNumber}: rank values must be unsigned integers`;
+      }
+
+      return undefined;
+    };
 
     const id = draft.id.trim();
     const name = draft.name.trim();
@@ -288,8 +315,9 @@ export default function CultureView() {
     for (let i = 0; i < draft.backgroundLanguages.length; i++) {
       const bl = draft.backgroundLanguages[i];
       if (!bl) continue;
-      if (!bl.language) {
-        e.backgroundLanguages = `Background Language ${i + 1}: language is required`;
+      const languageError = validateLanguageRankRow(bl, i + 1);
+      if (languageError) {
+        e.backgroundLanguages = languageError;
         break;
       }
     }

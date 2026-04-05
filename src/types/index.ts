@@ -1,6 +1,7 @@
 export * from './armourtype';
 export * from './animal';
 export * from './attacktable';
+export * from './base';
 export * from './book';
 export * from './characterbuilder';
 export * from './climate';
@@ -19,7 +20,6 @@ export * from './race';
 export * from './skill';
 export * from './skillcategory';
 export * from './skillgroup';
-export * from './skillmodifier';
 export * from './skillprogressiontype';
 export * from './specialattacktable';
 export * from './spelllist';

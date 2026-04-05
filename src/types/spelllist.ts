@@ -1,8 +1,7 @@
 import { SpellType, Realm } from './enum';
+import type { Named } from './base';
 
-export interface SpellList {
-  id: string;
-  name: string;
+export interface SpellList extends Named {
   book: string;
   type: SpellType;
   evil: boolean;
