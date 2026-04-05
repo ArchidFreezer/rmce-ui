@@ -38,8 +38,3 @@ export interface Skill extends Named {
 export interface SkillsPayload {
   skills: Skill[];
 }
-
-export interface SkillBase {
-  id: string;
-  subcategory?: string | undefined;
-}
