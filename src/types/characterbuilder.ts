@@ -23,6 +23,7 @@ export interface CharacterBuilder extends Named {
   built: boolean;
   num_hobby_skill_ranks: number;
   num_adolescent_spell_list_ranks: number;
+  gold: number;
 
   race: string;
   culture: string;
@@ -71,6 +72,8 @@ export interface CharacterBuilder extends Named {
   group_development_types: PersistentDevelopmentTypeValue[];
 
   spell_list_ranks: PersistentValue[];
+
+  items?: string[] | undefined; // Item.id[]
 }
 
 export function createEmptyCharacterBuilder(): CharacterBuilder {
@@ -80,7 +83,7 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
     built: false,
     num_hobby_skill_ranks: 0,
     num_adolescent_spell_list_ranks: 0,
-
+    gold: 0,
     race: '',
     culture: '',
     culture_type: '',
@@ -127,5 +130,6 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
     group_development_types: [],
 
     spell_list_ranks: [],
+    items: [],
   };
 }

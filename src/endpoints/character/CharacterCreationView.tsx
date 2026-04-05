@@ -108,10 +108,14 @@ type HobbyLanguageRow = {
   somatic: number;
 };
 
-type BackgroundOption = {
-  id: string;
-  label: string;
-  source: 'Generic' | 'Race' | 'Profession';
+type BackgroundLanguageRow = {
+  language: string;
+  maxSpoken: number;
+  maxWritten: number;
+  maxSomatic: number;
+  spoken: number;
+  written: number;
+  somatic: number;
 };
 
 type StatRoll = {
@@ -218,7 +222,13 @@ export default function CharacterCreationView() {
   const [hobbySpellListOptions, setHobbySpellListOptions] = useState<string[]>([]);
   const [hobbySpellListId, setHobbySpellListId] = useState('');
 
-  const [backgroundSelections, setBackgroundSelections] = useState<string[]>([]);
+  const [backgroundExtraStatGainRolls, setBackgroundExtraStatGainRolls] = useState(false);
+  const [backgroundExtraMoneyPoints, setBackgroundExtraMoneyPoints] = useState(0);
+  const [backgroundExtraLanguages, setBackgroundExtraLanguages] = useState(false);
+  const [backgroundLanguageRows, setBackgroundLanguageRows] = useState<BackgroundLanguageRow[]>([]);
+  const [backgroundSkillBonusIds, setBackgroundSkillBonusIds] = useState<string[]>([]);
+  const [backgroundCategoryBonusIds, setBackgroundCategoryBonusIds] = useState<string[]>([]);
+  const [backgroundSpecialItemsPoints, setBackgroundSpecialItemsPoints] = useState(0);
 
   const [trainingPackageId, setTrainingPackageId] = useState('');
   const [tpStatGainChoices, setTpStatGainChoices] = useState<Stat[]>([]);
@@ -227,6 +237,7 @@ export default function CharacterCreationView() {
   const [savingInitialChoices, setSavingInitialChoices] = useState(false);
   const [savingStats, setSavingStats] = useState(false);
   const [savingHobbyChoices, setSavingHobbyChoices] = useState(false);
+  const [savingBackgroundChoices, setSavingBackgroundChoices] = useState(false);
   const [applying, setApplying] = useState(false);
 
   useEffect(() => {
@@ -427,36 +438,84 @@ export default function CharacterCreationView() {
 
   const backgroundBudget = Math.max(0, race?.backgroundOptions ?? 0);
 
-  const backgroundOptions = useMemo<BackgroundOption[]>(() => {
-    const generic: BackgroundOption[] = [
-      { id: 'GENERIC_CONTACTS', label: 'Useful Contacts', source: 'Generic' },
-      { id: 'GENERIC_EQUIPMENT', label: 'Better Starting Gear', source: 'Generic' },
-      { id: 'GENERIC_LANGUAGE', label: 'Extra Language Exposure', source: 'Generic' },
-      { id: 'GENERIC_WEALTH', label: 'Bonus Starting Wealth', source: 'Generic' },
-      { id: 'GENERIC_REPUTATION', label: 'Favorable Reputation', source: 'Generic' },
-      { id: 'GENERIC_TRAINING', label: 'Additional Early Training', source: 'Generic' },
-    ];
+  const backgroundLanguageRanksBudget = backgroundExtraLanguages ? 20 : 0;
 
-    const raceSpecific = uniqStrings([
-      ...(race?.everymanSkills ?? []).map((x) => `RACE_SKILL_${x.id}`),
-      ...(race?.skillBonuses ?? []).map((x) => `RACE_BONUS_${x.id}`),
-    ]).map((id) => ({
-      id,
-      label: id.replace(/^RACE_(SKILL|BONUS)_/, 'Race: '),
-      source: 'Race' as const,
-    }));
+  const backgroundLanguageRankSpent = useMemo(
+    () => backgroundLanguageRows.reduce((sum, row) => sum + row.spoken + row.written + row.somatic, 0),
+    [backgroundLanguageRows],
+  );
 
-    const professionSpecific = uniqStrings([
-      ...(profession?.skillBonuses ?? []).map((x) => `PROF_SKILL_${skillChoiceKey(x.id, x.subcategory)}`),
-      ...(profession?.skillCategoryProfessionBonuses ?? []).map((x) => `PROF_CATEGORY_${x.id}`),
-    ]).map((id) => ({
-      id,
-      label: id.replace(/^PROF_(SKILL|CATEGORY)_/, 'Profession: '),
-      source: 'Profession' as const,
-    }));
+  const backgroundLanguageRankRemaining = backgroundLanguageRanksBudget - backgroundLanguageRankSpent;
 
-    return [...generic, ...raceSpecific, ...professionSpecific];
-  }, [race, profession]);
+  const selectedBackgroundPoints = useMemo(
+    () =>
+      (backgroundExtraStatGainRolls ? 1 : 0)
+      + backgroundExtraMoneyPoints
+      + (backgroundExtraLanguages ? 1 : 0)
+      + backgroundSkillBonusIds.length
+      + backgroundCategoryBonusIds.length
+      + backgroundSpecialItemsPoints,
+    [
+      backgroundExtraStatGainRolls,
+      backgroundExtraMoneyPoints,
+      backgroundExtraLanguages,
+      backgroundSkillBonusIds,
+      backgroundCategoryBonusIds,
+      backgroundSpecialItemsPoints,
+    ],
+  );
+
+  const selectedBackgroundOptionsPayload = useMemo(() => {
+    const out: string[] = [];
+    if (backgroundExtraStatGainRolls) out.push('EXTRA_STAT_GAIN_ROLLS');
+    for (let i = 0; i < backgroundExtraMoneyPoints; i++) out.push('EXTRA_MONEY');
+    if (backgroundExtraLanguages) out.push('EXTRA_LANGUAGES');
+    for (const id of backgroundSkillBonusIds) out.push(`SKILL_BONUS:${id}`);
+    for (const id of backgroundCategoryBonusIds) out.push(`SKILL_CATEGORY_BONUS:${id}`);
+    for (let i = 0; i < backgroundSpecialItemsPoints; i++) out.push('SPECIAL_ITEMS');
+    return out;
+  }, [
+    backgroundExtraStatGainRolls,
+    backgroundExtraMoneyPoints,
+    backgroundExtraLanguages,
+    backgroundSkillBonusIds,
+    backgroundCategoryBonusIds,
+    backgroundSpecialItemsPoints,
+  ]);
+
+  const backgroundSkillBonusOptions = useMemo(
+    () =>
+      skills
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((s) => ({ value: s.id, label: s.name })),
+    [skills],
+  );
+
+  const selectedBackgroundSkillSet = useMemo(() => new Set(backgroundSkillBonusIds), [backgroundSkillBonusIds]);
+  const availableBackgroundSkillBonusOptions = useMemo(
+    () => backgroundSkillBonusOptions.filter((opt) => !selectedBackgroundSkillSet.has(opt.value)),
+    [backgroundSkillBonusOptions, selectedBackgroundSkillSet],
+  );
+
+  const backgroundCategoryBonusOptions = useMemo(
+    () =>
+      categories
+        .slice()
+        .sort((a, b) => {
+          const aLabel = categoryNameById.get(a.id) ?? a.id;
+          const bLabel = categoryNameById.get(b.id) ?? b.id;
+          return aLabel.localeCompare(bLabel);
+        })
+        .map((c) => ({ value: c.id, label: categoryNameById.get(c.id) ?? c.id })),
+    [categories, categoryNameById],
+  );
+
+  const selectedBackgroundCategorySet = useMemo(() => new Set(backgroundCategoryBonusIds), [backgroundCategoryBonusIds]);
+  const availableBackgroundCategoryBonusOptions = useMemo(
+    () => backgroundCategoryBonusOptions.filter((opt) => !selectedBackgroundCategorySet.has(opt.value)),
+    [backgroundCategoryBonusOptions, selectedBackgroundCategorySet],
+  );
 
   const availableTrainingPackages = useMemo(() => {
     if (!raceId) return [];
@@ -530,10 +589,34 @@ export default function CharacterCreationView() {
   }, [selectedTrainingPackage]);
 
   useEffect(() => {
-    if (!backgroundSelections.length) return;
-    if (backgroundSelections.length <= backgroundBudget) return;
-    setBackgroundSelections((prev) => prev.slice(0, backgroundBudget));
-  }, [backgroundSelections, backgroundBudget]);
+    if (selectedBackgroundPoints <= backgroundBudget) return;
+
+    setBackgroundSpecialItemsPoints(0);
+    setBackgroundCategoryBonusIds([]);
+    setBackgroundSkillBonusIds([]);
+    setBackgroundExtraLanguages(false);
+    setBackgroundExtraMoneyPoints(0);
+    setBackgroundExtraStatGainRolls(false);
+  }, [selectedBackgroundPoints, backgroundBudget]);
+
+  useEffect(() => {
+    if (!backgroundExtraLanguages) {
+      setBackgroundLanguageRows([]);
+      return;
+    }
+
+    const rows = (culture?.backgroundLanguages ?? []).map((row) => ({
+      language: row.language,
+      maxSpoken: Math.max(0, row.spoken ?? 0),
+      maxWritten: Math.max(0, row.written ?? 0),
+      maxSomatic: Math.max(0, row.somatic ?? 0),
+      spoken: 0,
+      written: 0,
+      somatic: 0,
+    }));
+
+    setBackgroundLanguageRows(rows);
+  }, [backgroundExtraLanguages, culture]);
 
   useEffect(() => {
     setCharacterBuilder((prev) => ({
@@ -673,68 +756,29 @@ export default function CharacterCreationView() {
   }, [profession]);
 
   useEffect(() => {
-    const selected = new Set(backgroundSelections);
-
-    const selectedRaceEverymanSkillIds = backgroundSelections
-      .filter((id) => id.startsWith('RACE_SKILL_'))
-      .map((id) => id.replace('RACE_SKILL_', ''));
-
-    const selectedRaceSkillBonusIds = backgroundSelections
-      .filter((id) => id.startsWith('RACE_BONUS_'))
-      .map((id) => id.replace('RACE_BONUS_', ''));
-
-    const selectedProfessionSkillBonusKeys = backgroundSelections
-      .filter((id) => id.startsWith('PROF_SKILL_'))
-      .map((id) => id.replace('PROF_SKILL_', ''));
-
-    const selectedProfessionCategoryBonusIds = backgroundSelections
-      .filter((id) => id.startsWith('PROF_CATEGORY_'))
-      .map((id) => id.replace('PROF_CATEGORY_', ''));
-
-    const raceSkillBonuses = (race?.skillBonuses ?? [])
-      .filter((bonus) => selectedRaceSkillBonusIds.includes(bonus.id))
-      .map((bonus) => ({
-        id: bonus.id,
-        subcategory: bonus.subcategory,
-        value: bonus.value,
-      }));
-
-    const professionSkillBonuses = (profession?.skillBonuses ?? [])
-      .filter((bonus) => selectedProfessionSkillBonusKeys.includes(skillChoiceKey(bonus.id, bonus.subcategory)))
-      .map((bonus) => ({
-        id: bonus.id,
-        subcategory: bonus.subcategory,
-        value: bonus.value,
-      }));
-
-    const selectedRaceSkills = (race?.everymanSkills ?? [])
-      .filter((skill) => selectedRaceEverymanSkillIds.includes(skill.id));
-
-    const selectedCategoryBonuses = (profession?.skillCategoryProfessionBonuses ?? [])
-      .filter((bonus) => selectedProfessionCategoryBonusIds.includes(bonus.id));
-
-    const includeBackgroundLanguages = selected.has('GENERIC_LANGUAGE');
-    const mappedBackgroundLanguages = includeBackgroundLanguages
-      ? (culture?.backgroundLanguages ?? []).map((lang) => ({
-        language: lang.language,
-        spoken: lang.spoken ?? 0,
-        written: lang.written ?? 0,
-        somatic: lang.somatic ?? 0,
+    const mappedBackgroundLanguages = backgroundExtraLanguages
+      ? backgroundLanguageRows.map((row) => ({
+        language: row.language,
+        spoken: row.spoken,
+        written: row.written,
+        somatic: row.somatic,
       }))
       : [];
 
     setCharacterBuilder((prev) => ({
       ...prev,
-      everyman_skills: uniqStrings([
-        ...prev.everyman_skills.map((s) => skillChoiceKey(s.id, s.subcategory)),
-        ...selectedRaceSkills.map((s) => skillChoiceKey(s.id, s.subcategory)),
-      ]).map(parseSkillChoiceKey),
-      skill_professional_bonuses: [...raceSkillBonuses, ...professionSkillBonuses],
-      category_professional_bonuses: selectedCategoryBonuses,
+      skill_professional_bonuses: backgroundSkillBonusIds.map((id) => ({
+        id,
+        value: 10,
+      })),
+      category_professional_bonuses: backgroundCategoryBonusIds.map((id) => ({
+        id,
+        value: 5,
+      })),
       background_language_choices: mappedBackgroundLanguages,
       language_abilities: mappedBackgroundLanguages,
     }));
-  }, [backgroundSelections, race, profession, culture]);
+  }, [backgroundExtraLanguages, backgroundLanguageRows, backgroundSkillBonusIds, backgroundCategoryBonusIds]);
 
   useEffect(() => {
     const trainingPackage = selectedTrainingPackage;
@@ -884,8 +928,14 @@ export default function CharacterCreationView() {
 
   const validateBackground = (): string | undefined => {
     if (backgroundBudget === 0) return undefined;
-    if (backgroundSelections.length !== backgroundBudget) {
+    if (selectedBackgroundPoints !== backgroundBudget) {
       return `Select exactly ${backgroundBudget} background options.`;
+    }
+    if (backgroundExtraLanguages && backgroundLanguageRankSpent > backgroundLanguageRanksBudget) {
+      return `Background language ranks are over-allocated by ${backgroundLanguageRankSpent - backgroundLanguageRanksBudget}.`;
+    }
+    if (backgroundExtraLanguages && backgroundLanguageRankRemaining > 0) {
+      return `Spend all extra language ranks before continuing. Remaining: ${backgroundLanguageRankRemaining}.`;
     }
     return undefined;
   };
@@ -943,7 +993,11 @@ export default function CharacterCreationView() {
     languageRanksBudget,
     spellListRanksBudget,
     hobbySpellListId,
-    backgroundSelections,
+    selectedBackgroundPoints,
+    backgroundExtraLanguages,
+    backgroundLanguageRankSpent,
+    backgroundLanguageRanksBudget,
+    backgroundLanguageRankRemaining,
     trainingPackageId,
     tpStatGainChoices,
     tpSkillRankChoiceSelections,
@@ -1182,6 +1236,22 @@ export default function CharacterCreationView() {
       }
     }
 
+    if (step === 'background') {
+      setSavingBackgroundChoices(true);
+      try {
+        // TODO: Replace with background-choice API call when endpoint contract is finalized.
+      } catch (e) {
+        toast({
+          variant: 'danger',
+          title: 'Save background choices failed',
+          description: String(e instanceof Error ? e.message : e),
+        });
+        return;
+      } finally {
+        setSavingBackgroundChoices(false);
+      }
+    }
+
     const next = STEP_ORDER[idx + 1];
     if (next) setStep(next);
   };
@@ -1266,13 +1336,42 @@ export default function CharacterCreationView() {
     return [...selected, value];
   };
 
-  const toggleBackgroundOption = (id: string) => {
-    setBackgroundSelections((prev) => {
-      const has = prev.includes(id);
-      if (has) return prev.filter((x) => x !== id);
-      if (prev.length >= backgroundBudget) return prev;
-      return [...prev, id];
+  const canSpendBackgroundPoints = (cost: number): boolean => selectedBackgroundPoints + cost <= backgroundBudget;
+
+  const updateBackgroundLanguageRank = (
+    rowIndex: number,
+    key: 'spoken' | 'written' | 'somatic',
+    delta: 1 | -1,
+  ) => {
+    setBackgroundLanguageRows((prev) => {
+      const target = prev[rowIndex];
+      if (!target) return prev;
+
+      const currentValue = target[key];
+      const maxValue = key === 'spoken' ? target.maxSpoken : key === 'written' ? target.maxWritten : target.maxSomatic;
+      const nextValue = currentValue + delta;
+
+      if (delta > 0) {
+        if (backgroundLanguageRankRemaining <= 0) return prev;
+        if (nextValue > maxValue) return prev;
+      }
+
+      if (delta < 0 && nextValue < 0) return prev;
+
+      const copy = prev.slice();
+      copy[rowIndex] = { ...target, [key]: nextValue };
+      return copy;
     });
+  };
+
+  const resetBackgroundState = () => {
+    setBackgroundExtraStatGainRolls(false);
+    setBackgroundExtraMoneyPoints(0);
+    setBackgroundExtraLanguages(false);
+    setBackgroundLanguageRows([]);
+    setBackgroundSkillBonusIds([]);
+    setBackgroundCategoryBonusIds([]);
+    setBackgroundSpecialItemsPoints(0);
   };
 
   const resetWorkflow = () => {
@@ -1293,7 +1392,7 @@ export default function CharacterCreationView() {
     setSpellListRanksBudget(0);
     setHobbySpellListOptions([]);
     setHobbySpellListId('');
-    setBackgroundSelections([]);
+    resetBackgroundState();
     setTrainingPackageId('');
     setTpStatGainChoices([]);
     setTpSkillRankChoiceSelections([]);
@@ -1339,7 +1438,7 @@ export default function CharacterCreationView() {
           selectedRaceCategoryChoices: [],
           selectedProfessionSkillChoices: [],
         },
-        selectedBackgroundOptions: backgroundSelections,
+        selectedBackgroundOptions: selectedBackgroundOptionsPayload,
         apprenticeship: {
           trainingPackageId,
           selectedStatGainChoices: tpStatGainChoices,
@@ -1419,7 +1518,7 @@ export default function CharacterCreationView() {
 
         {/* Form panels for each step. Only the active step is interactable, but previous steps are shown for context. */}
         <div className="form-container">
-          {(generatingStats || applying || savingInitialChoices || savingStats || savingHobbyChoices) && (
+          {(generatingStats || applying || savingInitialChoices || savingStats || savingHobbyChoices || savingBackgroundChoices) && (
             <div className="overlay">
               <Spinner size={24} />
               <span>
@@ -1429,9 +1528,11 @@ export default function CharacterCreationView() {
                     ? 'Saving stats…'
                     : savingHobbyChoices
                       ? 'Saving hobby choices…'
-                      : applying
-                        ? 'Applying level upgrade…'
-                        : 'Generating stats…'}
+                      : savingBackgroundChoices
+                        ? 'Saving background choices…'
+                        : applying
+                          ? 'Applying level upgrade…'
+                          : 'Generating stats…'}
               </span>
             </div>
           )}
@@ -1456,7 +1557,7 @@ export default function CharacterCreationView() {
                   onChange={(v) => {
                     setRaceId(v);
                     setTrainingPackageId('');
-                    setBackgroundSelections([]);
+                    resetBackgroundState();
                   }}
                   options={races
                     .slice()
@@ -1471,7 +1572,7 @@ export default function CharacterCreationView() {
                   onChange={(v) => {
                     setCultureTypeId(v);
                     setTrainingPackageId('');
-                    setBackgroundSelections([]);
+                    resetBackgroundState();
                   }}
                   options={cultureTypes
                     .slice()
@@ -1502,7 +1603,7 @@ export default function CharacterCreationView() {
                   onChange={(v) => {
                     setProfessionId(v);
                     setSelectedRealms([]);
-                    setBackgroundSelections([]);
+                    resetBackgroundState();
                   }}
                   options={professionOptions}
                   helperText={
@@ -1769,25 +1870,217 @@ export default function CharacterCreationView() {
           {step === 'background' && (
             <section style={{ display: 'grid', gap: 10 }}>
               <div>
-                Budget: <strong>{backgroundBudget}</strong> | Selected: <strong>{backgroundSelections.length}</strong>
+                Budget: <strong>{backgroundBudget}</strong> | Selected: <strong>{selectedBackgroundPoints}</strong>
               </div>
               <div style={{ color: 'var(--muted)' }}>
-                Generic options are always available. Race and profession options are derived from your earlier choices.
+                Spend background option points across the options below.
               </div>
 
-              <div style={{ display: 'grid', gap: 8 }}>
-                {backgroundOptions.map((opt) => (
+              <div style={{ display: 'grid', gap: 12 }}>
+                <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
                   <CheckboxInput
-                    key={opt.id}
-                    label={`${opt.label} [${opt.source}]`}
-                    checked={backgroundSelections.includes(opt.id)}
-                    onChange={() => toggleBackgroundOption(opt.id)}
-                    disabled={
-                      !backgroundSelections.includes(opt.id)
-                      && backgroundSelections.length >= backgroundBudget
-                    }
+                    label="Extra Stat Gain Rolls"
+                    checked={backgroundExtraStatGainRolls}
+                    onChange={(checked) => {
+                      if (!checked) {
+                        setBackgroundExtraStatGainRolls(false);
+                        return;
+                      }
+                      if (!canSpendBackgroundPoints(1)) return;
+                      setBackgroundExtraStatGainRolls(true);
+                    }}
+                    disabled={!backgroundExtraStatGainRolls && !canSpendBackgroundPoints(1)}
                   />
-                ))}
+                </div>
+
+                <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
+                  <strong>Extra Money</strong>
+                  <div style={{ color: 'var(--muted)' }}>Spend 1 or 2 points.</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => setBackgroundExtraMoneyPoints((v) => Math.max(0, v - 1))}
+                      disabled={backgroundExtraMoneyPoints <= 0}
+                    >
+                      -
+                    </button>
+                    <span style={{ minWidth: 20, textAlign: 'center' }}>{backgroundExtraMoneyPoints}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (backgroundExtraMoneyPoints >= 2) return;
+                        if (!canSpendBackgroundPoints(1)) return;
+                        setBackgroundExtraMoneyPoints((v) => v + 1);
+                      }}
+                      disabled={backgroundExtraMoneyPoints >= 2 || !canSpendBackgroundPoints(1)}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 10 }}>
+                  <CheckboxInput
+                    label="Extra Languages"
+                    checked={backgroundExtraLanguages}
+                    onChange={(checked) => {
+                      if (!checked) {
+                        setBackgroundExtraLanguages(false);
+                        return;
+                      }
+                      if (!canSpendBackgroundPoints(1)) return;
+                      setBackgroundExtraLanguages(true);
+                    }}
+                    disabled={!backgroundExtraLanguages && !canSpendBackgroundPoints(1)}
+                  />
+
+                  {backgroundExtraLanguages && (
+                    <>
+                      <div style={{ color: backgroundLanguageRankRemaining < 0 ? '#b00020' : 'var(--muted)' }}>
+                        Remaining language ranks: {backgroundLanguageRankRemaining} / {backgroundLanguageRanksBudget}
+                      </div>
+
+                      {backgroundLanguageRows.length === 0 ? (
+                        <div style={{ color: 'var(--muted)' }}>No culture background languages are available.</div>
+                      ) : (
+                        <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))' }}>
+                          {backgroundLanguageRows.map((row, rowIndex) => {
+                            const controls: Array<{ key: 'spoken' | 'written' | 'somatic'; label: string; value: number; max: number }> = [
+                              { key: 'spoken', label: 'Spoken', value: row.spoken, max: row.maxSpoken },
+                              { key: 'written', label: 'Written', value: row.written, max: row.maxWritten },
+                              { key: 'somatic', label: 'Somatic', value: row.somatic, max: row.maxSomatic },
+                            ];
+
+                            return (
+                              <div key={`bg-lang-${row.language}-${rowIndex}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
+                                <strong>{languageNameById.get(row.language) ?? row.language}</strong>
+                                {controls.map((control) => (
+                                  <div key={`${row.language}-${control.key}`} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap' }}>
+                                    <span style={{ minWidth: 74, whiteSpace: 'nowrap' }}>{control.label}</span>
+                                    <small style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>Max: {control.max}</small>
+                                    <button
+                                      type="button"
+                                      onClick={() => updateBackgroundLanguageRank(rowIndex, control.key, -1)}
+                                      disabled={control.value <= 0}
+                                    >
+                                      -
+                                    </button>
+                                    <span style={{ minWidth: 20, textAlign: 'center', whiteSpace: 'nowrap' }}>{control.value}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => updateBackgroundLanguageRank(rowIndex, control.key, 1)}
+                                      disabled={backgroundLanguageRankRemaining <= 0 || control.value >= control.max}
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
+                  <strong>Skill Bonus</strong>
+                  <div style={{ color: 'var(--muted)' }}>Each selected skill grants +10 and costs 1 point.</div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'end', flexWrap: 'wrap' }}>
+                    <LabeledSelect
+                      label="Add Skill Bonus"
+                      hideLabel={true}
+                      value=""
+                      onChange={(value) => {
+                        if (!value) return;
+                        if (selectedBackgroundSkillSet.has(value)) return;
+                        if (!canSpendBackgroundPoints(1)) return;
+                        setBackgroundSkillBonusIds((prev) => [...prev, value]);
+                      }}
+                      options={availableBackgroundSkillBonusOptions}
+                      placeholderOption="— Select skill —"
+                      disabled={availableBackgroundSkillBonusOptions.length === 0 || !canSpendBackgroundPoints(1)}
+                    />
+                  </div>
+                  {backgroundSkillBonusIds.length > 0 && (
+                    <div style={{ display: 'grid', gap: 6 }}>
+                      {backgroundSkillBonusIds.map((id) => (
+                        <div key={`bg-skill-${id}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                          <span>{skillNameById.get(id) ?? id} (+10)</span>
+                          <button
+                            type="button"
+                            onClick={() => setBackgroundSkillBonusIds((prev) => prev.filter((x) => x !== id))}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
+                  <strong>Skill Category Bonus</strong>
+                  <div style={{ color: 'var(--muted)' }}>Each selected category grants +5 and costs 1 point.</div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'end', flexWrap: 'wrap' }}>
+                    <LabeledSelect
+                      label="Add Skill Category Bonus"
+                      hideLabel={true}
+                      value=""
+                      onChange={(value) => {
+                        if (!value) return;
+                        if (selectedBackgroundCategorySet.has(value)) return;
+                        if (!canSpendBackgroundPoints(1)) return;
+                        setBackgroundCategoryBonusIds((prev) => [...prev, value]);
+                      }}
+                      options={availableBackgroundCategoryBonusOptions}
+                      placeholderOption="— Select category —"
+                      disabled={availableBackgroundCategoryBonusOptions.length === 0 || !canSpendBackgroundPoints(1)}
+                    />
+                  </div>
+                  {backgroundCategoryBonusIds.length > 0 && (
+                    <div style={{ display: 'grid', gap: 6 }}>
+                      {backgroundCategoryBonusIds.map((id) => (
+                        <div key={`bg-category-${id}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                          <span>{categoryNameById.get(id) ?? id} (+5)</span>
+                          <button
+                            type="button"
+                            onClick={() => setBackgroundCategoryBonusIds((prev) => prev.filter((x) => x !== id))}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
+                  <strong>Special Items</strong>
+                  <div style={{ color: 'var(--muted)' }}>Spend 1 or 2 points.</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <button
+                      type="button"
+                      onClick={() => setBackgroundSpecialItemsPoints((v) => Math.max(0, v - 1))}
+                      disabled={backgroundSpecialItemsPoints <= 0}
+                    >
+                      -
+                    </button>
+                    <span style={{ minWidth: 20, textAlign: 'center' }}>{backgroundSpecialItemsPoints}</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (backgroundSpecialItemsPoints >= 2) return;
+                        if (!canSpendBackgroundPoints(1)) return;
+                        setBackgroundSpecialItemsPoints((v) => v + 1);
+                      }}
+                      disabled={backgroundSpecialItemsPoints >= 2 || !canSpendBackgroundPoints(1)}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {errors.background && <div style={{ color: '#b00020' }}>{errors.background}</div>}
@@ -1894,7 +2187,7 @@ export default function CharacterCreationView() {
                   <li>Realms: {selectedRealms.join(', ') || 'None'}</li>
                   <li>Builder ID: {characterBuilder.id || 'Not generated yet'}</li>
                   <li>Prime Stats: {primeStats.join(', ') || 'None'}</li>
-                  <li>Background selections: {backgroundSelections.length}</li>
+                  <li>Background selections: {selectedBackgroundPoints}</li>
                   <li>Training package: {selectedTrainingPackage?.name ?? trainingPackageId}</li>
                 </ul>
               </div>
@@ -1922,7 +2215,7 @@ export default function CharacterCreationView() {
 
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" onClick={goPrev} disabled={step === 'initial'}>Back</button>
-            <button type="button" onClick={goNext} disabled={!canGoNext || step === 'apply' || savingInitialChoices || savingStats || savingHobbyChoices}>Next</button>
+            <button type="button" onClick={goNext} disabled={!canGoNext || step === 'apply' || savingInitialChoices || savingStats || savingHobbyChoices || savingBackgroundChoices}>Next</button>
           </div>
         </div>
       </div>
