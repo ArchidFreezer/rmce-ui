@@ -1,11 +1,5 @@
 import type { Realm, SkillDevelopmentType, Stat } from './enum';
-
-export interface CharacterBuilderLanguageRanks {
-  language: string; // Language.id
-  spoken: number;
-  written: number;
-  somatic: number;
-}
+import type { LanguageAbility } from './language';
 
 export interface CharacterBuilderIdValue {
   id: string;
@@ -60,7 +54,7 @@ export interface CharacterBuilder {
   magical_realms: Realm[];
 
   race_category_everyman_choices: string[];
-  race_adolescent_language_choices: CharacterBuilderLanguageRanks[];
+  race_adolescent_language_choices: LanguageAbility[];
 
   culture_type_category_skill_ranks: CharacterBuilderIdOptionalSubcategoryValue[];
   base_spell_list_choices: string[];
@@ -74,8 +68,8 @@ export interface CharacterBuilder {
   hobby_category_ranks: CharacterBuilderIdValue[];
   adolescent_spell_list_choice: string | null; // SpellList.id
 
-  background_language_choices: CharacterBuilderLanguageRanks[];
-  language_abilities: CharacterBuilderLanguageRanks[];
+  background_language_choices: LanguageAbility[];
+  language_abilities: LanguageAbility[];
 
   realm_progressions: CharacterBuilderRealmProgression[];
   stats: CharacterBuilderStatValue[];

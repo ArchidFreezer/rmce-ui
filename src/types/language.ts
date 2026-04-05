@@ -17,9 +17,9 @@ export interface LanguagesPayload {
   languages: Language[];
 }
 
-export interface LanguageRank {
+export interface LanguageAbility {
   language: string;               // Language.id
-  spoken: number;
-  written: number;
+  spoken?: number | undefined;
+  written?: number | undefined;
   somatic?: number | undefined;  // keeping backend spelling
 }

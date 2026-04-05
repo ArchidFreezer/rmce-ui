@@ -1,6 +1,6 @@
 // src/types/race.ts
 import type { CreatureSize, CriticalTableType, Stat } from './enum';
-import type { LanguageRank } from './language';
+import type { LanguageAbility } from './language';
 
 export interface RaceSkillRef {
   id: string;                     // Skill.id
@@ -54,8 +54,8 @@ export interface Race {
   essenceProgression: string;     // SkillProgressionType.id
   mentalismProgression: string;   // SkillProgressionType.id
 
-  startingLanguages: LanguageRank[];
-  adolescentLanguages: LanguageRank[];
+  startingLanguages: LanguageAbility[];
+  adolescentLanguages: LanguageAbility[];
 
   statBonuses: RaceStatBonus[];
 
