@@ -1,12 +1,7 @@
-import type { Named } from './base';
+import type { Named, PersistentIntValue } from './base';
 import type { Realm, SkillDevelopmentType, Stat } from './enum';
 import type { LanguageAbility } from './language';
 import type { SkillValue } from './skill';
-
-export interface CharacterBuilderIdValue {
-  id: string;
-  value: number;
-}
 
 export interface CharacterBuilderIdOptionalSubcategory {
   id: string;
@@ -59,7 +54,7 @@ export interface CharacterBuilder extends Named {
   prof_group_development_type_choices: CharacterBuilderIdDevelopmentType[];
 
   hobby_skill_ranks: SkillValue[];
-  hobby_category_ranks: CharacterBuilderIdValue[];
+  hobby_category_ranks: PersistentIntValue[];
   adolescent_spell_list_choice: string | null; // SpellList.id
 
   background_language_choices: LanguageAbility[];
@@ -78,16 +73,16 @@ export interface CharacterBuilder extends Named {
   skillsub_development_types: CharacterBuilderIdOptionalSubcategoryDevelopmentType[];
   skill_development_types: CharacterBuilderIdDevelopmentType[];
 
-  category_ranks: CharacterBuilderIdValue[];
-  category_professional_bonuses: CharacterBuilderIdValue[];
-  category_special_bonuses: CharacterBuilderIdValue[];
+  category_ranks: PersistentIntValue[];
+  category_professional_bonuses: PersistentIntValue[];
+  category_special_bonuses: PersistentIntValue[];
   category_development_types: CharacterBuilderIdDevelopmentType[];
 
-  group_professional_bonuses: CharacterBuilderIdValue[];
-  group_special_bonuses: CharacterBuilderIdValue[];
+  group_professional_bonuses: PersistentIntValue[];
+  group_special_bonuses: PersistentIntValue[];
   group_development_types: CharacterBuilderIdDevelopmentType[];
 
-  spell_list_ranks: CharacterBuilderIdValue[];
+  spell_list_ranks: PersistentIntValue[];
 }
 
 export function createEmptyCharacterBuilder(): CharacterBuilder {
