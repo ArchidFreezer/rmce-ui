@@ -1,4 +1,6 @@
 /** Base types for common structures */
+import type { SkillDevelopmentType } from './enum';
+
 export interface Persistent {
   id: string;
 }
@@ -11,6 +13,14 @@ export interface PersistentValue extends Persistent {
   value: number;
 }
 
+export interface PersistentDevelopmentTypeValue extends Persistent {
+  value: SkillDevelopmentType;
+}
+
 export interface SkillValue extends PersistentValue {
+  subcategory?: string | undefined;
+}
+
+export interface SkillDevelopmentTypeValue extends PersistentDevelopmentTypeValue {
   subcategory?: string | undefined;
 }

@@ -1,21 +1,10 @@
-import type { Named, PersistentValue, SkillValue } from './base';
-import type { Realm, SkillDevelopmentType, Stat } from './enum';
+import type { Named, PersistentValue, PersistentDevelopmentTypeValue, SkillValue, SkillDevelopmentTypeValue } from './base';
+import type { Realm, Stat } from './enum';
 import type { LanguageAbility } from './language';
 
 export interface CharacterBuilderIdOptionalSubcategory {
   id: string;
   subcategory?: string | undefined;
-}
-
-export interface CharacterBuilderIdOptionalSubcategoryDevelopmentType {
-  id: string;
-  subcategory?: string | undefined;
-  value: SkillDevelopmentType;
-}
-
-export interface CharacterBuilderIdDevelopmentType {
-  id: string;
-  value: SkillDevelopmentType;
 }
 
 export interface CharacterBuilderRealmProgression {
@@ -47,10 +36,10 @@ export interface CharacterBuilder extends Named {
   culture_type_category_skill_ranks: SkillValue[];
   base_spell_list_choices: string[];
 
-  prof_skill_subcategory_development_type_choices: CharacterBuilderIdOptionalSubcategoryDevelopmentType[];
-  prof_skill_development_type_choices: CharacterBuilderIdOptionalSubcategoryDevelopmentType[];
-  prof_category_development_type_choices: CharacterBuilderIdDevelopmentType[];
-  prof_group_development_type_choices: CharacterBuilderIdDevelopmentType[];
+  prof_skill_subcategory_development_type_choices: SkillDevelopmentTypeValue[];
+  prof_skill_development_type_choices: SkillDevelopmentTypeValue[];
+  prof_category_development_type_choices: PersistentDevelopmentTypeValue[];
+  prof_group_development_type_choices: PersistentDevelopmentTypeValue[];
 
   hobby_skill_ranks: SkillValue[];
   hobby_category_ranks: PersistentValue[];
@@ -69,17 +58,17 @@ export interface CharacterBuilder extends Named {
 
   skill_ranks: SkillValue[];
   skill_professional_bonuses: SkillValue[];
-  skillsub_development_types: CharacterBuilderIdOptionalSubcategoryDevelopmentType[];
-  skill_development_types: CharacterBuilderIdDevelopmentType[];
+  skillsub_development_types: SkillDevelopmentTypeValue[];
+  skill_development_types: PersistentDevelopmentTypeValue[];
 
   category_ranks: PersistentValue[];
   category_professional_bonuses: PersistentValue[];
   category_special_bonuses: PersistentValue[];
-  category_development_types: CharacterBuilderIdDevelopmentType[];
+  category_development_types: PersistentDevelopmentTypeValue[];
 
   group_professional_bonuses: PersistentValue[];
   group_special_bonuses: PersistentValue[];
-  group_development_types: CharacterBuilderIdDevelopmentType[];
+  group_development_types: PersistentDevelopmentTypeValue[];
 
   spell_list_ranks: PersistentValue[];
 }
