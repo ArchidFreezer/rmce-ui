@@ -7,27 +7,11 @@ import type {
   SpellUserType,
 } from './enum';
 
-import type { Named, PersistentValue, SkillValue } from './base';
+import type { Named, PersistentValue, PersistentDevelopmentTypeValue, SkillDevelopmentTypeValue, SkillValue } from './base';
 
 export interface ProfessionSpellListChoice {
   numChoices: number;
   options: string[]; // SpellList.id[]
-}
-
-export interface ProfessionSkillDevelopmentType {
-  id: string;                    // Skill.id
-  subcategory?: string | undefined;
-  value: SkillDevelopmentType;
-}
-
-export interface ProfessionCategorySkillDevelopmentType {
-  id: string;                    // SkillCategory.id
-  value: SkillDevelopmentType;
-}
-
-export interface ProfessionGroupSkillDevelopmentType {
-  id: string;                    // SkillGroup.id
-  value: SkillDevelopmentType;
 }
 
 export interface ProfessionSkillSubcategoryDevelopmentTypeChoice {
@@ -83,9 +67,9 @@ export interface Profession extends Named {
   skillGroupProfessionBonuses: PersistentValue[];
   skillGroupSpecialBonuses: PersistentValue[];
 
-  skillDevelopmentTypes: ProfessionSkillDevelopmentType[];
-  skillCategorySkillDevelopmentTypes: ProfessionCategorySkillDevelopmentType[];
-  skillGroupSkillDevelopmentTypes: ProfessionGroupSkillDevelopmentType[];
+  skillDevelopmentTypes: SkillDevelopmentTypeValue[];
+  skillCategorySkillDevelopmentTypes: PersistentDevelopmentTypeValue[];
+  skillGroupSkillDevelopmentTypes: PersistentDevelopmentTypeValue[];
 
   skillSubcategoryDevelopmentTypeChoices: ProfessionSkillSubcategoryDevelopmentTypeChoice[];
   skillDevelopmentTypeChoices: ProfessionSkillDevelopmentTypeChoice[];

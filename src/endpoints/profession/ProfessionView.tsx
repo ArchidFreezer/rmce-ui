@@ -29,12 +29,10 @@ import {
 
 import type {
   Book,
+  PersistentDevelopmentTypeValue,
   PersistentValue,
   Profession,
   ProfessionSpellListChoice,
-  ProfessionSkillDevelopmentType,
-  ProfessionCategorySkillDevelopmentType,
-  ProfessionGroupSkillDevelopmentType,
   ProfessionSkillSubcategoryDevelopmentTypeChoice,
   ProfessionSkillDevelopmentTypeChoice,
   ProfessionSkillDevelopmentTypeChoiceOption,
@@ -44,6 +42,7 @@ import type {
   Race,
   Skill,
   SkillCategory,
+  SkillDevelopmentTypeValue,
   SkillGroup,
   SkillValue,
   SpellList,
@@ -266,16 +265,16 @@ const fromVM = (vm: FormState): Profession => ({
     value: Number(r.value),
   })),
 
-  skillDevelopmentTypes: vm.skillDevelopmentTypes.map((r): ProfessionSkillDevelopmentType => ({
+  skillDevelopmentTypes: vm.skillDevelopmentTypes.map((r): SkillDevelopmentTypeValue => ({
     id: r.id,
     subcategory: r.subcategory?.trim() || undefined,
     value: r.value as SkillDevelopmentType,
   })),
-  skillCategorySkillDevelopmentTypes: vm.skillCategorySkillDevelopmentTypes.map((r): ProfessionCategorySkillDevelopmentType => ({
+  skillCategorySkillDevelopmentTypes: vm.skillCategorySkillDevelopmentTypes.map((r): PersistentDevelopmentTypeValue => ({
     id: r.id,
     value: r.value as SkillDevelopmentType,
   })),
-  skillGroupSkillDevelopmentTypes: vm.skillGroupSkillDevelopmentTypes.map((r): ProfessionGroupSkillDevelopmentType => ({
+  skillGroupSkillDevelopmentTypes: vm.skillGroupSkillDevelopmentTypes.map((r): PersistentDevelopmentTypeValue => ({
     id: r.id,
     value: r.value as SkillDevelopmentType,
   })),

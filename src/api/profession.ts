@@ -2,19 +2,18 @@
 import { fetchJson, sendJson } from './client';
 
 import type {
+  PersistentDevelopmentTypeValue,
   PersistentValue,
   Profession,
   ProfessionsPayload,
   ProfessionSpellListChoice,
-  ProfessionSkillDevelopmentType,
-  ProfessionCategorySkillDevelopmentType,
-  ProfessionGroupSkillDevelopmentType,
   ProfessionSkillSubcategoryDevelopmentTypeChoice,
   ProfessionSkillDevelopmentTypeChoice,
   ProfessionSkillDevelopmentTypeChoiceOption,
   ProfessionCategorySkillDevelopmentTypeChoice,
   ProfessionGroupSkillDevelopmentTypeChoice,
   ProfessionSkillCategoryCost,
+  SkillDevelopmentTypeValue,
   SkillValue,
 } from '../types';
 
@@ -57,25 +56,25 @@ function groupBonusFromJson(x: any): PersistentValue {
   };
 }
 
-function skillDevTypeFromJson(x: any): ProfessionSkillDevelopmentType {
+function skillDevTypeFromJson(x: any): SkillDevelopmentTypeValue {
   return {
     id: asString(x?.id),
     subcategory: x?.subcategory != null ? asString(x?.subcategory) : undefined,
-    value: asString(x?.value) as ProfessionSkillDevelopmentType['value'],
+    value: asString(x?.value) as SkillDevelopmentTypeValue['value'],
   };
 }
 
-function categorySkillDevTypeFromJson(x: any): ProfessionCategorySkillDevelopmentType {
+function categorySkillDevTypeFromJson(x: any): PersistentDevelopmentTypeValue {
   return {
     id: asString(x?.id),
-    value: asString(x?.value) as ProfessionCategorySkillDevelopmentType['value'],
+    value: asString(x?.value) as PersistentDevelopmentTypeValue['value'],
   };
 }
 
-function groupSkillDevTypeFromJson(x: any): ProfessionGroupSkillDevelopmentType {
+function groupSkillDevTypeFromJson(x: any): PersistentDevelopmentTypeValue {
   return {
     id: asString(x?.id),
-    value: asString(x?.value) as ProfessionGroupSkillDevelopmentType['value'],
+    value: asString(x?.value) as PersistentDevelopmentTypeValue['value'],
   };
 }
 
