@@ -1,11 +1,6 @@
 // src/types/culture.ts
-
-export interface CultureBackgroundLanguage {
-  language: string;   // Language.id
-  spoken?: number | undefined;
-  written?: number | undefined;
-  somatic?: number | undefined;
-}
+import type { Named } from './base';
+import type { LanguageAbility } from './language';
 
 export interface CultureTrainingPackageModifier {
   id: string;         // TrainingPackage.id
@@ -17,15 +12,13 @@ export interface CultureHobbySkill {
   subcategory?: string | undefined;
 }
 
-export interface Culture {
-  id: string;
-  name: string;
+export interface Culture extends Named {
   description?: string | undefined;
 
   cultureType: string;        // CultureType.id
   highCulture: boolean;
 
-  backgroundLanguages: CultureBackgroundLanguage[];
+  backgroundLanguages: LanguageAbility[];
 
   hobbySkills: CultureHobbySkill[];
   hobbyCategories: string[];          // SkillCategory.id[]

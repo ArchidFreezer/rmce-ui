@@ -1,5 +1,7 @@
+import type { Named } from './base';
 import type { Realm, SkillDevelopmentType, Stat } from './enum';
 import type { LanguageAbility } from './language';
+import type { SkillValue } from './skill';
 
 export interface CharacterBuilderIdValue {
   id: string;
@@ -9,12 +11,6 @@ export interface CharacterBuilderIdValue {
 export interface CharacterBuilderIdOptionalSubcategory {
   id: string;
   subcategory?: string | undefined;
-}
-
-export interface CharacterBuilderIdOptionalSubcategoryValue {
-  id: string;
-  subcategory?: string | undefined;
-  value: number;
 }
 
 export interface CharacterBuilderIdOptionalSubcategoryDevelopmentType {
@@ -40,9 +36,7 @@ export interface CharacterBuilderStatValue {
   bonus: number;
 }
 
-export interface CharacterBuilder {
-  id: string;
-  name: string;
+export interface CharacterBuilder extends Named {
   built: boolean;
   num_hobby_skill_ranks: number;
   num_adolescent_spell_list_ranks: number;
@@ -56,7 +50,7 @@ export interface CharacterBuilder {
   race_category_everyman_choices: string[];
   race_adolescent_language_choices: LanguageAbility[];
 
-  culture_type_category_skill_ranks: CharacterBuilderIdOptionalSubcategoryValue[];
+  culture_type_category_skill_ranks: SkillValue[];
   base_spell_list_choices: string[];
 
   prof_skill_subcategory_development_type_choices: CharacterBuilderIdOptionalSubcategoryDevelopmentType[];
@@ -64,7 +58,7 @@ export interface CharacterBuilder {
   prof_category_development_type_choices: CharacterBuilderIdDevelopmentType[];
   prof_group_development_type_choices: CharacterBuilderIdDevelopmentType[];
 
-  hobby_skill_ranks: CharacterBuilderIdOptionalSubcategoryValue[];
+  hobby_skill_ranks: SkillValue[];
   hobby_category_ranks: CharacterBuilderIdValue[];
   adolescent_spell_list_choice: string | null; // SpellList.id
 
@@ -79,8 +73,8 @@ export interface CharacterBuilder {
   everyman_skill_categories: string[];
   restricted_skill_categories: string[];
 
-  skill_ranks: CharacterBuilderIdOptionalSubcategoryValue[];
-  skill_professional_bonuses: CharacterBuilderIdOptionalSubcategoryValue[];
+  skill_ranks: SkillValue[];
+  skill_professional_bonuses: SkillValue[];
   skillsub_development_types: CharacterBuilderIdOptionalSubcategoryDevelopmentType[];
   skill_development_types: CharacterBuilderIdDevelopmentType[];
 

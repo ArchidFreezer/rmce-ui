@@ -31,7 +31,6 @@ import type {
   Book,
   Profession,
   ProfessionSpellListChoice,
-  ProfessionSkillBonus,
   ProfessionCategoryBonus,
   ProfessionGroupBonus,
   ProfessionSkillDevelopmentType,
@@ -47,6 +46,7 @@ import type {
   Skill,
   SkillCategory,
   SkillGroup,
+  SkillValue,
   SpellList,
 } from '../../types';
 
@@ -244,7 +244,7 @@ const fromVM = (vm: FormState): Profession => ({
     options: r.options.slice(),
   })),
 
-  skillBonuses: vm.skillBonuses.map((r): ProfessionSkillBonus => ({
+  skillBonuses: vm.skillBonuses.map((r): SkillValue => ({
     id: r.id,
     subcategory: r.subcategory?.trim() || undefined,
     value: Number(r.value),

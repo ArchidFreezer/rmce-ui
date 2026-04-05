@@ -39,9 +39,9 @@ import {
 import type {
   Book,
   Language,
+  SkillGroup,
   Skill,
   SkillCategory,
-  SkillGroup,
   SpellList,
   TrainingPackage,
 } from '../../types';

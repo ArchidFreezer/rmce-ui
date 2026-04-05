@@ -1,5 +1,6 @@
 // src/types/weapontype.ts
 import type { CriticalType } from './enum';
+import type { Named } from './base';
 
 export interface WeaponTypeCritical {
   critical: CriticalType;
@@ -12,9 +13,7 @@ export interface WeaponTypeRange {
   modifier: number;
 }
 
-export interface WeaponType {
-  id: string;
-  name: string;
+export interface WeaponType extends Named {
   notes?: string | undefined;
 
   /** references Skill.id */

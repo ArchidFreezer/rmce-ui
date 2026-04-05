@@ -1,3 +1,4 @@
+import { Named } from './base';
 import { Precipitation, Temperature } from './enum';
 
 /**
@@ -6,9 +7,7 @@ import { Precipitation, Temperature } from './enum';
  * to ensure consistency in the UI and to make it easier to work with these values in forms and dropdowns. The climate interface captures the structure of the API's climate data, and the 
  * payload interface wraps it in a way that matches the API's response format.
  */
-export interface Climate {
-  id: string;
-  name: string;
+export interface Climate extends Named {
   temperature: Temperature; // e.g., "Cold"
   precipitations: Precipitation[];
 }

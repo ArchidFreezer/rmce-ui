@@ -1,4 +1,6 @@
 import type { Stat } from './enum';
+import type { SkillValue, } from './skill';
+import type { Named } from './base';
 
 export interface TrainingPackageQualifier {
   qualifier: string;
@@ -8,12 +10,6 @@ export interface TrainingPackageQualifier {
 export interface TrainingPackageSpecial {
   value: string;
   chance: number;
-}
-
-export interface TrainingPackageSkillRank {
-  id: string;                       // Skill.id
-  subcategory?: string | undefined;
-  value: number;
 }
 
 export interface TrainingPackageSkillRankChoice {
@@ -66,9 +62,7 @@ export interface TrainingPackageLanguageChoice {
   options: string[];                // Language.id[]
 }
 
-export interface TrainingPackage {
-  id: string;
-  name: string;
+export interface TrainingPackage extends Named {
   description?: string | undefined;
   flavourText?: string | undefined;
 
@@ -93,7 +87,7 @@ export interface TrainingPackage {
     options: Stat[];
   } | undefined;
 
-  skillRanks: TrainingPackageSkillRank[];
+  skillRanks: SkillValue[];
   skillRankChoices: TrainingPackageSkillRankChoice[];
 
   categoryRanks: TrainingPackageCategoryRank[];

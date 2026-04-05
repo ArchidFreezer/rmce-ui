@@ -1,13 +1,12 @@
 // ------------------------
 // Languages
 // ------------------------
-export interface Language {
-  id: string;
-  name: string;
-  /** Reference to LanguageCategory.id */
-  category: string;
-  /** Optional free-text (e.g., "Common") */
-  baseLanguage?: string | undefined;
+
+import { Named } from './base';
+
+export interface Language extends Named {
+  category: string; // LanguageCategory.id
+  baseLanguage?: string | undefined; // Optional free-text (e.g., "Common")
   isSpoken: boolean;
   isWritten: boolean;
   isSomatic: boolean;

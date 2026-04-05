@@ -5,7 +5,6 @@ import type {
   Profession,
   ProfessionsPayload,
   ProfessionSpellListChoice,
-  ProfessionSkillBonus,
   ProfessionCategoryBonus,
   ProfessionGroupBonus,
   ProfessionSkillDevelopmentType,
@@ -17,6 +16,7 @@ import type {
   ProfessionCategorySkillDevelopmentTypeChoice,
   ProfessionGroupSkillDevelopmentTypeChoice,
   ProfessionSkillCategoryCost,
+  SkillValue,
 } from '../types';
 
 const BASE = '/rmce/objects/profession';
@@ -36,7 +36,7 @@ function spellListChoiceFromJson(x: any): ProfessionSpellListChoice {
   };
 }
 
-function skillBonusFromJson(x: any): ProfessionSkillBonus {
+function skillBonusFromJson(x: any): SkillValue {
   return {
     id: asString(x?.id),
     subcategory: x?.subcategory != null ? asString(x?.subcategory) : undefined,

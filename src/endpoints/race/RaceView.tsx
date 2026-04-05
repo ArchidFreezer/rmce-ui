@@ -30,10 +30,11 @@ import {
 import type {
   Book,
   Language, LanguageAbility,
-  Race, RaceSkillRef, RaceSkillBonus, RaceSkillCategoryChoice,
+  Race, RaceSkillRef, RaceSkillCategoryChoice,
   Skill,
   SkillCategory,
   SkillGroup,
+  SkillValue,
   SkillProgressionType,
 } from '../../types';
 
@@ -344,7 +345,7 @@ const fromVM = (vm: FormState): Race => ({
   everymanCategories: vm.everymanCategories.slice(),
   restrictedCategories: vm.restrictedCategories.slice(),
 
-  skillBonuses: vm.skillBonuses.map((r): RaceSkillBonus => ({
+  skillBonuses: vm.skillBonuses.map((r): SkillValue => ({
     id: r.id,
     subcategory: r.subcategory?.trim() || undefined,
     value: Number(r.value),

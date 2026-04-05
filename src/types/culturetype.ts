@@ -1,11 +1,10 @@
 // src/types/culturetype.ts
-import { SkillRankValue, CategoryRankValue } from './skillmodifier';
+import { Named } from './base';
+import { CategoryRankValue } from './skillmodifier';
+import { SkillValue } from './skill';
 import { EnvironmentFeature, EnvironmentTerrain, EnvironmentVegetation, EnvironmentWaterBody } from './enum';
 
-export interface CultureType {
-  id: string;
-  name: string;
-
+export interface CultureType extends Named {
   // Long HTML/text fields
   description?: string | undefined;
   characterConcepts?: string | undefined;
@@ -31,7 +30,7 @@ export interface CultureType {
   preferredWeapons: string[];
 
   /** per skill; value is integer; optional subcategory */
-  skillRanks: SkillRankValue[];
+  skillRanks: SkillValue[];
 
   /** per category; value is integer */
   skillCategoryRanks: CategoryRankValue[];

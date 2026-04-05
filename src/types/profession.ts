@@ -7,15 +7,12 @@ import type {
   SpellUserType,
 } from './enum';
 
+import type { Named } from './base';
+import type { SkillValue } from './skill';
+
 export interface ProfessionSpellListChoice {
   numChoices: number;
   options: string[]; // SpellList.id[]
-}
-
-export interface ProfessionSkillBonus {
-  id: string;                    // Skill.id
-  subcategory?: string | undefined;
-  value: number;
 }
 
 export interface ProfessionCategoryBonus {
@@ -78,9 +75,7 @@ export interface ProfessionSkillCategoryCost {
   cost: string;     // 1 to 3 colon-separated positive numbers
 }
 
-export interface Profession {
-  id: string;
-  name: string;
+export interface Profession extends Named {
   description?: string | undefined;
 
   book: string; // Book.id
@@ -91,7 +86,7 @@ export interface Profession {
 
   baseSpellListChoices: ProfessionSpellListChoice[];
 
-  skillBonuses: ProfessionSkillBonus[];
+  skillBonuses: SkillValue[];
 
   skillCategoryProfessionBonuses: ProfessionCategoryBonus[];
   skillCategorySpecialBonuses: ProfessionCategoryBonus[];

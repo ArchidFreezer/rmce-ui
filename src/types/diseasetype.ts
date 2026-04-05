@@ -1,3 +1,4 @@
+import { Persistent } from './base';
 import { MaladySeverity } from './enum';
 // --- Disease Types ---
 export interface DiseaseTypeSymptom {
@@ -5,8 +6,7 @@ export interface DiseaseTypeSymptom {
   symptoms: string;
 }
 
-export interface DiseaseType {
-  id: string;
+export interface DiseaseType extends Persistent {
   type: string;           // “Bubonic”, “Chemical”, etc.
   transmission: string;   // “Injection”, “Ingestion”, ...
   description: string;

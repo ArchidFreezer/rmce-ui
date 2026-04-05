@@ -6,9 +6,9 @@ import type {
   Race,
   RacesPayload,
   RaceSkillRef,
-  RaceSkillBonus,
   RaceStatBonus,
   RaceSkillCategoryChoice,
+  SkillValue,
 } from '../types';
 
 const BASE = '/rmce/objects/race';
@@ -44,8 +44,8 @@ function skillRefFromJson(x: any): RaceSkillRef {
   return out;
 }
 
-function skillBonusFromJson(x: any): RaceSkillBonus {
-  const out: RaceSkillBonus = {
+function skillBonusFromJson(x: any): SkillValue {
+  const out: SkillValue = {
     id: asString(x?.id),
     value: asInt(x?.value),
   };

@@ -8,9 +8,9 @@
  * severity levels and their associated symptoms, which is a key part of the disease data structure.
  */
 
-export interface Disease {
-  id: string;
-  name: string;
+import { Named } from './base';
+
+export interface Disease extends Named {
   type: string;
   level: number;
   levelVariance: string;

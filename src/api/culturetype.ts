@@ -4,7 +4,7 @@ import { fetchJson, sendJson } from './client';
 import type {
   CategoryRankValue,
   CultureType, CultureTypesPayload,
-  SkillRankValue,
+  SkillValue,
 } from '../types';
 
 import {
@@ -26,8 +26,8 @@ const asStringArray = (v: unknown): string[] =>
   Array.isArray(v) ? v.map((x) => String(x ?? '')).filter(Boolean) : [];
 
 
-function rowSkillRankFromJson(r: any): SkillRankValue {
-  const out: SkillRankValue = {
+function rowSkillRankFromJson(r: any): SkillValue {
+  const out: SkillValue = {
     id: asString(r?.id),
     value: asInt(r?.value),
   };
