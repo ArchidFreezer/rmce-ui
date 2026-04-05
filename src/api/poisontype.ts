@@ -2,12 +2,12 @@
 import { fetchJson, sendJson } from './client';
 
 import type {
-  PoisonType,  PoisonTypesPayload,  PoisonTypeEffectOnset,  PoisonTypeSymptom,
+  PoisonType, PoisonTypesPayload, PoisonTypeEffectOnset, MaladySymptom,
 } from '../types';
 
-import { 
+import {
   MALADY_SEVERITIES, MaladySeverity,
- } from '../types/enum';
+} from '../types/enum';
 
 const BASE = '/rmce/objects/poisontype';
 
@@ -27,11 +27,11 @@ function sanitizeOnsets(arr: unknown): PoisonTypeEffectOnset[] {
   return out;
 }
 
-function sanitizeSymptoms(arr: unknown): PoisonTypeSymptom[] {
+function sanitizeSymptoms(arr: unknown): MaladySymptom[] {
   if (!Array.isArray(arr)) return [];
-  const out: PoisonTypeSymptom[] = [];
+  const out: MaladySymptom[] = [];
   for (const r of arr) {
-    const o = r as Partial<PoisonTypeSymptom> & { symptoms?: unknown };
+    const o = r as Partial<MaladySymptom> & { symptoms?: unknown };
     if (isSeverity(o?.severity) && typeof o?.symptoms === 'string') {
       out.push({ severity: o.severity, symptoms: o.symptoms });
     }

@@ -1,5 +1,5 @@
 /** Base types for common structures */
-import type { SkillDevelopmentType } from './enum';
+import type { MaladySeverity, SkillDevelopmentType } from './enum';
 
 export interface Persistent {
   id: string;
@@ -23,4 +23,9 @@ export interface SkillValue extends PersistentValue {
 
 export interface SkillDevelopmentTypeValue extends PersistentDevelopmentTypeValue {
   subcategory?: string | undefined;
+}
+
+export interface MaladySymptom {
+  severity: MaladySeverity;
+  symptoms: string;
 }

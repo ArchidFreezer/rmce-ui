@@ -1,12 +1,13 @@
 import { fetchJson, sendJson } from './client';
 
-import type { 
+import type {
   DiseaseType, DiseaseTypesPayload,
- } from '../types';
+  MaladySymptom,
+} from '../types';
 
-import { 
+import {
   MALADY_SEVERITIES, MaladySeverity,
- } from '../types/enum';
+} from '../types/enum';
 
 const BASE = '/rmce/objects/diseasetype';
 
@@ -14,11 +15,12 @@ const BASE = '/rmce/objects/diseasetype';
 function isSeverity(v: unknown): v is MaladySeverity {
   return typeof v === 'string' && (MALADY_SEVERITIES as readonly string[]).includes(v);
 }
-function sanitizeSymptoms(arr: unknown): DiseaseType['severitySymptoms'] {
+
+function sanitizeSymptoms(arr: unknown): MaladySymptom[] {
   if (!Array.isArray(arr)) return [];
-  const out: DiseaseType['severitySymptoms'] = [];
+  const out: MaladySymptom[] = [];
   for (const r of arr) {
-    const o = r as Partial<DiseaseType['severitySymptoms'][number]>;
+    const o = r as Partial<MaladySymptom> & { symptoms?: unknown };
     if (isSeverity(o?.severity) && typeof o?.symptoms === 'string') {
       out.push({ severity: o.severity, symptoms: o.symptoms });
     }
