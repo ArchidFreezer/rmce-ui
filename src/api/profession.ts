@@ -2,11 +2,10 @@
 import { fetchJson, sendJson } from './client';
 
 import type {
+  PersistentIntValue,
   Profession,
   ProfessionsPayload,
   ProfessionSpellListChoice,
-  ProfessionCategoryBonus,
-  ProfessionGroupBonus,
   ProfessionSkillDevelopmentType,
   ProfessionCategorySkillDevelopmentType,
   ProfessionGroupSkillDevelopmentType,
@@ -44,14 +43,14 @@ function skillBonusFromJson(x: any): SkillValue {
   };
 }
 
-function categoryBonusFromJson(x: any): ProfessionCategoryBonus {
+function categoryBonusFromJson(x: any): PersistentIntValue {
   return {
     id: asString(x?.id),
     value: asInt(x?.value),
   };
 }
 
-function groupBonusFromJson(x: any): ProfessionGroupBonus {
+function groupBonusFromJson(x: any): PersistentIntValue {
   return {
     id: asString(x?.id),
     value: asInt(x?.value),

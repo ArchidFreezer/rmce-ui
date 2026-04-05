@@ -1,11 +1,7 @@
 // src/types/culture.ts
-import type { Named } from './base';
+import type { Named, PersistentIntValue } from './base';
 import type { LanguageAbility } from './language';
 
-export interface CultureTrainingPackageModifier {
-  id: string;         // TrainingPackage.id
-  value: number;
-}
 
 export interface CultureHobbySkill {
   id: string;         // Skill.id
@@ -26,7 +22,7 @@ export interface Culture extends Named {
   preferredProfessions: string[];     // Profession.id[]
   restrictedProfessions: string[];    // Profession.id[]
 
-  trainingPackageModifiers: CultureTrainingPackageModifier[];
+  trainingPackageModifiers: PersistentIntValue[];
 }
 
 export interface CulturesPayload {

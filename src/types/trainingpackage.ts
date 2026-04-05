@@ -1,6 +1,6 @@
 import type { Stat } from './enum';
 import type { SkillValue, } from './skill';
-import type { Named } from './base';
+import type { Named, PersistentIntValue } from './base';
 
 export interface TrainingPackageQualifier {
   qualifier: string;
@@ -21,11 +21,6 @@ export interface TrainingPackageSkillRankChoice {
   }>;
 }
 
-export interface TrainingPackageCategoryRank {
-  id: string;                       // SkillCategory.id
-  value: number;
-}
-
 export interface TrainingPackageCategoryMultiSkillChoice {
   id: string;                       // SkillCategory.id
   value: number;
@@ -36,11 +31,6 @@ export interface TrainingPackageGroupMultiSkillChoice {
   id: string;                       // SkillGroup.id
   value: number;
   numChoices: number;
-}
-
-export interface TrainingPackageGroupCategoryAndSkillChoice {
-  id: string;                       // SkillGroup.id
-  value: number;
 }
 
 export interface TrainingPackageSpellListRank {
@@ -90,10 +80,10 @@ export interface TrainingPackage extends Named {
   skillRanks: SkillValue[];
   skillRankChoices: TrainingPackageSkillRankChoice[];
 
-  categoryRanks: TrainingPackageCategoryRank[];
+  categoryRanks: PersistentIntValue[];
   categoryMultiSkillRankChoices: TrainingPackageCategoryMultiSkillChoice[];
   groupMultiSkillRankChoices: TrainingPackageGroupMultiSkillChoice[];
-  groupCategoryAndSkillRankChoices: TrainingPackageGroupCategoryAndSkillChoice[];
+  groupCategoryAndSkillRankChoices: PersistentIntValue[];
 
   spellListRanks: TrainingPackageSpellListRank[];
   spellListCategoryRankChoices: TrainingPackageSpellListCategoryRankChoice[];

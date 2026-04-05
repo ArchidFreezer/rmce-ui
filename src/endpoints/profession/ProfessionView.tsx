@@ -29,10 +29,9 @@ import {
 
 import type {
   Book,
+  PersistentIntValue,
   Profession,
   ProfessionSpellListChoice,
-  ProfessionCategoryBonus,
-  ProfessionGroupBonus,
   ProfessionSkillDevelopmentType,
   ProfessionCategorySkillDevelopmentType,
   ProfessionGroupSkillDevelopmentType,
@@ -250,19 +249,19 @@ const fromVM = (vm: FormState): Profession => ({
     value: Number(r.value),
   })),
 
-  skillCategoryProfessionBonuses: vm.skillCategoryProfessionBonuses.map((r): ProfessionCategoryBonus => ({
+  skillCategoryProfessionBonuses: vm.skillCategoryProfessionBonuses.map((r): PersistentIntValue => ({
     id: r.id,
     value: Number(r.value),
   })),
-  skillCategorySpecialBonuses: vm.skillCategorySpecialBonuses.map((r): ProfessionCategoryBonus => ({
+  skillCategorySpecialBonuses: vm.skillCategorySpecialBonuses.map((r): PersistentIntValue => ({
     id: r.id,
     value: Number(r.value),
   })),
-  skillGroupProfessionBonuses: vm.skillGroupProfessionBonuses.map((r): ProfessionGroupBonus => ({
+  skillGroupProfessionBonuses: vm.skillGroupProfessionBonuses.map((r): PersistentIntValue => ({
     id: r.id,
     value: Number(r.value),
   })),
-  skillGroupSpecialBonuses: vm.skillGroupSpecialBonuses.map((r): ProfessionGroupBonus => ({
+  skillGroupSpecialBonuses: vm.skillGroupSpecialBonuses.map((r): PersistentIntValue => ({
     id: r.id,
     value: Number(r.value),
   })),

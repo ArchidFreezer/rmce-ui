@@ -20,7 +20,6 @@ export * from './race';
 export * from './skill';
 export * from './skillcategory';
 export * from './skillgroup';
-export * from './skillmodifier';
 export * from './skillprogressiontype';
 export * from './specialattacktable';
 export * from './spelllist';
