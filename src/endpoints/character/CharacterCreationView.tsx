@@ -85,6 +85,7 @@ type StepErrors = {
 type HobbySkillRow = {
   id: string;
   subcategory?: string | undefined;
+  subcategoryLocked: boolean;
   base: number;
   max: number;
   value: number;
@@ -1227,9 +1228,11 @@ export default function CharacterCreationView() {
           const key = skillChoiceKey(row.id, row.subcategory);
           const base = baseSkillByKey.get(key) ?? 0;
           const max = base + Math.max(0, row.value ?? 0);
+          const prepopulatedSubcategory = row.subcategory?.trim();
           return {
             id: row.id,
-            subcategory: row.subcategory,
+            subcategory: prepopulatedSubcategory || undefined,
+            subcategoryLocked: Boolean(prepopulatedSubcategory),
             base,
             max,
             value: base,
@@ -1935,6 +1938,7 @@ export default function CharacterCreationView() {
                                     idx === index ? { ...entry, subcategory: v } : entry
                                   )))}
                                   placeholder="Enter subcategory"
+                                  disabled={row.subcategoryLocked}
                                   error={errors.hobby && row.value > row.base && !(row.subcategory?.trim()) ? 'Required' : undefined}
                                 />
                               )}
