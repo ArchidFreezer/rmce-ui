@@ -196,7 +196,7 @@ function parseSkillChoiceKey(key: string): { id: string; subcategory?: string | 
 
 function createBackgroundLanguageRows(
   culture: Culture | undefined,
-  languageAbilities: CharacterBuilder['language_abilities'] = [],
+  languageAbilities: CharacterBuilder['languageAbilities'] = [],
 ): BackgroundLanguageRow[] {
   const abilityByLanguage = new Map<string, { spoken: number; written: number; somatic: number }>();
   for (const row of languageAbilities ?? []) {
@@ -688,7 +688,7 @@ export default function CharacterCreationView() {
       return;
     }
 
-    setBackgroundLanguageRows(createBackgroundLanguageRows(culture, characterBuilder.language_abilities));
+    setBackgroundLanguageRows(createBackgroundLanguageRows(culture, characterBuilder.languageAbilities));
   }, [backgroundExtraLanguages, culture]);
 
   useEffect(() => {
@@ -697,14 +697,14 @@ export default function CharacterCreationView() {
       name: characterName,
       race: raceId,
       culture: cultureId,
-      culture_type: cultureTypeId,
+      cultureType: cultureTypeId,
       profession: professionId,
-      magical_realms: selectedRealms,
-      everyman_skills: race?.everymanSkills ?? [],
+      magicalRealms: selectedRealms,
+      everymanSkills: race?.everymanSkills ?? [],
       restricted_skills: race?.restrictedSkills ?? [],
       everyman_skill_categories: race?.everymanCategories ?? [],
       restricted_skill_categories: race?.restrictedCategories ?? [],
-      realm_progressions: selectedRealms.map((realm) => ({
+      realmProgressions: selectedRealms.map((realm) => ({
         id: realm,
         value:
           realm === 'Arcane' ? (race?.arcaneProgression ?? '')
@@ -738,7 +738,7 @@ export default function CharacterCreationView() {
         id: row.id,
         value: row.value,
       })),
-      language_abilities: hobbyLanguageRows.map((row) => ({
+      languageAbilities: hobbyLanguageRows.map((row) => ({
         language: row.language,
         spoken: row.spoken,
         written: row.written,
@@ -747,7 +747,7 @@ export default function CharacterCreationView() {
       spell_list_ranks: spellListRanksBudget > 0 && hobbySpellListId
         ? [{ id: hobbySpellListId, value: spellListRanksBudget }]
         : [],
-      num_hobby_skill_ranks: hobbySkillRows.reduce((sum, row) => sum + row.value, 0)
+      numHobbySkillRanks: hobbySkillRows.reduce((sum, row) => sum + row.value, 0)
         + hobbyCategoryRows.reduce((sum, row) => sum + row.value, 0),
       num_adolescent_spell_list_ranks: spellListRanksBudget > 0 && hobbySpellListId ? spellListRanksBudget : 0,
     }));
@@ -757,16 +757,15 @@ export default function CharacterCreationView() {
     if (!profession) {
       setCharacterBuilder((prev) => ({
         ...prev,
-        base_spell_list_choices: [],
-        prof_skill_subcategory_development_type_choices: [],
-        prof_category_development_type_choices: [],
-        prof_group_development_type_choices: [],
-        skillsub_development_types: [],
-        skill_development_types: [],
-        category_special_bonuses: [],
-        category_development_types: [],
-        group_special_bonuses: [],
-        group_development_types: [],
+        baseSpellListChoices: [],
+        profSkillDevelopmentTypeChoices: [],
+        profCategoryDevelopmentTypeChoices: [],
+        profGroupDevelopmentTypeChoices: [],
+        skillDevelopmentTypes: [],
+        categorySpecialBonuses: [],
+        categoryDevelopmentTypes: [],
+        groupSpecialBonuses: [],
+        groupDevelopmentTypes: [],
       }));
       return;
     }
@@ -796,32 +795,28 @@ export default function CharacterCreationView() {
 
     setCharacterBuilder((prev) => ({
       ...prev,
-      base_spell_list_choices: defaultBaseSpellListChoices,
-      prof_skill_subcategory_development_type_choices: defaultSkillSubcategoryDevelopmentChoices,
-      prof_category_development_type_choices: defaultCategoryDevelopmentChoices,
-      prof_group_development_type_choices: defaultGroupDevelopmentChoices,
-      skillsub_development_types: profession.skillDevelopmentTypes.map((item) => ({
+      baseSpellListChoices: defaultBaseSpellListChoices,
+      profSkillDevelopmentTypeChoices: defaultSkillSubcategoryDevelopmentChoices,
+      profCategoryDevelopmentTypeChoices: defaultCategoryDevelopmentChoices,
+      profGroupDevelopmentTypeChoices: defaultGroupDevelopmentChoices,
+      skillDevelopmentTypes: profession.skillDevelopmentTypes.map((item) => ({
         id: item.id,
         subcategory: item.subcategory,
         value: item.value,
       })),
-      skill_development_types: profession.skillDevelopmentTypes.map((item) => ({
+      categorySpecialBonuses: profession.skillCategorySpecialBonuses.map((item) => ({
         id: item.id,
         value: item.value,
       })),
-      category_special_bonuses: profession.skillCategorySpecialBonuses.map((item) => ({
+      categoryDevelopmentTypes: profession.skillCategorySkillDevelopmentTypes.map((item) => ({
         id: item.id,
         value: item.value,
       })),
-      category_development_types: profession.skillCategorySkillDevelopmentTypes.map((item) => ({
+      groupSpecialBonuses: profession.skillGroupSpecialBonuses.map((item) => ({
         id: item.id,
         value: item.value,
       })),
-      group_special_bonuses: profession.skillGroupSpecialBonuses.map((item) => ({
-        id: item.id,
-        value: item.value,
-      })),
-      group_development_types: profession.skillGroupSkillDevelopmentTypes.map((item) => ({
+      groupDevelopmentTypes: profession.skillGroupSkillDevelopmentTypes.map((item) => ({
         id: item.id,
         value: item.value,
       })),
@@ -840,16 +835,16 @@ export default function CharacterCreationView() {
 
     setCharacterBuilder((prev) => ({
       ...prev,
-      skill_professional_bonuses: backgroundState.skillBonusIds.map((id) => ({
+      skillProfessionalBonuses: backgroundState.skillBonusIds.map((id) => ({
         id,
         value: 10,
       })),
-      category_professional_bonuses: backgroundState.categoryBonusIds.map((id) => ({
+      categoryProfessionalBonuses: backgroundState.categoryBonusIds.map((id) => ({
         id,
         value: 5,
       })),
-      background_language_choices: mappedBackgroundLanguages,
-      language_abilities: mappedBackgroundLanguages,
+      backgroundLanguageChoices: mappedBackgroundLanguages,
+      languageAbilities: mappedBackgroundLanguages,
     }));
   }, [backgroundState]);
 
@@ -858,11 +853,11 @@ export default function CharacterCreationView() {
     if (!trainingPackage) {
       setCharacterBuilder((prev) => ({
         ...prev,
-        skill_ranks: [],
-        category_ranks: [],
-        spell_list_ranks: [],
-        num_hobby_skill_ranks: prev.hobby_skill_ranks.reduce((sum, row) => sum + row.value, 0),
-        num_adolescent_spell_list_ranks: 0,
+        skillRanks: [],
+        categoryRanks: [],
+        spellListRanks: [],
+        numHobbySkillRanks: prev.hobbySkillRanks.reduce((sum, row) => sum + row.value, 0),
+        numAdolescentSpellListRanks: 0,
       }));
       return;
     }
@@ -903,11 +898,11 @@ export default function CharacterCreationView() {
 
     setCharacterBuilder((prev) => ({
       ...prev,
-      skill_ranks: skillRanks,
-      category_ranks: categoryRanks,
-      spell_list_ranks: spellListRanks,
-      num_hobby_skill_ranks: prev.hobby_skill_ranks.reduce((sum, row) => sum + row.value, 0),
-      num_adolescent_spell_list_ranks: spellListRanks.reduce((sum, row) => sum + row.value, 0),
+      skillRanks: skillRanks,
+      categoryRanks: categoryRanks,
+      spellListRanks: spellListRanks,
+      numHobbySkillRanks: prev.hobbySkillRanks.reduce((sum, row) => sum + row.value, 0),
+      numAdolescentSpellListRanks: spellListRanks.reduce((sum, row) => sum + row.value, 0),
     }));
   }, [selectedTrainingPackage, tpSkillRankChoiceSelections]);
 
@@ -1189,18 +1184,18 @@ export default function CharacterCreationView() {
         });
 
         const baseSkillByKey = new Map<string, number>();
-        for (const row of characterBuilder.skill_ranks ?? []) {
+        for (const row of characterBuilder.skillRanks ?? []) {
           const key = skillChoiceKey(row.id, row.subcategory);
           baseSkillByKey.set(key, (baseSkillByKey.get(key) ?? 0) + (row.value ?? 0));
         }
 
         const baseCategoryById = new Map<string, number>();
-        for (const row of characterBuilder.category_ranks ?? []) {
+        for (const row of characterBuilder.categoryRanks ?? []) {
           baseCategoryById.set(row.id, (baseCategoryById.get(row.id) ?? 0) + (row.value ?? 0));
         }
 
         const baseLanguageById = new Map<string, { spoken: number; written: number; somatic: number }>();
-        for (const row of characterBuilder.language_abilities ?? []) {
+        for (const row of characterBuilder.languageAbilities ?? []) {
           baseLanguageById.set(row.language, {
             spoken: row.spoken ?? 0,
             written: row.written ?? 0,
@@ -1257,7 +1252,7 @@ export default function CharacterCreationView() {
         const spellListOptions = (statsSetup.adolescentSpellLists ?? []).map((x) => String(x));
         const spellListRankBudget = Math.max(0, statsSetup.numSpellListRanks ?? 0);
         const existingSpellListId = spellListRankBudget > 0
-          ? (characterBuilder.adolescent_spell_list_choice ?? '')
+          ? (characterBuilder.adolescentSpellListChoice ?? '')
           : '';
         const spellListSelection = spellListRankBudget > 0
           ? (spellListOptions.includes(existingSpellListId) ? existingSpellListId : '')
