@@ -1858,51 +1858,53 @@ export default function CharacterCreationView() {
                 Generate the roll pool first, then assign each generated result to a stat. Prime stats from profession: {primeStats.length ? primeStats.join(', ') : 'None defined'}
               </div>
 
-              {statRolls.map((roll) => {
-                const isPrime = roll.assignedStat ? primeStats.includes(roll.assignedStat) : false;
-                const assignedStats = new Set(
-                  statRolls
-                    .filter((entry) => entry.assignedStat && entry.slot !== roll.slot)
-                    .map((entry) => entry.assignedStat)
-                );
-                return (
-                  <div key={roll.slot} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, background: isPrime ? 'var(--primary-weak)' : 'transparent' }}>
-                    <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'minmax(180px, 1fr) 160px minmax(220px, 1fr)', alignItems: 'end' }}>
-                      <LabeledInput
-                        label={`Roll ${roll.slot} Temporary`}
-                        value={roll.temporary}
-                        onChange={(v) => onChangeTemporaryRoll(roll.slot, v)}
-                        helperText="25-100"
-                        disabled={statRollsLocked}
-                      />
+              <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(560px, 1fr))' }}>
+                {statRolls.map((roll) => {
+                  const isPrime = roll.assignedStat ? primeStats.includes(roll.assignedStat) : false;
+                  const assignedStats = new Set(
+                    statRolls
+                      .filter((entry) => entry.assignedStat && entry.slot !== roll.slot)
+                      .map((entry) => entry.assignedStat)
+                  );
+                  return (
+                    <div key={roll.slot} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, background: isPrime ? 'var(--primary-weak)' : 'transparent' }}>
+                      <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', alignItems: 'end' }}>
+                        <LabeledInput
+                          label={`Roll ${roll.slot} Temporary`}
+                          value={roll.temporary}
+                          onChange={(v) => onChangeTemporaryRoll(roll.slot, v)}
+                          helperText="25-100"
+                          disabled={statRollsLocked}
+                        />
 
-                      <LabeledInput
-                        label="Potential"
-                        value={roll.potential == null ? '' : String(roll.potential)}
-                        onChange={() => { }}
-                        disabled
-                        helperText="REST result"
-                      />
+                        <LabeledInput
+                          label="Potential"
+                          value={roll.potential == null ? '' : String(roll.potential)}
+                          onChange={() => { }}
+                          disabled
+                          helperText="REST result"
+                        />
 
-                      <LabeledSelect
-                        label="Assign To Stat"
-                        value={roll.assignedStat}
-                        onChange={(value) => setStatRolls((prev) => prev.map((entry) =>
-                          entry.slot === roll.slot ? { ...entry, assignedStat: value as Stat | '' } : entry
-                        ))}
-                        options={STATS.map((stat) => ({
-                          value: stat,
-                          label: `${stat}${developmentStats.has(stat) ? ' *' : ''}${primeStats.includes(stat) ? ' (Prime)' : ''}`,
-                          disabled: assignedStats.has(stat),
-                        }))}
-                        placeholderOption="— Assign stat —"
-                        disabled={!statRollsLocked}
-                        helperText={roll.assignedStat && primeStats.includes(roll.assignedStat) ? 'Prime stat assignment' : undefined}
-                      />
+                        <LabeledSelect
+                          label="Assign To Stat"
+                          value={roll.assignedStat}
+                          onChange={(value) => setStatRolls((prev) => prev.map((entry) =>
+                            entry.slot === roll.slot ? { ...entry, assignedStat: value as Stat | '' } : entry
+                          ))}
+                          options={STATS.map((stat) => ({
+                            value: stat,
+                            label: `${stat}${developmentStats.has(stat) ? ' *' : ''}${primeStats.includes(stat) ? ' (Prime)' : ''}`,
+                            disabled: assignedStats.has(stat),
+                          }))}
+                          placeholderOption="— Assign stat —"
+                          disabled={!statRollsLocked}
+                          helperText={roll.assignedStat && primeStats.includes(roll.assignedStat) ? 'Prime stat assignment' : undefined}
+                        />
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
 
               {errors.stats && <div style={{ color: '#b00020' }}>{errors.stats}</div>}
             </section>
