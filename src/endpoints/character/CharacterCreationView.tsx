@@ -774,10 +774,10 @@ export default function CharacterCreationView() {
       profession.baseSpellListChoices.flatMap((choice) => choice.options.slice(0, choice.numChoices)),
     );
 
-    const defaultSkillSubcategoryDevelopmentChoices = profession.skillSubcategoryDevelopmentTypeChoices
-      .flatMap((choice) => choice.options.slice(0, choice.numChoices).map((id) => ({
-        id,
-        subcategory: undefined,
+    const defaultSkillDevelopmentChoices = profession.skillDevelopmentTypeChoices
+      .flatMap((choice) => choice.options.slice(0, choice.numChoices).map((option) => ({
+        id: option.id,
+        subcategory: option.subcategory,
         value: choice.type,
       })));
 
@@ -796,7 +796,7 @@ export default function CharacterCreationView() {
     setCharacterBuilder((prev) => ({
       ...prev,
       baseSpellListChoices: defaultBaseSpellListChoices,
-      profSkillDevelopmentTypeChoices: defaultSkillSubcategoryDevelopmentChoices,
+      profSkillDevelopmentTypeChoices: defaultSkillDevelopmentChoices,
       profCategoryDevelopmentTypeChoices: defaultCategoryDevelopmentChoices,
       profGroupDevelopmentTypeChoices: defaultGroupDevelopmentChoices,
       skillDevelopmentTypes: profession.skillDevelopmentTypes.map((item) => ({
