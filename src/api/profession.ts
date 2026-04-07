@@ -7,7 +7,6 @@ import type {
   Profession,
   ProfessionsPayload,
   ProfessionSpellListChoice,
-  ProfessionSkillSubcategoryDevelopmentTypeChoice,
   ProfessionSkillDevelopmentTypeChoice,
   ProfessionSkillDevelopmentTypeChoiceOption,
   ProfessionCategorySkillDevelopmentTypeChoice,
@@ -75,14 +74,6 @@ function groupSkillDevTypeFromJson(x: any): PersistentDevelopmentTypeValue {
   return {
     id: asString(x?.id),
     value: asString(x?.value) as PersistentDevelopmentTypeValue['value'],
-  };
-}
-
-function skillSubcategoryChoiceFromJson(x: any): ProfessionSkillSubcategoryDevelopmentTypeChoice {
-  return {
-    numChoices: asInt(x?.['num-choices'] ?? x?.numChoices),
-    type: asString(x?.type) as ProfessionSkillSubcategoryDevelopmentTypeChoice['type'],
-    options: asStringArray(x?.options),
   };
 }
 
@@ -170,10 +161,6 @@ function fromJson(x: any): Profession {
 
     skillGroupSkillDevelopmentTypes: Array.isArray(x?.skillGroupSkillDevelopmentTypes)
       ? x.skillGroupSkillDevelopmentTypes.map(groupSkillDevTypeFromJson)
-      : [],
-
-    skillSubcategoryDevelopmentTypeChoices: Array.isArray(x?.skillSubcategoryDevelopmentTypeChoices)
-      ? x.skillSubcategoryDevelopmentTypeChoices.map(skillSubcategoryChoiceFromJson)
       : [],
 
     skillDevelopmentTypeChoices: Array.isArray(x?.skillDevelopmentTypeChoices)

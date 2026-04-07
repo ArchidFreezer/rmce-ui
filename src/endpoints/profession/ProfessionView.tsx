@@ -33,7 +33,6 @@ import type {
   PersistentValue,
   Profession,
   ProfessionSpellListChoice,
-  ProfessionSkillSubcategoryDevelopmentTypeChoice,
   ProfessionSkillDevelopmentTypeChoice,
   ProfessionSkillDevelopmentTypeChoiceOption,
   ProfessionCategorySkillDevelopmentTypeChoice,
@@ -73,7 +72,6 @@ type SkillBonusVM = { id: string; subcategory?: string | undefined; value: strin
 type IdValueVM = { id: string; value: string };
 type SkillDevTypeVM = { id: string; subcategory?: string | undefined; value: SkillDevelopmentType | '' };
 type IdDevTypeVM = { id: string; value: SkillDevelopmentType | '' };
-type SkillSubcategoryChoiceVM = { numChoices: string; type: SkillDevelopmentType | ''; options: string[] };
 type SkillDevChoiceOptionVM = { id: string; subcategory?: string | undefined };
 type SkillDevChoiceVM = { numChoices: string; type: SkillDevelopmentType | ''; options: SkillDevChoiceOptionVM[] };
 type IdChoiceVM = { numChoices: string; type: SkillDevelopmentType | ''; options: string[] };
@@ -102,7 +100,6 @@ type FormState = {
   skillCategorySkillDevelopmentTypes: IdDevTypeVM[];
   skillGroupSkillDevelopmentTypes: IdDevTypeVM[];
 
-  skillSubcategoryDevelopmentTypeChoices: SkillSubcategoryChoiceVM[];
   skillDevelopmentTypeChoices: SkillDevChoiceVM[];
   skillCategorySkillDevelopmentTypeChoices: IdChoiceVM[];
   skillGroupSkillDevelopmentTypeChoices: IdChoiceVM[];
@@ -126,7 +123,6 @@ type FormErrors = {
   skillDevelopmentTypes?: string;
   skillCategorySkillDevelopmentTypes?: string;
   skillGroupSkillDevelopmentTypes?: string;
-  skillSubcategoryDevelopmentTypeChoices?: string;
   skillDevelopmentTypeChoices?: string;
   skillCategorySkillDevelopmentTypeChoices?: string;
   skillGroupSkillDevelopmentTypeChoices?: string;
@@ -156,7 +152,6 @@ const emptyVM = (): FormState => ({
   skillCategorySkillDevelopmentTypes: [],
   skillGroupSkillDevelopmentTypes: [],
 
-  skillSubcategoryDevelopmentTypeChoices: [],
   skillDevelopmentTypeChoices: [],
   skillCategorySkillDevelopmentTypeChoices: [],
   skillGroupSkillDevelopmentTypeChoices: [],
@@ -198,12 +193,6 @@ const toVM = (x: Profession): FormState => ({
   })),
   skillCategorySkillDevelopmentTypes: (x.skillCategorySkillDevelopmentTypes ?? []).map((r) => ({ id: r.id, value: r.value })),
   skillGroupSkillDevelopmentTypes: (x.skillGroupSkillDevelopmentTypes ?? []).map((r) => ({ id: r.id, value: r.value })),
-
-  skillSubcategoryDevelopmentTypeChoices: (x.skillSubcategoryDevelopmentTypeChoices ?? []).map((r) => ({
-    numChoices: String(r.numChoices),
-    type: r.type,
-    options: r.options.slice(),
-  })),
   skillDevelopmentTypeChoices: (x.skillDevelopmentTypeChoices ?? []).map((r) => ({
     numChoices: String(r.numChoices),
     type: r.type,
@@ -277,12 +266,6 @@ const fromVM = (vm: FormState): Profession => ({
   skillGroupSkillDevelopmentTypes: vm.skillGroupSkillDevelopmentTypes.map((r): PersistentDevelopmentTypeValue => ({
     id: r.id,
     value: r.value as SkillDevelopmentType,
-  })),
-
-  skillSubcategoryDevelopmentTypeChoices: vm.skillSubcategoryDevelopmentTypeChoices.map((r): ProfessionSkillSubcategoryDevelopmentTypeChoice => ({
-    numChoices: Number(r.numChoices),
-    type: r.type as SkillDevelopmentType,
-    options: r.options.slice(),
   })),
   skillDevelopmentTypeChoices: vm.skillDevelopmentTypeChoices.map((r): ProfessionSkillDevelopmentTypeChoice => ({
     numChoices: Number(r.numChoices),
@@ -536,7 +519,6 @@ export default function ProfessionView() {
         if (!r.options.length) { e[label] = `${entityName}[${i + 1}]: add at least one option`; break; }
       }
     };
-    checkChoice('skillSubcategoryDevelopmentTypeChoices', draft.skillSubcategoryDevelopmentTypeChoices, 'SkillSubcategoryDevelopmentTypeChoices');
     checkChoice('skillDevelopmentTypeChoices', draft.skillDevelopmentTypeChoices, 'SkillDevelopmentTypeChoices');
     checkChoice('skillCategorySkillDevelopmentTypeChoices', draft.skillCategorySkillDevelopmentTypeChoices, 'SkillCategorySkillDevelopmentTypeChoices');
     checkChoice('skillGroupSkillDevelopmentTypeChoices', draft.skillGroupSkillDevelopmentTypeChoices, 'SkillGroupSkillDevelopmentTypeChoices');
@@ -1208,26 +1190,6 @@ export default function ProfessionView() {
               loading={loading}
               viewing={viewing}
               error={errors.skillGroupSkillDevelopmentTypes}
-            />
-
-            {/* Skill Subcategory Development Type Choices */}
-            <ChoiceListEditor<SkillDevelopmentType, string>
-              title="Skill Subcategory Development Type Choices"
-              addRowButtonLabel='+ Add subcategory development type choice'
-              rows={form.skillSubcategoryDevelopmentTypeChoices}
-              onChangeRows={(next) =>
-                setForm((s) => ({ ...s, skillSubcategoryDevelopmentTypeChoices: next }))
-              }
-              typeOptions={developmentTypeOptions}
-              viewing={viewing}
-              error={errors.skillSubcategoryDevelopmentTypeChoices}
-              createEmptyOption={() => ''}
-              renderOptionEditor={({ option, setOption, removeOption, viewing }) => (
-                <div style={{ display: 'grid', gridTemplateColumns: viewing ? 'minmax(280px, 1fr) 1fr' : 'minmax(280px, 1fr) 1fr auto', gap: 8, }} >
-                  <LabeledSelect label="Skill" hideLabel ariaLabel="Skill" value={option} onChange={(v) => setOption(v)} options={skillOptions} disabled={loading || viewing} />
-                  {!viewing && (<button type="button" onClick={removeOption} style={{ color: '#b00020' }}>Remove</button>)}
-                </div>
-              )}
             />
 
             {/* Skill Development Type Choices */}

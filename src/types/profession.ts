@@ -14,12 +14,6 @@ export interface ProfessionSpellListChoice {
   options: string[]; // SpellList.id[]
 }
 
-export interface ProfessionSkillSubcategoryDevelopmentTypeChoice {
-  numChoices: number;
-  type: SkillDevelopmentType;
-  options: string[]; // Skill.id[]
-}
-
 export interface ProfessionSkillDevelopmentTypeChoiceOption {
   id: string;                    // Skill.id
   subcategory?: string | undefined;
@@ -71,7 +65,6 @@ export interface Profession extends Named {
   skillCategorySkillDevelopmentTypes: PersistentDevelopmentTypeValue[];
   skillGroupSkillDevelopmentTypes: PersistentDevelopmentTypeValue[];
 
-  skillSubcategoryDevelopmentTypeChoices: ProfessionSkillSubcategoryDevelopmentTypeChoice[];
   skillDevelopmentTypeChoices: ProfessionSkillDevelopmentTypeChoice[];
   skillCategorySkillDevelopmentTypeChoices: ProfessionCategorySkillDevelopmentTypeChoice[];
   skillGroupSkillDevelopmentTypeChoices: ProfessionGroupSkillDevelopmentTypeChoice[];
