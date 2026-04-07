@@ -19,60 +19,79 @@ export interface CharacterBuilderStatValue {
   bonus: number;
 }
 
+export interface CharacterBuilderCategoryCost {
+  category: string; // SkillCategory.id
+  cost: string;     // 1 to 3 colon-separated positive numbers
+}
+
 export interface CharacterBuilder extends Named {
   built: boolean;
-  num_hobby_skill_ranks: number;
-  num_adolescent_spell_list_ranks: number;
-  gold: number;
-  development_points: number;
-
   race: string;
   culture: string;
-  culture_type: string;
+  cultureType: string;
   profession: string;
-  magical_realms: Realm[];
 
-  race_category_everyman_choices: string[];
-  race_adolescent_language_choices: LanguageAbility[];
+  magicalRealms: Realm[];
+  numHobbySkillRanks: number;
+  numAdolescentLanguageRanks: number;
+  numAdolescentSpellListRanks: number;
+  developmentPoints: number;
 
-  culture_type_category_skill_ranks: SkillValue[];
-  base_spell_list_choices: string[];
+  /* Initial Choices */
+  // Race
+  raceCategoryEverymanChoices: string[];
+  // Culture Type
+  cultureTypeCategorySkillRanks: SkillValue[];
+  // Profession
+  profSkillDevelopmentTypeChoices: SkillDevelopmentTypeValue[];
+  profCategoryDevelopmentTypeChoices: PersistentDevelopmentTypeValue[];
+  profGroupDevelopmentTypeChoices: PersistentDevelopmentTypeValue[];
+  baseSpellListChoices: string[];
 
-  prof_skill_subcategory_development_type_choices: SkillDevelopmentTypeValue[];
-  prof_skill_development_type_choices: SkillDevelopmentTypeValue[];
-  prof_category_development_type_choices: PersistentDevelopmentTypeValue[];
-  prof_group_development_type_choices: PersistentDevelopmentTypeValue[];
+  /* Initial Stats */
+  initialStats: CharacterBuilderStatValue[];
 
-  hobby_skill_ranks: SkillValue[];
-  hobby_category_ranks: PersistentValue[];
-  adolescent_spell_list_choice: string | null; // SpellList.id
+  /* Hobby/Adolescent choices */
+  hobbySkillRanks: SkillValue[];
+  hobbyCategoryRanks: PersistentValue[];
+  adolescentSpellListChoice: string | null; // SpellList.id
+  adolescentLanguageChoices: LanguageAbility[];
 
-  background_language_choices: LanguageAbility[];
-  language_abilities: LanguageAbility[];
+  /* Background choices */
+  backgroundStats: CharacterBuilderStatValue[];
+  backgroundExtraGold: number;
+  backgroundLanguageChoices: LanguageAbility[];
+  backgroundSkillSpecialBonuses: SkillValue[];
+  backgroundCategorySpecialBonuses: PersistentValue[];
+  backgroundItems?: string[] | undefined; // Item.id[]
 
-  realm_progressions: CharacterBuilderRealmProgression[];
+  /* Aggregated State */
+  totalGold: number;
+  languageAbilities: LanguageAbility[];
+  realmProgressions: CharacterBuilderRealmProgression[];
   stats: CharacterBuilderStatValue[];
 
-  everyman_skills: CharacterBuilderIdOptionalSubcategory[];
-  restricted_skills: CharacterBuilderIdOptionalSubcategory[];
-  everyman_skill_categories: string[];
-  restricted_skill_categories: string[];
+  everymanSkills: CharacterBuilderIdOptionalSubcategory[];
+  restrictedSkills: CharacterBuilderIdOptionalSubcategory[];
+  everymanSkillCategories: string[];
+  restrictedSkillCategories: string[];
 
-  skill_ranks: SkillValue[];
-  skill_professional_bonuses: SkillValue[];
-  skillsub_development_types: SkillDevelopmentTypeValue[];
-  skill_development_types: PersistentDevelopmentTypeValue[];
+  skillRanks: SkillValue[];
+  skillProfessionalBonuses: SkillValue[];
+  skillSpecialBonuses: SkillValue[];
+  skillDevelopmentTypes: SkillDevelopmentTypeValue[];
 
-  category_ranks: PersistentValue[];
-  category_professional_bonuses: PersistentValue[];
-  category_special_bonuses: PersistentValue[];
-  category_development_types: PersistentDevelopmentTypeValue[];
+  categoryRanks: PersistentValue[];
+  categoryProfessionalBonuses: PersistentValue[];
+  categorySpecialBonuses: PersistentValue[];
+  categoryDevelopmentTypes: PersistentDevelopmentTypeValue[];
+  categoryCosts: CharacterBuilderCategoryCost[];
 
-  group_professional_bonuses: PersistentValue[];
-  group_special_bonuses: PersistentValue[];
-  group_development_types: PersistentDevelopmentTypeValue[];
+  groupProfessionalBonuses: PersistentValue[];
+  groupSpecialBonuses: PersistentValue[];
+  groupDevelopmentTypes: PersistentDevelopmentTypeValue[];
 
-  spell_list_ranks: PersistentValue[];
+  spellListRanks: PersistentValue[];
 
   items?: string[] | undefined; // Item.id[]
 }
@@ -82,56 +101,72 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
     id: '',
     name: '',
     built: false,
-    num_hobby_skill_ranks: 0,
-    num_adolescent_spell_list_ranks: 0,
-    gold: 0,
-    development_points: 0,
     race: '',
     culture: '',
-    culture_type: '',
+    cultureType: '',
     profession: '',
-    magical_realms: [],
 
-    race_category_everyman_choices: [],
-    race_adolescent_language_choices: [],
+    magicalRealms: [],
+    numHobbySkillRanks: 0,
+    numAdolescentLanguageRanks: 0,
+    numAdolescentSpellListRanks: 0,
+    developmentPoints: 0,
 
-    culture_type_category_skill_ranks: [],
-    base_spell_list_choices: [],
+    /* Initial Choices */
+    // Race
+    raceCategoryEverymanChoices: [],
+    // Culture Type
+    cultureTypeCategorySkillRanks: [],
+    // Profession
+    profSkillDevelopmentTypeChoices: [],
+    profCategoryDevelopmentTypeChoices: [],
+    profGroupDevelopmentTypeChoices: [],
+    baseSpellListChoices: [],
 
-    prof_skill_subcategory_development_type_choices: [],
-    prof_skill_development_type_choices: [],
-    prof_category_development_type_choices: [],
-    prof_group_development_type_choices: [],
+    /* Initial Stats */
+    initialStats: [],
 
-    hobby_skill_ranks: [],
-    hobby_category_ranks: [],
-    adolescent_spell_list_choice: null, // SpellList.id
-    background_language_choices: [],
-    language_abilities: [],
+    /* Hobby/Adolescent choices */
+    hobbySkillRanks: [],
+    hobbyCategoryRanks: [],
+    adolescentSpellListChoice: null, // SpellList.id
+    adolescentLanguageChoices: [],
 
-    realm_progressions: [],
+    /* Background choices */
+    backgroundStats: [],
+    backgroundExtraGold: 0,
+    backgroundLanguageChoices: [],
+    backgroundSkillSpecialBonuses: [],
+    backgroundCategorySpecialBonuses: [],
+    backgroundItems: [],
+
+    /* Aggregated State */
+    totalGold: 0,
+    languageAbilities: [],
+    realmProgressions: [],
     stats: [],
 
-    everyman_skills: [],
-    restricted_skills: [],
-    everyman_skill_categories: [],
-    restricted_skill_categories: [],
+    everymanSkills: [],
+    restrictedSkills: [],
+    everymanSkillCategories: [],
+    restrictedSkillCategories: [],
 
-    skill_ranks: [],
-    skill_professional_bonuses: [],
-    skillsub_development_types: [],
-    skill_development_types: [],
+    skillRanks: [],
+    skillProfessionalBonuses: [],
+    skillSpecialBonuses: [],
+    skillDevelopmentTypes: [],
 
-    category_ranks: [],
-    category_professional_bonuses: [],
-    category_special_bonuses: [],
-    category_development_types: [],
+    categoryRanks: [],
+    categoryProfessionalBonuses: [],
+    categorySpecialBonuses: [],
+    categoryDevelopmentTypes: [],
+    categoryCosts: [],
 
-    group_professional_bonuses: [],
-    group_special_bonuses: [],
-    group_development_types: [],
+    groupProfessionalBonuses: [],
+    groupSpecialBonuses: [],
+    groupDevelopmentTypes: [],
 
-    spell_list_ranks: [],
+    spellListRanks: [],
     items: [],
   };
 }
