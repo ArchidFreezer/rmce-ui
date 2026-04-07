@@ -85,6 +85,7 @@ type StepErrors = {
 type HobbySkillRow = {
   id: string;
   subcategory?: string | undefined;
+  subcategoryLocked: boolean;
   base: number;
   max: number;
   value: number;
@@ -391,6 +392,11 @@ export default function CharacterCreationView() {
     return map;
   }, [skills]);
 
+  const mandatoryHobbySubcategorySkillIds = useMemo(
+    () => new Set(skills.filter((s) => s.mandatorySubcategory).map((s) => s.id)),
+    [skills],
+  );
+
   const categoryNameById = useMemo(() => {
     const groupNameById = new Map<string, string>();
     for (const g of groups) groupNameById.set(g.id, g.name);
@@ -512,9 +518,10 @@ export default function CharacterCreationView() {
       .map((row, index) => ({
         row,
         index,
+        sortLabel: skillNameById.get(row.id) ?? row.id,
         label: `${skillNameById.get(row.id) ?? row.id}${row.subcategory ? ` (${row.subcategory})` : ''}`,
       }))
-      .sort((a, b) => a.label.localeCompare(b.label));
+      .sort((a, b) => a.sortLabel.localeCompare(b.sortLabel));
   }, [hobbySkillRows, skillNameById]);
 
   const sortedHobbyCategoryRows = useMemo(() => {
@@ -991,6 +998,17 @@ export default function CharacterCreationView() {
       return 'Select a spell list for hobby spell list ranks.';
     }
 
+    const missingMandatorySubcategory = hobbySkillRows.find((row) => (
+      mandatoryHobbySubcategorySkillIds.has(row.id)
+      && row.value > row.base
+      && !row.subcategory?.trim()
+    ));
+
+    if (missingMandatorySubcategory) {
+      const skillLabel = skillNameById.get(missingMandatorySubcategory.id) ?? missingMandatorySubcategory.id;
+      return `Enter a subcategory for ${skillLabel}.`;
+    }
+
     return undefined;
   };
 
@@ -1061,6 +1079,7 @@ export default function CharacterCreationView() {
     languageRanksBudget,
     spellListRanksBudget,
     hobbySpellListId,
+    hobbySkillRows,
     selectedBackgroundPoints,
     backgroundExtraLanguages,
     backgroundLanguageRankSpent,
@@ -1069,6 +1088,8 @@ export default function CharacterCreationView() {
     trainingPackageId,
     tpStatGainChoices,
     tpSkillRankChoiceSelections,
+    mandatoryHobbySubcategorySkillIds,
+    skillNameById,
   ]);
 
   const canGoNext = (() => {
@@ -1207,9 +1228,11 @@ export default function CharacterCreationView() {
           const key = skillChoiceKey(row.id, row.subcategory);
           const base = baseSkillByKey.get(key) ?? 0;
           const max = base + Math.max(0, row.value ?? 0);
+          const prepopulatedSubcategory = row.subcategory?.trim();
           return {
             id: row.id,
-            subcategory: row.subcategory,
+            subcategory: prepopulatedSubcategory || undefined,
+            subcategoryLocked: Boolean(prepopulatedSubcategory),
             base,
             max,
             value: base,
@@ -1904,8 +1927,21 @@ export default function CharacterCreationView() {
                         <h4 style={{ margin: '0 0 4px' }}>Hobby Skills</h4>
                         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))' }}>
                           {sortedHobbySkillRows.map(({ row, index, label }) => (
-                            <div key={`hskill-${row.id}-${row.subcategory ?? ''}-${index}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
+                            <div key={`hskill-${row.id}-${index}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
                               <strong style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={label}>{label}</strong>
+                              {mandatoryHobbySubcategorySkillIds.has(row.id) && (
+                                <LabeledInput
+                                  label="Subcategory"
+                                  hideLabel={true}
+                                  value={row.subcategory ?? ''}
+                                  onChange={(v) => setHobbySkillRows((prev) => prev.map((entry, idx) => (
+                                    idx === index ? { ...entry, subcategory: v } : entry
+                                  )))}
+                                  placeholder="Enter subcategory"
+                                  disabled={row.subcategoryLocked}
+                                  error={errors.hobby && row.value > row.base && !(row.subcategory?.trim()) ? 'Required' : undefined}
+                                />
+                              )}
                               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap' }}>
                                 <small style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>Base: {row.base}, Max: {row.max}</small>
                                 <button
