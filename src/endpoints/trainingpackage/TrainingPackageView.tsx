@@ -634,6 +634,13 @@ export default function TrainingPackagesView() {
     [categories, sgNameById],
   );
 
+  const spellCategoryOptions = useMemo(
+    () => categories
+      .filter((c) => c.group === 'SKILLGROUP_SPELLS')
+      .map((c) => ({ value: c.id, label: `(${sgNameById.get(c.group) ?? c.group}) - ${c.name}` })),
+    [categories, sgNameById],
+  );
+
   const groupOptions = useMemo(
     () => groups.map((g) => ({ value: g.id, label: g.name })),
     [groups],
@@ -647,6 +654,10 @@ export default function TrainingPackagesView() {
   const languageOptions = useMemo(
     () => languages.map((l) => ({ value: l.id, label: l.name })),
     [languages],
+  );
+  const spellCategoryIdSet = useMemo(
+    () => new Set(spellCategoryOptions.map((opt) => opt.value)),
+    [spellCategoryOptions],
   );
   const statOptions = useMemo(
     () => STATS.map(v => ({ value: v, label: v })),
@@ -963,6 +974,11 @@ export default function TrainingPackagesView() {
         break;
       } else if (r.options.length < Number(r.numChoices)) {
         e.spellListCategoryRankChoices = `SpellListCategoryRankChoices[${i + 1}]: number of categories to select from must be at least as many as the number of categories to select`;
+        break;
+      }
+
+      if (r.options.some((optionId) => !spellCategoryIdSet.has(optionId))) {
+        e.spellListCategoryRankChoices = `SpellListCategoryRankChoices[${i + 1}]: all categories must belong to SKILLGROUP_SPELLS`;
         break;
       }
     }
@@ -1675,7 +1691,7 @@ export default function TrainingPackagesView() {
                   spellListCategoryRankChoices: next,
                 }))
               }
-              categoryOptions={categoryOptions}
+              categoryOptions={spellCategoryOptions}
               viewing={viewing}
               error={errors.spellListCategoryRankChoices}
             />
