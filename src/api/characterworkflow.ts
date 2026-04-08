@@ -3,43 +3,12 @@ import { sendJson } from './client';
 import type { Realm, Stat } from '../types/enum';
 import type { CharacterBuilder, PersistentValue, LanguageAbility, SkillValue } from '../types';
 
-export type CharacterContext = {
-  name?: string;
-  raceId: string;
-  cultureId: string;
-  professionId: string;
-  realms: Realm[];
-};
-
-export type InitialChoicesRequest = {
+export type PrimaryChoicesRequest = {
   name: string;
   race: string;
   culture: string;
   profession: string;
   realms: Realm[];
-};
-
-export type ApplyLevelUpgradeRequest = {
-  character: CharacterContext;
-  temporaryStats: Record<Stat, number>;
-  potentialStats: Record<Stat, number>;
-  selectedAdolescentSkills: {
-    predefinedSkillIds: string[];
-    selectedRaceCategoryChoices: string[][];
-    selectedProfessionSkillChoices: string[][];
-  };
-  selectedBackgroundOptions: string[];
-  apprenticeship: {
-    trainingPackageId: string;
-    selectedStatGainChoices: Stat[];
-    selectedSkillRankChoices: Array<Array<{ id: string; subcategory?: string | undefined }>>;
-  };
-};
-
-export type ApplyLevelUpgradeResponse = {
-  message?: string | undefined;
-  level?: number | undefined;
-  [key: string]: unknown;
 };
 
 export type SetCharacterBuilderStatsRequest = {
@@ -79,12 +48,45 @@ export type SetCharacterBackgroundChoicesRequest = {
   backgroundItemCount: 0 | 1 | 2;
 };
 
+export type CharacterContext = {
+  name?: string;
+  raceId: string;
+  cultureId: string;
+  professionId: string;
+  realms: Realm[];
+};
+
+export type ApplyLevelUpgradeRequest = {
+  character: CharacterContext;
+  temporaryStats: Record<Stat, number>;
+  potentialStats: Record<Stat, number>;
+  selectedAdolescentSkills: {
+    predefinedSkillIds: string[];
+    selectedRaceCategoryChoices: string[][];
+    selectedProfessionSkillChoices: string[][];
+  };
+  selectedBackgroundOptions: string[];
+  apprenticeship: {
+    trainingPackageId: string;
+    selectedStatGainChoices: Stat[];
+    selectedSkillRankChoices: Array<Array<{ id: string; subcategory?: string | undefined }>>;
+  };
+};
+
+export type ApplyLevelUpgradeResponse = {
+  message?: string | undefined;
+  level?: number | undefined;
+  [key: string]: unknown;
+};
+
+const PRIMARY_DEFINITION_ENDPOINT = '/rmce/operations/character/primary-definition';
+const PRIMARY_CHOICES_ENDPOINT = '/rmce/operations/character/primary-choices';
 const STAT_ROLLS_ENDPOINT = '/rmce/operations/character/stat-rolls';
-const INITIAL_CHOICES_ENDPOINT = '/rmce/operations/character/initial-choices';
-const APPLY_LEVEL_ENDPOINT = '/rmce/operations/character/apply-level-upgrade';
 const SET_STATS_ENDPOINT = '/rmce/operations/character/set-stats';
 const SET_HOBBY_CHOICES_ENDPOINT = '/rmce/operations/character/set-hobby-choices';
 const SET_BACKGROUND_CHOICES_ENDPOINT = '/rmce/operations/character/set-background-choices';
+const APPLY_LEVEL_ENDPOINT = '/rmce/operations/character/apply-level-upgrade';
+
 export type StatRollRequest = {
   temporary: number;
 };
@@ -94,10 +96,10 @@ export type StatRollResponse = {
   potential: number;
 };
 
-export async function submitInitialChoices(
-  payload: InitialChoicesRequest,
+export async function setPrimaryDefinition(
+  payload: PrimaryChoicesRequest,
 ): Promise<CharacterBuilder> {
-  return sendJson<CharacterBuilder>(INITIAL_CHOICES_ENDPOINT, 'POST', payload);
+  return sendJson<CharacterBuilder>(PRIMARY_DEFINITION_ENDPOINT, 'POST', payload);
 }
 
 export async function getStatRollPotentials(
@@ -106,16 +108,16 @@ export async function getStatRollPotentials(
   return sendJson<StatRollResponse[]>(STAT_ROLLS_ENDPOINT, 'POST', payload);
 }
 
-export async function applyLevelUpgrade(
-  payload: ApplyLevelUpgradeRequest,
-): Promise<ApplyLevelUpgradeResponse> {
-  return sendJson<ApplyLevelUpgradeResponse>(APPLY_LEVEL_ENDPOINT, 'POST', payload);
-}
-
 export async function setCharacterBuilderStats(
   payload: SetCharacterBuilderStatsRequest,
 ): Promise<SetCharacterBuilderStatsResponse> {
   return sendJson<SetCharacterBuilderStatsResponse>(SET_STATS_ENDPOINT, 'POST', payload);
+}
+
+export async function setCharacterPrimaryChoices(
+  payload: CharacterBuilder,
+): Promise<CharacterBuilder> {
+  return sendJson<CharacterBuilder>(PRIMARY_CHOICES_ENDPOINT, 'POST', payload);
 }
 
 export async function setCharacterHobbyChoices(
@@ -128,4 +130,10 @@ export async function setCharacterBackgroundChoices(
   payload: SetCharacterBackgroundChoicesRequest,
 ): Promise<CharacterBuilder> {
   return sendJson<CharacterBuilder>(SET_BACKGROUND_CHOICES_ENDPOINT, 'POST', payload);
+}
+
+export async function applyLevelUpgrade(
+  payload: ApplyLevelUpgradeRequest,
+): Promise<ApplyLevelUpgradeResponse> {
+  return sendJson<ApplyLevelUpgradeResponse>(APPLY_LEVEL_ENDPOINT, 'POST', payload);
 }

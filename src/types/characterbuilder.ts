@@ -39,13 +39,13 @@ export interface CharacterBuilder extends Named {
 
   /* Initial Choices */
   // Race
-  raceCategoryEverymanChoices: string[];
+  raceCategoryEverymanChoices: CharacterBuilderIdOptionalSubcategory[];
   // Culture Type
   cultureTypeCategorySkillRanks: SkillValue[];
   // Profession
   profSkillDevelopmentTypeChoices: SkillDevelopmentTypeValue[];
-  profCategoryDevelopmentTypeChoices: PersistentDevelopmentTypeValue[];
-  profGroupDevelopmentTypeChoices: PersistentDevelopmentTypeValue[];
+  profCategoryDevelopmentTypeChoices: SkillDevelopmentTypeValue[];
+  profGroupDevelopmentTypeChoices: SkillDevelopmentTypeValue[];
   baseSpellListChoices: string[];
 
   /* Initial Stats */
