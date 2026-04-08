@@ -3,7 +3,7 @@ import { sendJson } from './client';
 import type { Realm, Stat } from '../types/enum';
 import type { CharacterBuilder, PersistentValue, LanguageAbility, SkillValue } from '../types';
 
-export type PrimaryChoicesRequest = {
+export type PrimaryDefinitionRequest = {
   name: string;
   race: string;
   culture: string;
@@ -97,9 +97,15 @@ export type StatRollResponse = {
 };
 
 export async function setPrimaryDefinition(
-  payload: PrimaryChoicesRequest,
+  payload: PrimaryDefinitionRequest,
 ): Promise<CharacterBuilder> {
   return sendJson<CharacterBuilder>(PRIMARY_DEFINITION_ENDPOINT, 'POST', payload);
+}
+
+export async function setCharacterPrimaryChoices(
+  payload: CharacterBuilder,
+): Promise<CharacterBuilder> {
+  return sendJson<CharacterBuilder>(PRIMARY_CHOICES_ENDPOINT, 'POST', payload);
 }
 
 export async function getStatRollPotentials(
@@ -112,12 +118,6 @@ export async function setCharacterBuilderStats(
   payload: SetCharacterBuilderStatsRequest,
 ): Promise<SetCharacterBuilderStatsResponse> {
   return sendJson<SetCharacterBuilderStatsResponse>(SET_STATS_ENDPOINT, 'POST', payload);
-}
-
-export async function setCharacterPrimaryChoices(
-  payload: CharacterBuilder,
-): Promise<CharacterBuilder> {
-  return sendJson<CharacterBuilder>(PRIMARY_CHOICES_ENDPOINT, 'POST', payload);
 }
 
 export async function setCharacterHobbyChoices(
