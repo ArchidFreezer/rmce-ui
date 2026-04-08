@@ -11,7 +11,7 @@ export type CharacterContext = {
   realms: Realm[];
 };
 
-export type InitialChoicesRequest = {
+export type PrimaryChoicesRequest = {
   name: string;
   race: string;
   culture: string;
@@ -79,8 +79,8 @@ export type SetCharacterBackgroundChoicesRequest = {
   backgroundItemCount: 0 | 1 | 2;
 };
 
+const PRIMARY_CHOICES_ENDPOINT = '/rmce/operations/character/primary-choices';
 const STAT_ROLLS_ENDPOINT = '/rmce/operations/character/stat-rolls';
-const INITIAL_CHOICES_ENDPOINT = '/rmce/operations/character/initial-choices';
 const APPLY_LEVEL_ENDPOINT = '/rmce/operations/character/apply-level-upgrade';
 const SET_STATS_ENDPOINT = '/rmce/operations/character/set-stats';
 const SET_HOBBY_CHOICES_ENDPOINT = '/rmce/operations/character/set-hobby-choices';
@@ -94,10 +94,10 @@ export type StatRollResponse = {
   potential: number;
 };
 
-export async function submitInitialChoices(
-  payload: InitialChoicesRequest,
+export async function submitPrimaryChoices(
+  payload: PrimaryChoicesRequest,
 ): Promise<CharacterBuilder> {
-  return sendJson<CharacterBuilder>(INITIAL_CHOICES_ENDPOINT, 'POST', payload);
+  return sendJson<CharacterBuilder>(PRIMARY_CHOICES_ENDPOINT, 'POST', payload);
 }
 
 export async function getStatRollPotentials(

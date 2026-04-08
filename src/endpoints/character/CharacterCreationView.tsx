@@ -16,7 +16,7 @@ import {
   setCharacterBuilderStats,
   setCharacterBackgroundChoices,
   setCharacterHobbyChoices,
-  submitInitialChoices,
+  submitPrimaryChoices,
   type SetCharacterBackgroundChoicesRequest,
 } from '../../api';
 
@@ -48,7 +48,7 @@ import { DEVELOPMENT_STATS, SPELL_REALMS, STATS, type Realm, type Stat } from '.
 import { isValidUnsignedInt, sanitizeUnsignedInt } from '../../utils';
 
 type CharacterStep =
-  | 'initial'
+  | 'primary'
   | 'stats'
   | 'hobby'
   | 'background'
@@ -56,7 +56,7 @@ type CharacterStep =
   | 'apply';
 
 const STEP_ORDER: CharacterStep[] = [
-  'initial',
+  'primary',
   'stats',
   'hobby',
   'background',
@@ -65,7 +65,7 @@ const STEP_ORDER: CharacterStep[] = [
 ];
 
 const STEP_LABELS: Record<CharacterStep, string> = {
-  initial: '1. Initial Choices',
+  primary: '1. Primary Choices',
   stats: '2. Stat Generation',
   hobby: '3. Hobby Ranks',
   background: '4. Background Options',
@@ -74,7 +74,7 @@ const STEP_LABELS: Record<CharacterStep, string> = {
 };
 
 type StepErrors = {
-  initial?: string | undefined;
+  primary?: string | undefined;
   stats?: string | undefined;
   hobby?: string | undefined;
   background?: string | undefined;
@@ -288,7 +288,7 @@ export default function CharacterCreationView() {
   const [spellLists, setSpellLists] = useState<SpellList[]>([]);
   const [trainingPackages, setTrainingPackages] = useState<TrainingPackage[]>([]);
 
-  const [step, setStep] = useState<CharacterStep>('initial');
+  const [step, setStep] = useState<CharacterStep>('primary');
   const [errors, setErrors] = useState<StepErrors>({});
 
   const [raceId, setRaceId] = useState('');
@@ -326,7 +326,7 @@ export default function CharacterCreationView() {
   const [tpStatGainChoices, setTpStatGainChoices] = useState<Stat[]>([]);
   const [tpSkillRankChoiceSelections, setTpSkillRankChoiceSelections] = useState<string[][]>([]);
   const [characterBuilder, setCharacterBuilder] = useState<CharacterBuilder>(() => createEmptyCharacterBuilder());
-  const [savingInitialChoices, setSavingInitialChoices] = useState(false);
+  const [savingPrimaryChoices, setSavingPrimaryChoices] = useState(false);
   const [savingStats, setSavingStats] = useState(false);
   const [savingHobbyChoices, setSavingHobbyChoices] = useState(false);
   const [savingBackgroundChoices, setSavingBackgroundChoices] = useState(false);
@@ -1052,7 +1052,7 @@ export default function CharacterCreationView() {
 
   const recomputeErrors = () => {
     const next: StepErrors = {
-      initial: validateInitial(),
+      primary: validateInitial(),
       stats: validateStats(),
       hobby: validateHobby(),
       background: validateBackground(),
@@ -1146,10 +1146,10 @@ export default function CharacterCreationView() {
     if (idx < 0 || idx >= STEP_ORDER.length - 1) return;
     if (!canGoNext) return;
 
-    if (step === 'initial') {
-      setSavingInitialChoices(true);
+    if (step === 'primary') {
+      setSavingPrimaryChoices(true);
       try {
-        const response = await submitInitialChoices({
+        const response = await submitPrimaryChoices({
           name: characterName.trim(),
           race: raceId,
           culture: cultureId,
@@ -1158,19 +1158,19 @@ export default function CharacterCreationView() {
         });
 
         if (!response.id) {
-          throw new Error('Initial choices response did not include a builder id.');
+          throw new Error('Primary choices response did not include a builder id.');
         }
 
         setCharacterBuilder(response);
       } catch (e) {
         toast({
           variant: 'danger',
-          title: 'Save initial choices failed',
+          title: 'Save primary choices failed',
           description: String(e instanceof Error ? e.message : e),
         });
         return;
       } finally {
-        setSavingInitialChoices(false);
+        setSavingPrimaryChoices(false);
       }
     }
 
@@ -1179,7 +1179,7 @@ export default function CharacterCreationView() {
         toast({
           variant: 'danger',
           title: 'Save stats failed',
-          description: 'Character builder id is missing. Complete initial choices first.',
+          description: 'Character builder id is missing. Complete primary choices first.',
         });
         return;
       }
@@ -1582,7 +1582,7 @@ export default function CharacterCreationView() {
   };
 
   const resetWorkflow = () => {
-    setStep('initial');
+    setStep('primary');
     setCharacterName('');
     setRaceId('');
     setCultureTypeId('');
@@ -1725,12 +1725,12 @@ export default function CharacterCreationView() {
 
         {/* Form panels for each step. Only the active step is interactable, but previous steps are shown for context. */}
         <div className="form-container">
-          {(generatingStats || applying || savingInitialChoices || savingStats || savingHobbyChoices || savingBackgroundChoices) && (
+          {(generatingStats || applying || savingPrimaryChoices || savingStats || savingHobbyChoices || savingBackgroundChoices) && (
             <div className="overlay">
               <Spinner size={24} />
               <span>
-                {savingInitialChoices
-                  ? 'Saving initial choices…'
+                {savingPrimaryChoices
+                  ? 'Saving primary choices…'
                   : savingStats
                     ? 'Saving stats…'
                     : savingHobbyChoices
@@ -1746,7 +1746,7 @@ export default function CharacterCreationView() {
 
           <h3>{STEP_LABELS[step]}</h3>
 
-          {step === 'initial' && (
+          {step === 'primary' && (
             <section style={{ display: 'grid', gap: 12 }}>
               <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr' }}>
                 <LabeledInput
@@ -1755,7 +1755,7 @@ export default function CharacterCreationView() {
                   onChange={(v) => setCharacterName(v)}
                   placeholder="Character name"
                   containerStyle={{ gridColumn: '1 / -1' }}
-                  error={errors.initial && !characterName.trim() ? 'Required' : undefined}
+                  error={errors.primary && !characterName.trim() ? 'Required' : undefined}
                 />
 
                 <LabeledSelect
@@ -1770,7 +1770,7 @@ export default function CharacterCreationView() {
                     .slice()
                     .sort((a, b) => a.name.localeCompare(b.name))
                     .map((r) => ({ value: r.id, label: r.name }))}
-                  error={errors.initial && !raceId ? 'Required' : undefined}
+                  error={errors.primary && !raceId ? 'Required' : undefined}
                 />
 
                 <LabeledSelect
@@ -1785,7 +1785,7 @@ export default function CharacterCreationView() {
                     .slice()
                     .sort((a, b) => a.name.localeCompare(b.name))
                     .map((ct) => ({ value: ct.id, label: ct.name }))}
-                  error={errors.initial && !cultureTypeId ? 'Required' : undefined}
+                  error={errors.primary && !cultureTypeId ? 'Required' : undefined}
                 />
 
                 <LabeledSelect
@@ -1801,7 +1801,7 @@ export default function CharacterCreationView() {
                     .map((c) => ({ value: c.id, label: c.name }))}
                   disabled={!cultureTypeId}
                   helperText={!cultureTypeId ? 'Select a Culture Type first.' : undefined}
-                  error={errors.initial && !cultureId ? 'Required' : undefined}
+                  error={errors.primary && !cultureId ? 'Required' : undefined}
                 />
 
                 <LabeledSelect
@@ -1818,7 +1818,7 @@ export default function CharacterCreationView() {
                       ? `Preferred: ${culture.preferredProfessions.length}, Restricted: ${culture.restrictedProfessions.length}`
                       : undefined
                   }
-                  error={errors.initial && !professionId ? 'Required' : undefined}
+                  error={errors.primary && !professionId ? 'Required' : undefined}
                 />
 
                 {!requiresRealmSelection ? (
@@ -1836,13 +1836,13 @@ export default function CharacterCreationView() {
                     onChange={(v) => setSelectedRealms(v ? [v as Realm] : [])}
                     options={realmOptionsForProfession}
                     disabled={!profession}
-                    error={errors.initial && selectedRealms.length !== 1 ? 'Required' : undefined}
+                    error={errors.primary && selectedRealms.length !== 1 ? 'Required' : undefined}
                   />
                 )}
               </div>
 
-              {errors.initial && (
-                <div style={{ color: '#b00020' }}>{errors.initial}</div>
+              {errors.primary && (
+                <div style={{ color: '#b00020' }}>{errors.primary}</div>
               )}
             </section>
           )}
@@ -1858,6 +1858,7 @@ export default function CharacterCreationView() {
                 Generate the roll pool first, then assign each generated result to a stat. Prime stats from profession: {primeStats.length ? primeStats.join(', ') : 'None defined'}
               </div>
 
+              {/* Stat rolls grid. Each roll has temporary value input, potential display, and stat assignment select. Assigned prime stats are highlighted. */}
               <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(560px, 1fr))' }}>
                 {statRolls.map((roll) => {
                   const isPrime = roll.assignedStat ? primeStats.includes(roll.assignedStat) : false;
@@ -2387,7 +2388,7 @@ export default function CharacterCreationView() {
                 </ul>
               </div>
 
-              {(errors.initial || errors.stats || errors.hobby || errors.background || errors.apprenticeship) && (
+              {(errors.primary || errors.stats || errors.hobby || errors.background || errors.apprenticeship) && (
                 <div style={{ color: '#b00020' }}>
                   There are validation issues in previous steps. Please go back and correct them before applying level upgrade.
                 </div>
@@ -2397,7 +2398,7 @@ export default function CharacterCreationView() {
                 <button
                   type="button"
                   onClick={submitLevelUpgrade}
-                  disabled={applying || Boolean(errors.initial || errors.stats || errors.hobby || errors.background || errors.apprenticeship)}
+                  disabled={applying || Boolean(errors.primary || errors.stats || errors.hobby || errors.background || errors.apprenticeship)}
                 >
                   {applying ? 'Applying…' : 'Apply Level Upgrade'}
                 </button>
@@ -2409,8 +2410,8 @@ export default function CharacterCreationView() {
           )}
 
           <div style={{ display: 'flex', gap: 8 }}>
-            <button type="button" onClick={goPrev} disabled={step === 'initial'}>Back</button>
-            <button type="button" onClick={goNext} disabled={!canGoNext || step === 'apply' || savingInitialChoices || savingStats || savingHobbyChoices || savingBackgroundChoices}>Next</button>
+            <button type="button" onClick={goPrev} disabled={step === 'primary'}>Back</button>
+            <button type="button" onClick={goNext} disabled={!canGoNext || step === 'apply' || savingPrimaryChoices || savingStats || savingHobbyChoices || savingBackgroundChoices}>Next</button>
           </div>
         </div>
       </div>
