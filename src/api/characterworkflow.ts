@@ -79,7 +79,7 @@ export type ApplyLevelUpgradeResponse = {
   [key: string]: unknown;
 };
 
-const PRIMARY_CHOICES_ENDPOINT = '/rmce/operations/character/primary-choices';
+const PRIMARY_DEFINITION_ENDPOINT = '/rmce/operations/character/primary-definition';
 const STAT_ROLLS_ENDPOINT = '/rmce/operations/character/stat-rolls';
 const SET_STATS_ENDPOINT = '/rmce/operations/character/set-stats';
 const SET_HOBBY_CHOICES_ENDPOINT = '/rmce/operations/character/set-hobby-choices';
@@ -95,10 +95,10 @@ export type StatRollResponse = {
   potential: number;
 };
 
-export async function submitPrimaryChoices(
+export async function setPrimaryDefinition(
   payload: PrimaryChoicesRequest,
 ): Promise<CharacterBuilder> {
-  return sendJson<CharacterBuilder>(PRIMARY_CHOICES_ENDPOINT, 'POST', payload);
+  return sendJson<CharacterBuilder>(PRIMARY_DEFINITION_ENDPOINT, 'POST', payload);
 }
 
 export async function getStatRollPotentials(

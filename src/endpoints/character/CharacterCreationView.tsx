@@ -16,7 +16,7 @@ import {
   setCharacterBuilderStats,
   setCharacterBackgroundChoices,
   setCharacterHobbyChoices,
-  submitPrimaryChoices,
+  setPrimaryDefinition,
   type SetCharacterBackgroundChoicesRequest,
 } from '../../api';
 
@@ -326,7 +326,7 @@ export default function CharacterCreationView() {
   const [tpStatGainChoices, setTpStatGainChoices] = useState<Stat[]>([]);
   const [tpSkillRankChoiceSelections, setTpSkillRankChoiceSelections] = useState<string[][]>([]);
   const [characterBuilder, setCharacterBuilder] = useState<CharacterBuilder>(() => createEmptyCharacterBuilder());
-  const [savingPrimaryChoices, setSavingPrimaryChoices] = useState(false);
+  const [savingPrimaryDefinition, setSavingPrimaryDefinition] = useState(false);
   const [savingStats, setSavingStats] = useState(false);
   const [savingHobbyChoices, setSavingHobbyChoices] = useState(false);
   const [savingBackgroundChoices, setSavingBackgroundChoices] = useState(false);
@@ -1147,9 +1147,9 @@ export default function CharacterCreationView() {
     if (!canGoNext) return;
 
     if (step === 'primary') {
-      setSavingPrimaryChoices(true);
+      setSavingPrimaryDefinition(true);
       try {
-        const response = await submitPrimaryChoices({
+        const response = await setPrimaryDefinition({
           name: characterName.trim(),
           race: raceId,
           culture: cultureId,
@@ -1170,7 +1170,7 @@ export default function CharacterCreationView() {
         });
         return;
       } finally {
-        setSavingPrimaryChoices(false);
+        setSavingPrimaryDefinition(false);
       }
     }
 
@@ -1725,11 +1725,11 @@ export default function CharacterCreationView() {
 
         {/* Form panels for each step. Only the active step is interactable, but previous steps are shown for context. */}
         <div className="form-container">
-          {(generatingStats || applying || savingPrimaryChoices || savingStats || savingHobbyChoices || savingBackgroundChoices) && (
+          {(generatingStats || applying || savingPrimaryDefinition || savingStats || savingHobbyChoices || savingBackgroundChoices) && (
             <div className="overlay">
               <Spinner size={24} />
               <span>
-                {savingPrimaryChoices
+                {savingPrimaryDefinition
                   ? 'Saving primary definition…'
                   : savingStats
                     ? 'Saving stats…'
@@ -2411,7 +2411,7 @@ export default function CharacterCreationView() {
 
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" onClick={goPrev} disabled={step === 'primary'}>Back</button>
-            <button type="button" onClick={goNext} disabled={!canGoNext || step === 'apply' || savingPrimaryChoices || savingStats || savingHobbyChoices || savingBackgroundChoices}>Next</button>
+            <button type="button" onClick={goNext} disabled={!canGoNext || step === 'apply' || savingPrimaryDefinition || savingStats || savingHobbyChoices || savingBackgroundChoices}>Next</button>
           </div>
         </div>
       </div>
