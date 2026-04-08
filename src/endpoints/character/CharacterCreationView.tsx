@@ -1298,6 +1298,7 @@ export default function CharacterCreationView() {
       if (!choice) continue;
       const rows = professionSkillDevelopmentChoiceRows[choiceIndex] ?? [];
       const selectedKeys = new Set<string>();
+      const selectedBySkill = new Map<string, { count: number; hasEmptySubcategory: boolean }>();
       for (let slot = 0; slot < choice.numChoices; slot++) {
         const row = rows[slot];
         if (!row?.id) {
@@ -1321,6 +1322,18 @@ export default function CharacterCreationView() {
             : `Profession Skill Development Types choice ${choiceIndex + 1}: ${skillName} is duplicated.`;
         }
         selectedKeys.add(key);
+
+        const entry = selectedBySkill.get(row.id) ?? { count: 0, hasEmptySubcategory: false };
+        entry.count += 1;
+        entry.hasEmptySubcategory = entry.hasEmptySubcategory || !subcategory;
+        selectedBySkill.set(row.id, entry);
+      }
+
+      for (const [skillId, entry] of selectedBySkill) {
+        if (entry.count > 1 && entry.hasEmptySubcategory) {
+          const skillName = skillNameById.get(skillId) ?? skillId;
+          return `Profession Skill Development Types choice ${choiceIndex + 1}: ${skillName} cannot be selected more than once unless each selection has a subcategory.`;
+        }
       }
     }
 
@@ -1329,6 +1342,7 @@ export default function CharacterCreationView() {
       if (!choice) continue;
       const rows = professionCategoryDevelopmentChoiceRows[choiceIndex] ?? [];
       const selectedKeys = new Set<string>();
+      const selectedBySkill = new Map<string, { count: number; hasEmptySubcategory: boolean }>();
       for (let slot = 0; slot < choice.numChoices; slot++) {
         const row = rows[slot];
         if (!row?.id) {
@@ -1350,6 +1364,18 @@ export default function CharacterCreationView() {
           return `Profession Category Skill Development Types choice ${choiceIndex + 1}: ${skillName} with subcategory '${subcategory}' is duplicated.`;
         }
         selectedKeys.add(key);
+
+        const entry = selectedBySkill.get(row.id) ?? { count: 0, hasEmptySubcategory: false };
+        entry.count += 1;
+        entry.hasEmptySubcategory = entry.hasEmptySubcategory || !subcategory;
+        selectedBySkill.set(row.id, entry);
+      }
+
+      for (const [skillId, entry] of selectedBySkill) {
+        if (entry.count > 1 && entry.hasEmptySubcategory) {
+          const skillName = skillNameById.get(skillId) ?? skillId;
+          return `Profession Category Skill Development Types choice ${choiceIndex + 1}: ${skillName} cannot be selected more than once unless each selection has a subcategory.`;
+        }
       }
     }
 
@@ -1358,6 +1384,7 @@ export default function CharacterCreationView() {
       if (!choice) continue;
       const rows = professionGroupDevelopmentChoiceRows[choiceIndex] ?? [];
       const selectedKeys = new Set<string>();
+      const selectedBySkill = new Map<string, { count: number; hasEmptySubcategory: boolean }>();
       for (let slot = 0; slot < choice.numChoices; slot++) {
         const row = rows[slot];
         if (!row?.id) {
@@ -1381,6 +1408,18 @@ export default function CharacterCreationView() {
             : `Profession Group Skill Development Types choice ${choiceIndex + 1}: ${skillName} is duplicated.`;
         }
         selectedKeys.add(key);
+
+        const entry = selectedBySkill.get(row.id) ?? { count: 0, hasEmptySubcategory: false };
+        entry.count += 1;
+        entry.hasEmptySubcategory = entry.hasEmptySubcategory || !subcategory;
+        selectedBySkill.set(row.id, entry);
+      }
+
+      for (const [skillId, entry] of selectedBySkill) {
+        if (entry.count > 1 && entry.hasEmptySubcategory) {
+          const skillName = skillNameById.get(skillId) ?? skillId;
+          return `Profession Group Skill Development Types choice ${choiceIndex + 1}: ${skillName} cannot be selected more than once unless each selection has a subcategory.`;
+        }
       }
     }
 
@@ -2519,16 +2558,35 @@ export default function CharacterCreationView() {
                         </div>
                         {rows.map((row, rowIndex) => (
                           <div key={`prof-skill-dev-${choiceIndex}-${rowIndex}`} style={{ display: 'grid', gap: 6, gridTemplateColumns: 'minmax(260px, 1fr) minmax(220px, 1fr)' }}>
-                            <LabeledSelect
-                              label={`Skill ${rowIndex + 1}`}
-                              value={row.id}
-                              onChange={(value) => updateGroupedSkillChoiceRow(setProfessionSkillDevelopmentChoiceRows, choiceIndex, rowIndex, {
-                                id: value,
-                                subcategory: '',
-                              })}
-                              options={optionList}
-                              placeholderOption="— Select skill —"
-                            />
+                            {(() => {
+                              const selectedByOtherRows = new Map<string, { hasEmptySubcategory: boolean }>();
+                              for (let i = 0; i < rows.length; i++) {
+                                if (i === rowIndex) continue;
+                                const other = rows[i];
+                                if (!other?.id) continue;
+                                const current = selectedByOtherRows.get(other.id) ?? { hasEmptySubcategory: false };
+                                current.hasEmptySubcategory = current.hasEmptySubcategory || !other.subcategory.trim();
+                                selectedByOtherRows.set(other.id, current);
+                              }
+                              const availableOptions = optionList.filter((opt) => {
+                                if (opt.value === row.id) return true;
+                                const state = selectedByOtherRows.get(opt.value);
+                                if (!state) return true;
+                                return row.subcategory.trim().length > 0 && !state.hasEmptySubcategory;
+                              });
+                              return (
+                                <LabeledSelect
+                                  label={`Skill ${rowIndex + 1}`}
+                                  value={row.id}
+                                  onChange={(value) => updateGroupedSkillChoiceRow(setProfessionSkillDevelopmentChoiceRows, choiceIndex, rowIndex, {
+                                    id: value,
+                                    subcategory: '',
+                                  })}
+                                  options={availableOptions}
+                                  placeholderOption="— Select skill —"
+                                />
+                              );
+                            })()}
                             {row.id && (mandatorySubcategorySkillIds.has(row.id) || languageSkillIds.has(row.id)) ? (
                               languageSkillIds.has(row.id) ? (
                                 <LabeledSelect
@@ -2576,16 +2634,35 @@ export default function CharacterCreationView() {
                         </div>
                         {rows.map((row, rowIndex) => (
                           <div key={`prof-category-dev-${choiceIndex}-${rowIndex}`} style={{ display: 'grid', gap: 6, gridTemplateColumns: 'minmax(260px, 1fr) minmax(220px, 1fr)' }}>
-                            <LabeledSelect
-                              label={`Skill ${rowIndex + 1}`}
-                              value={row.id}
-                              onChange={(value) => updateGroupedSkillChoiceRow(setProfessionCategoryDevelopmentChoiceRows, choiceIndex, rowIndex, {
-                                id: value,
-                                subcategory: '',
-                              })}
-                              options={optionList}
-                              placeholderOption="— Select skill —"
-                            />
+                            {(() => {
+                              const selectedByOtherRows = new Map<string, { hasEmptySubcategory: boolean }>();
+                              for (let i = 0; i < rows.length; i++) {
+                                if (i === rowIndex) continue;
+                                const other = rows[i];
+                                if (!other?.id) continue;
+                                const current = selectedByOtherRows.get(other.id) ?? { hasEmptySubcategory: false };
+                                current.hasEmptySubcategory = current.hasEmptySubcategory || !other.subcategory.trim();
+                                selectedByOtherRows.set(other.id, current);
+                              }
+                              const availableOptions = optionList.filter((opt) => {
+                                if (opt.value === row.id) return true;
+                                const state = selectedByOtherRows.get(opt.value);
+                                if (!state) return true;
+                                return row.subcategory.trim().length > 0 && !state.hasEmptySubcategory;
+                              });
+                              return (
+                                <LabeledSelect
+                                  label={`Skill ${rowIndex + 1}`}
+                                  value={row.id}
+                                  onChange={(value) => updateGroupedSkillChoiceRow(setProfessionCategoryDevelopmentChoiceRows, choiceIndex, rowIndex, {
+                                    id: value,
+                                    subcategory: '',
+                                  })}
+                                  options={availableOptions}
+                                  placeholderOption="— Select skill —"
+                                />
+                              );
+                            })()}
                             {row.id && (mandatorySubcategorySkillIds.has(row.id) || languageSkillIds.has(row.id)) ? (
                               languageSkillIds.has(row.id) ? (
                                 <LabeledSelect
@@ -2633,16 +2710,35 @@ export default function CharacterCreationView() {
                         </div>
                         {rows.map((row, rowIndex) => (
                           <div key={`prof-group-dev-${choiceIndex}-${rowIndex}`} style={{ display: 'grid', gap: 6, gridTemplateColumns: 'minmax(260px, 1fr) minmax(220px, 1fr)' }}>
-                            <LabeledSelect
-                              label={`Skill ${rowIndex + 1}`}
-                              value={row.id}
-                              onChange={(value) => updateGroupedSkillChoiceRow(setProfessionGroupDevelopmentChoiceRows, choiceIndex, rowIndex, {
-                                id: value,
-                                subcategory: '',
-                              })}
-                              options={optionList}
-                              placeholderOption="— Select skill —"
-                            />
+                            {(() => {
+                              const selectedByOtherRows = new Map<string, { hasEmptySubcategory: boolean }>();
+                              for (let i = 0; i < rows.length; i++) {
+                                if (i === rowIndex) continue;
+                                const other = rows[i];
+                                if (!other?.id) continue;
+                                const current = selectedByOtherRows.get(other.id) ?? { hasEmptySubcategory: false };
+                                current.hasEmptySubcategory = current.hasEmptySubcategory || !other.subcategory.trim();
+                                selectedByOtherRows.set(other.id, current);
+                              }
+                              const availableOptions = optionList.filter((opt) => {
+                                if (opt.value === row.id) return true;
+                                const state = selectedByOtherRows.get(opt.value);
+                                if (!state) return true;
+                                return row.subcategory.trim().length > 0 && !state.hasEmptySubcategory;
+                              });
+                              return (
+                                <LabeledSelect
+                                  label={`Skill ${rowIndex + 1}`}
+                                  value={row.id}
+                                  onChange={(value) => updateGroupedSkillChoiceRow(setProfessionGroupDevelopmentChoiceRows, choiceIndex, rowIndex, {
+                                    id: value,
+                                    subcategory: '',
+                                  })}
+                                  options={availableOptions}
+                                  placeholderOption="— Select skill —"
+                                />
+                              );
+                            })()}
                             {row.id && (mandatorySubcategorySkillIds.has(row.id) || languageSkillIds.has(row.id)) ? (
                               languageSkillIds.has(row.id) ? (
                                 <LabeledSelect
