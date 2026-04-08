@@ -1673,8 +1673,8 @@ export default function CharacterCreationView() {
     return !e;
   })();
 
-  const showPostStatsSummary = STEP_ORDER.indexOf(step) > STEP_ORDER.indexOf('stats');
-  const postStatsSummaryValue = `${race?.name ?? ''} - ${profession?.name ?? ''} (${characterBuilder.id || ''})`.trim();
+  const showPostPrimarySummary = STEP_ORDER.indexOf(step) > STEP_ORDER.indexOf('primary');
+  const postPrimarySummaryValue = `${race?.name ?? ''} - ${profession?.name ?? ''} (${characterBuilder.id || ''})`.trim();
 
   const goPrev = () => {
     const idx = STEP_ORDER.indexOf(step);
@@ -2330,11 +2330,11 @@ export default function CharacterCreationView() {
       <h2>Character Creation</h2>
       {/* The form panel is shared across steps, with conditional rendering of step-specific inputs. */}
       <div className="form-panel" style={{ display: 'grid', gap: 14 }}>
-        {showPostStatsSummary && (
+        {showPostPrimarySummary && (
           <LabeledInput
             label="Character"
             hideLabel={true}
-            value={postStatsSummaryValue}
+            value={postPrimarySummaryValue}
             onChange={() => { }}
             inputProps={{ readOnly: true }}
             disabled
