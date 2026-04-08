@@ -44,8 +44,8 @@ export interface CharacterBuilder extends Named {
   cultureTypeCategorySkillRanks: SkillValue[];
   // Profession
   profSkillDevelopmentTypeChoices: SkillDevelopmentTypeValue[];
-  profCategoryDevelopmentTypeChoices: PersistentDevelopmentTypeValue[];
-  profGroupDevelopmentTypeChoices: PersistentDevelopmentTypeValue[];
+  profCategoryDevelopmentTypeChoices: SkillDevelopmentTypeValue[];
+  profGroupDevelopmentTypeChoices: SkillDevelopmentTypeValue[];
   baseSpellListChoices: string[];
 
   /* Initial Stats */

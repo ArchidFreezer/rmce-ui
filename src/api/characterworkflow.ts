@@ -80,6 +80,7 @@ export type ApplyLevelUpgradeResponse = {
 };
 
 const PRIMARY_DEFINITION_ENDPOINT = '/rmce/operations/character/primary-definition';
+const PRIMARY_CHOICES_ENDPOINT = '/rmce/operations/character/primary-choices';
 const STAT_ROLLS_ENDPOINT = '/rmce/operations/character/stat-rolls';
 const SET_STATS_ENDPOINT = '/rmce/operations/character/set-stats';
 const SET_HOBBY_CHOICES_ENDPOINT = '/rmce/operations/character/set-hobby-choices';
@@ -111,6 +112,12 @@ export async function setCharacterBuilderStats(
   payload: SetCharacterBuilderStatsRequest,
 ): Promise<SetCharacterBuilderStatsResponse> {
   return sendJson<SetCharacterBuilderStatsResponse>(SET_STATS_ENDPOINT, 'POST', payload);
+}
+
+export async function setCharacterPrimaryChoices(
+  payload: CharacterBuilder,
+): Promise<CharacterBuilder> {
+  return sendJson<CharacterBuilder>(PRIMARY_CHOICES_ENDPOINT, 'POST', payload);
 }
 
 export async function setCharacterHobbyChoices(

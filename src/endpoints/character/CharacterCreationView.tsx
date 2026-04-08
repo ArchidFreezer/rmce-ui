@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 
 import {
   applyLevelUpgrade,
@@ -16,6 +16,7 @@ import {
   setCharacterBuilderStats,
   setCharacterBackgroundChoices,
   setCharacterHobbyChoices,
+  setCharacterPrimaryChoices,
   setPrimaryDefinition,
   type SetCharacterBackgroundChoicesRequest,
 } from '../../api';
@@ -49,6 +50,7 @@ import { isValidUnsignedInt, sanitizeUnsignedInt } from '../../utils';
 
 type CharacterStep =
   | 'primary'
+  | 'initial'
   | 'stats'
   | 'hobby'
   | 'background'
@@ -57,6 +59,7 @@ type CharacterStep =
 
 const STEP_ORDER: CharacterStep[] = [
   'primary',
+  'initial',
   'stats',
   'hobby',
   'background',
@@ -66,15 +69,17 @@ const STEP_ORDER: CharacterStep[] = [
 
 const STEP_LABELS: Record<CharacterStep, string> = {
   primary: '1. Primary Definition',
-  stats: '2. Stat Generation',
-  hobby: '3. Hobby Ranks',
-  background: '4. Background Options',
-  apprenticeship: '5. Apprenticeship Skills',
-  apply: '6. Apply Level Upgrade',
+  initial: '2. Initial Choices',
+  stats: '3. Stat Generation',
+  hobby: '4. Hobby Ranks',
+  background: '5. Background Options',
+  apprenticeship: '6. Apprenticeship Skills',
+  apply: '7. Apply Level Upgrade',
 };
 
 type StepErrors = {
   primary?: string | undefined;
+  initial?: string | undefined;
   stats?: string | undefined;
   hobby?: string | undefined;
   background?: string | undefined;
@@ -141,6 +146,11 @@ type StatRoll = {
   assignedStat: Stat | '';
 };
 
+type SkillChoiceRow = {
+  id: string;
+  subcategory: string;
+};
+
 function createEmptyStatRolls(): StatRoll[] {
   return STATS.map((_, index) => ({
     slot: index + 1,
@@ -192,6 +202,13 @@ function parseSkillChoiceKey(key: string): { id: string; subcategory?: string | 
   return {
     id,
     subcategory: subcategory || undefined,
+  };
+}
+
+function createEmptySkillChoiceRow(): SkillChoiceRow {
+  return {
+    id: '',
+    subcategory: '',
   };
 }
 
@@ -297,6 +314,13 @@ export default function CharacterCreationView() {
   const [professionId, setProfessionId] = useState('');
   const [selectedRealms, setSelectedRealms] = useState<Realm[]>([]);
 
+  const [raceEverymanChoiceRows, setRaceEverymanChoiceRows] = useState<SkillChoiceRow[][]>([]);
+  const [cultureTypeCategorySkillRankRows, setCultureTypeCategorySkillRankRows] = useState<SkillChoiceRow[]>([]);
+  const [professionSkillDevelopmentChoiceRows, setProfessionSkillDevelopmentChoiceRows] = useState<SkillChoiceRow[][]>([]);
+  const [professionCategoryDevelopmentChoiceRows, setProfessionCategoryDevelopmentChoiceRows] = useState<SkillChoiceRow[][]>([]);
+  const [professionGroupDevelopmentChoiceRows, setProfessionGroupDevelopmentChoiceRows] = useState<SkillChoiceRow[][]>([]);
+  const [professionBaseSpellListChoiceRows, setProfessionBaseSpellListChoiceRows] = useState<string[][]>([]);
+
   const [statRolls, setStatRolls] = useState<StatRoll[]>(() => createEmptyStatRolls());
   const [statRollsLocked, setStatRollsLocked] = useState(false);
   const [generatingStats, setGeneratingStats] = useState(false);
@@ -327,6 +351,7 @@ export default function CharacterCreationView() {
   const [tpSkillRankChoiceSelections, setTpSkillRankChoiceSelections] = useState<string[][]>([]);
   const [characterBuilder, setCharacterBuilder] = useState<CharacterBuilder>(() => createEmptyCharacterBuilder());
   const [savingPrimaryDefinition, setSavingPrimaryDefinition] = useState(false);
+  const [savingInitialChoices, setSavingInitialChoices] = useState(false);
   const [savingStats, setSavingStats] = useState(false);
   const [savingHobbyChoices, setSavingHobbyChoices] = useState(false);
   const [savingBackgroundChoices, setSavingBackgroundChoices] = useState(false);
@@ -376,6 +401,11 @@ export default function CharacterCreationView() {
     [cultures, cultureId],
   );
 
+  const cultureType = useMemo(
+    () => cultureTypes.find((x) => x.id === cultureTypeId),
+    [cultureTypes, cultureTypeId],
+  );
+
   const availableCultures = useMemo(
     () => cultures.filter((x) => x.cultureType === cultureTypeId),
     [cultures, cultureTypeId],
@@ -392,10 +422,126 @@ export default function CharacterCreationView() {
     return map;
   }, [skills]);
 
-  const mandatoryHobbySubcategorySkillIds = useMemo(
+  const mandatorySubcategorySkillIds = useMemo(
     () => new Set(skills.filter((s) => s.mandatorySubcategory).map((s) => s.id)),
     [skills],
   );
+
+  const skillIdsByCategory = useMemo(() => {
+    const map = new Map<string, Skill[]>();
+    for (const s of skills) {
+      const existing = map.get(s.category) ?? [];
+      existing.push(s);
+      map.set(s.category, existing);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return map;
+  }, [skills]);
+
+  const categoryIdsByGroup = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const category of categories) {
+      const existing = map.get(category.group) ?? [];
+      existing.push(category.id);
+      map.set(category.group, existing);
+    }
+    return map;
+  }, [categories]);
+
+  const raceEverymanChoiceDefinitions = useMemo(
+    () => race?.skillCategoryChoicesEveryman ?? [],
+    [race],
+  );
+
+  const cultureTypeCategorySkillRankDefinitions = useMemo(
+    () => cultureType?.skillCategorySkillRanks ?? [],
+    [cultureType],
+  );
+
+  const professionSkillDevelopmentChoiceDefinitions = useMemo(
+    () => profession?.skillDevelopmentTypeChoices ?? [],
+    [profession],
+  );
+
+  const professionCategoryDevelopmentChoiceDefinitions = useMemo(
+    () => profession?.skillCategorySkillDevelopmentTypeChoices ?? [],
+    [profession],
+  );
+
+  const professionGroupDevelopmentChoiceDefinitions = useMemo(
+    () => profession?.skillGroupSkillDevelopmentTypeChoices ?? [],
+    [profession],
+  );
+
+  const professionBaseSpellListChoiceDefinitions = useMemo(
+    () => (profession?.baseSpellListChoices ?? []).filter((choice) => choice.numChoices < choice.options.length),
+    [profession],
+  );
+
+  const fixedProfessionBaseSpellLists = useMemo(
+    () => (profession?.baseSpellListChoices ?? [])
+      .filter((choice) => choice.numChoices >= choice.options.length)
+      .flatMap((choice) => choice.options.slice(0, choice.numChoices)),
+    [profession],
+  );
+
+  const raceEverymanSkillOptions = useMemo(() => {
+    return raceEverymanChoiceDefinitions.map((choice) => {
+      const categorySet = new Set(choice.options);
+      const rows = skills
+        .filter((s) => categorySet.has(s.category))
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name));
+      return rows.map((s) => ({ value: s.id, label: s.name }));
+    });
+  }, [raceEverymanChoiceDefinitions, skills]);
+
+  const cultureTypeCategorySkillOptions = useMemo(() => {
+    return cultureTypeCategorySkillRankDefinitions.map((choice) => {
+      const rows = skillIdsByCategory.get(choice.id) ?? [];
+      return rows.map((s) => ({ value: s.id, label: s.name }));
+    });
+  }, [cultureTypeCategorySkillRankDefinitions, skillIdsByCategory]);
+
+  const professionSkillDevelopmentOptions = useMemo(() => {
+    return professionSkillDevelopmentChoiceDefinitions.map((choice) => {
+      const ids = new Set(choice.options.map((option) => option.id));
+      return skills
+        .filter((s) => ids.has(s.id))
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((s) => ({ value: s.id, label: s.name }));
+    });
+  }, [professionSkillDevelopmentChoiceDefinitions, skills]);
+
+  const professionCategoryDevelopmentOptions = useMemo(() => {
+    return professionCategoryDevelopmentChoiceDefinitions.map((choice) => {
+      const categorySet = new Set(choice.options);
+      return skills
+        .filter((s) => categorySet.has(s.category))
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((s) => ({ value: s.id, label: s.name }));
+    });
+  }, [professionCategoryDevelopmentChoiceDefinitions, skills]);
+
+  const professionGroupDevelopmentOptions = useMemo(() => {
+    return professionGroupDevelopmentChoiceDefinitions.map((choice) => {
+      const categorySet = new Set<string>();
+      for (const groupId of choice.options) {
+        for (const categoryId of categoryIdsByGroup.get(groupId) ?? []) {
+          categorySet.add(categoryId);
+        }
+      }
+      return skills
+        .filter((s) => categorySet.has(s.category))
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((s) => ({ value: s.id, label: s.name }));
+    });
+  }, [professionGroupDevelopmentChoiceDefinitions, categoryIdsByGroup, skills]);
 
   const categoryNameById = useMemo(() => {
     const groupNameById = new Map<string, string>();
@@ -678,6 +824,75 @@ export default function CharacterCreationView() {
   }, [selectedTrainingPackage]);
 
   useEffect(() => {
+    setRaceEverymanChoiceRows((prev) => raceEverymanChoiceDefinitions.map((choice, i) => {
+      const existing = prev[i] ?? [];
+      return Array.from({ length: choice.numChoices }, (_, slot) => {
+        const current = existing[slot];
+        return {
+          id: current?.id ?? '',
+          subcategory: current?.subcategory ?? '',
+        };
+      });
+    }));
+  }, [raceEverymanChoiceDefinitions]);
+
+  useEffect(() => {
+    setCultureTypeCategorySkillRankRows((prev) => cultureTypeCategorySkillRankDefinitions.map((_, i) => {
+      const current = prev[i];
+      return {
+        id: current?.id ?? '',
+        subcategory: current?.subcategory ?? '',
+      };
+    }));
+  }, [cultureTypeCategorySkillRankDefinitions]);
+
+  useEffect(() => {
+    setProfessionSkillDevelopmentChoiceRows((prev) => professionSkillDevelopmentChoiceDefinitions.map((choice, i) => {
+      const existing = prev[i] ?? [];
+      return Array.from({ length: choice.numChoices }, (_, slot) => {
+        const current = existing[slot];
+        return {
+          id: current?.id ?? '',
+          subcategory: current?.subcategory ?? '',
+        };
+      });
+    }));
+  }, [professionSkillDevelopmentChoiceDefinitions]);
+
+  useEffect(() => {
+    setProfessionCategoryDevelopmentChoiceRows((prev) => professionCategoryDevelopmentChoiceDefinitions.map((choice, i) => {
+      const existing = prev[i] ?? [];
+      return Array.from({ length: choice.numChoices }, (_, slot) => {
+        const current = existing[slot];
+        return {
+          id: current?.id ?? '',
+          subcategory: current?.subcategory ?? '',
+        };
+      });
+    }));
+  }, [professionCategoryDevelopmentChoiceDefinitions]);
+
+  useEffect(() => {
+    setProfessionGroupDevelopmentChoiceRows((prev) => professionGroupDevelopmentChoiceDefinitions.map((choice, i) => {
+      const existing = prev[i] ?? [];
+      return Array.from({ length: choice.numChoices }, (_, slot) => {
+        const current = existing[slot];
+        return {
+          id: current?.id ?? '',
+          subcategory: current?.subcategory ?? '',
+        };
+      });
+    }));
+  }, [professionGroupDevelopmentChoiceDefinitions]);
+
+  useEffect(() => {
+    setProfessionBaseSpellListChoiceRows((prev) => professionBaseSpellListChoiceDefinitions.map((choice, i) => {
+      const existing = prev[i] ?? [];
+      return Array.from({ length: choice.numChoices }, (_, slot) => existing[slot] ?? '');
+    }));
+  }, [professionBaseSpellListChoiceDefinitions]);
+
+  useEffect(() => {
     if (selectedBackgroundPoints <= backgroundBudget) return;
 
     const reset = createEmptyBackgroundOptionState();
@@ -764,10 +979,6 @@ export default function CharacterCreationView() {
     if (!profession) {
       setCharacterBuilder((prev) => ({
         ...prev,
-        baseSpellListChoices: [],
-        profSkillDevelopmentTypeChoices: [],
-        profCategoryDevelopmentTypeChoices: [],
-        profGroupDevelopmentTypeChoices: [],
         skillDevelopmentTypes: [],
         categorySpecialBonuses: [],
         categoryDevelopmentTypes: [],
@@ -777,35 +988,8 @@ export default function CharacterCreationView() {
       return;
     }
 
-    const defaultBaseSpellListChoices = uniqStrings(
-      profession.baseSpellListChoices.flatMap((choice) => choice.options.slice(0, choice.numChoices)),
-    );
-
-    const defaultSkillDevelopmentChoices = profession.skillDevelopmentTypeChoices
-      .flatMap((choice) => choice.options.slice(0, choice.numChoices).map((option) => ({
-        id: option.id,
-        subcategory: option.subcategory,
-        value: choice.type,
-      })));
-
-    const defaultCategoryDevelopmentChoices = profession.skillCategorySkillDevelopmentTypeChoices
-      .flatMap((choice) => choice.options.slice(0, choice.numChoices).map((id) => ({
-        id,
-        value: choice.type,
-      })));
-
-    const defaultGroupDevelopmentChoices = profession.skillGroupSkillDevelopmentTypeChoices
-      .flatMap((choice) => choice.options.slice(0, choice.numChoices).map((id) => ({
-        id,
-        value: choice.type,
-      })));
-
     setCharacterBuilder((prev) => ({
       ...prev,
-      baseSpellListChoices: defaultBaseSpellListChoices,
-      profSkillDevelopmentTypeChoices: defaultSkillDevelopmentChoices,
-      profCategoryDevelopmentTypeChoices: defaultCategoryDevelopmentChoices,
-      profGroupDevelopmentTypeChoices: defaultGroupDevelopmentChoices,
       skillDevelopmentTypes: profession.skillDevelopmentTypes.map((item) => ({
         id: item.id,
         subcategory: item.subcategory,
@@ -829,6 +1013,90 @@ export default function CharacterCreationView() {
       })),
     }));
   }, [profession]);
+
+  useEffect(() => {
+    const raceCategoryEverymanChoices = raceEverymanChoiceRows
+      .flatMap((rows) => rows)
+      .filter((row) => row.id)
+      .map((row) => ({
+        id: row.id,
+        subcategory: row.subcategory.trim() || undefined,
+      }));
+
+    const cultureTypeCategorySkillRanks = cultureTypeCategorySkillRankDefinitions
+      .flatMap((def, index) => {
+        const row = cultureTypeCategorySkillRankRows[index];
+        if (!row?.id) return [];
+        return [{
+          id: row.id,
+          subcategory: row.subcategory.trim() || undefined,
+          value: def.value,
+        }];
+      });
+
+    const profSkillDevelopmentTypeChoices = professionSkillDevelopmentChoiceDefinitions
+      .flatMap((def, index) => {
+        const rows = professionSkillDevelopmentChoiceRows[index] ?? [];
+        return rows
+          .filter((row) => row.id)
+          .map((row) => ({
+            id: row.id,
+            subcategory: row.subcategory.trim() || undefined,
+            value: def.type,
+          }));
+      });
+
+    const profCategoryDevelopmentTypeChoices = professionCategoryDevelopmentChoiceDefinitions
+      .flatMap((def, index) => {
+        const rows = professionCategoryDevelopmentChoiceRows[index] ?? [];
+        return rows
+          .filter((row) => row.id)
+          .map((row) => ({
+            id: row.id,
+            subcategory: row.subcategory.trim() || undefined,
+            value: def.type,
+          }));
+      });
+
+    const profGroupDevelopmentTypeChoices = professionGroupDevelopmentChoiceDefinitions
+      .flatMap((def, index) => {
+        const rows = professionGroupDevelopmentChoiceRows[index] ?? [];
+        return rows
+          .filter((row) => row.id)
+          .map((row) => ({
+            id: row.id,
+            subcategory: row.subcategory.trim() || undefined,
+            value: def.type,
+          }));
+      });
+
+    const baseSpellListChoices = uniqStrings([
+      ...fixedProfessionBaseSpellLists,
+      ...professionBaseSpellListChoiceRows.flatMap((rows) => rows.filter(Boolean)),
+    ]);
+
+    setCharacterBuilder((prev) => ({
+      ...prev,
+      raceCategoryEverymanChoices,
+      cultureTypeCategorySkillRanks,
+      profSkillDevelopmentTypeChoices,
+      profCategoryDevelopmentTypeChoices,
+      profGroupDevelopmentTypeChoices,
+      baseSpellListChoices,
+    }));
+  }, [
+    raceEverymanChoiceRows,
+    cultureTypeCategorySkillRankDefinitions,
+    cultureTypeCategorySkillRankRows,
+    professionSkillDevelopmentChoiceDefinitions,
+    professionSkillDevelopmentChoiceRows,
+    professionCategoryDevelopmentChoiceDefinitions,
+    professionCategoryDevelopmentChoiceRows,
+    professionGroupDevelopmentChoiceDefinitions,
+    professionGroupDevelopmentChoiceRows,
+    professionBaseSpellListChoiceRows,
+    fixedProfessionBaseSpellLists,
+  ]);
 
   useEffect(() => {
     const mappedBackgroundLanguages = backgroundState.extraLanguages
@@ -939,6 +1207,141 @@ export default function CharacterCreationView() {
     return undefined;
   };
 
+  const validateInitialChoices = (): string | undefined => {
+    for (let choiceIndex = 0; choiceIndex < raceEverymanChoiceDefinitions.length; choiceIndex++) {
+      const choice = raceEverymanChoiceDefinitions[choiceIndex];
+      const rows = raceEverymanChoiceRows[choiceIndex] ?? [];
+      if (!choice) continue;
+      for (let slot = 0; slot < choice.numChoices; slot++) {
+        const row = rows[slot];
+        if (!row?.id) {
+          return `Racial Everyman Skills choice ${choiceIndex + 1}: select a skill for slot ${slot + 1}.`;
+        }
+        if (mandatorySubcategorySkillIds.has(row.id) && !row.subcategory.trim()) {
+          const skillName = skillNameById.get(row.id) ?? row.id;
+          return `Racial Everyman Skills choice ${choiceIndex + 1}: enter subcategory for ${skillName}.`;
+        }
+      }
+    }
+
+    for (let i = 0; i < cultureTypeCategorySkillRankDefinitions.length; i++) {
+      const def = cultureTypeCategorySkillRankDefinitions[i];
+      const row = cultureTypeCategorySkillRankRows[i];
+      if (!def) continue;
+      if (!row?.id) {
+        const categoryLabel = categoryNameById.get(def.id) ?? def.id;
+        return `Skill Category Skill Ranks: select a skill for ${categoryLabel}.`;
+      }
+      if (mandatorySubcategorySkillIds.has(row.id) && !row.subcategory.trim()) {
+        const skillName = skillNameById.get(row.id) ?? row.id;
+        return `Skill Category Skill Ranks: enter subcategory for ${skillName}.`;
+      }
+    }
+
+    for (let choiceIndex = 0; choiceIndex < professionSkillDevelopmentChoiceDefinitions.length; choiceIndex++) {
+      const choice = professionSkillDevelopmentChoiceDefinitions[choiceIndex];
+      if (!choice) continue;
+      const rows = professionSkillDevelopmentChoiceRows[choiceIndex] ?? [];
+      const selectedKeys = new Set<string>();
+      for (let slot = 0; slot < choice.numChoices; slot++) {
+        const row = rows[slot];
+        if (!row?.id) {
+          return `Profession Skill Development Types choice ${choiceIndex + 1}: select a skill for slot ${slot + 1}.`;
+        }
+        const isMandatorySubcategory = mandatorySubcategorySkillIds.has(row.id);
+        const subcategory = row.subcategory.trim();
+        if (isMandatorySubcategory && !subcategory) {
+          const skillName = skillNameById.get(row.id) ?? row.id;
+          return `Profession Skill Development Types choice ${choiceIndex + 1}: enter subcategory for ${skillName}.`;
+        }
+
+        const key = `${row.id}::${subcategory.toLowerCase()}`;
+        if (selectedKeys.has(key)) {
+          const skillName = skillNameById.get(row.id) ?? row.id;
+          return subcategory
+            ? `Profession Skill Development Types choice ${choiceIndex + 1}: ${skillName} with subcategory '${subcategory}' is duplicated.`
+            : `Profession Skill Development Types choice ${choiceIndex + 1}: ${skillName} is duplicated.`;
+        }
+        selectedKeys.add(key);
+      }
+    }
+
+    for (let choiceIndex = 0; choiceIndex < professionCategoryDevelopmentChoiceDefinitions.length; choiceIndex++) {
+      const choice = professionCategoryDevelopmentChoiceDefinitions[choiceIndex];
+      if (!choice) continue;
+      const rows = professionCategoryDevelopmentChoiceRows[choiceIndex] ?? [];
+      const selectedKeys = new Set<string>();
+      for (let slot = 0; slot < choice.numChoices; slot++) {
+        const row = rows[slot];
+        if (!row?.id) {
+          return `Profession Category Skill Development Types choice ${choiceIndex + 1}: select a skill for slot ${slot + 1}.`;
+        }
+        const isMandatorySubcategory = mandatorySubcategorySkillIds.has(row.id);
+        const subcategory = row.subcategory.trim();
+        if (isMandatorySubcategory && !subcategory) {
+          const skillName = skillNameById.get(row.id) ?? row.id;
+          return `Profession Category Skill Development Types choice ${choiceIndex + 1}: enter subcategory for ${skillName}.`;
+        }
+
+        const key = `${row.id}::${subcategory.toLowerCase()}`;
+        if (selectedKeys.has(key)) {
+          const skillName = skillNameById.get(row.id) ?? row.id;
+          return `Profession Category Skill Development Types choice ${choiceIndex + 1}: ${skillName} with subcategory '${subcategory}' is duplicated.`;
+        }
+        selectedKeys.add(key);
+      }
+    }
+
+    for (let choiceIndex = 0; choiceIndex < professionGroupDevelopmentChoiceDefinitions.length; choiceIndex++) {
+      const choice = professionGroupDevelopmentChoiceDefinitions[choiceIndex];
+      if (!choice) continue;
+      const rows = professionGroupDevelopmentChoiceRows[choiceIndex] ?? [];
+      const selectedKeys = new Set<string>();
+      for (let slot = 0; slot < choice.numChoices; slot++) {
+        const row = rows[slot];
+        if (!row?.id) {
+          return `Profession Group Skill Development Types choice ${choiceIndex + 1}: select a skill for slot ${slot + 1}.`;
+        }
+        const isMandatorySubcategory = mandatorySubcategorySkillIds.has(row.id);
+        const subcategory = row.subcategory.trim();
+        if (isMandatorySubcategory && !subcategory) {
+          const skillName = skillNameById.get(row.id) ?? row.id;
+          return `Profession Group Skill Development Types choice ${choiceIndex + 1}: enter subcategory for ${skillName}.`;
+        }
+
+        const key = `${row.id}::${subcategory.toLowerCase()}`;
+        if (selectedKeys.has(key)) {
+          const skillName = skillNameById.get(row.id) ?? row.id;
+          return subcategory
+            ? `Profession Group Skill Development Types choice ${choiceIndex + 1}: ${skillName} with subcategory '${subcategory}' is duplicated.`
+            : `Profession Group Skill Development Types choice ${choiceIndex + 1}: ${skillName} is duplicated.`;
+        }
+        selectedKeys.add(key);
+      }
+    }
+
+    const selectedSpellListIds = new Set<string>();
+    for (let choiceIndex = 0; choiceIndex < professionBaseSpellListChoiceDefinitions.length; choiceIndex++) {
+      const choice = professionBaseSpellListChoiceDefinitions[choiceIndex];
+      if (!choice) continue;
+
+      const rows = professionBaseSpellListChoiceRows[choiceIndex] ?? [];
+      for (let slot = 0; slot < choice.numChoices; slot++) {
+        const spellListId = rows[slot] ?? '';
+        if (!spellListId) {
+          return `Profession Base Spell Lists choice ${choiceIndex + 1}: select spell list for slot ${slot + 1}.`;
+        }
+        if (selectedSpellListIds.has(spellListId)) {
+          const spellListName = spellListNameById.get(spellListId) ?? spellListId;
+          return `Profession Base Spell Lists: ${spellListName} can only be selected once.`;
+        }
+        selectedSpellListIds.add(spellListId);
+      }
+    }
+
+    return undefined;
+  };
+
   const validateStats = (): string | undefined => {
     if (!statRollsLocked) {
       return 'Get potentials before assigning rolls to stats.';
@@ -999,7 +1402,7 @@ export default function CharacterCreationView() {
     }
 
     const missingMandatorySubcategory = hobbySkillRows.find((row) => (
-      mandatoryHobbySubcategorySkillIds.has(row.id)
+      mandatorySubcategorySkillIds.has(row.id)
       && row.value > row.base
       && !row.subcategory?.trim()
     ));
@@ -1053,6 +1456,7 @@ export default function CharacterCreationView() {
   const recomputeErrors = () => {
     const next: StepErrors = {
       primary: validateInitial(),
+      initial: validateInitialChoices(),
       stats: validateStats(),
       hobby: validateHobby(),
       background: validateBackground(),
@@ -1071,6 +1475,22 @@ export default function CharacterCreationView() {
     cultureId,
     professionId,
     selectedRealms,
+    raceEverymanChoiceRows,
+    cultureTypeCategorySkillRankRows,
+    professionSkillDevelopmentChoiceRows,
+    professionCategoryDevelopmentChoiceRows,
+    professionGroupDevelopmentChoiceRows,
+    professionBaseSpellListChoiceRows,
+    raceEverymanChoiceDefinitions,
+    cultureTypeCategorySkillRankDefinitions,
+    professionSkillDevelopmentChoiceDefinitions,
+    professionCategoryDevelopmentChoiceDefinitions,
+    professionGroupDevelopmentChoiceDefinitions,
+    professionBaseSpellListChoiceDefinitions,
+    mandatorySubcategorySkillIds,
+    skillNameById,
+    categoryNameById,
+    spellListNameById,
     statRolls,
     statRollsLocked,
     hobbyRankSpent,
@@ -1088,8 +1508,6 @@ export default function CharacterCreationView() {
     trainingPackageId,
     tpStatGainChoices,
     tpSkillRankChoiceSelections,
-    mandatoryHobbySubcategorySkillIds,
-    skillNameById,
   ]);
 
   const canGoNext = (() => {
@@ -1171,6 +1589,32 @@ export default function CharacterCreationView() {
         return;
       } finally {
         setSavingPrimaryDefinition(false);
+      }
+    }
+
+    if (step === 'initial') {
+      if (!characterBuilder.id) {
+        toast({
+          variant: 'danger',
+          title: 'Save initial choices failed',
+          description: 'Character builder id is missing. Complete primary definition first.',
+        });
+        return;
+      }
+
+      setSavingInitialChoices(true);
+      try {
+        const response = await setCharacterPrimaryChoices(characterBuilder);
+        setCharacterBuilder(response);
+      } catch (e) {
+        toast({
+          variant: 'danger',
+          title: 'Save initial choices failed',
+          description: String(e instanceof Error ? e.message : e),
+        });
+        return;
+      } finally {
+        setSavingInitialChoices(false);
       }
     }
 
@@ -1473,6 +1917,49 @@ export default function CharacterCreationView() {
     return [...selected, value];
   };
 
+  const updateGroupedSkillChoiceRow = (
+    setter: Dispatch<SetStateAction<SkillChoiceRow[][]>>,
+    groupIndex: number,
+    rowIndex: number,
+    patch: Partial<SkillChoiceRow>,
+  ) => {
+    setter((prev) => prev.map((group, gIdx) => {
+      if (gIdx !== groupIndex) return group;
+      return group.map((row, rIdx) => {
+        if (rIdx !== rowIndex) return row;
+        return {
+          ...row,
+          ...patch,
+        };
+      });
+    }));
+  };
+
+  const updateFlatSkillChoiceRow = (
+    setter: Dispatch<SetStateAction<SkillChoiceRow[]>>,
+    rowIndex: number,
+    patch: Partial<SkillChoiceRow>,
+  ) => {
+    setter((prev) => prev.map((row, idx) => {
+      if (idx !== rowIndex) return row;
+      return {
+        ...row,
+        ...patch,
+      };
+    }));
+  };
+
+  const updateBaseSpellListChoiceRow = (
+    groupIndex: number,
+    rowIndex: number,
+    value: string,
+  ) => {
+    setProfessionBaseSpellListChoiceRows((prev) => prev.map((group, gIdx) => {
+      if (gIdx !== groupIndex) return group;
+      return group.map((existing, rIdx) => (rIdx === rowIndex ? value : existing));
+    }));
+  };
+
   const canSpendBackgroundPoints = (cost: number): boolean => selectedBackgroundPoints + cost <= backgroundBudget;
 
   const backgroundActions = {
@@ -1589,6 +2076,12 @@ export default function CharacterCreationView() {
     setCultureId('');
     setProfessionId('');
     setSelectedRealms([]);
+    setRaceEverymanChoiceRows([]);
+    setCultureTypeCategorySkillRankRows([]);
+    setProfessionSkillDevelopmentChoiceRows([]);
+    setProfessionCategoryDevelopmentChoiceRows([]);
+    setProfessionGroupDevelopmentChoiceRows([]);
+    setProfessionBaseSpellListChoiceRows([]);
     setStatRolls(createEmptyStatRolls());
     setStatRollsLocked(false);
     setHobbyRanksBudget(0);
@@ -1725,21 +2218,23 @@ export default function CharacterCreationView() {
 
         {/* Form panels for each step. Only the active step is interactable, but previous steps are shown for context. */}
         <div className="form-container">
-          {(generatingStats || applying || savingPrimaryDefinition || savingStats || savingHobbyChoices || savingBackgroundChoices) && (
+          {(generatingStats || applying || savingPrimaryDefinition || savingInitialChoices || savingStats || savingHobbyChoices || savingBackgroundChoices) && (
             <div className="overlay">
               <Spinner size={24} />
               <span>
                 {savingPrimaryDefinition
                   ? 'Saving primary definition…'
-                  : savingStats
-                    ? 'Saving stats…'
-                    : savingHobbyChoices
-                      ? 'Saving hobby choices…'
-                      : savingBackgroundChoices
-                        ? 'Saving background choices…'
-                        : applying
-                          ? 'Applying level upgrade…'
-                          : 'Generating stats…'}
+                  : savingInitialChoices
+                    ? 'Saving initial choices…'
+                    : savingStats
+                      ? 'Saving stats…'
+                      : savingHobbyChoices
+                        ? 'Saving hobby choices…'
+                        : savingBackgroundChoices
+                          ? 'Saving background choices…'
+                          : applying
+                            ? 'Applying level upgrade…'
+                            : 'Generating stats…'}
               </span>
             </div>
           )}
@@ -1847,6 +2342,273 @@ export default function CharacterCreationView() {
             </section>
           )}
 
+          {step === 'initial' && (
+            <section style={{ display: 'grid', gap: 12 }}>
+              {raceEverymanChoiceDefinitions.length > 0 && (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <h4 style={{ margin: 0 }}>Racial Everyman Skills</h4>
+                  {raceEverymanChoiceDefinitions.map((choice, choiceIndex) => {
+                    const optionList = raceEverymanSkillOptions[choiceIndex] ?? [];
+                    const rows = raceEverymanChoiceRows[choiceIndex] ?? [];
+                    return (
+                      <div key={`race-everyman-${choiceIndex}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
+                        <div style={{ color: 'var(--muted)' }}>
+                          Choice #{choiceIndex + 1}: select {choice.numChoices} skill{choice.numChoices === 1 ? '' : 's'}.
+                        </div>
+                        {rows.map((row, rowIndex) => (
+                          <div key={`race-everyman-${choiceIndex}-${rowIndex}`} style={{ display: 'grid', gap: 6, gridTemplateColumns: 'minmax(260px, 1fr) minmax(220px, 1fr)' }}>
+                            <LabeledSelect
+                              label={`Skill ${rowIndex + 1}`}
+                              value={row.id}
+                              onChange={(value) => updateGroupedSkillChoiceRow(setRaceEverymanChoiceRows, choiceIndex, rowIndex, {
+                                id: value,
+                                subcategory: '',
+                              })}
+                              options={optionList}
+                              placeholderOption="— Select skill —"
+                            />
+                            {row.id && mandatorySubcategorySkillIds.has(row.id) ? (
+                              <LabeledInput
+                                label="Subcategory"
+                                value={row.subcategory}
+                                onChange={(value) => updateGroupedSkillChoiceRow(setRaceEverymanChoiceRows, choiceIndex, rowIndex, {
+                                  subcategory: value,
+                                })}
+                                placeholder="Enter subcategory"
+                                error={errors.initial && !row.subcategory.trim() ? 'Required' : undefined}
+                              />
+                            ) : (
+                              <div />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {cultureTypeCategorySkillRankDefinitions.length > 0 && (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <h4 style={{ margin: 0 }}>Skill Category Skill Ranks</h4>
+                  {cultureTypeCategorySkillRankDefinitions.map((def, index) => {
+                    const row = cultureTypeCategorySkillRankRows[index] ?? createEmptySkillChoiceRow();
+                    const optionList = cultureTypeCategorySkillOptions[index] ?? [];
+                    return (
+                      <div key={`culture-type-rank-${def.id}-${index}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
+                        <div style={{ color: 'var(--muted)' }}>
+                          {categoryNameById.get(def.id) ?? def.id}: select one skill to gain {def.value} rank{def.value === 1 ? '' : 's'}.
+                        </div>
+                        <div style={{ display: 'grid', gap: 6, gridTemplateColumns: 'minmax(260px, 1fr) minmax(220px, 1fr)' }}>
+                          <LabeledSelect
+                            label="Skill"
+                            value={row.id}
+                            onChange={(value) => updateFlatSkillChoiceRow(setCultureTypeCategorySkillRankRows, index, {
+                              id: value,
+                              subcategory: '',
+                            })}
+                            options={optionList}
+                            placeholderOption="— Select skill —"
+                          />
+                          {row.id && mandatorySubcategorySkillIds.has(row.id) ? (
+                            <LabeledInput
+                              label="Subcategory"
+                              value={row.subcategory}
+                              onChange={(value) => updateFlatSkillChoiceRow(setCultureTypeCategorySkillRankRows, index, {
+                                subcategory: value,
+                              })}
+                              placeholder="Enter subcategory"
+                              error={errors.initial && !row.subcategory.trim() ? 'Required' : undefined}
+                            />
+                          ) : (
+                            <div />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {professionSkillDevelopmentChoiceDefinitions.length > 0 && (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <h4 style={{ margin: 0 }}>Profession Skill Development Types</h4>
+                  {professionSkillDevelopmentChoiceDefinitions.map((choice, choiceIndex) => {
+                    const rows = professionSkillDevelopmentChoiceRows[choiceIndex] ?? [];
+                    const optionList = professionSkillDevelopmentOptions[choiceIndex] ?? [];
+                    return (
+                      <div key={`prof-skill-dev-${choiceIndex}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
+                        <div style={{ color: 'var(--muted)' }}>
+                          Choice #{choiceIndex + 1}: select exactly {choice.numChoices} skill{choice.numChoices === 1 ? '' : 's'} for {choice.type}.
+                        </div>
+                        {rows.map((row, rowIndex) => (
+                          <div key={`prof-skill-dev-${choiceIndex}-${rowIndex}`} style={{ display: 'grid', gap: 6, gridTemplateColumns: 'minmax(260px, 1fr) minmax(220px, 1fr)' }}>
+                            <LabeledSelect
+                              label={`Skill ${rowIndex + 1}`}
+                              value={row.id}
+                              onChange={(value) => updateGroupedSkillChoiceRow(setProfessionSkillDevelopmentChoiceRows, choiceIndex, rowIndex, {
+                                id: value,
+                                subcategory: '',
+                              })}
+                              options={optionList}
+                              placeholderOption="— Select skill —"
+                            />
+                            {row.id && mandatorySubcategorySkillIds.has(row.id) ? (
+                              <LabeledInput
+                                label="Subcategory"
+                                value={row.subcategory}
+                                onChange={(value) => updateGroupedSkillChoiceRow(setProfessionSkillDevelopmentChoiceRows, choiceIndex, rowIndex, {
+                                  subcategory: value,
+                                })}
+                                placeholder="Enter subcategory"
+                                error={errors.initial && !row.subcategory.trim() ? 'Required' : undefined}
+                              />
+                            ) : (
+                              <div />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {professionCategoryDevelopmentChoiceDefinitions.length > 0 && (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <h4 style={{ margin: 0 }}>Profession Category Skill Development Types</h4>
+                  {professionCategoryDevelopmentChoiceDefinitions.map((choice, choiceIndex) => {
+                    const rows = professionCategoryDevelopmentChoiceRows[choiceIndex] ?? [];
+                    const optionList = professionCategoryDevelopmentOptions[choiceIndex] ?? [];
+                    return (
+                      <div key={`prof-category-dev-${choiceIndex}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
+                        <div style={{ color: 'var(--muted)' }}>
+                          Choice #{choiceIndex + 1}: select exactly {choice.numChoices} skill{choice.numChoices === 1 ? '' : 's'} for {choice.type}.
+                        </div>
+                        {rows.map((row, rowIndex) => (
+                          <div key={`prof-category-dev-${choiceIndex}-${rowIndex}`} style={{ display: 'grid', gap: 6, gridTemplateColumns: 'minmax(260px, 1fr) minmax(220px, 1fr)' }}>
+                            <LabeledSelect
+                              label={`Skill ${rowIndex + 1}`}
+                              value={row.id}
+                              onChange={(value) => updateGroupedSkillChoiceRow(setProfessionCategoryDevelopmentChoiceRows, choiceIndex, rowIndex, {
+                                id: value,
+                                subcategory: '',
+                              })}
+                              options={optionList}
+                              placeholderOption="— Select skill —"
+                            />
+                            {row.id && mandatorySubcategorySkillIds.has(row.id) ? (
+                              <LabeledInput
+                                label="Subcategory"
+                                value={row.subcategory}
+                                onChange={(value) => updateGroupedSkillChoiceRow(setProfessionCategoryDevelopmentChoiceRows, choiceIndex, rowIndex, {
+                                  subcategory: value,
+                                })}
+                                placeholder="Enter subcategory"
+                                error={errors.initial && !row.subcategory.trim() ? 'Required' : undefined}
+                              />
+                            ) : (
+                              <div />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {professionGroupDevelopmentChoiceDefinitions.length > 0 && (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <h4 style={{ margin: 0 }}>Profession Group Skill Development Types</h4>
+                  {professionGroupDevelopmentChoiceDefinitions.map((choice, choiceIndex) => {
+                    const rows = professionGroupDevelopmentChoiceRows[choiceIndex] ?? [];
+                    const optionList = professionGroupDevelopmentOptions[choiceIndex] ?? [];
+                    return (
+                      <div key={`prof-group-dev-${choiceIndex}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
+                        <div style={{ color: 'var(--muted)' }}>
+                          Choice #{choiceIndex + 1}: select exactly {choice.numChoices} skill{choice.numChoices === 1 ? '' : 's'} for {choice.type}.
+                        </div>
+                        {rows.map((row, rowIndex) => (
+                          <div key={`prof-group-dev-${choiceIndex}-${rowIndex}`} style={{ display: 'grid', gap: 6, gridTemplateColumns: 'minmax(260px, 1fr) minmax(220px, 1fr)' }}>
+                            <LabeledSelect
+                              label={`Skill ${rowIndex + 1}`}
+                              value={row.id}
+                              onChange={(value) => updateGroupedSkillChoiceRow(setProfessionGroupDevelopmentChoiceRows, choiceIndex, rowIndex, {
+                                id: value,
+                                subcategory: '',
+                              })}
+                              options={optionList}
+                              placeholderOption="— Select skill —"
+                            />
+                            {row.id && mandatorySubcategorySkillIds.has(row.id) ? (
+                              <LabeledInput
+                                label="Subcategory"
+                                value={row.subcategory}
+                                onChange={(value) => updateGroupedSkillChoiceRow(setProfessionGroupDevelopmentChoiceRows, choiceIndex, rowIndex, {
+                                  subcategory: value,
+                                })}
+                                placeholder="Enter subcategory"
+                                error={errors.initial && !row.subcategory.trim() ? 'Required' : undefined}
+                              />
+                            ) : (
+                              <div />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {professionBaseSpellListChoiceDefinitions.length > 0 && (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <h4 style={{ margin: 0 }}>Profession Base Spell Lists</h4>
+                  {professionBaseSpellListChoiceDefinitions.map((choice, choiceIndex) => {
+                    const rows = professionBaseSpellListChoiceRows[choiceIndex] ?? [];
+                    const options = choice.options
+                      .map((id) => ({ value: id, label: spellListNameById.get(id) ?? id }))
+                      .sort((a, b) => a.label.localeCompare(b.label));
+                    return (
+                      <div key={`prof-base-spell-${choiceIndex}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
+                        <div style={{ color: 'var(--muted)' }}>
+                          Choice #{choiceIndex + 1}: select exactly {choice.numChoices} spell list{choice.numChoices === 1 ? '' : 's'}.
+                        </div>
+                        {rows.map((spellListId, rowIndex) => (
+                          (() => {
+                            const selectedOtherIds = new Set(
+                              professionBaseSpellListChoiceRows
+                                .flatMap((group, groupIndex) => group
+                                  .map((value, index) => ({ value, groupIndex, index })),
+                                )
+                                .filter((entry) => !(entry.groupIndex === choiceIndex && entry.index === rowIndex))
+                                .map((entry) => entry.value)
+                                .filter(Boolean),
+                            );
+                            const availableOptions = options.filter((opt) => !selectedOtherIds.has(opt.value) || opt.value === spellListId);
+                            return (
+                              <LabeledSelect
+                                key={`prof-base-spell-${choiceIndex}-${rowIndex}`}
+                                label={`Spell List ${rowIndex + 1}`}
+                                value={spellListId}
+                                onChange={(value) => updateBaseSpellListChoiceRow(choiceIndex, rowIndex, value)}
+                                options={availableOptions}
+                                placeholderOption="— Select spell list —"
+                              />
+                            );
+                          })()
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {errors.initial && <div style={{ color: '#b00020' }}>{errors.initial}</div>}
+            </section>
+          )}
+
           {step === 'stats' && (
             <section style={{ display: 'grid', gap: 10 }}>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -1932,7 +2694,7 @@ export default function CharacterCreationView() {
                           {sortedHobbySkillRows.map(({ row, index, label }) => (
                             <div key={`hskill-${row.id}-${index}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
                               <strong style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={label}>{label}</strong>
-                              {mandatoryHobbySubcategorySkillIds.has(row.id) && (
+                              {mandatorySubcategorySkillIds.has(row.id) && (
                                 <LabeledInput
                                   label="Subcategory"
                                   hideLabel={true}
@@ -2411,7 +3173,7 @@ export default function CharacterCreationView() {
 
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" onClick={goPrev} disabled={step === 'primary'}>Back</button>
-            <button type="button" onClick={goNext} disabled={!canGoNext || step === 'apply' || savingPrimaryDefinition || savingStats || savingHobbyChoices || savingBackgroundChoices}>Next</button>
+            <button type="button" onClick={goNext} disabled={!canGoNext || step === 'apply' || savingPrimaryDefinition || savingInitialChoices || savingStats || savingHobbyChoices || savingBackgroundChoices}>Next</button>
           </div>
         </div>
       </div>
