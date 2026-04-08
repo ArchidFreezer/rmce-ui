@@ -47,6 +47,7 @@ export interface CharacterBuilder extends Named {
   profCategoryDevelopmentTypeChoices: SkillDevelopmentTypeValue[];
   profGroupDevelopmentTypeChoices: SkillDevelopmentTypeValue[];
   baseSpellListChoices: string[];
+  weaponCategoryCostChoices: CharacterBuilderCategoryCost[];
 
   /* Initial Stats */
   initialStats: CharacterBuilderStatValue[];
@@ -122,6 +123,7 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
     profCategoryDevelopmentTypeChoices: [],
     profGroupDevelopmentTypeChoices: [],
     baseSpellListChoices: [],
+    weaponCategoryCostChoices: [],
 
     /* Initial Stats */
     initialStats: [],
