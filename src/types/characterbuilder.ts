@@ -72,11 +72,6 @@ export interface CharacterBuilder extends Named {
   realmProgressions: CharacterBuilderRealmProgression[];
   stats: CharacterBuilderStatValue[];
 
-  everymanSkills: CharacterBuilderIdOptionalSubcategory[];
-  restrictedSkills: CharacterBuilderIdOptionalSubcategory[];
-  everymanSkillCategories: string[];
-  restrictedSkillCategories: string[];
-
   skillRanks: SkillValue[];
   skillProfessionalBonuses: SkillValue[];
   skillSpecialBonuses: SkillValue[];
@@ -85,12 +80,10 @@ export interface CharacterBuilder extends Named {
   categoryRanks: PersistentValue[];
   categoryProfessionalBonuses: PersistentValue[];
   categorySpecialBonuses: PersistentValue[];
-  categoryDevelopmentTypes: PersistentDevelopmentTypeValue[];
   categoryCosts: CharacterBuilderCategoryCost[];
 
   groupProfessionalBonuses: PersistentValue[];
   groupSpecialBonuses: PersistentValue[];
-  groupDevelopmentTypes: PersistentDevelopmentTypeValue[];
 
   spellListRanks: PersistentValue[];
 
@@ -148,11 +141,6 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
     realmProgressions: [],
     stats: [],
 
-    everymanSkills: [],
-    restrictedSkills: [],
-    everymanSkillCategories: [],
-    restrictedSkillCategories: [],
-
     skillRanks: [],
     skillProfessionalBonuses: [],
     skillSpecialBonuses: [],
@@ -161,12 +149,10 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
     categoryRanks: [],
     categoryProfessionalBonuses: [],
     categorySpecialBonuses: [],
-    categoryDevelopmentTypes: [],
     categoryCosts: [],
 
     groupProfessionalBonuses: [],
     groupSpecialBonuses: [],
-    groupDevelopmentTypes: [],
 
     spellListRanks: [],
     items: [],

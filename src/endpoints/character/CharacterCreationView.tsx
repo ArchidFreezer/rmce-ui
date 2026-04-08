@@ -1054,9 +1054,7 @@ export default function CharacterCreationView() {
         ...prev,
         skillDevelopmentTypes: [],
         categorySpecialBonuses: [],
-        categoryDevelopmentTypes: [],
         groupSpecialBonuses: [],
-        groupDevelopmentTypes: [],
       }));
       return;
     }
@@ -1072,15 +1070,7 @@ export default function CharacterCreationView() {
         id: item.id,
         value: item.value,
       })),
-      categoryDevelopmentTypes: profession.skillCategorySkillDevelopmentTypes.map((item) => ({
-        id: item.id,
-        value: item.value,
-      })),
       groupSpecialBonuses: profession.skillGroupSpecialBonuses.map((item) => ({
-        id: item.id,
-        value: item.value,
-      })),
-      groupDevelopmentTypes: profession.skillGroupSkillDevelopmentTypes.map((item) => ({
         id: item.id,
         value: item.value,
       })),
