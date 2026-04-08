@@ -65,7 +65,7 @@ const STEP_ORDER: CharacterStep[] = [
 ];
 
 const STEP_LABELS: Record<CharacterStep, string> = {
-  primary: '1. Primary Choices',
+  primary: '1. Primary Definition',
   stats: '2. Stat Generation',
   hobby: '3. Hobby Ranks',
   background: '4. Background Options',
@@ -1158,14 +1158,14 @@ export default function CharacterCreationView() {
         });
 
         if (!response.id) {
-          throw new Error('Primary choices response did not include a builder id.');
+          throw new Error('Primary definition response did not include a builder id.');
         }
 
         setCharacterBuilder(response);
       } catch (e) {
         toast({
           variant: 'danger',
-          title: 'Save primary choices failed',
+          title: 'Save primary definition failed',
           description: String(e instanceof Error ? e.message : e),
         });
         return;
@@ -1179,7 +1179,7 @@ export default function CharacterCreationView() {
         toast({
           variant: 'danger',
           title: 'Save stats failed',
-          description: 'Character builder id is missing. Complete primary choices first.',
+          description: 'Character builder id is missing. Complete primary definition first.',
         });
         return;
       }
@@ -1308,7 +1308,7 @@ export default function CharacterCreationView() {
         toast({
           variant: 'danger',
           title: 'Save hobby choices failed',
-          description: 'Character builder id is missing. Complete initial choices first.',
+          description: 'Character builder id is missing. Complete primary definition first.',
         });
         return;
       }
@@ -1365,7 +1365,7 @@ export default function CharacterCreationView() {
         toast({
           variant: 'danger',
           title: 'Save background choices failed',
-          description: 'Character builder id is missing. Complete initial choices first.',
+          description: 'Character builder id is missing. Complete primary definition first.',
         });
         return;
       }
@@ -1730,7 +1730,7 @@ export default function CharacterCreationView() {
               <Spinner size={24} />
               <span>
                 {savingPrimaryChoices
-                  ? 'Saving primary choices…'
+                  ? 'Saving primary definition…'
                   : savingStats
                     ? 'Saving stats…'
                     : savingHobbyChoices
