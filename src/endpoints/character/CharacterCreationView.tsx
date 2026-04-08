@@ -12,6 +12,7 @@ import {
   fetchSkills,
   fetchSpellLists,
   fetchTrainingPackages,
+  fetchWeaponTypes,
   getStatRollPotentials,
   setCharacterBuilderStats,
   setCharacterBackgroundChoices,
@@ -43,6 +44,7 @@ import type {
   SkillGroup,
   SpellList,
   TrainingPackage,
+  WeaponType,
 } from '../../types';
 
 import { DEVELOPMENT_STATS, SPELL_REALMS, STATS, type Realm, type Stat } from '../../types/enum';
@@ -304,6 +306,7 @@ export default function CharacterCreationView() {
   const [groups, setGroups] = useState<SkillGroup[]>([]);
   const [spellLists, setSpellLists] = useState<SpellList[]>([]);
   const [trainingPackages, setTrainingPackages] = useState<TrainingPackage[]>([]);
+  const [weaponTypes, setWeaponTypes] = useState<WeaponType[]>([]);
 
   const [step, setStep] = useState<CharacterStep>('primary');
   const [errors, setErrors] = useState<StepErrors>({});
@@ -360,7 +363,7 @@ export default function CharacterCreationView() {
   useEffect(() => {
     (async () => {
       try {
-        const [raceData, languageData, cultureTypeData, cultureData, professionData, skillData, categoryData, groupData, spellListData, tpData] = await Promise.all([
+        const [raceData, languageData, cultureTypeData, cultureData, professionData, skillData, categoryData, groupData, spellListData, tpData, weaponTypeData] = await Promise.all([
           fetchRaces(),
           fetchLanguages(),
           fetchCultureTypes(),
@@ -371,6 +374,7 @@ export default function CharacterCreationView() {
           fetchSkillGroups(),
           fetchSpellLists(),
           fetchTrainingPackages(),
+          fetchWeaponTypes(),
         ]);
 
         setRaces(raceData);
@@ -383,6 +387,7 @@ export default function CharacterCreationView() {
         setGroups(groupData);
         setSpellLists(spellListData);
         setTrainingPackages(tpData);
+        setWeaponTypes(weaponTypeData);
       } catch (e) {
         setError(String(e));
       } finally {
@@ -560,6 +565,27 @@ export default function CharacterCreationView() {
     for (const l of languages) map.set(l.id, l.name);
     return map;
   }, [languages]);
+
+  const weaponTypeOptionsBySkillId = useMemo(() => {
+    const map = new Map<string, Array<{ value: string; label: string }>>();
+    for (const row of weaponTypes) {
+      const existing = map.get(row.skill) ?? [];
+      existing.push({ value: row.id, label: row.name });
+      map.set(row.skill, existing);
+    }
+
+    for (const rows of map.values()) {
+      rows.sort((a, b) => a.label.localeCompare(b.label));
+    }
+
+    return map;
+  }, [weaponTypes]);
+
+  const weaponTypeNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const row of weaponTypes) map.set(row.id, row.name);
+    return map;
+  }, [weaponTypes]);
 
   const languageOptions = useMemo(
     () => languages
@@ -1245,10 +1271,26 @@ export default function CharacterCreationView() {
         const categoryLabel = categoryNameById.get(def.id) ?? def.id;
         return `Skill Category Skill Ranks: select a skill for ${categoryLabel}.`;
       }
-      if (mandatorySubcategorySkillIds.has(row.id) && !row.subcategory.trim()) {
+
+      const weaponTypeOptions = weaponTypeOptionsBySkillId.get(row.id) ?? [];
+      if (mandatorySubcategorySkillIds.has(row.id) && weaponTypeOptions.length === 0) {
         const skillName = skillNameById.get(row.id) ?? row.id;
-        return `Skill Category Skill Ranks: enter subcategory for ${skillName}.`;
+        return `Skill Category Skill Ranks: no weapon types are configured for ${skillName}.`;
       }
+
+      if (weaponTypeOptions.length > 0 && !row.subcategory.trim()) {
+        const skillName = skillNameById.get(row.id) ?? row.id;
+        return `Skill Category Skill Ranks: select weapon type for ${skillName}.`;
+      }
+
+      if (weaponTypeOptions.length > 0 && row.subcategory.trim()) {
+        const isValidWeaponType = weaponTypeOptions.some((opt) => opt.value === row.subcategory.trim());
+        if (!isValidWeaponType) {
+          const skillName = skillNameById.get(row.id) ?? row.id;
+          return `Skill Category Skill Ranks: invalid weapon type selected for ${skillName}.`;
+        }
+      }
+
     }
 
     for (let choiceIndex = 0; choiceIndex < professionSkillDevelopmentChoiceDefinitions.length; choiceIndex++) {
@@ -1510,9 +1552,11 @@ export default function CharacterCreationView() {
     professionGroupDevelopmentChoiceDefinitions,
     professionBaseSpellListChoiceDefinitions,
     mandatorySubcategorySkillIds,
+    weaponTypeOptionsBySkillId,
     languageSkillIds,
     skillNameById,
     categoryNameById,
+    weaponTypeNameById,
     spellListNameById,
     statRolls,
     statRollsLocked,
@@ -2417,6 +2461,7 @@ export default function CharacterCreationView() {
                   {cultureTypeCategorySkillRankDefinitions.map((def, index) => {
                     const row = cultureTypeCategorySkillRankRows[index] ?? createEmptySkillChoiceRow();
                     const optionList = cultureTypeCategorySkillOptions[index] ?? [];
+                    const weaponTypeOptions = row.id ? (weaponTypeOptionsBySkillId.get(row.id) ?? []) : [];
                     return (
                       <div key={`culture-type-rank-${def.id}-${index}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
                         <div style={{ color: 'var(--muted)' }}>
@@ -2433,20 +2478,28 @@ export default function CharacterCreationView() {
                             options={optionList}
                             placeholderOption="— Select skill —"
                           />
-                          {row.id && mandatorySubcategorySkillIds.has(row.id) ? (
-                            <LabeledInput
-                              label="Subcategory"
+                          {row.id ? (
+                            <LabeledSelect
+                              label="Weapon Type"
                               value={row.subcategory}
                               onChange={(value) => updateFlatSkillChoiceRow(setCultureTypeCategorySkillRankRows, index, {
                                 subcategory: value,
                               })}
-                              placeholder="Enter subcategory"
-                              error={errors.initial && !row.subcategory.trim() ? 'Required' : undefined}
+                              options={weaponTypeOptions}
+                              disabled={weaponTypeOptions.length === 0}
+                              helperText={weaponTypeOptions.length === 0 ? 'No weapon types available for selected skill.' : undefined}
+                              placeholderOption="— Select weapon type —"
+                              error={errors.initial && weaponTypeOptions.length > 0 && !row.subcategory.trim() ? 'Required' : undefined}
                             />
                           ) : (
                             <div />
                           )}
                         </div>
+                        {row.id && row.subcategory && weaponTypeOptions.length > 0 && (
+                          <div style={{ color: 'var(--muted)' }}>
+                            Selected weapon type: {weaponTypeNameById.get(row.subcategory) ?? row.subcategory}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
