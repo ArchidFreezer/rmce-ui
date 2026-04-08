@@ -561,6 +561,19 @@ export default function CharacterCreationView() {
     return map;
   }, [languages]);
 
+  const languageOptions = useMemo(
+    () => languages
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((l) => ({ value: l.id, label: l.name })),
+    [languages],
+  );
+
+  const languageSkillIds = useMemo(
+    () => new Set(skills.filter((s) => s.name.trim().toLowerCase() === 'languages').map((s) => s.id)),
+    [skills],
+  );
+
   const spellListNameById = useMemo(() => {
     const map = new Map<string, string>();
     for (const s of spellLists) map.set(s.id, s.name);
@@ -1249,10 +1262,13 @@ export default function CharacterCreationView() {
           return `Profession Skill Development Types choice ${choiceIndex + 1}: select a skill for slot ${slot + 1}.`;
         }
         const isMandatorySubcategory = mandatorySubcategorySkillIds.has(row.id);
+        const isLanguageSkill = languageSkillIds.has(row.id);
         const subcategory = row.subcategory.trim();
-        if (isMandatorySubcategory && !subcategory) {
+        if ((isMandatorySubcategory || isLanguageSkill) && !subcategory) {
           const skillName = skillNameById.get(row.id) ?? row.id;
-          return `Profession Skill Development Types choice ${choiceIndex + 1}: enter subcategory for ${skillName}.`;
+          return isLanguageSkill
+            ? `Profession Skill Development Types choice ${choiceIndex + 1}: select language for ${skillName}.`
+            : `Profession Skill Development Types choice ${choiceIndex + 1}: enter subcategory for ${skillName}.`;
         }
 
         const key = `${row.id}::${subcategory.toLowerCase()}`;
@@ -1277,10 +1293,13 @@ export default function CharacterCreationView() {
           return `Profession Category Skill Development Types choice ${choiceIndex + 1}: select a skill for slot ${slot + 1}.`;
         }
         const isMandatorySubcategory = mandatorySubcategorySkillIds.has(row.id);
+        const isLanguageSkill = languageSkillIds.has(row.id);
         const subcategory = row.subcategory.trim();
-        if (isMandatorySubcategory && !subcategory) {
+        if ((isMandatorySubcategory || isLanguageSkill) && !subcategory) {
           const skillName = skillNameById.get(row.id) ?? row.id;
-          return `Profession Category Skill Development Types choice ${choiceIndex + 1}: enter subcategory for ${skillName}.`;
+          return isLanguageSkill
+            ? `Profession Category Skill Development Types choice ${choiceIndex + 1}: select language for ${skillName}.`
+            : `Profession Category Skill Development Types choice ${choiceIndex + 1}: enter subcategory for ${skillName}.`;
         }
 
         const key = `${row.id}::${subcategory.toLowerCase()}`;
@@ -1303,10 +1322,13 @@ export default function CharacterCreationView() {
           return `Profession Group Skill Development Types choice ${choiceIndex + 1}: select a skill for slot ${slot + 1}.`;
         }
         const isMandatorySubcategory = mandatorySubcategorySkillIds.has(row.id);
+        const isLanguageSkill = languageSkillIds.has(row.id);
         const subcategory = row.subcategory.trim();
-        if (isMandatorySubcategory && !subcategory) {
+        if ((isMandatorySubcategory || isLanguageSkill) && !subcategory) {
           const skillName = skillNameById.get(row.id) ?? row.id;
-          return `Profession Group Skill Development Types choice ${choiceIndex + 1}: enter subcategory for ${skillName}.`;
+          return isLanguageSkill
+            ? `Profession Group Skill Development Types choice ${choiceIndex + 1}: select language for ${skillName}.`
+            : `Profession Group Skill Development Types choice ${choiceIndex + 1}: enter subcategory for ${skillName}.`;
         }
 
         const key = `${row.id}::${subcategory.toLowerCase()}`;
@@ -1488,6 +1510,7 @@ export default function CharacterCreationView() {
     professionGroupDevelopmentChoiceDefinitions,
     professionBaseSpellListChoiceDefinitions,
     mandatorySubcategorySkillIds,
+    languageSkillIds,
     skillNameById,
     categoryNameById,
     spellListNameById,
@@ -2453,16 +2476,29 @@ export default function CharacterCreationView() {
                               options={optionList}
                               placeholderOption="— Select skill —"
                             />
-                            {row.id && mandatorySubcategorySkillIds.has(row.id) ? (
-                              <LabeledInput
-                                label="Subcategory"
-                                value={row.subcategory}
-                                onChange={(value) => updateGroupedSkillChoiceRow(setProfessionSkillDevelopmentChoiceRows, choiceIndex, rowIndex, {
-                                  subcategory: value,
-                                })}
-                                placeholder="Enter subcategory"
-                                error={errors.initial && !row.subcategory.trim() ? 'Required' : undefined}
-                              />
+                            {row.id && (mandatorySubcategorySkillIds.has(row.id) || languageSkillIds.has(row.id)) ? (
+                              languageSkillIds.has(row.id) ? (
+                                <LabeledSelect
+                                  label="Language"
+                                  value={row.subcategory}
+                                  onChange={(value) => updateGroupedSkillChoiceRow(setProfessionSkillDevelopmentChoiceRows, choiceIndex, rowIndex, {
+                                    subcategory: value,
+                                  })}
+                                  options={languageOptions}
+                                  placeholderOption="— Select language —"
+                                  error={errors.initial && !row.subcategory.trim() ? 'Required' : undefined}
+                                />
+                              ) : (
+                                <LabeledInput
+                                  label="Subcategory"
+                                  value={row.subcategory}
+                                  onChange={(value) => updateGroupedSkillChoiceRow(setProfessionSkillDevelopmentChoiceRows, choiceIndex, rowIndex, {
+                                    subcategory: value,
+                                  })}
+                                  placeholder="Enter subcategory"
+                                  error={errors.initial && !row.subcategory.trim() ? 'Required' : undefined}
+                                />
+                              )
                             ) : (
                               <div />
                             )}
@@ -2497,16 +2533,29 @@ export default function CharacterCreationView() {
                               options={optionList}
                               placeholderOption="— Select skill —"
                             />
-                            {row.id && mandatorySubcategorySkillIds.has(row.id) ? (
-                              <LabeledInput
-                                label="Subcategory"
-                                value={row.subcategory}
-                                onChange={(value) => updateGroupedSkillChoiceRow(setProfessionCategoryDevelopmentChoiceRows, choiceIndex, rowIndex, {
-                                  subcategory: value,
-                                })}
-                                placeholder="Enter subcategory"
-                                error={errors.initial && !row.subcategory.trim() ? 'Required' : undefined}
-                              />
+                            {row.id && (mandatorySubcategorySkillIds.has(row.id) || languageSkillIds.has(row.id)) ? (
+                              languageSkillIds.has(row.id) ? (
+                                <LabeledSelect
+                                  label="Language"
+                                  value={row.subcategory}
+                                  onChange={(value) => updateGroupedSkillChoiceRow(setProfessionCategoryDevelopmentChoiceRows, choiceIndex, rowIndex, {
+                                    subcategory: value,
+                                  })}
+                                  options={languageOptions}
+                                  placeholderOption="— Select language —"
+                                  error={errors.initial && !row.subcategory.trim() ? 'Required' : undefined}
+                                />
+                              ) : (
+                                <LabeledInput
+                                  label="Subcategory"
+                                  value={row.subcategory}
+                                  onChange={(value) => updateGroupedSkillChoiceRow(setProfessionCategoryDevelopmentChoiceRows, choiceIndex, rowIndex, {
+                                    subcategory: value,
+                                  })}
+                                  placeholder="Enter subcategory"
+                                  error={errors.initial && !row.subcategory.trim() ? 'Required' : undefined}
+                                />
+                              )
                             ) : (
                               <div />
                             )}
@@ -2541,16 +2590,29 @@ export default function CharacterCreationView() {
                               options={optionList}
                               placeholderOption="— Select skill —"
                             />
-                            {row.id && mandatorySubcategorySkillIds.has(row.id) ? (
-                              <LabeledInput
-                                label="Subcategory"
-                                value={row.subcategory}
-                                onChange={(value) => updateGroupedSkillChoiceRow(setProfessionGroupDevelopmentChoiceRows, choiceIndex, rowIndex, {
-                                  subcategory: value,
-                                })}
-                                placeholder="Enter subcategory"
-                                error={errors.initial && !row.subcategory.trim() ? 'Required' : undefined}
-                              />
+                            {row.id && (mandatorySubcategorySkillIds.has(row.id) || languageSkillIds.has(row.id)) ? (
+                              languageSkillIds.has(row.id) ? (
+                                <LabeledSelect
+                                  label="Language"
+                                  value={row.subcategory}
+                                  onChange={(value) => updateGroupedSkillChoiceRow(setProfessionGroupDevelopmentChoiceRows, choiceIndex, rowIndex, {
+                                    subcategory: value,
+                                  })}
+                                  options={languageOptions}
+                                  placeholderOption="— Select language —"
+                                  error={errors.initial && !row.subcategory.trim() ? 'Required' : undefined}
+                                />
+                              ) : (
+                                <LabeledInput
+                                  label="Subcategory"
+                                  value={row.subcategory}
+                                  onChange={(value) => updateGroupedSkillChoiceRow(setProfessionGroupDevelopmentChoiceRows, choiceIndex, rowIndex, {
+                                    subcategory: value,
+                                  })}
+                                  placeholder="Enter subcategory"
+                                  error={errors.initial && !row.subcategory.trim() ? 'Required' : undefined}
+                                />
+                              )
                             ) : (
                               <div />
                             )}
