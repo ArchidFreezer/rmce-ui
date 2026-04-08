@@ -323,6 +323,7 @@ export default function CharacterCreationView() {
   const [professionCategoryDevelopmentChoiceRows, setProfessionCategoryDevelopmentChoiceRows] = useState<SkillChoiceRow[][]>([]);
   const [professionGroupDevelopmentChoiceRows, setProfessionGroupDevelopmentChoiceRows] = useState<SkillChoiceRow[][]>([]);
   const [professionBaseSpellListChoiceRows, setProfessionBaseSpellListChoiceRows] = useState<string[][]>([]);
+  const [professionWeaponCategoryCostSelections, setProfessionWeaponCategoryCostSelections] = useState<string[]>([]);
 
   const [statRolls, setStatRolls] = useState<StatRoll[]>(() => createEmptyStatRolls());
   const [statRollsLocked, setStatRollsLocked] = useState(false);
@@ -483,6 +484,30 @@ export default function CharacterCreationView() {
   const professionBaseSpellListChoiceDefinitions = useMemo(
     () => (profession?.baseSpellListChoices ?? []).filter((choice) => choice.numChoices < choice.options.length),
     [profession],
+  );
+
+  const professionWeaponCategoryCostDefinitions = useMemo(() => {
+    const out: Array<{ cost: string; defaultCategory: string }> = [];
+    const costs = profession?.skillCategoryCosts ?? [];
+    for (const row of costs) {
+      const category = categories.find((c) => c.id === row.category);
+      if (!category) continue;
+      if (category.group !== 'SKILLGROUP_WEAPON') continue;
+      out.push({
+        cost: row.cost,
+        defaultCategory: row.category,
+      });
+    }
+    return out;
+  }, [profession, categories]);
+
+  const weaponSkillCategoryOptions = useMemo(
+    () => categories
+      .filter((c) => c.group === 'SKILLGROUP_WEAPON')
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((c) => ({ value: c.id, label: c.name })),
+    [categories],
   );
 
   const fixedProfessionBaseSpellLists = useMemo(
@@ -932,6 +957,15 @@ export default function CharacterCreationView() {
   }, [professionBaseSpellListChoiceDefinitions]);
 
   useEffect(() => {
+    const allowedIds = new Set(weaponSkillCategoryOptions.map((opt) => opt.value));
+    setProfessionWeaponCategoryCostSelections((prev) => professionWeaponCategoryCostDefinitions.map((def, index) => {
+      const existing = prev[index];
+      if (existing && allowedIds.has(existing)) return existing;
+      return allowedIds.has(def.defaultCategory) ? def.defaultCategory : '';
+    }));
+  }, [professionWeaponCategoryCostDefinitions, weaponSkillCategoryOptions]);
+
+  useEffect(() => {
     if (selectedBackgroundPoints <= backgroundBudget) return;
 
     const reset = createEmptyBackgroundOptionState();
@@ -1114,6 +1148,11 @@ export default function CharacterCreationView() {
       ...professionBaseSpellListChoiceRows.flatMap((rows) => rows.filter(Boolean)),
     ]);
 
+    const weaponCategoryCostChoices = professionWeaponCategoryCostDefinitions.map((def, index) => ({
+      category: professionWeaponCategoryCostSelections[index] || def.defaultCategory,
+      cost: def.cost,
+    }));
+
     setCharacterBuilder((prev) => ({
       ...prev,
       raceCategoryEverymanChoices,
@@ -1122,6 +1161,7 @@ export default function CharacterCreationView() {
       profCategoryDevelopmentTypeChoices,
       profGroupDevelopmentTypeChoices,
       baseSpellListChoices,
+      weaponCategoryCostChoices,
     }));
   }, [
     raceEverymanChoiceRows,
@@ -1134,6 +1174,8 @@ export default function CharacterCreationView() {
     professionGroupDevelopmentChoiceDefinitions,
     professionGroupDevelopmentChoiceRows,
     professionBaseSpellListChoiceRows,
+    professionWeaponCategoryCostSelections,
+    professionWeaponCategoryCostDefinitions,
     fixedProfessionBaseSpellLists,
   ]);
 
@@ -1442,6 +1484,23 @@ export default function CharacterCreationView() {
       }
     }
 
+    if (professionWeaponCategoryCostDefinitions.length > 0) {
+      const selectedCategoryIds = new Set<string>();
+      for (let i = 0; i < professionWeaponCategoryCostDefinitions.length; i++) {
+        const selectedCategory = professionWeaponCategoryCostSelections[i] ?? '';
+        const definition = professionWeaponCategoryCostDefinitions[i];
+        if (!definition) continue;
+        if (!selectedCategory) {
+          return `Allocate Weapon Costs row ${i + 1}: select a weapon skill category.`;
+        }
+        if (selectedCategoryIds.has(selectedCategory)) {
+          const categoryName = categoryNameById.get(selectedCategory) ?? selectedCategory;
+          return `Allocate Weapon Costs: ${categoryName} can only be selected once.`;
+        }
+        selectedCategoryIds.add(selectedCategory);
+      }
+    }
+
     return undefined;
   };
 
@@ -1584,12 +1643,14 @@ export default function CharacterCreationView() {
     professionCategoryDevelopmentChoiceRows,
     professionGroupDevelopmentChoiceRows,
     professionBaseSpellListChoiceRows,
+    professionWeaponCategoryCostSelections,
     raceEverymanChoiceDefinitions,
     cultureTypeCategorySkillRankDefinitions,
     professionSkillDevelopmentChoiceDefinitions,
     professionCategoryDevelopmentChoiceDefinitions,
     professionGroupDevelopmentChoiceDefinitions,
     professionBaseSpellListChoiceDefinitions,
+    professionWeaponCategoryCostDefinitions,
     mandatorySubcategorySkillIds,
     weaponTypeOptionsBySkillId,
     languageSkillIds,
@@ -2188,6 +2249,7 @@ export default function CharacterCreationView() {
     setProfessionCategoryDevelopmentChoiceRows([]);
     setProfessionGroupDevelopmentChoiceRows([]);
     setProfessionBaseSpellListChoiceRows([]);
+    setProfessionWeaponCategoryCostSelections([]);
     setStatRolls(createEmptyStatRolls());
     setStatRollsLocked(false);
     setHobbyRanksBudget(0);
@@ -2810,6 +2872,48 @@ export default function CharacterCreationView() {
                             );
                           })()
                         ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {professionWeaponCategoryCostDefinitions.length > 0 && (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <h4 style={{ margin: 0 }}>Allocate Weapon Costs</h4>
+                  {professionWeaponCategoryCostDefinitions.map((def, index) => {
+                    const selectedCategory = professionWeaponCategoryCostSelections[index] ?? '';
+
+                    return (
+                      <div key={`weapon-cost-${index}-${def.cost}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
+                        <div style={{ display: 'grid', gap: 6, gridTemplateColumns: '200px minmax(280px, 1fr)' }}>
+                          <LabeledInput
+                            label="Cost"
+                            value={def.cost}
+                            onChange={() => { }}
+                            inputProps={{ readOnly: true }}
+                            disabled
+                          />
+                          <LabeledSelect
+                            label="Skill Category"
+                            value={selectedCategory}
+                            onChange={(value) => setProfessionWeaponCategoryCostSelections((prev) => {
+                              const next = prev.slice();
+                              const currentValue = next[index] ?? '';
+                              const otherIndex = next.findIndex((entry, i) => i !== index && entry === value);
+
+                              if (otherIndex >= 0) {
+                                next[otherIndex] = currentValue;
+                              }
+
+                              next[index] = value;
+                              return next;
+                            })}
+                            options={weaponSkillCategoryOptions}
+                            placeholderOption="— Select weapon category —"
+                            error={errors.initial && !selectedCategory ? 'Required' : undefined}
+                          />
+                        </div>
                       </div>
                     );
                   })}
