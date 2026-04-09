@@ -14,7 +14,7 @@ import {
   fetchTrainingPackages,
   fetchWeaponTypes,
   getStatRollPotentials,
-  setCharacterBuilderStats,
+  setCharacterStats,
   setCharacterBackgroundChoices,
   setCharacterHobbyChoices,
   setCharacterPrimaryChoices,
@@ -1802,7 +1802,7 @@ export default function CharacterCreationView() {
           };
         });
 
-        const statsSetup = await setCharacterBuilderStats({
+        await setCharacterStats({
           ...characterBuilder,
           initialStats,
         });
@@ -1827,7 +1827,7 @@ export default function CharacterCreationView() {
           });
         }
 
-        const hobbySkillInit = (statsSetup.hobbySkills ?? []).map((row) => {
+        const hobbySkillInit = (characterBuilder.hobbySkillRankChoices ?? []).map((row) => {
           const key = skillChoiceKey(row.id, row.subcategory);
           const base = baseSkillByKey.get(key) ?? 0;
           const max = base + Math.max(0, row.value ?? 0);
@@ -1842,18 +1842,19 @@ export default function CharacterCreationView() {
           };
         });
 
-        const hobbyCategoryInit = (statsSetup.hobbyCategories ?? []).map((row) => {
-          const base = baseCategoryById.get(row.id) ?? 0;
+        const hobbyCategoryInit = (characterBuilder.hobbyCategoryRankChoices ?? []).map((row) => {
+          const rowId = String(row.id);
+          const base = baseCategoryById.get(rowId) ?? 0;
           const max = base + Math.max(0, row.value ?? 0);
           return {
-            id: row.id,
+            id: rowId,
             base,
             max,
             value: base,
           };
         });
 
-        const hobbyLanguageInit = (statsSetup.adolescentLanguages ?? []).map((row) => {
+        const hobbyLanguageInit = (race?.adolescentLanguages ?? []).map((row) => {
           const base = baseLanguageById.get(row.language);
           const baseSpoken = base?.spoken ?? 0;
           const baseWritten = base?.written ?? 0;
@@ -1875,8 +1876,8 @@ export default function CharacterCreationView() {
           };
         });
 
-        const spellListOptions = (statsSetup.adolescentSpellLists ?? []).map((x) => String(x));
-        const spellListRankBudget = Math.max(0, statsSetup.numSpellListRanks ?? 0);
+        const spellListOptions = (characterBuilder.adolescentSpellListChoices ?? []).map((x) => String(x));
+        const spellListRankBudget = Math.max(0, characterBuilder.numAdolescentSpellListRanks ?? 0);
         const existingSpellListId = spellListRankBudget > 0
           ? (characterBuilder.adolescentSpellListChoice ?? '')
           : '';
@@ -1884,11 +1885,11 @@ export default function CharacterCreationView() {
           ? (spellListOptions.includes(existingSpellListId) ? existingSpellListId : '')
           : '';
 
-        setHobbyRanksBudget(Math.max(0, statsSetup.numHobbyRanks ?? 0));
+        setHobbyRanksBudget(Math.max(0, characterBuilder.numHobbySkillRanks ?? 0));
         setHobbySkillRows(hobbySkillInit);
         setHobbyCategoryRows(hobbyCategoryInit);
 
-        setLanguageRanksBudget(Math.max(0, statsSetup.numLanguageRanks ?? 0));
+        setLanguageRanksBudget(Math.max(0, characterBuilder.numAdolescentLanguageRanks ?? 0));
         setHobbyLanguageRows(hobbyLanguageInit);
 
         setSpellListRanksBudget(spellListRankBudget);

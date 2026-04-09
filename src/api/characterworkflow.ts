@@ -1,7 +1,7 @@
 import { sendJson } from './client';
 
 import type { Realm, Stat } from '../types/enum';
-import type { CharacterBuilder, PersistentValue, LanguageAbility, SkillValue } from '../types';
+import type { CharacterBuilder, PersistentValue, LanguageAbility } from '../types';
 
 export type PrimaryDefinitionRequest = {
   name: string;
@@ -9,16 +9,6 @@ export type PrimaryDefinitionRequest = {
   culture: string;
   profession: string;
   realms: Realm[];
-};
-
-export type SetCharacterBuilderStatsResponse = {
-  numHobbyRanks: number;
-  hobbySkills: SkillValue[]; // Skill.id + optional subcategory
-  hobbyCategories: PersistentValue[]; // SkillCategory.id
-  numLanguageRanks: number;
-  adolescentLanguages: LanguageAbility[]; // language + spoken/written/somatic ranks
-  numSpellListRanks: number;
-  adolescentSpellLists: string[]; // SpellList.id[]
 };
 
 export type SetCharacterBackgroundChoicesRequest = {
@@ -97,10 +87,10 @@ export async function getStatRollPotentials(
   return sendJson<StatRollResponse[]>(STAT_ROLLS_ENDPOINT, 'POST', payload);
 }
 
-export async function setCharacterBuilderStats(
+export async function setCharacterStats(
   payload: CharacterBuilder,
-): Promise<SetCharacterBuilderStatsResponse> {
-  return sendJson<SetCharacterBuilderStatsResponse>(SET_STATS_ENDPOINT, 'POST', payload);
+): Promise<CharacterBuilder> {
+  return sendJson<CharacterBuilder>(SET_STATS_ENDPOINT, 'POST', payload);
 }
 
 export async function setCharacterHobbyChoices(

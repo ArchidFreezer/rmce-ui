@@ -42,12 +42,18 @@ export interface CharacterBuilder extends Named {
   raceCategoryEverymanChoices: CharacterBuilderIdOptionalSubcategory[];
   // Culture Type
   cultureTypeCategorySkillRanks: SkillValue[];
+  // Culture
+  hobbySkillRankChoices: SkillValue[];
+  hobbyCategoryRankChoices: PersistentValue[];
   // Profession
   profSkillDevelopmentTypeChoices: SkillDevelopmentTypeValue[];
   profCategoryDevelopmentTypeChoices: SkillDevelopmentTypeValue[];
   profGroupDevelopmentTypeChoices: SkillDevelopmentTypeValue[];
-  baseSpellListChoices: string[];
+  baseSpellListChoices: string[]; // SpellList.id[]
   weaponCategoryCostChoices: CharacterBuilderCategoryCost[];
+  // Realms
+  adolescentSpellListChoices: string[]; // SpellList.id[]
+
 
   /* Initial Stats */
   initialStats: CharacterBuilderStatValue[];
@@ -111,12 +117,17 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
     raceCategoryEverymanChoices: [],
     // Culture Type
     cultureTypeCategorySkillRanks: [],
+    // Culture
+    hobbySkillRankChoices: [],
+    hobbyCategoryRankChoices: [],
     // Profession
     profSkillDevelopmentTypeChoices: [],
     profCategoryDevelopmentTypeChoices: [],
     profGroupDevelopmentTypeChoices: [],
     baseSpellListChoices: [],
     weaponCategoryCostChoices: [],
+    // Realms
+    adolescentSpellListChoices: [],
 
     /* Initial Stats */
     initialStats: [],
