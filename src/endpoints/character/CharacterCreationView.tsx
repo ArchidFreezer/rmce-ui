@@ -79,6 +79,8 @@ const STEP_LABELS: Record<CharacterStep, string> = {
   apply: '7. Apply Level Upgrade',
 };
 
+const OWN_REALM_OPEN_LISTS_CATEGORY_ID = 'SKILLCATEGORY_SPELLS_OWN_REALM_OPEN_LISTS';
+
 type StepErrors = {
   primary?: string | undefined;
   initial?: string | undefined;
@@ -1876,7 +1878,11 @@ export default function CharacterCreationView() {
           };
         });
 
-        const spellListOptions = (characterBuilder.adolescentSpellListOptions ?? []).map((x) => String(x));
+        const spellListOptions = (
+          characterBuilder.categorySpellLists
+            .find((row) => row.category === OWN_REALM_OPEN_LISTS_CATEGORY_ID)
+            ?.spellLists ?? []
+        ).map((x) => String(x));
         const spellListRankBudget = Math.max(0, characterBuilder.numAdolescentSpellListRanks ?? 0);
         const existingSpellListId = spellListRankBudget > 0
           ? (characterBuilder.adolescentSpellListChoice ?? '')

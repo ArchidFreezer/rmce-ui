@@ -24,6 +24,11 @@ export interface CharacterBuilderCategoryCost {
   cost: string;     // 1 to 3 colon-separated positive numbers
 }
 
+export interface CharacterBuilderCategorySpellLists {
+  category: string; // SkillCategory.id
+  spellLists: string[]; // SpellList.id[]
+}
+
 export interface CharacterBuilder extends Named {
   built: boolean;
   race: string;
@@ -37,6 +42,9 @@ export interface CharacterBuilder extends Named {
   numAdolescentSpellListRanks: number;
   developmentPoints: number;
 
+  categorySpellLists: CharacterBuilderCategorySpellLists[];
+  trainingPackageCosts: PersistentValue[];
+
   /* Initial Choices */
   // Race
   raceCategoryEverymanChoices: CharacterBuilderIdOptionalSubcategory[];
@@ -49,12 +57,9 @@ export interface CharacterBuilder extends Named {
   profSkillDevelopmentTypeChoices: SkillDevelopmentTypeValue[];
   profCategoryDevelopmentTypeChoices: SkillDevelopmentTypeValue[];
   profGroupDevelopmentTypeChoices: SkillDevelopmentTypeValue[];
-  trainingPackageCosts: PersistentValue[];
   baseSpellListChoices: string[]; // SpellList.id[]
   weaponCategoryCostChoices: CharacterBuilderCategoryCost[];
   // Realms
-  adolescentSpellListOptions: string[]; // SpellList.id[]
-
 
   /* Initial Stats */
   initialStats: CharacterBuilderStatValue[];
@@ -113,6 +118,9 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
     numAdolescentSpellListRanks: 0,
     developmentPoints: 0,
 
+    categorySpellLists: [],
+    trainingPackageCosts: [],
+
     /* Initial Choices */
     // Race
     raceCategoryEverymanChoices: [],
@@ -125,11 +133,9 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
     profSkillDevelopmentTypeChoices: [],
     profCategoryDevelopmentTypeChoices: [],
     profGroupDevelopmentTypeChoices: [],
-    trainingPackageCosts: [],
     baseSpellListChoices: [],
     weaponCategoryCostChoices: [],
     // Realms
-    adolescentSpellListOptions: [],
 
     /* Initial Stats */
     initialStats: [],
