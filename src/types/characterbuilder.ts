@@ -49,10 +49,11 @@ export interface CharacterBuilder extends Named {
   profSkillDevelopmentTypeChoices: SkillDevelopmentTypeValue[];
   profCategoryDevelopmentTypeChoices: SkillDevelopmentTypeValue[];
   profGroupDevelopmentTypeChoices: SkillDevelopmentTypeValue[];
+  trainingPackageCosts: PersistentValue[];
   baseSpellListChoices: string[]; // SpellList.id[]
   weaponCategoryCostChoices: CharacterBuilderCategoryCost[];
   // Realms
-  adolescentSpellListChoices: string[]; // SpellList.id[]
+  adolescentSpellListOptions: string[]; // SpellList.id[]
 
 
   /* Initial Stats */
@@ -124,10 +125,11 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
     profSkillDevelopmentTypeChoices: [],
     profCategoryDevelopmentTypeChoices: [],
     profGroupDevelopmentTypeChoices: [],
+    trainingPackageCosts: [],
     baseSpellListChoices: [],
     weaponCategoryCostChoices: [],
     // Realms
-    adolescentSpellListChoices: [],
+    adolescentSpellListOptions: [],
 
     /* Initial Stats */
     initialStats: [],

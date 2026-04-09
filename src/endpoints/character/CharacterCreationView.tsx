@@ -1876,7 +1876,7 @@ export default function CharacterCreationView() {
           };
         });
 
-        const spellListOptions = (characterBuilder.adolescentSpellListChoices ?? []).map((x) => String(x));
+        const spellListOptions = (characterBuilder.adolescentSpellListOptions ?? []).map((x) => String(x));
         const spellListRankBudget = Math.max(0, characterBuilder.numAdolescentSpellListRanks ?? 0);
         const existingSpellListId = spellListRankBudget > 0
           ? (characterBuilder.adolescentSpellListChoice ?? '')
