@@ -1035,9 +1035,9 @@ export default function CharacterCreationView() {
       })),
       languageAbilities: hobbyLanguageRows.map((row) => ({
         language: row.language,
-        spoken: row.spoken,
-        written: row.written,
-        somatic: row.somatic,
+        ...(row.spoken > 0 ? { spoken: row.spoken } : {}),
+        ...(row.written > 0 ? { written: row.written } : {}),
+        ...(row.somatic > 0 ? { somatic: row.somatic } : {}),
       })),
       spell_list_ranks: spellListRanksBudget > 0 && hobbySpellListId
         ? [{ id: hobbySpellListId, value: spellListRanksBudget }]
@@ -1173,9 +1173,9 @@ export default function CharacterCreationView() {
     const mappedBackgroundLanguages = backgroundState.extraLanguages
       ? backgroundState.languageRows.map((row) => ({
         language: row.language,
-        spoken: row.spoken,
-        written: row.written,
-        somatic: row.somatic,
+        ...(row.spoken > 0 ? { spoken: row.spoken } : {}),
+        ...(row.written > 0 ? { written: row.written } : {}),
+        ...(row.somatic > 0 ? { somatic: row.somatic } : {}),
       }))
       : [];
 
@@ -1689,9 +1689,9 @@ export default function CharacterCreationView() {
         .filter((row) => row.spoken > 0 || row.written > 0 || row.somatic > 0)
         .map((row) => ({
           language: row.language,
-          spoken: row.spoken,
-          written: row.written,
-          somatic: row.somatic,
+          ...(row.spoken > 0 ? { spoken: row.spoken } : {}),
+          ...(row.written > 0 ? { written: row.written } : {}),
+          ...(row.somatic > 0 ? { somatic: row.somatic } : {}),
         }))
       : [];
 
@@ -1918,7 +1918,7 @@ export default function CharacterCreationView() {
 
       setSavingHobbyChoices(true);
       try {
-        const hobbyRanks = hobbySkillRows
+        const hobbySkillRanks = hobbySkillRows
           .map((row) => ({
             id: row.id,
             subcategory: row.subcategory,
@@ -1933,21 +1933,21 @@ export default function CharacterCreationView() {
           }))
           .filter((row) => row.value > 0);
 
-        const adolescentLanguages = hobbyLanguageRows
+        const adolescentLanguageChoices = hobbyLanguageRows
           .filter((row) => row.spoken > row.baseSpoken || row.written > row.baseWritten || row.somatic > row.baseSomatic)
           .map((row) => ({
             language: row.language,
-            spoken: row.spoken,
-            written: row.written,
-            somatic: row.somatic,
+            ...(row.spoken > 0 ? { spoken: row.spoken } : {}),
+            ...(row.written > 0 ? { written: row.written } : {}),
+            ...(row.somatic > 0 ? { somatic: row.somatic } : {}),
           }));
 
         const response = await setCharacterHobbyChoices({
-          id: characterBuilder.id,
-          hobbyRanks,
+          ...characterBuilder,
+          hobbySkillRanks,
           hobbyCategoryRanks,
-          adolescentLanguages,
-          adolescentSpellList: hobbySpellListId || '',
+          adolescentLanguageChoices,
+          adolescentSpellListChoice: hobbySpellListId || null,
         });
 
         setCharacterBuilder(response);

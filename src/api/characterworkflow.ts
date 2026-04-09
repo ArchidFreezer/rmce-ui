@@ -21,14 +21,6 @@ export type SetCharacterBuilderStatsResponse = {
   adolescentSpellLists: string[]; // SpellList.id[]
 };
 
-export type SetCharacterHobbyChoicesRequest = {
-  id: string;
-  hobbyRanks: SkillValue[]; // Skill.id + optional subcategory
-  hobbyCategoryRanks: PersistentValue[]; // SkillCategory.id
-  adolescentLanguages: LanguageAbility[]; // language + spoken/written/somatic ranks
-  adolescentSpellList: string | null; // SpellList.id
-};
-
 export type SetCharacterBackgroundChoicesRequest = {
   id: string;
   statGains: boolean;
@@ -112,7 +104,7 @@ export async function setCharacterBuilderStats(
 }
 
 export async function setCharacterHobbyChoices(
-  payload: SetCharacterHobbyChoicesRequest,
+  payload: CharacterBuilder,
 ): Promise<CharacterBuilder> {
   return sendJson<CharacterBuilder>(SET_HOBBY_CHOICES_ENDPOINT, 'POST', payload);
 }
