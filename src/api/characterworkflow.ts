@@ -11,15 +11,6 @@ export type PrimaryDefinitionRequest = {
   realms: Realm[];
 };
 
-export type SetCharacterBuilderStatsRequest = {
-  id: string;
-  stats: Array<{
-    stat: Stat;
-    temporary: number;
-    potential: number;
-  }>;
-};
-
 export type SetCharacterBuilderStatsResponse = {
   numHobbyRanks: number;
   hobbySkills: SkillValue[]; // Skill.id + optional subcategory
@@ -115,7 +106,7 @@ export async function getStatRollPotentials(
 }
 
 export async function setCharacterBuilderStats(
-  payload: SetCharacterBuilderStatsRequest,
+  payload: CharacterBuilder,
 ): Promise<SetCharacterBuilderStatsResponse> {
   return sendJson<SetCharacterBuilderStatsResponse>(SET_STATS_ENDPOINT, 'POST', payload);
 }

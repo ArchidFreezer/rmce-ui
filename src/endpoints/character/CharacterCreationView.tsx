@@ -1787,7 +1787,7 @@ export default function CharacterCreationView() {
 
       setSavingStats(true);
       try {
-        const statsPayload = STATS.map((stat) => {
+        const initialStats = STATS.map((stat) => {
           const assigned = statRolls.find((roll) => roll.assignedStat === stat);
           if (!assigned) {
             throw new Error(`Missing assigned roll for stat ${stat}.`);
@@ -1797,12 +1797,14 @@ export default function CharacterCreationView() {
             stat,
             temporary: Number(assigned.temporary) || 0,
             potential: assigned.potential ?? 0,
+            bonus: (race?.statBonuses.find((b) => b.id === stat)?.value ?? 0)
+              + tpStatGainChoices.filter((s) => s === stat).length,
           };
         });
 
         const statsSetup = await setCharacterBuilderStats({
-          id: characterBuilder.id,
-          stats: statsPayload,
+          ...characterBuilder,
+          initialStats,
         });
 
         const baseSkillByKey = new Map<string, number>();
