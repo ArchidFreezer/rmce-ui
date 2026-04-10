@@ -32,9 +32,11 @@ export type ApplyLevelUpgradeRequest = {
   };
   selectedBackgroundOptions: string[];
   apprenticeship: {
-    trainingPackageId: string;
-    selectedStatGainChoices: Stat[];
-    selectedSkillRankChoices: Array<Array<{ id: string; subcategory?: string | undefined }>>;
+    trainingPackageIds: string[];
+    statGains: Stat[];
+    skillPurchases: Array<{ id: string; subcategory?: string | undefined; purchases: number }>;
+    categoryPurchases: Array<{ id: string; purchases: number }>;
+    spellListPurchases: Array<{ id: string; purchases: number }>;
   };
 };
 
