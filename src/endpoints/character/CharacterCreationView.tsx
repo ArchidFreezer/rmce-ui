@@ -415,6 +415,7 @@ export default function CharacterCreationView() {
   const [apprenticeCategoryPurchases, setApprenticeCategoryPurchases] = useState<ApprenticeCategoryPurchase[]>([]);
   const [apprenticeSpellListPurchases, setApprenticeSpellListPurchases] = useState<ApprenticeSpellListPurchase[]>([]);
   const [apprenticeSelectedSpellCategory, setApprenticeSelectedSpellCategory] = useState('');
+  const [apprenticeAddingSpellList, setApprenticeAddingSpellList] = useState(false);
   const [characterBuilder, setCharacterBuilder] = useState<CharacterBuilder>(() => createEmptyCharacterBuilder());
   const [savingPrimaryDefinition, setSavingPrimaryDefinition] = useState(false);
   const [savingInitialChoices, setSavingInitialChoices] = useState(false);
@@ -1062,19 +1063,26 @@ export default function CharacterCreationView() {
 
   const apprenticeSpellCategoryOptions = useMemo(
     () => characterBuilder.categorySpellLists
-      .map((c) => ({ value: c.category, label: categoryNameById.get(c.category) ?? c.category }))
+      .map((c) => {
+        const costElements = categoryCostMap.get(c.category) ?? [];
+        const nextRankCost = getCategoryOrSpellListPurchaseTotalCost(costElements, 1);
+        const catName = categoryNameById.get(c.category) ?? c.category;
+        return { value: c.category, label: `${catName} — ${nextRankCost} DP / rank` };
+      })
       .sort((a, b) => a.label.localeCompare(b.label)),
-    [characterBuilder.categorySpellLists, categoryNameById],
+    [characterBuilder.categorySpellLists, categoryNameById, categoryCostMap],
   );
 
   const apprenticeSpellListsInSelectedCategory = useMemo(() => {
     if (!apprenticeSelectedSpellCategory) return [];
     const catEntry = characterBuilder.categorySpellLists.find((c) => c.category === apprenticeSelectedSpellCategory);
     if (!catEntry) return [];
+    const purchasedIds = new Set(apprenticeSpellListPurchases.map((p) => p.id));
     return catEntry.spellLists
+      .filter((slId) => !purchasedIds.has(slId))
       .map((slId) => ({ id: slId, name: spellListNameById.get(slId) ?? slId }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [apprenticeSelectedSpellCategory, characterBuilder.categorySpellLists, spellListNameById]);
+  }, [apprenticeSelectedSpellCategory, characterBuilder.categorySpellLists, spellListNameById, apprenticeSpellListPurchases]);
 
   useEffect(() => {
     if (!cultureTypeId) {
@@ -2554,6 +2562,7 @@ export default function CharacterCreationView() {
     setApprenticeCategoryPurchases([]);
     setApprenticeSpellListPurchases([]);
     setApprenticeSelectedSpellCategory('');
+    setApprenticeAddingSpellList(false);
     setCharacterBuilder(createEmptyCharacterBuilder());
     setErrors({});
   };
@@ -3890,6 +3899,7 @@ export default function CharacterCreationView() {
                 )}
                 <LabeledSelect
                   label="Add Skill"
+                  hideLabel={true}
                   value=""
                   onChange={(v) => {
                     if (v) {
@@ -3961,6 +3971,7 @@ export default function CharacterCreationView() {
                 <LabeledSelect
                   label="Add Category"
                   value=""
+                  hideLabel={true}
                   onChange={(v) => {
                     if (v) {
                       setApprenticeCategoryPurchases((prev) => [...prev, { id: v, purchases: 1 }]);
@@ -3973,97 +3984,117 @@ export default function CharacterCreationView() {
               {/* Spell List Rank Purchases */}
               <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
                 <h4 style={{ margin: '0 0 8px' }}>Spell List Ranks</h4>
-                {characterBuilder.categorySpellLists.length === 0 && (
-                  <div style={{ color: 'var(--muted)' }}>No spell lists available.</div>
-                )}
-                <div style={{ display: 'grid', gap: 12 }}>
-                  {characterBuilder.categorySpellLists
-                    .slice()
-                    .sort((a, b) => (categoryNameById.get(a.category) ?? a.category).localeCompare(categoryNameById.get(b.category) ?? b.category))
-                    .map((catEntry) => {
-                      const catName = categoryNameById.get(catEntry.category) ?? catEntry.category;
-                      const costElements = categoryCostMap.get(catEntry.category) ?? [];
+                {apprenticeSpellListPurchases.length > 0 && (
+                  <div style={{ display: 'grid', gap: 6, marginBottom: 8 }}>
+                    {apprenticeSpellListPurchases.map((purchase, i) => {
+                      const slName = spellListNameById.get(purchase.id) ?? purchase.id;
+                      const catEntry = characterBuilder.categorySpellLists.find((c) => c.spellLists.includes(purchase.id));
+                      const costElements = catEntry ? (categoryCostMap.get(catEntry.category) ?? []) : [];
                       const maxPurch = getMaxPurchases(costElements);
-                      const spellListsInCat = [...catEntry.spellLists]
-                        .map((slId) => ({ id: slId, name: spellListNameById.get(slId) ?? slId }))
-                        .sort((a, b) => a.name.localeCompare(b.name));
-
-                      const nextRankCostForCat = getCategoryOrSpellListPurchaseTotalCost(costElements, 1);
+                      const totalCost = getCategoryOrSpellListPurchaseTotalCost(costElements, purchase.purchases);
+                      const nextCost = purchase.purchases < maxPurch
+                        ? getCategoryOrSpellListPurchaseTotalCost(costElements, purchase.purchases + 1) - totalCost
+                        : 0;
+                      const existingSlRanks = characterBuilder.spellListRanks
+                        .filter((r) => r.id === purchase.id)
+                        .reduce((sum, r) => sum + r.value, 0);
+                      const afterSlRanks = existingSlRanks + purchase.purchases;
 
                       return (
-                        <div key={catEntry.category}>
-                          <strong style={{ display: 'block', marginBottom: 6 }}>
-                            {catName}
-                            {costElements.length > 0 && (
-                              <span style={{ color: 'var(--muted)', fontWeight: 400, marginLeft: 8 }}>{nextRankCostForCat} DP / rank</span>
-                            )}
-                          </strong>
-                          <div style={{ display: 'grid', gap: 6 }}>
-                            {spellListsInCat.map((sl) => {
-                              const existingEntry = apprenticeSpellListPurchases.find((p) => p.id === sl.id);
-                              const purchases = existingEntry?.purchases ?? 0;
-                              const totalCost = getCategoryOrSpellListPurchaseTotalCost(costElements, purchases);
-                              const nextCost = purchases < maxPurch
-                                ? getCategoryOrSpellListPurchaseTotalCost(costElements, purchases + 1) - totalCost
-                                : 0;
-                              const existingSlRanks = characterBuilder.spellListRanks
-                                .filter((r) => r.id === sl.id)
-                                .reduce((sum, r) => sum + r.value, 0);
-                              const afterSlRanks = existingSlRanks + purchases;
-
-                              return (
-                                <div key={sl.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: 8 }}>
-                                  <span>
-                                    {sl.name}
-                                    {(existingSlRanks > 0 || purchases > 0) && (
-                                      <span style={{ color: 'var(--muted)', marginLeft: 6 }}>
-                                        {purchases > 0
-                                          ? `— ${existingSlRanks} → ${afterSlRanks} rank${afterSlRanks !== 1 ? 's' : ''}, ${totalCost} DP`
-                                          : `— ${existingSlRanks} rank${existingSlRanks !== 1 ? 's' : ''}`}
-                                      </span>
-                                    )}
-                                  </span>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <button
-                                      type="button"
-                                      disabled={purchases <= 0}
-                                      onClick={() => {
-                                        setApprenticeSpellListPurchases((prev) => {
-                                          const idx = prev.findIndex((p) => p.id === sl.id);
-                                          if (idx < 0) return prev;
-                                          const entry = prev[idx];
-                                          if (!entry) return prev;
-                                          const newPurchases = entry.purchases - 1;
-                                          if (newPurchases <= 0) return prev.filter((_, j) => j !== idx);
-                                          return prev.map((p, j) => j === idx ? { ...p, purchases: newPurchases } : p);
-                                        });
-                                      }}
-                                    >
-                                      −
-                                    </button>
-                                    <span style={{ minWidth: 20, textAlign: 'center' }}>{purchases}</span>
-                                    <button
-                                      type="button"
-                                      disabled={purchases >= maxPurch || nextCost > apprenticeDpRemaining}
-                                      onClick={() => {
-                                        setApprenticeSpellListPurchases((prev) => {
-                                          const idx = prev.findIndex((p) => p.id === sl.id);
-                                          if (idx < 0) return [...prev, { id: sl.id, purchases: 1 }];
-                                          return prev.map((p, j) => j === idx ? { ...p, purchases: p.purchases + 1 } : p);
-                                        });
-                                      }}
-                                    >
-                                      +
-                                    </button>
-                                  </div>
-                                </div>
-                              );
-                            })}
+                        <div key={purchase.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center', gap: 8 }}>
+                          <span>
+                            {slName}
+                            <span style={{ color: 'var(--muted)', marginLeft: 6 }}>
+                              — {existingSlRanks} → {afterSlRanks} rank{afterSlRanks !== 1 ? 's' : ''}, {totalCost} DP
+                            </span>
+                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <button
+                              type="button"
+                              disabled={purchase.purchases <= 0}
+                              onClick={() => setApprenticeSpellListPurchases((prev) =>
+                                prev.map((p, idx) => idx === i ? { ...p, purchases: p.purchases - 1 } : p),
+                              )}
+                            >
+                              −
+                            </button>
+                            <span style={{ minWidth: 20, textAlign: 'center' }}>{purchase.purchases}</span>
+                            <button
+                              type="button"
+                              disabled={purchase.purchases >= maxPurch || nextCost > apprenticeDpRemaining}
+                              onClick={() => setApprenticeSpellListPurchases((prev) =>
+                                prev.map((p, idx) => idx === i ? { ...p, purchases: p.purchases + 1 } : p),
+                              )}
+                            >
+                              +
+                            </button>
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => setApprenticeSpellListPurchases((prev) => prev.filter((_, idx) => idx !== i))}
+                          >
+                            Remove
+                          </button>
                         </div>
                       );
                     })}
-                </div>
+                  </div>
+                )}
+                {apprenticeAddingSpellList ? (
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    <LabeledSelect
+                      label="Spell Category"
+                      hideLabel={true}
+                      value={apprenticeSelectedSpellCategory}
+                      onChange={(v) => setApprenticeSelectedSpellCategory(v)}
+                      options={apprenticeSpellCategoryOptions}
+                      placeholderOption="— Select category —"
+                    />
+                    {apprenticeSelectedSpellCategory && apprenticeSpellListsInSelectedCategory.length > 0 && (
+                      <LabeledSelect
+                        label="Spell List"
+                        hideLabel={true}
+                        value=""
+                        onChange={(v) => {
+                          if (v) {
+                            setApprenticeSpellListPurchases((prev) => [...prev, { id: v, purchases: 1 }]);
+                            setApprenticeSelectedSpellCategory('');
+                            setApprenticeAddingSpellList(false);
+                          }
+                        }}
+                        options={apprenticeSpellListsInSelectedCategory.map((sl) => ({ value: sl.id, label: sl.name }))}
+                        placeholderOption="— Select spell list —"
+                      />
+                    )}
+                    {apprenticeSelectedSpellCategory && apprenticeSpellListsInSelectedCategory.length === 0 && (
+                      <div style={{ color: 'var(--muted)' }}>No more spell lists available in this category.</div>
+                    )}
+                    <div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setApprenticeAddingSpellList(false);
+                          setApprenticeSelectedSpellCategory('');
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={
+                      apprenticeDpRemaining <= 0
+                      || characterBuilder.categorySpellLists.every((c) =>
+                        c.spellLists.every((slId) => apprenticeSpellListPurchases.some((p) => p.id === slId)),
+                      )
+                    }
+                    onClick={() => setApprenticeAddingSpellList(true)}
+                  >
+                    Add Spell List
+                  </button>
+                )}
               </div>
 
               {errors.apprenticeship && <div style={{ color: '#b00020' }}>{errors.apprenticeship}</div>}
