@@ -21,7 +21,12 @@ export interface CharacterBuilderStatValue {
 
 export interface CharacterBuilderCategoryCost {
   category: string; // SkillCategory.id
-  cost: string;     // 1 to 3 colon-separated positive numbers
+  cost: string;     // 0 to 3 colon-separated positive numbers
+}
+
+export interface CharacterBuilderCategorySpellLists {
+  category: string; // SkillCategory.id
+  spellLists: string[]; // SpellList.id[]
 }
 
 export interface CharacterBuilder extends Named {
@@ -37,17 +42,24 @@ export interface CharacterBuilder extends Named {
   numAdolescentSpellListRanks: number;
   developmentPoints: number;
 
+  categorySpellLists: CharacterBuilderCategorySpellLists[];
+  trainingPackageCosts: PersistentValue[];
+
   /* Initial Choices */
   // Race
   raceCategoryEverymanChoices: CharacterBuilderIdOptionalSubcategory[];
   // Culture Type
   cultureTypeCategorySkillRanks: SkillValue[];
+  // Culture
+  hobbySkillRankChoices: SkillValue[];
+  hobbyCategoryRankChoices: PersistentValue[];
   // Profession
   profSkillDevelopmentTypeChoices: SkillDevelopmentTypeValue[];
   profCategoryDevelopmentTypeChoices: SkillDevelopmentTypeValue[];
   profGroupDevelopmentTypeChoices: SkillDevelopmentTypeValue[];
-  baseSpellListChoices: string[];
+  baseSpellListChoices: string[]; // SpellList.id[]
   weaponCategoryCostChoices: CharacterBuilderCategoryCost[];
+  // Realms
 
   /* Initial Stats */
   initialStats: CharacterBuilderStatValue[];
@@ -106,17 +118,24 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
     numAdolescentSpellListRanks: 0,
     developmentPoints: 0,
 
+    categorySpellLists: [],
+    trainingPackageCosts: [],
+
     /* Initial Choices */
     // Race
     raceCategoryEverymanChoices: [],
     // Culture Type
     cultureTypeCategorySkillRanks: [],
+    // Culture
+    hobbySkillRankChoices: [],
+    hobbyCategoryRankChoices: [],
     // Profession
     profSkillDevelopmentTypeChoices: [],
     profCategoryDevelopmentTypeChoices: [],
     profGroupDevelopmentTypeChoices: [],
     baseSpellListChoices: [],
     weaponCategoryCostChoices: [],
+    // Realms
 
     /* Initial Stats */
     initialStats: [],

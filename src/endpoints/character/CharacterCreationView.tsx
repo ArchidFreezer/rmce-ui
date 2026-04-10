@@ -14,7 +14,7 @@ import {
   fetchTrainingPackages,
   fetchWeaponTypes,
   getStatRollPotentials,
-  setCharacterBuilderStats,
+  setCharacterStats,
   setCharacterBackgroundChoices,
   setCharacterHobbyChoices,
   setCharacterPrimaryChoices,
@@ -78,6 +78,8 @@ const STEP_LABELS: Record<CharacterStep, string> = {
   apprenticeship: '6. Apprenticeship Skills',
   apply: '7. Apply Level Upgrade',
 };
+
+const OWN_REALM_OPEN_LISTS_CATEGORY_ID = 'SKILLCATEGORY_SPELLS_OWN_REALM_OPEN_LISTS';
 
 type StepErrors = {
   primary?: string | undefined;
@@ -1035,9 +1037,9 @@ export default function CharacterCreationView() {
       })),
       languageAbilities: hobbyLanguageRows.map((row) => ({
         language: row.language,
-        spoken: row.spoken,
-        written: row.written,
-        somatic: row.somatic,
+        ...(row.spoken > 0 ? { spoken: row.spoken } : {}),
+        ...(row.written > 0 ? { written: row.written } : {}),
+        ...(row.somatic > 0 ? { somatic: row.somatic } : {}),
       })),
       spell_list_ranks: spellListRanksBudget > 0 && hobbySpellListId
         ? [{ id: hobbySpellListId, value: spellListRanksBudget }]
@@ -1173,9 +1175,9 @@ export default function CharacterCreationView() {
     const mappedBackgroundLanguages = backgroundState.extraLanguages
       ? backgroundState.languageRows.map((row) => ({
         language: row.language,
-        spoken: row.spoken,
-        written: row.written,
-        somatic: row.somatic,
+        ...(row.spoken > 0 ? { spoken: row.spoken } : {}),
+        ...(row.written > 0 ? { written: row.written } : {}),
+        ...(row.somatic > 0 ? { somatic: row.somatic } : {}),
       }))
       : [];
 
@@ -1689,9 +1691,9 @@ export default function CharacterCreationView() {
         .filter((row) => row.spoken > 0 || row.written > 0 || row.somatic > 0)
         .map((row) => ({
           language: row.language,
-          spoken: row.spoken,
-          written: row.written,
-          somatic: row.somatic,
+          ...(row.spoken > 0 ? { spoken: row.spoken } : {}),
+          ...(row.written > 0 ? { written: row.written } : {}),
+          ...(row.somatic > 0 ? { somatic: row.somatic } : {}),
         }))
       : [];
 
@@ -1725,11 +1727,12 @@ export default function CharacterCreationView() {
       setSavingPrimaryDefinition(true);
       try {
         const response = await setPrimaryDefinition({
+          ...characterBuilder,
           name: characterName.trim(),
           race: raceId,
           culture: cultureId,
           profession: professionId,
-          realms: selectedRealms,
+          magicalRealms: selectedRealms,
         });
 
         if (!response.id) {
@@ -1787,7 +1790,7 @@ export default function CharacterCreationView() {
 
       setSavingStats(true);
       try {
-        const statsPayload = STATS.map((stat) => {
+        const initialStats = STATS.map((stat) => {
           const assigned = statRolls.find((roll) => roll.assignedStat === stat);
           if (!assigned) {
             throw new Error(`Missing assigned roll for stat ${stat}.`);
@@ -1797,12 +1800,14 @@ export default function CharacterCreationView() {
             stat,
             temporary: Number(assigned.temporary) || 0,
             potential: assigned.potential ?? 0,
+            bonus: (race?.statBonuses.find((b) => b.id === stat)?.value ?? 0)
+              + tpStatGainChoices.filter((s) => s === stat).length,
           };
         });
 
-        const statsSetup = await setCharacterBuilderStats({
-          id: characterBuilder.id,
-          stats: statsPayload,
+        await setCharacterStats({
+          ...characterBuilder,
+          initialStats,
         });
 
         const baseSkillByKey = new Map<string, number>();
@@ -1825,7 +1830,7 @@ export default function CharacterCreationView() {
           });
         }
 
-        const hobbySkillInit = (statsSetup.hobbySkills ?? []).map((row) => {
+        const hobbySkillInit = (characterBuilder.hobbySkillRankChoices ?? []).map((row) => {
           const key = skillChoiceKey(row.id, row.subcategory);
           const base = baseSkillByKey.get(key) ?? 0;
           const max = base + Math.max(0, row.value ?? 0);
@@ -1840,18 +1845,19 @@ export default function CharacterCreationView() {
           };
         });
 
-        const hobbyCategoryInit = (statsSetup.hobbyCategories ?? []).map((row) => {
-          const base = baseCategoryById.get(row.id) ?? 0;
+        const hobbyCategoryInit = (characterBuilder.hobbyCategoryRankChoices ?? []).map((row) => {
+          const rowId = String(row.id);
+          const base = baseCategoryById.get(rowId) ?? 0;
           const max = base + Math.max(0, row.value ?? 0);
           return {
-            id: row.id,
+            id: rowId,
             base,
             max,
             value: base,
           };
         });
 
-        const hobbyLanguageInit = (statsSetup.adolescentLanguages ?? []).map((row) => {
+        const hobbyLanguageInit = (race?.adolescentLanguages ?? []).map((row) => {
           const base = baseLanguageById.get(row.language);
           const baseSpoken = base?.spoken ?? 0;
           const baseWritten = base?.written ?? 0;
@@ -1873,8 +1879,12 @@ export default function CharacterCreationView() {
           };
         });
 
-        const spellListOptions = (statsSetup.adolescentSpellLists ?? []).map((x) => String(x));
-        const spellListRankBudget = Math.max(0, statsSetup.numSpellListRanks ?? 0);
+        const spellListOptions = (
+          characterBuilder.categorySpellLists
+            .find((row) => row.category === OWN_REALM_OPEN_LISTS_CATEGORY_ID)
+            ?.spellLists ?? []
+        ).map((x) => String(x));
+        const spellListRankBudget = Math.max(0, characterBuilder.numAdolescentSpellListRanks ?? 0);
         const existingSpellListId = spellListRankBudget > 0
           ? (characterBuilder.adolescentSpellListChoice ?? '')
           : '';
@@ -1882,11 +1892,11 @@ export default function CharacterCreationView() {
           ? (spellListOptions.includes(existingSpellListId) ? existingSpellListId : '')
           : '';
 
-        setHobbyRanksBudget(Math.max(0, statsSetup.numHobbyRanks ?? 0));
+        setHobbyRanksBudget(Math.max(0, characterBuilder.numHobbySkillRanks ?? 0));
         setHobbySkillRows(hobbySkillInit);
         setHobbyCategoryRows(hobbyCategoryInit);
 
-        setLanguageRanksBudget(Math.max(0, statsSetup.numLanguageRanks ?? 0));
+        setLanguageRanksBudget(Math.max(0, characterBuilder.numAdolescentLanguageRanks ?? 0));
         setHobbyLanguageRows(hobbyLanguageInit);
 
         setSpellListRanksBudget(spellListRankBudget);
@@ -1916,7 +1926,7 @@ export default function CharacterCreationView() {
 
       setSavingHobbyChoices(true);
       try {
-        const hobbyRanks = hobbySkillRows
+        const hobbySkillRanks = hobbySkillRows
           .map((row) => ({
             id: row.id,
             subcategory: row.subcategory,
@@ -1931,21 +1941,21 @@ export default function CharacterCreationView() {
           }))
           .filter((row) => row.value > 0);
 
-        const adolescentLanguages = hobbyLanguageRows
+        const adolescentLanguageChoices = hobbyLanguageRows
           .filter((row) => row.spoken > row.baseSpoken || row.written > row.baseWritten || row.somatic > row.baseSomatic)
           .map((row) => ({
             language: row.language,
-            spoken: row.spoken,
-            written: row.written,
-            somatic: row.somatic,
+            ...(row.spoken > 0 ? { spoken: row.spoken } : {}),
+            ...(row.written > 0 ? { written: row.written } : {}),
+            ...(row.somatic > 0 ? { somatic: row.somatic } : {}),
           }));
 
         const response = await setCharacterHobbyChoices({
-          id: characterBuilder.id,
-          hobbyRanks,
+          ...characterBuilder,
+          hobbySkillRanks,
           hobbyCategoryRanks,
-          adolescentLanguages,
-          adolescentSpellList: hobbySpellListId || '',
+          adolescentLanguageChoices,
+          adolescentSpellListChoice: hobbySpellListId || null,
         });
 
         setCharacterBuilder(response);
