@@ -320,8 +320,8 @@ function getSkillMaxPurchases(costElements: number[], devType: SkillDevelopmentT
 
 function getSkillRanksPerPurchase(devType: SkillDevelopmentType | undefined): number {
   switch (devType) {
-    case 'Everyman': return 3;
-    case 'Occupational': return 2;
+    case 'Occupational': return 3;
+    case 'Everyman': return 2;
     case 'Restricted': return 1;
     case 'Standard':
     default: return 1;
@@ -416,6 +416,11 @@ export default function CharacterCreationView() {
   const [apprenticeSpellListPurchases, setApprenticeSpellListPurchases] = useState<ApprenticeSpellListPurchase[]>([]);
   const [apprenticeSelectedSpellCategory, setApprenticeSelectedSpellCategory] = useState('');
   const [apprenticeAddingSpellList, setApprenticeAddingSpellList] = useState(false);
+  const [preApprenticeshipRanks, setPreApprenticeshipRanks] = useState<{
+    skillRanks: CharacterBuilder['skillRanks'];
+    categoryRanks: CharacterBuilder['categoryRanks'];
+    spellListRanks: CharacterBuilder['spellListRanks'];
+  }>({ skillRanks: [], categoryRanks: [], spellListRanks: [] });
   const [characterBuilder, setCharacterBuilder] = useState<CharacterBuilder>(() => createEmptyCharacterBuilder());
   const [savingPrimaryDefinition, setSavingPrimaryDefinition] = useState(false);
   const [savingInitialChoices, setSavingInitialChoices] = useState(false);
@@ -1039,18 +1044,13 @@ export default function CharacterCreationView() {
         const costElements = categoryCostMap.get(s.category) ?? [];
         return costElements.length > 0;
       })
-      .sort((a, b) => {
-        const aGroupLabel = categoryGroupNameById.get(a.category) ?? a.category;
-        const bGroupLabel = categoryGroupNameById.get(b.category) ?? b.category;
-        const cmp = aGroupLabel.localeCompare(bGroupLabel);
-        return cmp !== 0 ? cmp : a.name.localeCompare(b.name);
-      })
+      .sort((a, b) => a.name.localeCompare(b.name))
       .map((s) => {
         const costElements = categoryCostMap.get(s.category) ?? [];
         const devType = skillDevTypeMap.get(s.id);
         const nextRankCost = getSkillPurchaseTotalCost(costElements, devType, 1);
         const groupLabel = categoryGroupNameById.get(s.category) ?? s.category;
-        return { value: s.id, label: `[${groupLabel}] ${s.name} — ${nextRankCost} DP` };
+        return { value: s.id, label: `${s.name} (${groupLabel}) — ${nextRankCost} DP` };
       });
   }, [skills, apprenticeSkillPurchases, categoryCostMap, skillDevTypeMap, categoryGroupNameById]);
 
@@ -2302,6 +2302,11 @@ export default function CharacterCreationView() {
         );
 
         setCharacterBuilder(response);
+        setPreApprenticeshipRanks({
+          skillRanks: response.skillRanks ?? [],
+          categoryRanks: response.categoryRanks ?? [],
+          spellListRanks: response.spellListRanks ?? [],
+        });
       } catch (e) {
         toast({
           variant: 'danger',
@@ -2577,6 +2582,7 @@ export default function CharacterCreationView() {
     setApprenticeSpellListPurchases([]);
     setApprenticeSelectedSpellCategory('');
     setApprenticeAddingSpellList(false);
+    setPreApprenticeshipRanks({ skillRanks: [], categoryRanks: [], spellListRanks: [] });
     setCharacterBuilder(createEmptyCharacterBuilder());
     setErrors({});
   };
@@ -3837,7 +3843,7 @@ export default function CharacterCreationView() {
                         : 0;
                       const isWeaponGroupSkill = weaponGroupSkillIds.has(purchase.id);
                       const needsSubcategory = mandatorySubcategorySkillIds.has(purchase.id);
-                      const existingSkillRanks = characterBuilder.skillRanks
+                      const existingSkillRanks = preApprenticeshipRanks.skillRanks
                         .filter((r) => r.id === purchase.id && (purchase.subcategory ? r.subcategory === purchase.subcategory : true))
                         .reduce((sum, r) => sum + r.value, 0);
                       const afterSkillRanks = existingSkillRanks + totalRanks;
@@ -3848,7 +3854,8 @@ export default function CharacterCreationView() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                               <div>
                                 <strong>{skillName}</strong>
-                                {devType && <span style={{ color: 'var(--muted)', marginLeft: 6 }}>({devType})</span>}
+                                <span style={{ color: 'var(--muted)', marginLeft: 6 }}>({categoryGroupNameById.get(categoryId) ?? categoryId})</span>
+                                {devType && <span style={{ color: 'var(--muted)', marginLeft: 6 }}>[{devType}]</span>}
                                 <span style={{ color: 'var(--muted)', marginLeft: 6 }}>
                                   — {existingSkillRanks} → {afterSkillRanks} rank{afterSkillRanks !== 1 ? 's' : ''}, {totalCost} DP
                                 </span>
@@ -3937,7 +3944,7 @@ export default function CharacterCreationView() {
                       const nextCost = purchase.purchases < maxPurch
                         ? getCategoryOrSpellListPurchaseTotalCost(costElements, purchase.purchases + 1) - totalCost
                         : 0;
-                      const existingCatRanks = characterBuilder.categoryRanks
+                      const existingCatRanks = preApprenticeshipRanks.categoryRanks
                         .filter((r) => r.id === purchase.id)
                         .reduce((sum, r) => sum + r.value, 0);
                       const afterCatRanks = existingCatRanks + purchase.purchases;
@@ -4009,7 +4016,7 @@ export default function CharacterCreationView() {
                       const nextCost = purchase.purchases < maxPurch
                         ? getCategoryOrSpellListPurchaseTotalCost(costElements, purchase.purchases + 1) - totalCost
                         : 0;
-                      const existingSlRanks = characterBuilder.spellListRanks
+                      const existingSlRanks = preApprenticeshipRanks.spellListRanks
                         .filter((r) => r.id === purchase.id)
                         .reduce((sum, r) => sum + r.value, 0);
                       const afterSlRanks = existingSlRanks + purchase.purchases;
