@@ -3804,6 +3804,10 @@ export default function CharacterCreationView() {
                         : 0;
                       const isWeaponGroupSkill = weaponGroupSkillIds.has(purchase.id);
                       const needsSubcategory = mandatorySubcategorySkillIds.has(purchase.id);
+                      const existingSkillRanks = characterBuilder.skillRanks
+                        .filter((r) => r.id === purchase.id && (purchase.subcategory ? r.subcategory === purchase.subcategory : true))
+                        .reduce((sum, r) => sum + r.value, 0);
+                      const afterSkillRanks = existingSkillRanks + totalRanks;
 
                       return (
                         <div key={purchase.id} style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}>
@@ -3813,7 +3817,7 @@ export default function CharacterCreationView() {
                                 <strong>{skillName}</strong>
                                 {devType && <span style={{ color: 'var(--muted)', marginLeft: 6 }}>({devType})</span>}
                                 <span style={{ color: 'var(--muted)', marginLeft: 6 }}>
-                                  — {totalRanks} rank{totalRanks !== 1 ? 's' : ''}, {totalCost} DP
+                                  — {existingSkillRanks} → {afterSkillRanks} rank{afterSkillRanks !== 1 ? 's' : ''}, {totalCost} DP
                                 </span>
                               </div>
                               {needsSubcategory && (
@@ -3899,13 +3903,17 @@ export default function CharacterCreationView() {
                       const nextCost = purchase.purchases < maxPurch
                         ? getCategoryOrSpellListPurchaseTotalCost(costElements, purchase.purchases + 1) - totalCost
                         : 0;
+                      const existingCatRanks = characterBuilder.categoryRanks
+                        .filter((r) => r.id === purchase.id)
+                        .reduce((sum, r) => sum + r.value, 0);
+                      const afterCatRanks = existingCatRanks + purchase.purchases;
 
                       return (
                         <div key={purchase.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center', gap: 8 }}>
                           <span>
                             {catName}
                             <span style={{ color: 'var(--muted)', marginLeft: 6 }}>
-                              — {purchase.purchases} rank{purchase.purchases !== 1 ? 's' : ''}, {totalCost} DP
+                              — {existingCatRanks} → {afterCatRanks} rank{afterCatRanks !== 1 ? 's' : ''}, {totalCost} DP
                             </span>
                           </span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -3955,72 +3963,90 @@ export default function CharacterCreationView() {
               {/* Spell List Rank Purchases */}
               <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
                 <h4 style={{ margin: '0 0 8px' }}>Spell List Ranks</h4>
-                <LabeledSelect
-                  label="Spell Category"
-                  value={apprenticeSelectedSpellCategory}
-                  onChange={(v) => setApprenticeSelectedSpellCategory(v)}
-                  options={apprenticeSpellCategoryOptions}
-                />
-                {apprenticeSelectedSpellCategory && apprenticeSpellListsInSelectedCategory.length > 0 && (
-                  <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
-                    {apprenticeSpellListsInSelectedCategory.map((sl) => {
-                      const existing = apprenticeSpellListPurchases.find((p) => p.id === sl.id);
-                      const purchases = existing?.purchases ?? 0;
-                      const costElements = categoryCostMap.get(apprenticeSelectedSpellCategory) ?? [];
+                {characterBuilder.categorySpellLists.length === 0 && (
+                  <div style={{ color: 'var(--muted)' }}>No spell lists available.</div>
+                )}
+                <div style={{ display: 'grid', gap: 12 }}>
+                  {characterBuilder.categorySpellLists
+                    .slice()
+                    .sort((a, b) => (categoryNameById.get(a.category) ?? a.category).localeCompare(categoryNameById.get(b.category) ?? b.category))
+                    .map((catEntry) => {
+                      const catName = categoryNameById.get(catEntry.category) ?? catEntry.category;
+                      const costElements = categoryCostMap.get(catEntry.category) ?? [];
                       const maxPurch = getMaxPurchases(costElements);
-                      const totalCost = getCategoryOrSpellListPurchaseTotalCost(costElements, purchases);
-                      const nextCost = purchases < maxPurch
-                        ? getCategoryOrSpellListPurchaseTotalCost(costElements, purchases + 1) - totalCost
-                        : 0;
+                      const spellListsInCat = [...catEntry.spellLists]
+                        .map((slId) => ({ id: slId, name: spellListNameById.get(slId) ?? slId }))
+                        .sort((a, b) => a.name.localeCompare(b.name));
 
                       return (
-                        <div key={sl.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: 8 }}>
-                          <span>
-                            {sl.name}
-                            {purchases > 0 && (
-                              <span style={{ color: 'var(--muted)', marginLeft: 6 }}>
-                                — {purchases} rank{purchases !== 1 ? 's' : ''}, {totalCost} DP
-                              </span>
-                            )}
-                          </span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <button
-                              type="button"
-                              disabled={purchases <= 0}
-                              onClick={() => {
-                                setApprenticeSpellListPurchases((prev) => {
-                                  const idx = prev.findIndex((p) => p.id === sl.id);
-                                  if (idx < 0) return prev;
-                                  const entry = prev[idx];
-                                  if (!entry) return prev;
-                                  const newPurchases = entry.purchases - 1;
-                                  if (newPurchases <= 0) return prev.filter((_, j) => j !== idx);
-                                  return prev.map((p, j) => j === idx ? { ...p, purchases: newPurchases } : p);
-                                });
-                              }}
-                            >
-                              −
-                            </button>
-                            <span style={{ minWidth: 20, textAlign: 'center' }}>{purchases}</span>
-                            <button
-                              type="button"
-                              disabled={purchases >= maxPurch || nextCost > apprenticeDpRemaining}
-                              onClick={() => {
-                                setApprenticeSpellListPurchases((prev) => {
-                                  const idx = prev.findIndex((p) => p.id === sl.id);
-                                  if (idx < 0) return [...prev, { id: sl.id, purchases: 1 }];
-                                  return prev.map((p, j) => j === idx ? { ...p, purchases: p.purchases + 1 } : p);
-                                });
-                              }}
-                            >
-                              +
-                            </button>
+                        <div key={catEntry.category}>
+                          <strong style={{ display: 'block', marginBottom: 6 }}>{catName}</strong>
+                          <div style={{ display: 'grid', gap: 6 }}>
+                            {spellListsInCat.map((sl) => {
+                              const existingEntry = apprenticeSpellListPurchases.find((p) => p.id === sl.id);
+                              const purchases = existingEntry?.purchases ?? 0;
+                              const totalCost = getCategoryOrSpellListPurchaseTotalCost(costElements, purchases);
+                              const nextCost = purchases < maxPurch
+                                ? getCategoryOrSpellListPurchaseTotalCost(costElements, purchases + 1) - totalCost
+                                : 0;
+                              const existingSlRanks = characterBuilder.spellListRanks
+                                .filter((r) => r.id === sl.id)
+                                .reduce((sum, r) => sum + r.value, 0);
+                              const afterSlRanks = existingSlRanks + purchases;
+
+                              return (
+                                <div key={sl.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: 8 }}>
+                                  <span>
+                                    {sl.name}
+                                    {(existingSlRanks > 0 || purchases > 0) && (
+                                      <span style={{ color: 'var(--muted)', marginLeft: 6 }}>
+                                        {purchases > 0
+                                          ? `— ${existingSlRanks} → ${afterSlRanks} rank${afterSlRanks !== 1 ? 's' : ''}, ${totalCost} DP`
+                                          : `— ${existingSlRanks} rank${existingSlRanks !== 1 ? 's' : ''}`}
+                                      </span>
+                                    )}
+                                  </span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <button
+                                      type="button"
+                                      disabled={purchases <= 0}
+                                      onClick={() => {
+                                        setApprenticeSpellListPurchases((prev) => {
+                                          const idx = prev.findIndex((p) => p.id === sl.id);
+                                          if (idx < 0) return prev;
+                                          const entry = prev[idx];
+                                          if (!entry) return prev;
+                                          const newPurchases = entry.purchases - 1;
+                                          if (newPurchases <= 0) return prev.filter((_, j) => j !== idx);
+                                          return prev.map((p, j) => j === idx ? { ...p, purchases: newPurchases } : p);
+                                        });
+                                      }}
+                                    >
+                                      −
+                                    </button>
+                                    <span style={{ minWidth: 20, textAlign: 'center' }}>{purchases}</span>
+                                    <button
+                                      type="button"
+                                      disabled={purchases >= maxPurch || nextCost > apprenticeDpRemaining}
+                                      onClick={() => {
+                                        setApprenticeSpellListPurchases((prev) => {
+                                          const idx = prev.findIndex((p) => p.id === sl.id);
+                                          if (idx < 0) return [...prev, { id: sl.id, purchases: 1 }];
+                                          return prev.map((p, j) => j === idx ? { ...p, purchases: p.purchases + 1 } : p);
+                                        });
+                                      }}
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       );
                     })}
-                  </div>
-                )}
+                </div>
               </div>
 
               {errors.apprenticeship && <div style={{ color: '#b00020' }}>{errors.apprenticeship}</div>}
