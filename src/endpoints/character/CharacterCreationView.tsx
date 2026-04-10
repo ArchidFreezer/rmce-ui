@@ -133,12 +133,17 @@ type BackgroundLanguageRow = {
   somatic: number;
 };
 
+type BackgroundSkillBonusRow = {
+  id: string;
+  subcategory: string;
+};
+
 type BackgroundOptionState = {
   extraStatGainRolls: boolean;
   extraMoneyPoints: number;
   extraLanguages: boolean;
   languageRows: BackgroundLanguageRow[];
-  skillBonusIds: string[];
+  skillBonuses: BackgroundSkillBonusRow[];
   categoryBonusIds: string[];
   specialItemsPoints: number;
 };
@@ -256,7 +261,7 @@ function createEmptyBackgroundOptionState(): BackgroundOptionState {
     extraMoneyPoints: 0,
     extraLanguages: false,
     languageRows: [],
-    skillBonusIds: [],
+    skillBonuses: [],
     categoryBonusIds: [],
     specialItemsPoints: 0,
   };
@@ -276,7 +281,7 @@ function getSelectedBackgroundPoints(state: BackgroundOptionState): number {
   return (state.extraStatGainRolls ? 1 : 0)
     + state.extraMoneyPoints
     + (state.extraLanguages ? 1 : 0)
-    + state.skillBonusIds.length
+    + state.skillBonuses.length
     + state.categoryBonusIds.length
     + state.specialItemsPoints;
 }
@@ -286,7 +291,7 @@ function getSelectedBackgroundOptionsPayload(state: BackgroundOptionState): stri
   if (state.extraStatGainRolls) out.push('EXTRA_STAT_GAIN_ROLLS');
   for (let i = 0; i < state.extraMoneyPoints; i++) out.push('EXTRA_MONEY');
   if (state.extraLanguages) out.push('EXTRA_LANGUAGES');
-  for (const id of state.skillBonusIds) out.push(`SKILL_BONUS:${id}`);
+  for (const row of state.skillBonuses) out.push(`SKILL_BONUS:${row.id}`);
   for (const id of state.categoryBonusIds) out.push(`SKILL_CATEGORY_BONUS:${id}`);
   for (let i = 0; i < state.specialItemsPoints; i++) out.push('SPECIAL_ITEMS');
   return out;
@@ -348,7 +353,7 @@ export default function CharacterCreationView() {
   const [backgroundExtraMoneyPoints, setBackgroundExtraMoneyPoints] = useState(0);
   const [backgroundExtraLanguages, setBackgroundExtraLanguages] = useState(false);
   const [backgroundLanguageRows, setBackgroundLanguageRows] = useState<BackgroundLanguageRow[]>([]);
-  const [backgroundSkillBonusIds, setBackgroundSkillBonusIds] = useState<string[]>([]);
+  const [backgroundSkillBonusRows, setBackgroundSkillBonusRows] = useState<BackgroundSkillBonusRow[]>([]);
   const [backgroundCategoryBonusIds, setBackgroundCategoryBonusIds] = useState<string[]>([]);
   const [backgroundSpecialItemsPoints, setBackgroundSpecialItemsPoints] = useState(0);
 
@@ -614,6 +619,19 @@ export default function CharacterCreationView() {
     return map;
   }, [weaponTypes]);
 
+  const weaponGroupSkillIds = useMemo(() => {
+    const weaponCategoryIds = new Set(
+      categories
+        .filter((category) => category.group === 'SKILLGROUP_WEAPON')
+        .map((category) => category.id),
+    );
+    return new Set(
+      skills
+        .filter((skill) => weaponCategoryIds.has(skill.category))
+        .map((skill) => skill.id),
+    );
+  }, [categories, skills]);
+
   const languageOptions = useMemo(
     () => languages
       .slice()
@@ -753,7 +771,7 @@ export default function CharacterCreationView() {
     extraMoneyPoints: backgroundExtraMoneyPoints,
     extraLanguages: backgroundExtraLanguages,
     languageRows: backgroundLanguageRows,
-    skillBonusIds: backgroundSkillBonusIds,
+    skillBonuses: backgroundSkillBonusRows,
     categoryBonusIds: backgroundCategoryBonusIds,
     specialItemsPoints: backgroundSpecialItemsPoints,
   }), [
@@ -761,7 +779,7 @@ export default function CharacterCreationView() {
     backgroundExtraMoneyPoints,
     backgroundExtraLanguages,
     backgroundLanguageRows,
-    backgroundSkillBonusIds,
+    backgroundSkillBonusRows,
     backgroundCategoryBonusIds,
     backgroundSpecialItemsPoints,
   ]);
@@ -793,7 +811,10 @@ export default function CharacterCreationView() {
     [skills],
   );
 
-  const selectedBackgroundSkillSet = useMemo(() => new Set(backgroundSkillBonusIds), [backgroundSkillBonusIds]);
+  const selectedBackgroundSkillSet = useMemo(
+    () => new Set(backgroundSkillBonusRows.map((row) => row.id)),
+    [backgroundSkillBonusRows],
+  );
   const availableBackgroundSkillBonusOptions = useMemo(
     () => backgroundSkillBonusOptions.filter((opt) => !selectedBackgroundSkillSet.has(opt.value)),
     [backgroundSkillBonusOptions, selectedBackgroundSkillSet],
@@ -973,7 +994,7 @@ export default function CharacterCreationView() {
     const reset = createEmptyBackgroundOptionState();
     setBackgroundSpecialItemsPoints(reset.specialItemsPoints);
     setBackgroundCategoryBonusIds(reset.categoryBonusIds);
-    setBackgroundSkillBonusIds(reset.skillBonusIds);
+    setBackgroundSkillBonusRows(reset.skillBonuses);
     setBackgroundExtraLanguages(reset.extraLanguages);
     setBackgroundExtraMoneyPoints(reset.extraMoneyPoints);
     setBackgroundExtraStatGainRolls(reset.extraStatGainRolls);
@@ -1183,8 +1204,9 @@ export default function CharacterCreationView() {
 
     setCharacterBuilder((prev) => ({
       ...prev,
-      skillProfessionalBonuses: backgroundState.skillBonusIds.map((id) => ({
-        id,
+      skillProfessionalBonuses: backgroundState.skillBonuses.map((row) => ({
+        id: row.id,
+        subcategory: row.subcategory.trim() || undefined,
         value: 10,
       })),
       categoryProfessionalBonuses: backgroundState.categoryBonusIds.map((id) => ({
@@ -1574,6 +1596,32 @@ export default function CharacterCreationView() {
     if (selectedBackgroundPoints !== backgroundBudget) {
       return `Select exactly ${backgroundBudget} background options.`;
     }
+
+    for (const row of backgroundSkillBonusRows) {
+      const skillName = skillNameById.get(row.id) ?? row.id;
+      const isWeaponGroupSkill = weaponGroupSkillIds.has(row.id);
+      const weaponTypeOptions = weaponTypeOptionsBySkillId.get(row.id) ?? [];
+
+      if (isWeaponGroupSkill && weaponTypeOptions.length === 0) {
+        return `Background Skill Bonus: no weapon types are configured for ${skillName}.`;
+      }
+
+      if (isWeaponGroupSkill && !row.subcategory.trim()) {
+        return `Background Skill Bonus: select weapon type for ${skillName}.`;
+      }
+
+      if (isWeaponGroupSkill && row.subcategory.trim()) {
+        const isValidWeaponType = weaponTypeOptions.some((opt) => opt.value === row.subcategory.trim());
+        if (!isValidWeaponType) {
+          return `Background Skill Bonus: invalid weapon type selected for ${skillName}.`;
+        }
+      }
+
+      if (!isWeaponGroupSkill && mandatorySubcategorySkillIds.has(row.id) && !row.subcategory.trim()) {
+        return `Background Skill Bonus: enter subcategory for ${skillName}.`;
+      }
+    }
+
     if (backgroundExtraLanguages && backgroundLanguageRankSpent > backgroundLanguageRanksBudget) {
       return `Background language ranks are over-allocated by ${backgroundLanguageRankSpent - backgroundLanguageRanksBudget}.`;
     }
@@ -1660,6 +1708,8 @@ export default function CharacterCreationView() {
     hobbySpellListId,
     hobbySkillRows,
     selectedBackgroundPoints,
+    backgroundSkillBonusRows,
+    weaponGroupSkillIds,
     backgroundExtraLanguages,
     backgroundLanguageRankSpent,
     backgroundLanguageRanksBudget,
@@ -1697,8 +1747,9 @@ export default function CharacterCreationView() {
         }))
       : [];
 
-    const backgroundSkillBonus = backgroundState.skillBonusIds.map((id) => ({
-      id,
+    const backgroundSkillBonus = backgroundState.skillBonuses.map((row) => ({
+      id: row.id,
+      subcategory: row.subcategory.trim() || undefined,
       value: 10,
     }));
 
@@ -2162,11 +2213,17 @@ export default function CharacterCreationView() {
       if (!id) return;
       if (selectedBackgroundSkillSet.has(id)) return;
       if (!canSpendBackgroundPoints(1)) return;
-      setBackgroundSkillBonusIds((prev) => [...prev, id]);
+      setBackgroundSkillBonusRows((prev) => [...prev, { id, subcategory: '' }]);
     },
 
     removeSkillBonus(id: string) {
-      setBackgroundSkillBonusIds((prev) => prev.filter((x) => x !== id));
+      setBackgroundSkillBonusRows((prev) => prev.filter((row) => row.id !== id));
+    },
+
+    updateSkillBonusSubcategory(id: string, subcategory: string) {
+      setBackgroundSkillBonusRows((prev) => prev.map((row) => (
+        row.id === id ? { ...row, subcategory } : row
+      )));
     },
 
     addCategoryBonus(id: string) {
@@ -2224,7 +2281,7 @@ export default function CharacterCreationView() {
     setBackgroundExtraMoneyPoints(reset.extraMoneyPoints);
     setBackgroundExtraLanguages(reset.extraLanguages);
     setBackgroundLanguageRows(reset.languageRows);
-    setBackgroundSkillBonusIds(reset.skillBonusIds);
+    setBackgroundSkillBonusRows(reset.skillBonuses);
     setBackgroundCategoryBonusIds(reset.categoryBonusIds);
     setBackgroundSpecialItemsPoints(reset.specialItemsPoints);
   };
@@ -3285,19 +3342,57 @@ export default function CharacterCreationView() {
                       disabled={availableBackgroundSkillBonusOptions.length === 0 || !canSpendBackgroundPoints(1)}
                     />
                   </div>
-                  {backgroundSkillBonusIds.length > 0 && (
+                  {backgroundSkillBonusRows.length > 0 && (
                     <div style={{ display: 'grid', gap: 6 }}>
-                      {backgroundSkillBonusIds.map((id) => (
-                        <div key={`bg-skill-${id}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                          <span>{skillNameById.get(id) ?? id} (+10)</span>
-                          <button
-                            type="button"
-                            onClick={() => backgroundActions.removeSkillBonus(id)}
+                      {backgroundSkillBonusRows.map((row) => {
+                        const isWeaponGroupSkill = weaponGroupSkillIds.has(row.id);
+                        const weaponTypeOptions = weaponTypeOptionsBySkillId.get(row.id) ?? [];
+                        const requiresFreeTextSubcategory = mandatorySubcategorySkillIds.has(row.id) && !isWeaponGroupSkill;
+
+                        return (
+                          <div
+                            key={`bg-skill-${row.id}`}
+                            style={{
+                              display: 'grid',
+                              gap: 8,
+                              gridTemplateColumns: 'minmax(220px, 1fr) minmax(260px, 1fr) auto',
+                              alignItems: 'end',
+                            }}
                           >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
+                            <span>{skillNameById.get(row.id) ?? row.id} (+10)</span>
+                            {isWeaponGroupSkill ? (
+                              <LabeledSelect
+                                label={`Weapon type for ${skillNameById.get(row.id) ?? row.id}`}
+                                hideLabel={true}
+                                value={row.subcategory}
+                                onChange={(value) => backgroundActions.updateSkillBonusSubcategory(row.id, value)}
+                                options={weaponTypeOptions}
+                                disabled={weaponTypeOptions.length === 0}
+                                helperText={weaponTypeOptions.length === 0 ? 'No weapon types available for selected skill.' : undefined}
+                                placeholderOption="— Select weapon type —"
+                                error={errors.background && weaponTypeOptions.length > 0 && !row.subcategory.trim() ? 'Required' : undefined}
+                              />
+                            ) : requiresFreeTextSubcategory ? (
+                              <LabeledInput
+                                label={`Subcategory for ${skillNameById.get(row.id) ?? row.id}`}
+                                hideLabel={true}
+                                value={row.subcategory}
+                                onChange={(value) => backgroundActions.updateSkillBonusSubcategory(row.id, value)}
+                                placeholder="Enter subcategory"
+                                error={errors.background && !row.subcategory.trim() ? 'Required' : undefined}
+                              />
+                            ) : (
+                              <div />
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => backgroundActions.removeSkillBonus(row.id)}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
