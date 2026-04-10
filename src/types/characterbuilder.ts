@@ -21,7 +21,7 @@ export interface CharacterBuilderStatValue {
 
 export interface CharacterBuilderCategoryCost {
   category: string; // SkillCategory.id
-  cost: string;     // 1 to 3 colon-separated positive numbers
+  cost: string;     // 0 to 3 colon-separated positive numbers
 }
 
 export interface CharacterBuilderCategorySpellLists {
