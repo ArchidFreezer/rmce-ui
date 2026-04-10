@@ -1727,11 +1727,12 @@ export default function CharacterCreationView() {
       setSavingPrimaryDefinition(true);
       try {
         const response = await setPrimaryDefinition({
+          ...characterBuilder,
           name: characterName.trim(),
           race: raceId,
           culture: cultureId,
           profession: professionId,
-          realms: selectedRealms,
+          magicalRealms: selectedRealms,
         });
 
         if (!response.id) {

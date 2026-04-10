@@ -3,14 +3,6 @@ import { sendJson } from './client';
 import type { Realm, Stat } from '../types/enum';
 import type { CharacterBuilder, PersistentValue, LanguageAbility } from '../types';
 
-export type PrimaryDefinitionRequest = {
-  name: string;
-  race: string;
-  culture: string;
-  profession: string;
-  realms: Realm[];
-};
-
 export type SetCharacterBackgroundChoicesRequest = {
   id: string;
   statGains: boolean;
@@ -70,7 +62,7 @@ export type StatRollResponse = {
 };
 
 export async function setPrimaryDefinition(
-  payload: PrimaryDefinitionRequest,
+  payload: CharacterBuilder,
 ): Promise<CharacterBuilder> {
   return sendJson<CharacterBuilder>(PRIMARY_DEFINITION_ENDPOINT, 'POST', payload);
 }
