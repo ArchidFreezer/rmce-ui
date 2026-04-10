@@ -1031,8 +1031,13 @@ export default function CharacterCreationView() {
         return costElements.length > 0;
       })
       .sort((a, b) => a.name.localeCompare(b.name))
-      .map((s) => ({ value: s.id, label: s.name }));
-  }, [skills, apprenticeSkillPurchases, categoryCostMap]);
+      .map((s) => {
+        const costElements = categoryCostMap.get(s.category) ?? [];
+        const devType = skillDevTypeMap.get(s.id);
+        const nextRankCost = getSkillPurchaseTotalCost(costElements, devType, 1);
+        return { value: s.id, label: `${s.name} — ${nextRankCost} DP` };
+      });
+  }, [skills, apprenticeSkillPurchases, categoryCostMap, skillDevTypeMap]);
 
   const apprenticeCategoryOptions = useMemo(() => {
     const selectedSet = new Set(apprenticeCategoryPurchases.map((p) => p.id));
@@ -1047,7 +1052,12 @@ export default function CharacterCreationView() {
         const bLabel = categoryNameById.get(b.id) ?? b.id;
         return aLabel.localeCompare(bLabel);
       })
-      .map((c) => ({ value: c.id, label: categoryNameById.get(c.id) ?? c.id }));
+      .map((c) => {
+        const costElements = categoryCostMap.get(c.id) ?? [];
+        const nextRankCost = getCategoryOrSpellListPurchaseTotalCost(costElements, 1);
+        const baseLabel = categoryNameById.get(c.id) ?? c.id;
+        return { value: c.id, label: `${baseLabel} — ${nextRankCost} DP` };
+      });
   }, [categories, apprenticeCategoryPurchases, categoryCostMap, categoryNameById]);
 
   const apprenticeSpellCategoryOptions = useMemo(
@@ -3978,9 +3988,16 @@ export default function CharacterCreationView() {
                         .map((slId) => ({ id: slId, name: spellListNameById.get(slId) ?? slId }))
                         .sort((a, b) => a.name.localeCompare(b.name));
 
+                      const nextRankCostForCat = getCategoryOrSpellListPurchaseTotalCost(costElements, 1);
+
                       return (
                         <div key={catEntry.category}>
-                          <strong style={{ display: 'block', marginBottom: 6 }}>{catName}</strong>
+                          <strong style={{ display: 'block', marginBottom: 6 }}>
+                            {catName}
+                            {costElements.length > 0 && (
+                              <span style={{ color: 'var(--muted)', fontWeight: 400, marginLeft: 8 }}>{nextRankCostForCat} DP / rank</span>
+                            )}
+                          </strong>
                           <div style={{ display: 'grid', gap: 6 }}>
                             {spellListsInCat.map((sl) => {
                               const existingEntry = apprenticeSpellListPurchases.find((p) => p.id === sl.id);
