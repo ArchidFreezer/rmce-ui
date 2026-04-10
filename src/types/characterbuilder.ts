@@ -43,7 +43,7 @@ export interface CharacterBuilder extends Named {
   developmentPoints: number;
 
   categorySpellLists: CharacterBuilderCategorySpellLists[];
-  trainingPackageCosts: PersistentValue[];
+  trainingPackageCosts: PersistentValue[]; // TrainingPackage.id and cost
 
   /* Initial Choices */
   // Race

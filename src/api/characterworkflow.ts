@@ -1,14 +1,14 @@
 import { sendJson } from './client';
 
 import type { Realm, Stat } from '../types/enum';
-import type { CharacterBuilder, PersistentValue, LanguageAbility } from '../types';
+import type { CharacterBuilder, PersistentValue, LanguageAbility, SkillValue } from '../types';
 
 export type SetCharacterBackgroundChoicesRequest = {
   id: string;
   statGains: boolean;
   extraMoney: 0 | 1 | 2;
   backgroundLanguages: LanguageAbility[];
-  backgroundSkillBonus: PersistentValue[];
+  backgroundSkillBonus: SkillValue[];
   backgroundCategoryBonus: PersistentValue[];
   backgroundItemCount: 0 | 1 | 2;
 };
