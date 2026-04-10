@@ -648,6 +648,14 @@ export default function CharacterCreationView() {
     return map;
   }, [categories, groups]);
 
+  const categoryGroupNameById = useMemo(() => {
+    const groupNameById = new Map<string, string>();
+    for (const g of groups) groupNameById.set(g.id, g.name);
+    const map = new Map<string, string>();
+    for (const c of categories) map.set(c.id, groupNameById.get(c.group) ?? c.group);
+    return map;
+  }, [categories, groups]);
+
   const languageNameById = useMemo(() => {
     const map = new Map<string, string>();
     for (const l of languages) map.set(l.id, l.name);
@@ -1031,14 +1039,20 @@ export default function CharacterCreationView() {
         const costElements = categoryCostMap.get(s.category) ?? [];
         return costElements.length > 0;
       })
-      .sort((a, b) => a.name.localeCompare(b.name))
+      .sort((a, b) => {
+        const aGroupLabel = categoryGroupNameById.get(a.category) ?? a.category;
+        const bGroupLabel = categoryGroupNameById.get(b.category) ?? b.category;
+        const cmp = aGroupLabel.localeCompare(bGroupLabel);
+        return cmp !== 0 ? cmp : a.name.localeCompare(b.name);
+      })
       .map((s) => {
         const costElements = categoryCostMap.get(s.category) ?? [];
         const devType = skillDevTypeMap.get(s.id);
         const nextRankCost = getSkillPurchaseTotalCost(costElements, devType, 1);
-        return { value: s.id, label: `${s.name} — ${nextRankCost} DP` };
+        const groupLabel = categoryGroupNameById.get(s.category) ?? s.category;
+        return { value: s.id, label: `[${groupLabel}] ${s.name} — ${nextRankCost} DP` };
       });
-  }, [skills, apprenticeSkillPurchases, categoryCostMap, skillDevTypeMap]);
+  }, [skills, apprenticeSkillPurchases, categoryCostMap, skillDevTypeMap, categoryGroupNameById]);
 
   const apprenticeCategoryOptions = useMemo(() => {
     const selectedSet = new Set(apprenticeCategoryPurchases.map((p) => p.id));
