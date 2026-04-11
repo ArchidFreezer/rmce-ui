@@ -29,7 +29,7 @@ export type ApplyLevelUpgradeRequest = {
     spellListChoices: Array<Array<{ id: string; ranks: number }>>;
     spellListCategoryChoices: Array<Array<{ id: string; ranks: number }>>;
     lifestyleCategorySkillChoices: string[][];
-    languageChoices: string[][];
+    languageChoices: Array<Array<{ languageId: string; spoken: number; written: number; somatic: number }>>;
   }>;
 };
 

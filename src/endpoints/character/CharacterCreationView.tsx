@@ -167,6 +167,7 @@ type ApprenticeSpellListPurchase = {
 type TpSkillAllocation = { id: string; subcategory: string; ranks: number };
 type TpSpellListAllocation = { id: string; ranks: number };
 type TpGroupCategoryAndSkillChoice = { categoryId: string; skillId: string; subcategory: string };
+type TpLanguageAllocation = { languageId: string; spoken: number; written: number; somatic: number };
 
 type TpResolution = {
   tpId: string;
@@ -178,7 +179,7 @@ type TpResolution = {
   spellListChoices: TpSpellListAllocation[][];
   spellListCategoryChoices: TpSpellListAllocation[][];
   lifestyleCategorySkillChoices: string[][];
-  languageChoices: string[][];
+  languageChoices: TpLanguageAllocation[][];
 };
 
 type ApprenticeSubstep = 'selecting' | 'resolving' | 'purchasing';
@@ -401,9 +402,7 @@ function createEmptyTpResolution(tp: TrainingPackage): TpResolution {
     lifestyleCategorySkillChoices: (tp.lifestyleCategorySkillChoices ?? []).map((c) =>
       Array.from({ length: c.numChoices }, () => ''),
     ),
-    languageChoices: (tp.languageChoices ?? []).map((c) =>
-      Array.from({ length: c.numChoices }, () => ''),
-    ),
+    languageChoices: (tp.languageChoices ?? []).map(() => []),
   };
 }
 
@@ -525,11 +524,20 @@ function validateTpResolution(tp: TrainingPackage, resolution: TpResolution): st
   }
 
   for (let gi = 0; gi < (tp.languageChoices ?? []).length; gi++) {
-    const choice = (tp.languageChoices ?? [])[gi];
-    if (!choice) continue;
-    const chosen = resolution.languageChoices[gi] ?? [];
-    for (let si = 0; si < choice.numChoices; si++) {
-      if (!chosen[si]) return `${tp.name}: language choice ${gi + 1} slot ${si + 1} required.`;
+    const choiceDef = (tp.languageChoices ?? [])[gi];
+    if (!choiceDef || choiceDef.numChoices <= 0) continue;
+    const allocs = resolution.languageChoices[gi] ?? [];
+    if (allocs.length === 0) return `${tp.name}: language choice ${gi + 1}: at least one language required.`;
+    if (allocs.length > choiceDef.numChoices) return `${tp.name}: language choice ${gi + 1}: at most ${choiceDef.numChoices} language${choiceDef.numChoices !== 1 ? 's' : ''} allowed.`;
+    for (const alloc of allocs) {
+      if (!alloc.languageId) return `${tp.name}: language choice ${gi + 1}: all entries must have a language selected.`;
+    }
+    const langIds = allocs.map((a) => a.languageId).filter(Boolean);
+    if (new Set(langIds).size < langIds.length) return `${tp.name}: language choice ${gi + 1}: duplicate languages selected.`;
+    const totalRanks = allocs.reduce((s, a) => s + a.spoken + a.written + a.somatic, 0);
+    if (totalRanks !== choiceDef.value) {
+      const remaining = choiceDef.value - totalRanks;
+      return `${tp.name}: language choice ${gi + 1}: ${remaining > 0 ? `${remaining} rank${remaining !== 1 ? 's' : ''} still to allocate` : `${Math.abs(remaining)} rank${Math.abs(remaining) !== 1 ? 's' : ''} over`}.`;
     }
   }
   return undefined;
@@ -896,6 +904,12 @@ export default function CharacterCreationView() {
   const languageNameById = useMemo(() => {
     const map = new Map<string, string>();
     for (const l of languages) map.set(l.id, l.name);
+    return map;
+  }, [languages]);
+
+  const languageById = useMemo(() => {
+    const map = new Map<string, Language>();
+    for (const l of languages) map.set(l.id, l);
     return map;
   }, [languages]);
 
@@ -3021,7 +3035,7 @@ export default function CharacterCreationView() {
           spellListChoices: res.spellListChoices.map((g) => g.filter((a) => a.id)),
           spellListCategoryChoices: res.spellListCategoryChoices.map((g) => g.filter((a) => a.id)),
           lifestyleCategorySkillChoices: res.lifestyleCategorySkillChoices.map((g) => g.filter(Boolean)),
-          languageChoices: res.languageChoices.map((g) => g.filter(Boolean)),
+          languageChoices: res.languageChoices.map((g) => g.filter((a) => a.languageId)),
         })),
       };
 
@@ -4592,37 +4606,66 @@ export default function CharacterCreationView() {
                       <div style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}>
                         <strong>Language Choices</strong>
                         <div style={{ display: 'grid', gap: 10, marginTop: 6 }}>
-                          {(currentTp.languageChoices ?? []).map((choice, gi) => {
-                            if (choice.numChoices <= 0) return null;
-                            const chosenInGroup = currentResolution.languageChoices[gi] ?? [];
-                            const usedIds = new Set(chosenInGroup.filter(Boolean));
-                            const baseOpts = choice.options.filter((lId) => lId && !usedIds.has(lId)).map((lId) => ({ value: lId, label: languageNameById.get(lId) ?? lId }));
+                          {(currentTp.languageChoices ?? []).map((choiceDef, gi) => {
+                            if (choiceDef.numChoices <= 0) return null;
+                            const allocs = currentResolution.languageChoices[gi] ?? [];
+                            const totalAllocated = allocs.reduce((s, a) => s + a.spoken + a.written + a.somatic, 0);
+                            const remainingRanks = choiceDef.value - totalAllocated;
+                            const usedLangIds = new Set(allocs.map((a) => a.languageId).filter(Boolean));
+                            const availableLangOpts = choiceDef.options
+                              .filter((lId) => lId)
+                              .map((lId) => ({ value: lId, label: languageNameById.get(lId) ?? lId }));
                             return (
                               <div key={gi}>
                                 <div style={{ color: 'var(--muted)', fontSize: '0.9em', marginBottom: 4 }}>
-                                  Choose {choice.numChoices} language{choice.numChoices > 1 ? 's' : ''} — {choice.value} rank{choice.value > 1 ? 's' : ''} each
+                                  Distribute {choiceDef.value} rank{choiceDef.value !== 1 ? 's' : ''} across up to {choiceDef.numChoices} language{choiceDef.numChoices !== 1 ? 's' : ''}
+                                  {remainingRanks !== 0 && <span style={{ color: remainingRanks > 0 ? 'var(--warning, #b96c00)' : '#b00020', marginLeft: 8, fontWeight: 600 }}>({remainingRanks > 0 ? `${remainingRanks} rank${remainingRanks !== 1 ? 's' : ''} unallocated` : `${Math.abs(remainingRanks)} rank${Math.abs(remainingRanks) !== 1 ? 's' : ''} over`})</span>}
                                 </div>
-                                <div style={{ display: 'grid', gap: 4 }}>
-                                  {Array.from({ length: choice.numChoices }, (_, si) => {
-                                    const chosen = chosenInGroup[si] ?? '';
-                                    const opts = chosen ? [{ value: chosen, label: languageNameById.get(chosen) ?? chosen }, ...baseOpts.filter((o) => o.value !== chosen)] : baseOpts;
+                                <div style={{ display: 'grid', gap: 8 }}>
+                                  {allocs.map((alloc, ai) => {
+                                    const lang = languageById.get(alloc.languageId);
+                                    const filteredOpts = availableLangOpts.filter((o) => o.value === alloc.languageId || !usedLangIds.has(o.value));
                                     return (
-                                      <LabeledSelect
-                                        key={si}
-                                        label={`Slot ${si + 1}`}
-                                        value={chosen}
-                                        onChange={(v) => updateResolution((r) => ({
-                                          ...r,
-                                          languageChoices: r.languageChoices.map((g, gIdx) =>
-                                            gIdx !== gi ? g : g.map((s, sIdx) => sIdx !== si ? s : v),
-                                          ),
-                                        }))}
-                                        options={opts}
-                                        placeholderOption="— Select language —"
-                                      />
+                                      <div key={ai} style={{ border: '1px solid var(--border)', borderRadius: 4, padding: 6 }}>
+                                        <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', marginBottom: 6 }}>
+                                          <div style={{ flex: 1 }}>
+                                            <LabeledSelect
+                                              label={`Language ${ai + 1}`}
+                                              value={alloc.languageId}
+                                              onChange={(v) => updateResolution((r) => ({
+                                                ...r,
+                                                languageChoices: r.languageChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { languageId: v, spoken: 0, written: 0, somatic: 0 })),
+                                              }))}
+                                              options={filteredOpts}
+                                              placeholderOption="— Select language —"
+                                            />
+                                          </div>
+                                          <button type="button" onClick={() => updateResolution((r) => ({ ...r, languageChoices: r.languageChoices.map((g, gIdx) => gIdx !== gi ? g : g.filter((_, aIdx) => aIdx !== ai)) }))} style={{ marginBottom: 4 }}>×</button>
+                                        </div>
+                                        {alloc.languageId && (
+                                          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                                            {(['spoken', 'written', 'somatic'] as const).map((ability) => {
+                                              const enabled = ability === 'spoken' ? (lang?.isSpoken ?? false) : ability === 'written' ? (lang?.isWritten ?? false) : (lang?.isSomatic ?? false);
+                                              if (!enabled) return null;
+                                              const val = alloc[ability];
+                                              return (
+                                                <div key={ability} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                  <span style={{ textTransform: 'capitalize', minWidth: 52 }}>{ability}</span>
+                                                  <button type="button" onClick={() => updateResolution((r) => ({ ...r, languageChoices: r.languageChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, [ability]: a[ability] - 1 })) }))} disabled={val <= 0}>-</button>
+                                                  <span style={{ minWidth: 24, textAlign: 'center' }}>{val}</span>
+                                                  <button type="button" onClick={() => updateResolution((r) => ({ ...r, languageChoices: r.languageChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, [ability]: a[ability] + 1 })) }))} disabled={remainingRanks <= 0}>+</button>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        )}
+                                      </div>
                                     );
                                   })}
                                 </div>
+                                {allocs.length < choiceDef.numChoices && (
+                                  <button type="button" style={{ marginTop: 4 }} onClick={() => updateResolution((r) => ({ ...r, languageChoices: r.languageChoices.map((g, gIdx) => gIdx !== gi ? g : [...g, { languageId: '', spoken: 0, written: 0, somatic: 0 }]) }))}>+ Add language</button>
+                                )}
                               </div>
                             );
                           })}
