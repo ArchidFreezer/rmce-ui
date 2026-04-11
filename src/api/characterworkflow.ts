@@ -40,11 +40,13 @@ export type ApplyLevelUpgradeRequest = {
     tpResolutions: Array<{
       tpId: string;
       statGainChoices: string[];
-      skillRankChoices: Array<Array<{ id: string; subcategory: string }>>;
-      categoryMultiSkillChoices: Array<Array<{ id: string; subcategory: string }>>;
-      groupMultiSkillChoices: Array<Array<{ id: string; subcategory: string }>>;
-      spellListChoices: string[][];
-      spellListCategoryChoices: string[][];
+      skillRankChoices: Array<Array<{ id: string; subcategory: string; ranks: number }>>;
+      categoryMultiSkillChoices: Array<Array<{ id: string; subcategory: string; ranks: number }>>;
+      groupMultiSkillChoices: Array<Array<{ id: string; subcategory: string; ranks: number }>>;
+      groupCategoryAndSkillChoices: Array<{ categoryId: string; skillId: string; subcategory: string }>;
+      spellListChoices: Array<Array<{ id: string; ranks: number }>>;
+      spellListCategoryChoices: Array<Array<{ id: string; ranks: number }>>;
+      lifestyleCategorySkillChoices: string[][];
       languageChoices: string[][];
     }>;
   };

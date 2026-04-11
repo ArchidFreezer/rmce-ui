@@ -164,16 +164,20 @@ type ApprenticeSpellListPurchase = {
   purchases: number;
 };
 
-type TpSkillChoice = { id: string; subcategory: string };
+type TpSkillAllocation = { id: string; subcategory: string; ranks: number };
+type TpSpellListAllocation = { id: string; ranks: number };
+type TpGroupCategoryAndSkillChoice = { categoryId: string; skillId: string; subcategory: string };
 
 type TpResolution = {
   tpId: string;
   statGainChoices: (Stat | '')[];
-  skillRankChoices: TpSkillChoice[][];
-  categoryMultiSkillChoices: TpSkillChoice[][];
-  groupMultiSkillChoices: TpSkillChoice[][];
-  spellListChoices: string[][];
-  spellListCategoryChoices: string[][];
+  skillRankChoices: TpSkillAllocation[][];
+  categoryMultiSkillChoices: TpSkillAllocation[][];
+  groupMultiSkillChoices: TpSkillAllocation[][];
+  groupCategoryAndSkillChoices: TpGroupCategoryAndSkillChoice[];
+  spellListChoices: TpSpellListAllocation[][];
+  spellListCategoryChoices: TpSpellListAllocation[][];
+  lifestyleCategorySkillChoices: string[][];
   languageChoices: string[][];
 };
 
@@ -370,8 +374,10 @@ function tpHasChoices(tp: TrainingPackage): boolean {
     || (tp.skillRankChoices ?? []).some((c) => c.numChoices > 0)
     || (tp.categoryMultiSkillRankChoices ?? []).some((c) => c.numChoices > 0)
     || (tp.groupMultiSkillRankChoices ?? []).some((c) => c.numChoices > 0)
+    || (tp.groupCategoryAndSkillRankChoices ?? []).length > 0
     || (tp.spellListRanks ?? []).some((r) => r.numChoices > 0)
     || (tp.spellListCategoryRankChoices ?? []).some((c) => c.numChoices > 0)
+    || (tp.lifestyleCategorySkillChoices ?? []).some((c) => c.numChoices > 0)
     || (tp.languageChoices ?? []).some((c) => c.numChoices > 0)
   );
 }
@@ -380,19 +386,19 @@ function createEmptyTpResolution(tp: TrainingPackage): TpResolution {
   return {
     tpId: tp.id,
     statGainChoices: Array.from({ length: tp.statGainChoices?.numChoices ?? 0 }, () => '' as Stat | ''),
-    skillRankChoices: (tp.skillRankChoices ?? []).map((c) =>
-      Array.from({ length: c.numChoices }, () => ({ id: '', subcategory: '' })),
-    ),
-    categoryMultiSkillChoices: (tp.categoryMultiSkillRankChoices ?? []).map((c) =>
-      Array.from({ length: c.numChoices }, () => ({ id: '', subcategory: '' })),
-    ),
-    groupMultiSkillChoices: (tp.groupMultiSkillRankChoices ?? []).map((c) =>
-      Array.from({ length: c.numChoices }, () => ({ id: '', subcategory: '' })),
-    ),
+    skillRankChoices: (tp.skillRankChoices ?? []).map(() => []),
+    categoryMultiSkillChoices: (tp.categoryMultiSkillRankChoices ?? []).map(() => []),
+    groupMultiSkillChoices: (tp.groupMultiSkillRankChoices ?? []).map(() => []),
+    groupCategoryAndSkillChoices: (tp.groupCategoryAndSkillRankChoices ?? []).map(() => ({
+      categoryId: '',
+      skillId: '',
+      subcategory: '',
+    })),
     spellListChoices: (tp.spellListRanks ?? [])
       .filter((r) => r.numChoices > 0)
-      .map((r) => Array.from({ length: r.numChoices }, () => '')),
-    spellListCategoryChoices: (tp.spellListCategoryRankChoices ?? []).map((c) =>
+      .map(() => []),
+    spellListCategoryChoices: (tp.spellListCategoryRankChoices ?? []).map(() => []),
+    lifestyleCategorySkillChoices: (tp.lifestyleCategorySkillChoices ?? []).map((c) =>
       Array.from({ length: c.numChoices }, () => ''),
     ),
     languageChoices: (tp.languageChoices ?? []).map((c) =>
@@ -409,47 +415,115 @@ function validateTpResolution(tp: TrainingPackage, resolution: TpResolution): st
     const chosen = resolution.statGainChoices.filter(Boolean);
     if (new Set(chosen).size < chosen.length) return `${tp.name}: stat gain choices must be unique.`;
   }
+
   for (let gi = 0; gi < (tp.skillRankChoices ?? []).length; gi++) {
-    const choice = (tp.skillRankChoices ?? [])[gi];
-    if (!choice) continue;
-    const chosen = resolution.skillRankChoices[gi] ?? [];
-    for (let si = 0; si < choice.numChoices; si++) {
-      if (!chosen[si]?.id) return `${tp.name}: skill choice group ${gi + 1} slot ${si + 1} required.`;
+    const choiceDef = (tp.skillRankChoices ?? [])[gi];
+    if (!choiceDef || choiceDef.numChoices <= 0) continue;
+    const allocs = resolution.skillRankChoices[gi] ?? [];
+    const totalRanks = allocs.reduce((s, a) => s + a.ranks, 0);
+    if (totalRanks !== choiceDef.value) {
+      const remaining = choiceDef.value - totalRanks;
+      return `${tp.name}: skill rank choice ${gi + 1}: ${remaining > 0 ? `${remaining} rank${remaining !== 1 ? 's' : ''} still to allocate` : 'too many ranks allocated'}.`;
     }
+    if (allocs.length > choiceDef.numChoices) return `${tp.name}: skill rank choice ${gi + 1}: at most ${choiceDef.numChoices} skill${choiceDef.numChoices !== 1 ? 's' : ''} allowed.`;
+    for (const alloc of allocs) {
+      if (!alloc.id) return `${tp.name}: skill rank choice ${gi + 1}: all allocations must have a skill selected.`;
+      if (alloc.ranks < 1) return `${tp.name}: skill rank choice ${gi + 1}: each allocation must have at least 1 rank.`;
+    }
+    const ids = allocs.map((a) => a.id);
+    if (new Set(ids).size < ids.length) return `${tp.name}: skill rank choice ${gi + 1}: duplicate skills selected.`;
   }
+
   for (let gi = 0; gi < (tp.categoryMultiSkillRankChoices ?? []).length; gi++) {
-    const choice = (tp.categoryMultiSkillRankChoices ?? [])[gi];
-    if (!choice) continue;
-    const chosen = resolution.categoryMultiSkillChoices[gi] ?? [];
-    for (let si = 0; si < choice.numChoices; si++) {
-      if (!chosen[si]?.id) return `${tp.name}: category skill choice ${gi + 1} slot ${si + 1} required.`;
+    const choiceDef = (tp.categoryMultiSkillRankChoices ?? [])[gi];
+    if (!choiceDef || choiceDef.numChoices <= 0) continue;
+    const allocs = resolution.categoryMultiSkillChoices[gi] ?? [];
+    const totalRanks = allocs.reduce((s, a) => s + a.ranks, 0);
+    if (totalRanks !== choiceDef.value) {
+      const remaining = choiceDef.value - totalRanks;
+      return `${tp.name}: category skill choice ${gi + 1}: ${remaining > 0 ? `${remaining} rank${remaining !== 1 ? 's' : ''} still to allocate` : 'too many ranks allocated'}.`;
     }
+    if (allocs.length > choiceDef.numChoices) return `${tp.name}: category skill choice ${gi + 1}: at most ${choiceDef.numChoices} skill${choiceDef.numChoices !== 1 ? 's' : ''} allowed.`;
+    for (const alloc of allocs) {
+      if (!alloc.id) return `${tp.name}: category skill choice ${gi + 1}: all allocations must have a skill selected.`;
+      if (alloc.ranks < 1) return `${tp.name}: category skill choice ${gi + 1}: each allocation must have at least 1 rank.`;
+    }
+    const ids = allocs.map((a) => a.id);
+    if (new Set(ids).size < ids.length) return `${tp.name}: category skill choice ${gi + 1}: duplicate skills selected.`;
   }
+
   for (let gi = 0; gi < (tp.groupMultiSkillRankChoices ?? []).length; gi++) {
-    const choice = (tp.groupMultiSkillRankChoices ?? [])[gi];
-    if (!choice) continue;
-    const chosen = resolution.groupMultiSkillChoices[gi] ?? [];
-    for (let si = 0; si < choice.numChoices; si++) {
-      if (!chosen[si]?.id) return `${tp.name}: group skill choice ${gi + 1} slot ${si + 1} required.`;
+    const choiceDef = (tp.groupMultiSkillRankChoices ?? [])[gi];
+    if (!choiceDef || choiceDef.numChoices <= 0) continue;
+    const allocs = resolution.groupMultiSkillChoices[gi] ?? [];
+    const totalRanks = allocs.reduce((s, a) => s + a.ranks, 0);
+    if (totalRanks !== choiceDef.value) {
+      const remaining = choiceDef.value - totalRanks;
+      return `${tp.name}: group skill choice ${gi + 1}: ${remaining > 0 ? `${remaining} rank${remaining !== 1 ? 's' : ''} still to allocate` : 'too many ranks allocated'}.`;
     }
+    if (allocs.length > choiceDef.numChoices) return `${tp.name}: group skill choice ${gi + 1}: at most ${choiceDef.numChoices} skill${choiceDef.numChoices !== 1 ? 's' : ''} allowed.`;
+    for (const alloc of allocs) {
+      if (!alloc.id) return `${tp.name}: group skill choice ${gi + 1}: all allocations must have a skill selected.`;
+      if (alloc.ranks < 1) return `${tp.name}: group skill choice ${gi + 1}: each allocation must have at least 1 rank.`;
+    }
+    const ids = allocs.map((a) => a.id);
+    if (new Set(ids).size < ids.length) return `${tp.name}: group skill choice ${gi + 1}: duplicate skills selected.`;
   }
+
+  for (let gi = 0; gi < (tp.groupCategoryAndSkillRankChoices ?? []).length; gi++) {
+    const slot = resolution.groupCategoryAndSkillChoices[gi];
+    if (!slot || !slot.categoryId) return `${tp.name}: group category & skill choice ${gi + 1}: select a category.`;
+    if (!slot.skillId) return `${tp.name}: group category & skill choice ${gi + 1}: select a skill.`;
+  }
+
   const choiceableSlRanks = (tp.spellListRanks ?? []).filter((r) => r.numChoices > 0);
   for (let gi = 0; gi < choiceableSlRanks.length; gi++) {
-    const choice = choiceableSlRanks[gi];
-    if (!choice) continue;
-    const chosen = resolution.spellListChoices[gi] ?? [];
-    for (let si = 0; si < choice.numChoices; si++) {
-      if (!chosen[si]) return `${tp.name}: spell list choice ${gi + 1} slot ${si + 1} required.`;
+    const choiceDef = choiceableSlRanks[gi];
+    if (!choiceDef) continue;
+    const allocs = resolution.spellListChoices[gi] ?? [];
+    const totalRanks = allocs.reduce((s, a) => s + a.ranks, 0);
+    if (totalRanks !== choiceDef.value) {
+      const remaining = choiceDef.value - totalRanks;
+      return `${tp.name}: spell list choice ${gi + 1}: ${remaining > 0 ? `${remaining} rank${remaining !== 1 ? 's' : ''} still to allocate` : 'too many ranks allocated'}.`;
     }
+    if (allocs.length > choiceDef.numChoices) return `${tp.name}: spell list choice ${gi + 1}: at most ${choiceDef.numChoices} spell list${choiceDef.numChoices !== 1 ? 's' : ''} allowed.`;
+    for (const alloc of allocs) {
+      if (!alloc.id) return `${tp.name}: spell list choice ${gi + 1}: all allocations must have a spell list selected.`;
+      if (alloc.ranks < 1) return `${tp.name}: spell list choice ${gi + 1}: each allocation must have at least 1 rank.`;
+    }
+    const ids = allocs.map((a) => a.id);
+    if (new Set(ids).size < ids.length) return `${tp.name}: spell list choice ${gi + 1}: duplicate spell lists selected.`;
   }
+
   for (let gi = 0; gi < (tp.spellListCategoryRankChoices ?? []).length; gi++) {
-    const choice = (tp.spellListCategoryRankChoices ?? [])[gi];
-    if (!choice) continue;
-    const chosen = resolution.spellListCategoryChoices[gi] ?? [];
-    for (let si = 0; si < choice.numChoices; si++) {
-      if (!chosen[si]) return `${tp.name}: spell list category choice ${gi + 1} slot ${si + 1} required.`;
+    const choiceDef = (tp.spellListCategoryRankChoices ?? [])[gi];
+    if (!choiceDef || choiceDef.numChoices <= 0) continue;
+    const allocs = resolution.spellListCategoryChoices[gi] ?? [];
+    const totalRanks = allocs.reduce((s, a) => s + a.ranks, 0);
+    if (totalRanks !== choiceDef.value) {
+      const remaining = choiceDef.value - totalRanks;
+      return `${tp.name}: spell list category choice ${gi + 1}: ${remaining > 0 ? `${remaining} rank${remaining !== 1 ? 's' : ''} still to allocate` : 'too many ranks allocated'}.`;
     }
+    if (allocs.length > choiceDef.numChoices) return `${tp.name}: spell list category choice ${gi + 1}: at most ${choiceDef.numChoices} spell list${choiceDef.numChoices !== 1 ? 's' : ''} allowed.`;
+    for (const alloc of allocs) {
+      if (!alloc.id) return `${tp.name}: spell list category choice ${gi + 1}: all allocations must have a spell list selected.`;
+      if (alloc.ranks < 1) return `${tp.name}: spell list category choice ${gi + 1}: each allocation must have at least 1 rank.`;
+    }
+    const ids = allocs.map((a) => a.id);
+    if (new Set(ids).size < ids.length) return `${tp.name}: spell list category choice ${gi + 1}: duplicate spell lists selected.`;
   }
+
+  for (let gi = 0; gi < (tp.lifestyleCategorySkillChoices ?? []).length; gi++) {
+    const choiceDef = (tp.lifestyleCategorySkillChoices ?? [])[gi];
+    if (!choiceDef || choiceDef.numChoices <= 0) continue;
+    const chosen = resolution.lifestyleCategorySkillChoices[gi] ?? [];
+    for (let si = 0; si < choiceDef.numChoices; si++) {
+      if (!chosen[si]) return `${tp.name}: lifestyle skill choice ${gi + 1} slot ${si + 1} required.`;
+    }
+    const nonEmpty = chosen.filter(Boolean);
+    if (new Set(nonEmpty).size < nonEmpty.length) return `${tp.name}: lifestyle skill choice ${gi + 1}: duplicate skills selected.`;
+  }
+
   for (let gi = 0; gi < (tp.languageChoices ?? []).length; gi++) {
     const choice = (tp.languageChoices ?? [])[gi];
     if (!choice) continue;
@@ -1155,24 +1229,25 @@ export default function CharacterCreationView() {
       const res = tpResolutions.find((r) => r.tpId === tp.id);
       if (!res) continue;
       for (let gi = 0; gi < (tp.skillRankChoices ?? []).length; gi++) {
-        const choice = (tp.skillRankChoices ?? [])[gi];
-        if (!choice) continue;
-        for (const slot of res.skillRankChoices[gi] ?? []) {
-          if (slot.id) map.set(slot.id, (map.get(slot.id) ?? 0) + choice.value);
+        for (const alloc of res.skillRankChoices[gi] ?? []) {
+          if (alloc.id) map.set(alloc.id, (map.get(alloc.id) ?? 0) + alloc.ranks);
         }
       }
       for (let gi = 0; gi < (tp.categoryMultiSkillRankChoices ?? []).length; gi++) {
-        const choice = (tp.categoryMultiSkillRankChoices ?? [])[gi];
-        if (!choice) continue;
-        for (const slot of res.categoryMultiSkillChoices[gi] ?? []) {
-          if (slot.id) map.set(slot.id, (map.get(slot.id) ?? 0) + choice.value);
+        for (const alloc of res.categoryMultiSkillChoices[gi] ?? []) {
+          if (alloc.id) map.set(alloc.id, (map.get(alloc.id) ?? 0) + alloc.ranks);
         }
       }
       for (let gi = 0; gi < (tp.groupMultiSkillRankChoices ?? []).length; gi++) {
-        const choice = (tp.groupMultiSkillRankChoices ?? [])[gi];
-        if (!choice) continue;
-        for (const slot of res.groupMultiSkillChoices[gi] ?? []) {
-          if (slot.id) map.set(slot.id, (map.get(slot.id) ?? 0) + choice.value);
+        for (const alloc of res.groupMultiSkillChoices[gi] ?? []) {
+          if (alloc.id) map.set(alloc.id, (map.get(alloc.id) ?? 0) + alloc.ranks);
+        }
+      }
+      for (let gi = 0; gi < (tp.groupCategoryAndSkillRankChoices ?? []).length; gi++) {
+        const choiceDef = (tp.groupCategoryAndSkillRankChoices ?? [])[gi];
+        const slot = res.groupCategoryAndSkillChoices[gi];
+        if (choiceDef && slot?.skillId) {
+          map.set(slot.skillId, (map.get(slot.skillId) ?? 0) + choiceDef.value);
         }
       }
     }
@@ -1185,9 +1260,18 @@ export default function CharacterCreationView() {
       for (const rank of tp.categoryRanks ?? []) {
         map.set(rank.id, (map.get(rank.id) ?? 0) + rank.value);
       }
+      const res = tpResolutions.find((r) => r.tpId === tp.id);
+      if (!res) continue;
+      for (let gi = 0; gi < (tp.groupCategoryAndSkillRankChoices ?? []).length; gi++) {
+        const choiceDef = (tp.groupCategoryAndSkillRankChoices ?? [])[gi];
+        const slot = res.groupCategoryAndSkillChoices[gi];
+        if (choiceDef && slot?.categoryId) {
+          map.set(slot.categoryId, (map.get(slot.categoryId) ?? 0) + choiceDef.value);
+        }
+      }
     }
     return map;
-  }, [selectedApprenticeTrainingPackages]);
+  }, [selectedApprenticeTrainingPackages, tpResolutions]);
 
   const tpGrantedSpellListRankCounts = useMemo(() => {
     const map = new Map<string, number>();
@@ -1196,10 +1280,13 @@ export default function CharacterCreationView() {
       if (!res) continue;
       const choiceableSlRanks = (tp.spellListRanks ?? []).filter((r) => r.numChoices > 0);
       for (let gi = 0; gi < choiceableSlRanks.length; gi++) {
-        const choice = choiceableSlRanks[gi];
-        if (!choice) continue;
-        for (const slId of res.spellListChoices[gi] ?? []) {
-          if (slId) map.set(slId, (map.get(slId) ?? 0) + choice.value);
+        for (const alloc of res.spellListChoices[gi] ?? []) {
+          if (alloc.id) map.set(alloc.id, (map.get(alloc.id) ?? 0) + alloc.ranks);
+        }
+      }
+      for (let gi = 0; gi < (tp.spellListCategoryRankChoices ?? []).length; gi++) {
+        for (const alloc of res.spellListCategoryChoices[gi] ?? []) {
+          if (alloc.id) map.set(alloc.id, (map.get(alloc.id) ?? 0) + alloc.ranks);
         }
       }
     }
@@ -1712,39 +1799,37 @@ export default function CharacterCreationView() {
       const res = tpResolutions.find((r) => r.tpId === tp.id);
       if (res) {
         for (let gi = 0; gi < (tp.skillRankChoices ?? []).length; gi++) {
-          const choice = (tp.skillRankChoices ?? [])[gi];
-          if (!choice) continue;
-          for (const slot of res.skillRankChoices[gi] ?? []) {
-            if (slot.id) tpSkillRanks.push({ id: slot.id, ...(slot.subcategory ? { subcategory: slot.subcategory } : {}), value: choice.value });
+          for (const alloc of res.skillRankChoices[gi] ?? []) {
+            if (alloc.id) tpSkillRanks.push({ id: alloc.id, ...(alloc.subcategory ? { subcategory: alloc.subcategory } : {}), value: alloc.ranks });
           }
         }
         for (let gi = 0; gi < (tp.categoryMultiSkillRankChoices ?? []).length; gi++) {
-          const choice = (tp.categoryMultiSkillRankChoices ?? [])[gi];
-          if (!choice) continue;
-          for (const slot of res.categoryMultiSkillChoices[gi] ?? []) {
-            if (slot.id) tpSkillRanks.push({ id: slot.id, ...(slot.subcategory ? { subcategory: slot.subcategory } : {}), value: choice.value });
+          for (const alloc of res.categoryMultiSkillChoices[gi] ?? []) {
+            if (alloc.id) tpSkillRanks.push({ id: alloc.id, ...(alloc.subcategory ? { subcategory: alloc.subcategory } : {}), value: alloc.ranks });
           }
         }
         for (let gi = 0; gi < (tp.groupMultiSkillRankChoices ?? []).length; gi++) {
-          const choice = (tp.groupMultiSkillRankChoices ?? [])[gi];
-          if (!choice) continue;
-          for (const slot of res.groupMultiSkillChoices[gi] ?? []) {
-            if (slot.id) tpSkillRanks.push({ id: slot.id, ...(slot.subcategory ? { subcategory: slot.subcategory } : {}), value: choice.value });
+          for (const alloc of res.groupMultiSkillChoices[gi] ?? []) {
+            if (alloc.id) tpSkillRanks.push({ id: alloc.id, ...(alloc.subcategory ? { subcategory: alloc.subcategory } : {}), value: alloc.ranks });
           }
+        }
+        for (let gi = 0; gi < (tp.groupCategoryAndSkillRankChoices ?? []).length; gi++) {
+          const choiceDef = (tp.groupCategoryAndSkillRankChoices ?? [])[gi];
+          if (!choiceDef) continue;
+          const slot = res.groupCategoryAndSkillChoices[gi];
+          if (!slot) continue;
+          if (slot.categoryId) tpCategoryRanks.push({ id: slot.categoryId, value: choiceDef.value });
+          if (slot.skillId) tpSkillRanks.push({ id: slot.skillId, ...(slot.subcategory ? { subcategory: slot.subcategory } : {}), value: choiceDef.value });
         }
         const choiceableSlRanks = (tp.spellListRanks ?? []).filter((r) => r.numChoices > 0);
         for (let gi = 0; gi < choiceableSlRanks.length; gi++) {
-          const choice = choiceableSlRanks[gi];
-          if (!choice) continue;
-          for (const slId of res.spellListChoices[gi] ?? []) {
-            if (slId) tpSpellListRanks.push({ id: slId, value: choice.value });
+          for (const alloc of res.spellListChoices[gi] ?? []) {
+            if (alloc.id) tpSpellListRanks.push({ id: alloc.id, value: alloc.ranks });
           }
         }
         for (let gi = 0; gi < (tp.spellListCategoryRankChoices ?? []).length; gi++) {
-          const choice = (tp.spellListCategoryRankChoices ?? [])[gi];
-          if (!choice) continue;
-          for (const catId of res.spellListCategoryChoices[gi] ?? []) {
-            if (catId) tpSpellListRanks.push({ id: catId, value: choice.value });
+          for (const alloc of res.spellListCategoryChoices[gi] ?? []) {
+            if (alloc.id) tpSpellListRanks.push({ id: alloc.id, value: alloc.ranks });
           }
         }
       }
@@ -2945,11 +3030,13 @@ export default function CharacterCreationView() {
           tpResolutions: tpResolutions.map((res) => ({
             tpId: res.tpId,
             statGainChoices: res.statGainChoices.filter(Boolean) as string[],
-            skillRankChoices: res.skillRankChoices.map((g) => g.filter((s) => s.id)),
-            categoryMultiSkillChoices: res.categoryMultiSkillChoices.map((g) => g.filter((s) => s.id)),
-            groupMultiSkillChoices: res.groupMultiSkillChoices.map((g) => g.filter((s) => s.id)),
-            spellListChoices: res.spellListChoices.map((g) => g.filter(Boolean)),
-            spellListCategoryChoices: res.spellListCategoryChoices.map((g) => g.filter(Boolean)),
+            skillRankChoices: res.skillRankChoices.map((g) => g.filter((a) => a.id)),
+            categoryMultiSkillChoices: res.categoryMultiSkillChoices.map((g) => g.filter((a) => a.id)),
+            groupMultiSkillChoices: res.groupMultiSkillChoices.map((g) => g.filter((a) => a.id)),
+            groupCategoryAndSkillChoices: res.groupCategoryAndSkillChoices.filter((s) => s.skillId),
+            spellListChoices: res.spellListChoices.map((g) => g.filter((a) => a.id)),
+            spellListCategoryChoices: res.spellListCategoryChoices.map((g) => g.filter((a) => a.id)),
+            lifestyleCategorySkillChoices: res.lifestyleCategorySkillChoices.map((g) => g.filter(Boolean)),
             languageChoices: res.languageChoices.map((g) => g.filter(Boolean)),
           })),
         },
@@ -4122,6 +4209,15 @@ export default function CharacterCreationView() {
                       <span style={{ color: 'var(--muted)' }}>TP {apprenticeResolvingTpIndex + 1} of {tpsRequiringResolution.length}</span>
                     </div>
 
+                    {currentTp.realmStatGain && characterBuilder.magicalRealms.length > 0 && (
+                      <div style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}>
+                        <strong>Realm Stat Gain</strong>
+                        <div style={{ color: 'var(--muted)', fontSize: '0.9em', marginTop: 4 }}>
+                          This TP grants a stat gain roll for each of your magical realm stats ({characterBuilder.magicalRealms.join(', ')}).
+                        </div>
+                      </div>
+                    )}
+
                     {currentTp.statGainChoices && currentTp.statGainChoices.numChoices > 0 && (
                       <div style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}>
                         <strong>Stat Gain Choices</strong>
@@ -4155,37 +4251,46 @@ export default function CharacterCreationView() {
                       <div style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}>
                         <strong>Skill Rank Choices</strong>
                         <div style={{ display: 'grid', gap: 10, marginTop: 6 }}>
-                          {(currentTp.skillRankChoices ?? []).map((choice, gi) => {
-                            if (choice.numChoices <= 0) return null;
-                            const chosenInGroup = currentResolution.skillRankChoices[gi] ?? [];
-                            const usedIds = new Set(chosenInGroup.filter((s) => s.id).map((s) => s.id));
-                            const optionIds = new Set(choice.options.map((o) => o.id));
+                          {(currentTp.skillRankChoices ?? []).map((choiceDef, gi) => {
+                            if (choiceDef.numChoices <= 0) return null;
+                            const allocs = currentResolution.skillRankChoices[gi] ?? [];
+                            const totalAllocated = allocs.reduce((s, a) => s + a.ranks, 0);
+                            const remainingRanks = choiceDef.value - totalAllocated;
+                            const usedIds = new Set(allocs.map((a) => a.id).filter(Boolean));
+                            const optionIds = new Set(choiceDef.options.map((o) => o.id));
                             return (
                               <div key={gi}>
                                 <div style={{ color: 'var(--muted)', fontSize: '0.9em', marginBottom: 4 }}>
-                                  Choose {choice.numChoices} skill{choice.numChoices > 1 ? 's' : ''} — {choice.value} rank{choice.value > 1 ? 's' : ''} each
+                                  Distribute {choiceDef.value} rank{choiceDef.value !== 1 ? 's' : ''} across up to {choiceDef.numChoices} skill{choiceDef.numChoices !== 1 ? 's' : ''}
+                                  {remainingRanks !== 0 && <span style={{ color: remainingRanks > 0 ? 'var(--warning, #b96c00)' : '#b00020', marginLeft: 8, fontWeight: 600 }}>({remainingRanks > 0 ? `${remainingRanks} rank${remainingRanks !== 1 ? 's' : ''} unallocated` : `${Math.abs(remainingRanks)} rank${Math.abs(remainingRanks) !== 1 ? 's' : ''} over`})</span>}
                                 </div>
-                                <div style={{ display: 'grid', gap: 4 }}>
-                                  {Array.from({ length: choice.numChoices }, (_, si) => {
-                                    const slot = chosenInGroup[si] ?? { id: '', subcategory: '' };
-                                    const opts = skills.filter((s) => optionIds.has(s.id) && (s.id === slot.id || !usedIds.has(s.id))).map((s) => ({ value: s.id, label: s.name }));
+                                <div style={{ display: 'grid', gap: 6 }}>
+                                  {allocs.map((alloc, ai) => {
+                                    const availableOpts = skills.filter((s) => optionIds.has(s.id) && (s.id === alloc.id || !usedIds.has(s.id))).map((s) => ({ value: s.id, label: s.name }));
                                     return (
-                                      <LabeledSelect
-                                        key={si}
-                                        label={`Slot ${si + 1}`}
-                                        value={slot.id}
-                                        onChange={(v) => updateResolution((r) => ({
-                                          ...r,
-                                          skillRankChoices: r.skillRankChoices.map((g, gIdx) =>
-                                            gIdx !== gi ? g : g.map((s, sIdx) => sIdx !== si ? s : { ...s, id: v }),
-                                          ),
-                                        }))}
-                                        options={opts}
-                                        placeholderOption="— Select skill —"
-                                      />
+                                      <div key={ai} style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
+                                        <div style={{ flex: 1 }}>
+                                          <LabeledSelect
+                                            label={`Skill ${ai + 1}`}
+                                            value={alloc.id}
+                                            onChange={(v) => updateResolution((r) => ({ ...r, skillRankChoices: r.skillRankChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, id: v, subcategory: '' })) }))}
+                                            options={availableOpts}
+                                            placeholderOption="— Select skill —"
+                                          />
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingBottom: 4 }}>
+                                          <button type="button" onClick={() => updateResolution((r) => ({ ...r, skillRankChoices: r.skillRankChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, ranks: a.ranks - 1 })) }))} disabled={alloc.ranks <= 1}>-</button>
+                                          <span style={{ minWidth: 24, textAlign: 'center' }}>{alloc.ranks}</span>
+                                          <button type="button" onClick={() => updateResolution((r) => ({ ...r, skillRankChoices: r.skillRankChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, ranks: a.ranks + 1 })) }))} disabled={remainingRanks <= 0}>+</button>
+                                        </div>
+                                        <button type="button" onClick={() => updateResolution((r) => ({ ...r, skillRankChoices: r.skillRankChoices.map((g, gIdx) => gIdx !== gi ? g : g.filter((_, aIdx) => aIdx !== ai)) }))} style={{ marginBottom: 4 }}>×</button>
+                                      </div>
                                     );
                                   })}
                                 </div>
+                                {allocs.length < choiceDef.numChoices && remainingRanks > 0 && (
+                                  <button type="button" style={{ marginTop: 4 }} onClick={() => updateResolution((r) => ({ ...r, skillRankChoices: r.skillRankChoices.map((g, gIdx) => gIdx !== gi ? g : [...g, { id: '', subcategory: '', ranks: 1 }]) }))}>+ Add skill</button>
+                                )}
                               </div>
                             );
                           })}
@@ -4197,38 +4302,47 @@ export default function CharacterCreationView() {
                       <div style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}>
                         <strong>Category Skill Choices</strong>
                         <div style={{ display: 'grid', gap: 10, marginTop: 6 }}>
-                          {(currentTp.categoryMultiSkillRankChoices ?? []).map((choice, gi) => {
-                            if (choice.numChoices <= 0) return null;
-                            const catName = categoryNameById.get(choice.id) ?? choice.id;
-                            const skillsInCat = (skillIdsByCategory.get(choice.id) ?? []).map((s) => ({ value: s.id, label: s.name }));
-                            const chosenInGroup = currentResolution.categoryMultiSkillChoices[gi] ?? [];
-                            const usedIds = new Set(chosenInGroup.filter((s) => s.id).map((s) => s.id));
+                          {(currentTp.categoryMultiSkillRankChoices ?? []).map((choiceDef, gi) => {
+                            if (choiceDef.numChoices <= 0) return null;
+                            const catName = categoryNameById.get(choiceDef.id) ?? choiceDef.id;
+                            const catSkills = skillIdsByCategory.get(choiceDef.id) ?? [];
+                            const allocs = currentResolution.categoryMultiSkillChoices[gi] ?? [];
+                            const totalAllocated = allocs.reduce((s, a) => s + a.ranks, 0);
+                            const remainingRanks = choiceDef.value - totalAllocated;
+                            const usedIds = new Set(allocs.map((a) => a.id).filter(Boolean));
                             return (
                               <div key={gi}>
                                 <div style={{ color: 'var(--muted)', fontSize: '0.9em', marginBottom: 4 }}>
-                                  {catName}: choose {choice.numChoices} skill{choice.numChoices > 1 ? 's' : ''} — {choice.value} rank{choice.value > 1 ? 's' : ''} each
+                                  {catName}: distribute {choiceDef.value} rank{choiceDef.value !== 1 ? 's' : ''} across up to {choiceDef.numChoices} skill{choiceDef.numChoices !== 1 ? 's' : ''}
+                                  {remainingRanks !== 0 && <span style={{ color: remainingRanks > 0 ? 'var(--warning, #b96c00)' : '#b00020', marginLeft: 8, fontWeight: 600 }}>({remainingRanks > 0 ? `${remainingRanks} rank${remainingRanks !== 1 ? 's' : ''} unallocated` : `${Math.abs(remainingRanks)} rank${Math.abs(remainingRanks) !== 1 ? 's' : ''} over`})</span>}
                                 </div>
-                                <div style={{ display: 'grid', gap: 4 }}>
-                                  {Array.from({ length: choice.numChoices }, (_, si) => {
-                                    const slot = chosenInGroup[si] ?? { id: '', subcategory: '' };
-                                    const opts = skillsInCat.filter((o) => o.value === slot.id || !usedIds.has(o.value));
+                                <div style={{ display: 'grid', gap: 6 }}>
+                                  {allocs.map((alloc, ai) => {
+                                    const availableOpts = catSkills.filter((s) => s.id === alloc.id || !usedIds.has(s.id)).map((s) => ({ value: s.id, label: s.name }));
                                     return (
-                                      <LabeledSelect
-                                        key={si}
-                                        label={`Slot ${si + 1}`}
-                                        value={slot.id}
-                                        onChange={(v) => updateResolution((r) => ({
-                                          ...r,
-                                          categoryMultiSkillChoices: r.categoryMultiSkillChoices.map((g, gIdx) =>
-                                            gIdx !== gi ? g : g.map((s, sIdx) => sIdx !== si ? s : { ...s, id: v }),
-                                          ),
-                                        }))}
-                                        options={opts}
-                                        placeholderOption="— Select skill —"
-                                      />
+                                      <div key={ai} style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
+                                        <div style={{ flex: 1 }}>
+                                          <LabeledSelect
+                                            label={`Skill ${ai + 1}`}
+                                            value={alloc.id}
+                                            onChange={(v) => updateResolution((r) => ({ ...r, categoryMultiSkillChoices: r.categoryMultiSkillChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, id: v, subcategory: '' })) }))}
+                                            options={availableOpts}
+                                            placeholderOption="— Select skill —"
+                                          />
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingBottom: 4 }}>
+                                          <button type="button" onClick={() => updateResolution((r) => ({ ...r, categoryMultiSkillChoices: r.categoryMultiSkillChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, ranks: a.ranks - 1 })) }))} disabled={alloc.ranks <= 1}>-</button>
+                                          <span style={{ minWidth: 24, textAlign: 'center' }}>{alloc.ranks}</span>
+                                          <button type="button" onClick={() => updateResolution((r) => ({ ...r, categoryMultiSkillChoices: r.categoryMultiSkillChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, ranks: a.ranks + 1 })) }))} disabled={remainingRanks <= 0}>+</button>
+                                        </div>
+                                        <button type="button" onClick={() => updateResolution((r) => ({ ...r, categoryMultiSkillChoices: r.categoryMultiSkillChoices.map((g, gIdx) => gIdx !== gi ? g : g.filter((_, aIdx) => aIdx !== ai)) }))} style={{ marginBottom: 4 }}>×</button>
+                                      </div>
                                     );
                                   })}
                                 </div>
+                                {allocs.length < choiceDef.numChoices && remainingRanks > 0 && (
+                                  <button type="button" style={{ marginTop: 4 }} onClick={() => updateResolution((r) => ({ ...r, categoryMultiSkillChoices: r.categoryMultiSkillChoices.map((g, gIdx) => gIdx !== gi ? g : [...g, { id: '', subcategory: '', ranks: 1 }]) }))}>+ Add skill</button>
+                                )}
                               </div>
                             );
                           })}
@@ -4240,38 +4354,104 @@ export default function CharacterCreationView() {
                       <div style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}>
                         <strong>Group Skill Choices</strong>
                         <div style={{ display: 'grid', gap: 10, marginTop: 6 }}>
-                          {(currentTp.groupMultiSkillRankChoices ?? []).map((choice, gi) => {
-                            if (choice.numChoices <= 0) return null;
-                            const groupName = groups.find((g) => g.id === choice.id)?.name ?? choice.id;
-                            const groupSkills = (categoryIdsByGroup.get(choice.id) ?? []).flatMap((catId) => skillIdsByCategory.get(catId) ?? []).map((s) => ({ value: s.id, label: s.name }));
-                            const chosenInGroup = currentResolution.groupMultiSkillChoices[gi] ?? [];
-                            const usedIds = new Set(chosenInGroup.filter((s) => s.id).map((s) => s.id));
+                          {(currentTp.groupMultiSkillRankChoices ?? []).map((choiceDef, gi) => {
+                            if (choiceDef.numChoices <= 0) return null;
+                            const grpName = groups.find((g) => g.id === choiceDef.id)?.name ?? choiceDef.id;
+                            const grpSkills = (categoryIdsByGroup.get(choiceDef.id) ?? []).flatMap((catId) => skillIdsByCategory.get(catId) ?? []);
+                            const allocs = currentResolution.groupMultiSkillChoices[gi] ?? [];
+                            const totalAllocated = allocs.reduce((s, a) => s + a.ranks, 0);
+                            const remainingRanks = choiceDef.value - totalAllocated;
+                            const usedIds = new Set(allocs.map((a) => a.id).filter(Boolean));
                             return (
                               <div key={gi}>
                                 <div style={{ color: 'var(--muted)', fontSize: '0.9em', marginBottom: 4 }}>
-                                  {groupName}: choose {choice.numChoices} skill{choice.numChoices > 1 ? 's' : ''} — {choice.value} rank{choice.value > 1 ? 's' : ''} each
+                                  {grpName}: distribute {choiceDef.value} rank{choiceDef.value !== 1 ? 's' : ''} across up to {choiceDef.numChoices} skill{choiceDef.numChoices !== 1 ? 's' : ''}
+                                  {remainingRanks !== 0 && <span style={{ color: remainingRanks > 0 ? 'var(--warning, #b96c00)' : '#b00020', marginLeft: 8, fontWeight: 600 }}>({remainingRanks > 0 ? `${remainingRanks} rank${remainingRanks !== 1 ? 's' : ''} unallocated` : `${Math.abs(remainingRanks)} rank${Math.abs(remainingRanks) !== 1 ? 's' : ''} over`})</span>}
                                 </div>
-                                <div style={{ display: 'grid', gap: 4 }}>
-                                  {Array.from({ length: choice.numChoices }, (_, si) => {
-                                    const slot = chosenInGroup[si] ?? { id: '', subcategory: '' };
-                                    const opts = groupSkills.filter((o) => o.value === slot.id || !usedIds.has(o.value));
+                                <div style={{ display: 'grid', gap: 6 }}>
+                                  {allocs.map((alloc, ai) => {
+                                    const availableOpts = grpSkills.filter((s) => s.id === alloc.id || !usedIds.has(s.id)).map((s) => ({ value: s.id, label: s.name }));
                                     return (
-                                      <LabeledSelect
-                                        key={si}
-                                        label={`Slot ${si + 1}`}
-                                        value={slot.id}
-                                        onChange={(v) => updateResolution((r) => ({
-                                          ...r,
-                                          groupMultiSkillChoices: r.groupMultiSkillChoices.map((g, gIdx) =>
-                                            gIdx !== gi ? g : g.map((s, sIdx) => sIdx !== si ? s : { ...s, id: v }),
-                                          ),
-                                        }))}
-                                        options={opts}
-                                        placeholderOption="— Select skill —"
-                                      />
+                                      <div key={ai} style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
+                                        <div style={{ flex: 1 }}>
+                                          <LabeledSelect
+                                            label={`Skill ${ai + 1}`}
+                                            value={alloc.id}
+                                            onChange={(v) => updateResolution((r) => ({ ...r, groupMultiSkillChoices: r.groupMultiSkillChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, id: v, subcategory: '' })) }))}
+                                            options={availableOpts}
+                                            placeholderOption="— Select skill —"
+                                          />
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingBottom: 4 }}>
+                                          <button type="button" onClick={() => updateResolution((r) => ({ ...r, groupMultiSkillChoices: r.groupMultiSkillChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, ranks: a.ranks - 1 })) }))} disabled={alloc.ranks <= 1}>-</button>
+                                          <span style={{ minWidth: 24, textAlign: 'center' }}>{alloc.ranks}</span>
+                                          <button type="button" onClick={() => updateResolution((r) => ({ ...r, groupMultiSkillChoices: r.groupMultiSkillChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, ranks: a.ranks + 1 })) }))} disabled={remainingRanks <= 0}>+</button>
+                                        </div>
+                                        <button type="button" onClick={() => updateResolution((r) => ({ ...r, groupMultiSkillChoices: r.groupMultiSkillChoices.map((g, gIdx) => gIdx !== gi ? g : g.filter((_, aIdx) => aIdx !== ai)) }))} style={{ marginBottom: 4 }}>×</button>
+                                      </div>
                                     );
                                   })}
                                 </div>
+                                {allocs.length < choiceDef.numChoices && remainingRanks > 0 && (
+                                  <button type="button" style={{ marginTop: 4 }} onClick={() => updateResolution((r) => ({ ...r, groupMultiSkillChoices: r.groupMultiSkillChoices.map((g, gIdx) => gIdx !== gi ? g : [...g, { id: '', subcategory: '', ranks: 1 }]) }))}>+ Add skill</button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {(currentTp.groupCategoryAndSkillRankChoices ?? []).length > 0 && (
+                      <div style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}>
+                        <strong>Group Category &amp; Skill Choices</strong>
+                        <div style={{ display: 'grid', gap: 10, marginTop: 6 }}>
+                          {(currentTp.groupCategoryAndSkillRankChoices ?? []).map((choiceDef, gi) => {
+                            const slot = currentResolution.groupCategoryAndSkillChoices[gi] ?? { categoryId: '', skillId: '', subcategory: '' };
+                            const grpName = groups.find((g) => g.id === choiceDef.id)?.name ?? choiceDef.id;
+                            const isWeaponsGroup = choiceDef.id === 'SKILLGROUP_WEAPON';
+                            const catsInGroup = categories.filter((c) => c.group === choiceDef.id).map((c) => ({ value: c.id, label: c.name }));
+                            const skillsInSelectedCat = slot.categoryId ? (skillIdsByCategory.get(slot.categoryId) ?? []).map((s) => ({ value: s.id, label: s.name })) : [];
+                            const weaponTypeOpts = slot.skillId && isWeaponsGroup ? (weaponTypeOptionsBySkillId.get(slot.skillId) ?? []) : [];
+                            return (
+                              <div key={gi} style={{ display: 'grid', gap: 6 }}>
+                                <div style={{ color: 'var(--muted)', fontSize: '0.9em' }}>
+                                  {grpName}: select a category and one skill from it — each receives {choiceDef.value} rank{choiceDef.value !== 1 ? 's' : ''}
+                                </div>
+                                <LabeledSelect
+                                  label="Category"
+                                  value={slot.categoryId}
+                                  onChange={(v) => updateResolution((r) => ({
+                                    ...r,
+                                    groupCategoryAndSkillChoices: r.groupCategoryAndSkillChoices.map((s, i) => i !== gi ? s : { categoryId: v, skillId: '', subcategory: '' }),
+                                  }))}
+                                  options={catsInGroup}
+                                  placeholderOption="— Select category —"
+                                />
+                                {slot.categoryId && (
+                                  <LabeledSelect
+                                    label="Skill"
+                                    value={slot.skillId}
+                                    onChange={(v) => updateResolution((r) => ({
+                                      ...r,
+                                      groupCategoryAndSkillChoices: r.groupCategoryAndSkillChoices.map((s, i) => i !== gi ? s : { ...s, skillId: v, subcategory: '' }),
+                                    }))}
+                                    options={skillsInSelectedCat}
+                                    placeholderOption="— Select skill —"
+                                  />
+                                )}
+                                {slot.skillId && isWeaponsGroup && weaponTypeOpts.length > 0 && (
+                                  <LabeledSelect
+                                    label="Weapon Type"
+                                    value={slot.subcategory}
+                                    onChange={(v) => updateResolution((r) => ({
+                                      ...r,
+                                      groupCategoryAndSkillChoices: r.groupCategoryAndSkillChoices.map((s, i) => i !== gi ? s : { ...s, subcategory: v }),
+                                    }))}
+                                    options={weaponTypeOpts}
+                                    placeholderOption="— Select weapon type —"
+                                  />
+                                )}
                               </div>
                             );
                           })}
@@ -4283,36 +4463,45 @@ export default function CharacterCreationView() {
                       <div style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}>
                         <strong>Spell List Choices</strong>
                         <div style={{ display: 'grid', gap: 10, marginTop: 6 }}>
-                          {(currentTp.spellListRanks ?? []).filter((r) => r.numChoices > 0).map((choice, gi) => {
-                            const chosenInGroup = currentResolution.spellListChoices[gi] ?? [];
-                            const usedIds = new Set(chosenInGroup.filter(Boolean));
-                            const baseOpts = choice.options.filter((slId) => slId && !usedIds.has(slId)).map((slId) => ({ value: slId, label: spellListNameById.get(slId) ?? slId }));
+                          {(currentTp.spellListRanks ?? []).filter((r) => r.numChoices > 0).map((choiceDef, gi) => {
+                            const allocs = currentResolution.spellListChoices[gi] ?? [];
+                            const totalAllocated = allocs.reduce((s, a) => s + a.ranks, 0);
+                            const remainingRanks = choiceDef.value - totalAllocated;
+                            const usedIds = new Set(allocs.map((a) => a.id).filter(Boolean));
+                            const availableSlOpts = choiceDef.options.filter((slId) => slId).map((slId) => ({ value: slId, label: spellListNameById.get(slId) ?? slId }));
                             return (
                               <div key={gi}>
                                 <div style={{ color: 'var(--muted)', fontSize: '0.9em', marginBottom: 4 }}>
-                                  Choose {choice.numChoices} spell list{choice.numChoices > 1 ? 's' : ''} — {choice.value} rank{choice.value > 1 ? 's' : ''} each
+                                  Distribute {choiceDef.value} rank{choiceDef.value !== 1 ? 's' : ''} across up to {choiceDef.numChoices} spell list{choiceDef.numChoices !== 1 ? 's' : ''}
+                                  {remainingRanks !== 0 && <span style={{ color: remainingRanks > 0 ? 'var(--warning, #b96c00)' : '#b00020', marginLeft: 8, fontWeight: 600 }}>({remainingRanks > 0 ? `${remainingRanks} rank${remainingRanks !== 1 ? 's' : ''} unallocated` : `${Math.abs(remainingRanks)} rank${Math.abs(remainingRanks) !== 1 ? 's' : ''} over`})</span>}
                                 </div>
-                                <div style={{ display: 'grid', gap: 4 }}>
-                                  {Array.from({ length: choice.numChoices }, (_, si) => {
-                                    const chosen = chosenInGroup[si] ?? '';
-                                    const opts = chosen ? [{ value: chosen, label: spellListNameById.get(chosen) ?? chosen }, ...baseOpts.filter((o) => o.value !== chosen)] : baseOpts;
+                                <div style={{ display: 'grid', gap: 6 }}>
+                                  {allocs.map((alloc, ai) => {
+                                    const filteredOpts = availableSlOpts.filter((o) => o.value === alloc.id || !usedIds.has(o.value));
                                     return (
-                                      <LabeledSelect
-                                        key={si}
-                                        label={`Slot ${si + 1}`}
-                                        value={chosen}
-                                        onChange={(v) => updateResolution((r) => ({
-                                          ...r,
-                                          spellListChoices: r.spellListChoices.map((g, gIdx) =>
-                                            gIdx !== gi ? g : g.map((s, sIdx) => sIdx !== si ? s : v),
-                                          ),
-                                        }))}
-                                        options={opts}
-                                        placeholderOption="— Select spell list —"
-                                      />
+                                      <div key={ai} style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
+                                        <div style={{ flex: 1 }}>
+                                          <LabeledSelect
+                                            label={`Spell List ${ai + 1}`}
+                                            value={alloc.id}
+                                            onChange={(v) => updateResolution((r) => ({ ...r, spellListChoices: r.spellListChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, id: v })) }))}
+                                            options={filteredOpts}
+                                            placeholderOption="— Select spell list —"
+                                          />
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingBottom: 4 }}>
+                                          <button type="button" onClick={() => updateResolution((r) => ({ ...r, spellListChoices: r.spellListChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, ranks: a.ranks - 1 })) }))} disabled={alloc.ranks <= 1}>-</button>
+                                          <span style={{ minWidth: 24, textAlign: 'center' }}>{alloc.ranks}</span>
+                                          <button type="button" onClick={() => updateResolution((r) => ({ ...r, spellListChoices: r.spellListChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, ranks: a.ranks + 1 })) }))} disabled={remainingRanks <= 0}>+</button>
+                                        </div>
+                                        <button type="button" onClick={() => updateResolution((r) => ({ ...r, spellListChoices: r.spellListChoices.map((g, gIdx) => gIdx !== gi ? g : g.filter((_, aIdx) => aIdx !== ai)) }))} style={{ marginBottom: 4 }}>×</button>
+                                      </div>
                                     );
                                   })}
                                 </div>
+                                {allocs.length < choiceDef.numChoices && remainingRanks > 0 && (
+                                  <button type="button" style={{ marginTop: 4 }} onClick={() => updateResolution((r) => ({ ...r, spellListChoices: r.spellListChoices.map((g, gIdx) => gIdx !== gi ? g : [...g, { id: '', ranks: 1 }]) }))}>+ Add spell list</button>
+                                )}
                               </div>
                             );
                           })}
@@ -4324,33 +4513,87 @@ export default function CharacterCreationView() {
                       <div style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}>
                         <strong>Spell List Category Choices</strong>
                         <div style={{ display: 'grid', gap: 10, marginTop: 6 }}>
-                          {(currentTp.spellListCategoryRankChoices ?? []).map((choice, gi) => {
-                            if (choice.numChoices <= 0) return null;
-                            const chosenInGroup = currentResolution.spellListCategoryChoices[gi] ?? [];
-                            const usedIds = new Set(chosenInGroup.filter(Boolean));
-                            const baseOpts = choice.options.filter((cId) => cId && !usedIds.has(cId)).map((cId) => ({ value: cId, label: categoryNameById.get(cId) ?? cId }));
+                          {(currentTp.spellListCategoryRankChoices ?? []).map((choiceDef, gi) => {
+                            if (choiceDef.numChoices <= 0) return null;
+                            const allocs = currentResolution.spellListCategoryChoices[gi] ?? [];
+                            const totalAllocated = allocs.reduce((s, a) => s + a.ranks, 0);
+                            const remainingRanks = choiceDef.value - totalAllocated;
+                            const usedIds = new Set(allocs.map((a) => a.id).filter(Boolean));
+                            const aggregatedSlOpts = choiceDef.options.flatMap((catId) =>
+                              (characterBuilder.categorySpellLists.find((c) => c.category === catId)?.spellLists ?? [])
+                                .map((slId) => ({ value: slId, label: spellListNameById.get(slId) ?? slId }))
+                            );
                             return (
                               <div key={gi}>
                                 <div style={{ color: 'var(--muted)', fontSize: '0.9em', marginBottom: 4 }}>
-                                  Choose {choice.numChoices} spell list categor{choice.numChoices > 1 ? 'ies' : 'y'} — {choice.value} rank{choice.value > 1 ? 's' : ''} each
+                                  Distribute {choiceDef.value} rank{choiceDef.value !== 1 ? 's' : ''} across up to {choiceDef.numChoices} spell list{choiceDef.numChoices !== 1 ? 's' : ''}
+                                  {remainingRanks !== 0 && <span style={{ color: remainingRanks > 0 ? 'var(--warning, #b96c00)' : '#b00020', marginLeft: 8, fontWeight: 600 }}>({remainingRanks > 0 ? `${remainingRanks} rank${remainingRanks !== 1 ? 's' : ''} unallocated` : `${Math.abs(remainingRanks)} rank${Math.abs(remainingRanks) !== 1 ? 's' : ''} over`})</span>}
+                                </div>
+                                <div style={{ display: 'grid', gap: 6 }}>
+                                  {allocs.map((alloc, ai) => {
+                                    const filteredOpts = aggregatedSlOpts.filter((o) => o.value === alloc.id || !usedIds.has(o.value));
+                                    return (
+                                      <div key={ai} style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
+                                        <div style={{ flex: 1 }}>
+                                          <LabeledSelect
+                                            label={`Spell List ${ai + 1}`}
+                                            value={alloc.id}
+                                            onChange={(v) => updateResolution((r) => ({ ...r, spellListCategoryChoices: r.spellListCategoryChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, id: v })) }))}
+                                            options={filteredOpts}
+                                            placeholderOption="— Select spell list —"
+                                          />
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingBottom: 4 }}>
+                                          <button type="button" onClick={() => updateResolution((r) => ({ ...r, spellListCategoryChoices: r.spellListCategoryChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, ranks: a.ranks - 1 })) }))} disabled={alloc.ranks <= 1}>-</button>
+                                          <span style={{ minWidth: 24, textAlign: 'center' }}>{alloc.ranks}</span>
+                                          <button type="button" onClick={() => updateResolution((r) => ({ ...r, spellListCategoryChoices: r.spellListCategoryChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, ranks: a.ranks + 1 })) }))} disabled={remainingRanks <= 0}>+</button>
+                                        </div>
+                                        <button type="button" onClick={() => updateResolution((r) => ({ ...r, spellListCategoryChoices: r.spellListCategoryChoices.map((g, gIdx) => gIdx !== gi ? g : g.filter((_, aIdx) => aIdx !== ai)) }))} style={{ marginBottom: 4 }}>×</button>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                {allocs.length < choiceDef.numChoices && remainingRanks > 0 && (
+                                  <button type="button" style={{ marginTop: 4 }} onClick={() => updateResolution((r) => ({ ...r, spellListCategoryChoices: r.spellListCategoryChoices.map((g, gIdx) => gIdx !== gi ? g : [...g, { id: '', ranks: 1 }]) }))}>+ Add spell list</button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {(currentTp.lifestyleCategorySkillChoices ?? []).some((c) => c.numChoices > 0) && (
+                      <div style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}>
+                        <strong>Lifestyle Skill Choices</strong>
+                        <div style={{ display: 'grid', gap: 10, marginTop: 6 }}>
+                          {(currentTp.lifestyleCategorySkillChoices ?? []).map((choiceDef, gi) => {
+                            if (choiceDef.numChoices <= 0) return null;
+                            const chosen = currentResolution.lifestyleCategorySkillChoices[gi] ?? [];
+                            const poolSkills = choiceDef.options.flatMap((catId) => skillIdsByCategory.get(catId) ?? []);
+                            return (
+                              <div key={gi}>
+                                <div style={{ color: 'var(--muted)', fontSize: '0.9em', marginBottom: 4 }}>
+                                  Choose {choiceDef.numChoices} skill{choiceDef.numChoices !== 1 ? 's' : ''} to gain Lifestyle development — these will be available at Lifestyle cost during extra options.
                                 </div>
                                 <div style={{ display: 'grid', gap: 4 }}>
-                                  {Array.from({ length: choice.numChoices }, (_, si) => {
-                                    const chosen = chosenInGroup[si] ?? '';
-                                    const opts = chosen ? [{ value: chosen, label: categoryNameById.get(chosen) ?? chosen }, ...baseOpts.filter((o) => o.value !== chosen)] : baseOpts;
+                                  {Array.from({ length: choiceDef.numChoices }, (_, si) => {
+                                    const val = chosen[si] ?? '';
+                                    const usedOthers = new Set(chosen.filter((s, i) => i !== si && s));
+                                    const opts = poolSkills.filter((s) => s.id === val || !usedOthers.has(s.id)).map((s) => ({ value: s.id, label: s.name }));
                                     return (
                                       <LabeledSelect
                                         key={si}
-                                        label={`Slot ${si + 1}`}
-                                        value={chosen}
+                                        label={`Skill ${si + 1}`}
+                                        value={val}
                                         onChange={(v) => updateResolution((r) => ({
                                           ...r,
-                                          spellListCategoryChoices: r.spellListCategoryChoices.map((g, gIdx) =>
+                                          lifestyleCategorySkillChoices: r.lifestyleCategorySkillChoices.map((g, gIdx) =>
                                             gIdx !== gi ? g : g.map((s, sIdx) => sIdx !== si ? s : v),
                                           ),
                                         }))}
                                         options={opts}
-                                        placeholderOption="— Select category —"
+                                        placeholderOption="— Select skill —"
                                       />
                                     );
                                   })}
@@ -4436,6 +4679,7 @@ export default function CharacterCreationView() {
                   </div>
                 );
               })()}
+
 
               {/* PURCHASING sub-step */}
               {apprenticeSubstep === 'purchasing' && (
