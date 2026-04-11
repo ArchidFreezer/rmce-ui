@@ -1,6 +1,6 @@
 import { sendJson } from './client';
 
-import type { Realm, Stat } from '../types/enum';
+import type { Stat } from '../types/enum';
 import type { CharacterBuilder, PersistentValue, LanguageAbility, SkillValue } from '../types';
 
 export type SetCharacterBackgroundChoicesRequest = {
@@ -13,43 +13,24 @@ export type SetCharacterBackgroundChoicesRequest = {
   backgroundItemCount: 0 | 1 | 2;
 };
 
-export type CharacterContext = {
-  name?: string;
-  raceId: string;
-  cultureId: string;
-  professionId: string;
-  realms: Realm[];
-};
-
 export type ApplyLevelUpgradeRequest = {
-  character: CharacterContext;
-  temporaryStats: Record<Stat, number>;
-  potentialStats: Record<Stat, number>;
-  selectedAdolescentSkills: {
-    predefinedSkillIds: string[];
-    selectedRaceCategoryChoices: string[][];
-    selectedProfessionSkillChoices: string[][];
-  };
-  selectedBackgroundOptions: string[];
-  apprenticeship: {
-    trainingPackageIds: string[];
-    statGains: Stat[];
-    skillPurchases: Array<{ id: string; subcategory?: string | undefined; purchases: number }>;
-    categoryPurchases: Array<{ id: string; purchases: number }>;
-    spellListPurchases: Array<{ id: string; purchases: number }>;
-    tpResolutions: Array<{
-      tpId: string;
-      statGainChoices: string[];
-      skillRankChoices: Array<Array<{ id: string; subcategory: string; ranks: number }>>;
-      categoryMultiSkillChoices: Array<Array<{ id: string; subcategory: string; ranks: number }>>;
-      groupMultiSkillChoices: Array<Array<{ id: string; subcategory: string; ranks: number }>>;
-      groupCategoryAndSkillChoices: Array<{ categoryId: string; skillId: string; subcategory: string }>;
-      spellListChoices: Array<Array<{ id: string; ranks: number }>>;
-      spellListCategoryChoices: Array<Array<{ id: string; ranks: number }>>;
-      lifestyleCategorySkillChoices: string[][];
-      languageChoices: string[][];
-    }>;
-  };
+  trainingPackageIds: string[];
+  statGains: Stat[];
+  skillPurchases: Array<{ id: string; subcategory?: string | undefined; purchases: number }>;
+  categoryPurchases: Array<{ id: string; purchases: number }>;
+  spellListPurchases: Array<{ id: string; purchases: number }>;
+  tpResolutions: Array<{
+    tpId: string;
+    statGainChoices: string[];
+    skillRankChoices: Array<Array<{ id: string; subcategory: string; ranks: number }>>;
+    categoryMultiSkillChoices: Array<Array<{ id: string; subcategory: string; ranks: number }>>;
+    groupMultiSkillChoices: Array<Array<{ id: string; subcategory: string; ranks: number }>>;
+    groupCategoryAndSkillChoices: Array<{ categoryId: string; skillId: string; subcategory: string }>;
+    spellListChoices: Array<Array<{ id: string; ranks: number }>>;
+    spellListCategoryChoices: Array<Array<{ id: string; ranks: number }>>;
+    lifestyleCategorySkillChoices: string[][];
+    languageChoices: string[][];
+  }>;
 };
 
 export type ApplyLevelUpgradeResponse = {

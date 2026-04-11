@@ -2996,50 +2996,33 @@ export default function CharacterCreationView() {
     setApplying(true);
     try {
       const payload = {
-        character: {
-          name: characterName,
-          raceId,
-          cultureId,
-          professionId,
-          realms: selectedRealms,
-        },
-        temporaryStats: tempStatsAsNumbers,
-        potentialStats: potentialStatsAsNumbers,
-        selectedAdolescentSkills: {
-          predefinedSkillIds: [],
-          selectedRaceCategoryChoices: [],
-          selectedProfessionSkillChoices: [],
-        },
-        selectedBackgroundOptions: selectedBackgroundOptionsPayload,
-        apprenticeship: {
-          trainingPackageIds: apprenticeTrainingPackageIds,
-          statGains: apprenticeStatGains,
-          skillPurchases: apprenticeSkillPurchases.filter((p) => p.purchases > 0).map((p) => ({
-            id: p.id,
-            subcategory: p.subcategory || undefined,
-            purchases: p.purchases,
-          })),
-          categoryPurchases: apprenticeCategoryPurchases.filter((p) => p.purchases > 0).map((p) => ({
-            id: p.id,
-            purchases: p.purchases,
-          })),
-          spellListPurchases: apprenticeSpellListPurchases.filter((p) => p.purchases > 0).map((p) => ({
-            id: p.id,
-            purchases: p.purchases,
-          })),
-          tpResolutions: tpResolutions.map((res) => ({
-            tpId: res.tpId,
-            statGainChoices: res.statGainChoices.filter(Boolean) as string[],
-            skillRankChoices: res.skillRankChoices.map((g) => g.filter((a) => a.id)),
-            categoryMultiSkillChoices: res.categoryMultiSkillChoices.map((g) => g.filter((a) => a.id)),
-            groupMultiSkillChoices: res.groupMultiSkillChoices.map((g) => g.filter((a) => a.id)),
-            groupCategoryAndSkillChoices: res.groupCategoryAndSkillChoices.filter((s) => s.skillId),
-            spellListChoices: res.spellListChoices.map((g) => g.filter((a) => a.id)),
-            spellListCategoryChoices: res.spellListCategoryChoices.map((g) => g.filter((a) => a.id)),
-            lifestyleCategorySkillChoices: res.lifestyleCategorySkillChoices.map((g) => g.filter(Boolean)),
-            languageChoices: res.languageChoices.map((g) => g.filter(Boolean)),
-          })),
-        },
+        trainingPackageIds: apprenticeTrainingPackageIds,
+        statGains: apprenticeStatGains,
+        skillPurchases: apprenticeSkillPurchases.filter((p) => p.purchases > 0).map((p) => ({
+          id: p.id,
+          subcategory: p.subcategory || undefined,
+          purchases: p.purchases,
+        })),
+        categoryPurchases: apprenticeCategoryPurchases.filter((p) => p.purchases > 0).map((p) => ({
+          id: p.id,
+          purchases: p.purchases,
+        })),
+        spellListPurchases: apprenticeSpellListPurchases.filter((p) => p.purchases > 0).map((p) => ({
+          id: p.id,
+          purchases: p.purchases,
+        })),
+        tpResolutions: tpResolutions.map((res) => ({
+          tpId: res.tpId,
+          statGainChoices: res.statGainChoices.filter(Boolean) as string[],
+          skillRankChoices: res.skillRankChoices.map((g) => g.filter((a) => a.id)),
+          categoryMultiSkillChoices: res.categoryMultiSkillChoices.map((g) => g.filter((a) => a.id)),
+          groupMultiSkillChoices: res.groupMultiSkillChoices.map((g) => g.filter((a) => a.id)),
+          groupCategoryAndSkillChoices: res.groupCategoryAndSkillChoices.filter((s) => s.skillId),
+          spellListChoices: res.spellListChoices.map((g) => g.filter((a) => a.id)),
+          spellListCategoryChoices: res.spellListCategoryChoices.map((g) => g.filter((a) => a.id)),
+          lifestyleCategorySkillChoices: res.lifestyleCategorySkillChoices.map((g) => g.filter(Boolean)),
+          languageChoices: res.languageChoices.map((g) => g.filter(Boolean)),
+        })),
       };
 
       const response = await applyLevelUpgrade(payload);
