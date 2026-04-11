@@ -14,7 +14,7 @@ export type SetCharacterBackgroundChoicesRequest = {
 };
 
 export type ApplyLevelUpgradeRequest = {
-  characterId: string;
+  id: string;
   trainingPackageIds: string[];
   statGains: Stat[];
   skillPurchases: Array<{ id: string; subcategory?: string | undefined; purchases: number }>;
