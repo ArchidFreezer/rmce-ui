@@ -3010,6 +3010,7 @@ export default function CharacterCreationView() {
     setApplying(true);
     try {
       const payload = {
+        characterId: characterBuilder.id,
         trainingPackageIds: apprenticeTrainingPackageIds,
         statGains: apprenticeStatGains,
         skillPurchases: apprenticeSkillPurchases.filter((p) => p.purchases > 0).map((p) => ({

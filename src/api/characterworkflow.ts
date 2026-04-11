@@ -14,6 +14,7 @@ export type SetCharacterBackgroundChoicesRequest = {
 };
 
 export type ApplyLevelUpgradeRequest = {
+  characterId: string;
   trainingPackageIds: string[];
   statGains: Stat[];
   skillPurchases: Array<{ id: string; subcategory?: string | undefined; purchases: number }>;
@@ -45,7 +46,7 @@ const STAT_ROLLS_ENDPOINT = '/rmce/operations/character/stat-rolls';
 const SET_STATS_ENDPOINT = '/rmce/operations/character/set-stats';
 const SET_HOBBY_CHOICES_ENDPOINT = '/rmce/operations/character/set-hobby-choices';
 const SET_BACKGROUND_CHOICES_ENDPOINT = '/rmce/operations/character/set-background-choices';
-const APPLY_LEVEL_ENDPOINT = '/rmce/operations/character/apply-level-upgrade';
+const APPLY_LEVEL_ENDPOINT = '/rmce/operations/character/apply-level-up';
 
 export type StatRollRequest = {
   temporary: number;
