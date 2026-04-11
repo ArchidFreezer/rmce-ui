@@ -37,6 +37,16 @@ export type ApplyLevelUpgradeRequest = {
     skillPurchases: Array<{ id: string; subcategory?: string | undefined; purchases: number }>;
     categoryPurchases: Array<{ id: string; purchases: number }>;
     spellListPurchases: Array<{ id: string; purchases: number }>;
+    tpResolutions: Array<{
+      tpId: string;
+      statGainChoices: string[];
+      skillRankChoices: Array<Array<{ id: string; subcategory: string }>>;
+      categoryMultiSkillChoices: Array<Array<{ id: string; subcategory: string }>>;
+      groupMultiSkillChoices: Array<Array<{ id: string; subcategory: string }>>;
+      spellListChoices: string[][];
+      spellListCategoryChoices: string[][];
+      languageChoices: string[][];
+    }>;
   };
 };
 

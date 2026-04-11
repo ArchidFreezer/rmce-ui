@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+﻿import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 
 import {
   applyLevelUpgrade,
@@ -163,6 +163,21 @@ type ApprenticeSpellListPurchase = {
   id: string;
   purchases: number;
 };
+
+type TpSkillChoice = { id: string; subcategory: string };
+
+type TpResolution = {
+  tpId: string;
+  statGainChoices: (Stat | '')[];
+  skillRankChoices: TpSkillChoice[][];
+  categoryMultiSkillChoices: TpSkillChoice[][];
+  groupMultiSkillChoices: TpSkillChoice[][];
+  spellListChoices: string[][];
+  spellListCategoryChoices: string[][];
+  languageChoices: string[][];
+};
+
+type ApprenticeSubstep = 'selecting' | 'resolving' | 'purchasing';
 
 type StatRoll = {
   slot: number;
@@ -349,6 +364,146 @@ function getCategoryOrSpellListPurchaseTotalCost(costElements: number[], purchas
   return costElements.slice(0, purchases).reduce((s, c) => s + c, 0);
 }
 
+function tpHasChoices(tp: TrainingPackage): boolean {
+  return (
+    (tp.statGainChoices?.numChoices ?? 0) > 0
+    || (tp.skillRankChoices ?? []).some((c) => c.numChoices > 0)
+    || (tp.categoryMultiSkillRankChoices ?? []).some((c) => c.numChoices > 0)
+    || (tp.groupMultiSkillRankChoices ?? []).some((c) => c.numChoices > 0)
+    || (tp.spellListRanks ?? []).some((r) => r.numChoices > 0)
+    || (tp.spellListCategoryRankChoices ?? []).some((c) => c.numChoices > 0)
+    || (tp.languageChoices ?? []).some((c) => c.numChoices > 0)
+  );
+}
+
+function createEmptyTpResolution(tp: TrainingPackage): TpResolution {
+  return {
+    tpId: tp.id,
+    statGainChoices: Array.from({ length: tp.statGainChoices?.numChoices ?? 0 }, () => '' as Stat | ''),
+    skillRankChoices: (tp.skillRankChoices ?? []).map((c) =>
+      Array.from({ length: c.numChoices }, () => ({ id: '', subcategory: '' })),
+    ),
+    categoryMultiSkillChoices: (tp.categoryMultiSkillRankChoices ?? []).map((c) =>
+      Array.from({ length: c.numChoices }, () => ({ id: '', subcategory: '' })),
+    ),
+    groupMultiSkillChoices: (tp.groupMultiSkillRankChoices ?? []).map((c) =>
+      Array.from({ length: c.numChoices }, () => ({ id: '', subcategory: '' })),
+    ),
+    spellListChoices: (tp.spellListRanks ?? [])
+      .filter((r) => r.numChoices > 0)
+      .map((r) => Array.from({ length: r.numChoices }, () => '')),
+    spellListCategoryChoices: (tp.spellListCategoryRankChoices ?? []).map((c) =>
+      Array.from({ length: c.numChoices }, () => ''),
+    ),
+    languageChoices: (tp.languageChoices ?? []).map((c) =>
+      Array.from({ length: c.numChoices }, () => ''),
+    ),
+  };
+}
+
+function validateTpResolution(tp: TrainingPackage, resolution: TpResolution): string | undefined {
+  if (tp.statGainChoices && tp.statGainChoices.numChoices > 0) {
+    for (let i = 0; i < tp.statGainChoices.numChoices; i++) {
+      if (!resolution.statGainChoices[i]) return `${tp.name}: select stat for gain choice ${i + 1}.`;
+    }
+    const chosen = resolution.statGainChoices.filter(Boolean);
+    if (new Set(chosen).size < chosen.length) return `${tp.name}: stat gain choices must be unique.`;
+  }
+  for (let gi = 0; gi < (tp.skillRankChoices ?? []).length; gi++) {
+    const choice = (tp.skillRankChoices ?? [])[gi];
+    if (!choice) continue;
+    const chosen = resolution.skillRankChoices[gi] ?? [];
+    for (let si = 0; si < choice.numChoices; si++) {
+      if (!chosen[si]?.id) return `${tp.name}: skill choice group ${gi + 1} slot ${si + 1} required.`;
+    }
+  }
+  for (let gi = 0; gi < (tp.categoryMultiSkillRankChoices ?? []).length; gi++) {
+    const choice = (tp.categoryMultiSkillRankChoices ?? [])[gi];
+    if (!choice) continue;
+    const chosen = resolution.categoryMultiSkillChoices[gi] ?? [];
+    for (let si = 0; si < choice.numChoices; si++) {
+      if (!chosen[si]?.id) return `${tp.name}: category skill choice ${gi + 1} slot ${si + 1} required.`;
+    }
+  }
+  for (let gi = 0; gi < (tp.groupMultiSkillRankChoices ?? []).length; gi++) {
+    const choice = (tp.groupMultiSkillRankChoices ?? [])[gi];
+    if (!choice) continue;
+    const chosen = resolution.groupMultiSkillChoices[gi] ?? [];
+    for (let si = 0; si < choice.numChoices; si++) {
+      if (!chosen[si]?.id) return `${tp.name}: group skill choice ${gi + 1} slot ${si + 1} required.`;
+    }
+  }
+  const choiceableSlRanks = (tp.spellListRanks ?? []).filter((r) => r.numChoices > 0);
+  for (let gi = 0; gi < choiceableSlRanks.length; gi++) {
+    const choice = choiceableSlRanks[gi];
+    if (!choice) continue;
+    const chosen = resolution.spellListChoices[gi] ?? [];
+    for (let si = 0; si < choice.numChoices; si++) {
+      if (!chosen[si]) return `${tp.name}: spell list choice ${gi + 1} slot ${si + 1} required.`;
+    }
+  }
+  for (let gi = 0; gi < (tp.spellListCategoryRankChoices ?? []).length; gi++) {
+    const choice = (tp.spellListCategoryRankChoices ?? [])[gi];
+    if (!choice) continue;
+    const chosen = resolution.spellListCategoryChoices[gi] ?? [];
+    for (let si = 0; si < choice.numChoices; si++) {
+      if (!chosen[si]) return `${tp.name}: spell list category choice ${gi + 1} slot ${si + 1} required.`;
+    }
+  }
+  for (let gi = 0; gi < (tp.languageChoices ?? []).length; gi++) {
+    const choice = (tp.languageChoices ?? [])[gi];
+    if (!choice) continue;
+    const chosen = resolution.languageChoices[gi] ?? [];
+    for (let si = 0; si < choice.numChoices; si++) {
+      if (!chosen[si]) return `${tp.name}: language choice ${gi + 1} slot ${si + 1} required.`;
+    }
+  }
+  return undefined;
+}
+
+function getSkillMaxDpPurchases(
+  costElements: number[],
+  devType: SkillDevelopmentType | undefined,
+  tpRanks: number,
+): number {
+  if (devType === 'Restricted') {
+    return Math.max(0, Math.floor((costElements.length - tpRanks * 2) / 2));
+  }
+  const ranksPerPurchase = getSkillRanksPerPurchase(devType);
+  const usedPurchases = Math.ceil(tpRanks / (ranksPerPurchase || 1));
+  return Math.max(0, costElements.length - usedPurchases);
+}
+
+function getSkillDpCostWithTpOffset(
+  costElements: number[],
+  devType: SkillDevelopmentType | undefined,
+  purchases: number,
+  tpRanks: number,
+): number {
+  if (purchases <= 0) return 0;
+  if (devType === 'Restricted') {
+    let total = 0;
+    for (let r = 0; r < purchases; r++) {
+      const i1 = (tpRanks + r) * 2;
+      const i2 = (tpRanks + r) * 2 + 1;
+      total += (costElements[i1] ?? 0) + (costElements[i2] ?? 0);
+    }
+    return total;
+  }
+  const ranksPerPurchase = getSkillRanksPerPurchase(devType);
+  const purchaseOffset = Math.ceil(tpRanks / (ranksPerPurchase || 1));
+  return costElements.slice(purchaseOffset, purchaseOffset + purchases).reduce((s, c) => s + c, 0);
+}
+
+function getCategoryMaxDpPurchases(costElements: number[], tpRanks: number): number {
+  return Math.max(0, costElements.length - tpRanks);
+}
+
+function getCategoryDpCostWithTpOffset(costElements: number[], purchases: number, tpRanks: number): number {
+  if (purchases <= 0) return 0;
+  return costElements.slice(tpRanks, tpRanks + purchases).reduce((s, c) => s + c, 0);
+}
+
 export default function CharacterCreationView() {
   const toast = useToast();
 
@@ -416,6 +571,9 @@ export default function CharacterCreationView() {
   const [apprenticeSpellListPurchases, setApprenticeSpellListPurchases] = useState<ApprenticeSpellListPurchase[]>([]);
   const [apprenticeSelectedSpellCategory, setApprenticeSelectedSpellCategory] = useState('');
   const [apprenticeAddingSpellList, setApprenticeAddingSpellList] = useState(false);
+  const [apprenticeSubstep, setApprenticeSubstep] = useState<ApprenticeSubstep>('selecting');
+  const [apprenticeResolvingTpIndex, setApprenticeResolvingTpIndex] = useState(0);
+  const [tpResolutions, setTpResolutions] = useState<TpResolution[]>([]);
   const [preApprenticeshipRanks, setPreApprenticeshipRanks] = useState<{
     skillRanks: CharacterBuilder['skillRanks'];
     categoryRanks: CharacterBuilder['categoryRanks'];
@@ -973,14 +1131,85 @@ export default function CharacterCreationView() {
       for (const stat of tp.statGains ?? []) {
         claimed.add(stat);
       }
+      const res = tpResolutions.find((r) => r.tpId === tp.id);
+      if (res) {
+        for (const stat of res.statGainChoices) {
+          if (stat) claimed.add(stat);
+        }
+      }
     }
     return claimed;
-  }, [selectedApprenticeTrainingPackages]);
+  }, [selectedApprenticeTrainingPackages, tpResolutions]);
 
   useEffect(() => {
     if (apprenticeStatGainsUnavailable.size === 0) return;
     setApprenticeStatGains((prev) => prev.filter((s) => !apprenticeStatGainsUnavailable.has(s)));
   }, [apprenticeStatGainsUnavailable]);
+
+  const tpGrantedSkillRankCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const tp of selectedApprenticeTrainingPackages) {
+      for (const rank of tp.skillRanks ?? []) {
+        map.set(rank.id, (map.get(rank.id) ?? 0) + rank.value);
+      }
+      const res = tpResolutions.find((r) => r.tpId === tp.id);
+      if (!res) continue;
+      for (let gi = 0; gi < (tp.skillRankChoices ?? []).length; gi++) {
+        const choice = (tp.skillRankChoices ?? [])[gi];
+        if (!choice) continue;
+        for (const slot of res.skillRankChoices[gi] ?? []) {
+          if (slot.id) map.set(slot.id, (map.get(slot.id) ?? 0) + choice.value);
+        }
+      }
+      for (let gi = 0; gi < (tp.categoryMultiSkillRankChoices ?? []).length; gi++) {
+        const choice = (tp.categoryMultiSkillRankChoices ?? [])[gi];
+        if (!choice) continue;
+        for (const slot of res.categoryMultiSkillChoices[gi] ?? []) {
+          if (slot.id) map.set(slot.id, (map.get(slot.id) ?? 0) + choice.value);
+        }
+      }
+      for (let gi = 0; gi < (tp.groupMultiSkillRankChoices ?? []).length; gi++) {
+        const choice = (tp.groupMultiSkillRankChoices ?? [])[gi];
+        if (!choice) continue;
+        for (const slot of res.groupMultiSkillChoices[gi] ?? []) {
+          if (slot.id) map.set(slot.id, (map.get(slot.id) ?? 0) + choice.value);
+        }
+      }
+    }
+    return map;
+  }, [selectedApprenticeTrainingPackages, tpResolutions]);
+
+  const tpGrantedCategoryRankCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const tp of selectedApprenticeTrainingPackages) {
+      for (const rank of tp.categoryRanks ?? []) {
+        map.set(rank.id, (map.get(rank.id) ?? 0) + rank.value);
+      }
+    }
+    return map;
+  }, [selectedApprenticeTrainingPackages]);
+
+  const tpGrantedSpellListRankCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const tp of selectedApprenticeTrainingPackages) {
+      const res = tpResolutions.find((r) => r.tpId === tp.id);
+      if (!res) continue;
+      const choiceableSlRanks = (tp.spellListRanks ?? []).filter((r) => r.numChoices > 0);
+      for (let gi = 0; gi < choiceableSlRanks.length; gi++) {
+        const choice = choiceableSlRanks[gi];
+        if (!choice) continue;
+        for (const slId of res.spellListChoices[gi] ?? []) {
+          if (slId) map.set(slId, (map.get(slId) ?? 0) + choice.value);
+        }
+      }
+    }
+    return map;
+  }, [selectedApprenticeTrainingPackages, tpResolutions]);
+
+  const tpsRequiringResolution = useMemo(
+    () => selectedApprenticeTrainingPackages.filter(tpHasChoices),
+    [selectedApprenticeTrainingPackages],
+  );
 
   const apprenticeTrainingPackageDpCost = useMemo(() => {
     return apprenticeTrainingPackageIds.reduce((total, tpId) => {
@@ -996,25 +1225,28 @@ export default function CharacterCreationView() {
       if (!categoryId) return total;
       const costElements = categoryCostMap.get(categoryId) ?? [];
       const devType = skillDevTypeMap.get(p.id);
-      return total + getSkillPurchaseTotalCost(costElements, devType, p.purchases);
+      const tpRanks = tpGrantedSkillRankCounts.get(p.id) ?? 0;
+      return total + getSkillDpCostWithTpOffset(costElements, devType, p.purchases, tpRanks);
     }, 0);
-  }, [apprenticeSkillPurchases, categoryCostMap, skillDevTypeMap, skillCategoryMap]);
+  }, [apprenticeSkillPurchases, categoryCostMap, skillDevTypeMap, skillCategoryMap, tpGrantedSkillRankCounts]);
 
   const apprenticeCategoryDpCost = useMemo(() => {
     return apprenticeCategoryPurchases.reduce((total, p) => {
       const costElements = categoryCostMap.get(p.id) ?? [];
-      return total + getCategoryOrSpellListPurchaseTotalCost(costElements, p.purchases);
+      const tpRanks = tpGrantedCategoryRankCounts.get(p.id) ?? 0;
+      return total + getCategoryDpCostWithTpOffset(costElements, p.purchases, tpRanks);
     }, 0);
-  }, [apprenticeCategoryPurchases, categoryCostMap]);
+  }, [apprenticeCategoryPurchases, categoryCostMap, tpGrantedCategoryRankCounts]);
 
   const apprenticeSpellListDpCost = useMemo(() => {
     return apprenticeSpellListPurchases.reduce((total, p) => {
       const catEntry = characterBuilder.categorySpellLists.find((c) => c.spellLists.includes(p.id));
       if (!catEntry) return total;
       const costElements = categoryCostMap.get(catEntry.category) ?? [];
-      return total + getCategoryOrSpellListPurchaseTotalCost(costElements, p.purchases);
+      const tpRanks = tpGrantedSpellListRankCounts.get(p.id) ?? 0;
+      return total + getCategoryDpCostWithTpOffset(costElements, p.purchases, tpRanks);
     }, 0);
-  }, [apprenticeSpellListPurchases, categoryCostMap, characterBuilder.categorySpellLists]);
+  }, [apprenticeSpellListPurchases, categoryCostMap, characterBuilder.categorySpellLists, tpGrantedSpellListRankCounts]);
 
   const apprenticeTotalDpSpent = apprenticeTrainingPackageDpCost + apprenticeStatGainDpCost + apprenticeSkillDpCost + apprenticeCategoryDpCost + apprenticeSpellListDpCost;
   const apprenticeDpRemaining = characterBuilder.developmentPoints - apprenticeTotalDpSpent;
@@ -1042,17 +1274,20 @@ export default function CharacterCreationView() {
       .filter((s) => {
         if (selectedSet.has(s.id)) return false;
         const costElements = categoryCostMap.get(s.category) ?? [];
-        return costElements.length > 0;
+        const devType = skillDevTypeMap.get(s.id);
+        const tpRanks = tpGrantedSkillRankCounts.get(s.id) ?? 0;
+        return getSkillMaxDpPurchases(costElements, devType, tpRanks) > 0;
       })
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((s) => {
         const costElements = categoryCostMap.get(s.category) ?? [];
         const devType = skillDevTypeMap.get(s.id);
-        const nextRankCost = getSkillPurchaseTotalCost(costElements, devType, 1);
+        const tpRanks = tpGrantedSkillRankCounts.get(s.id) ?? 0;
+        const nextRankCost = getSkillDpCostWithTpOffset(costElements, devType, 1, tpRanks);
         const groupLabel = categoryGroupNameById.get(s.category) ?? s.category;
         return { value: s.id, label: `${s.name} (${groupLabel}) — ${nextRankCost} DP` };
       });
-  }, [skills, apprenticeSkillPurchases, categoryCostMap, skillDevTypeMap, categoryGroupNameById]);
+  }, [skills, apprenticeSkillPurchases, categoryCostMap, skillDevTypeMap, categoryGroupNameById, tpGrantedSkillRankCounts]);
 
   const apprenticeCategoryOptions = useMemo(() => {
     const selectedSet = new Set(apprenticeCategoryPurchases.map((p) => p.id));
@@ -1060,7 +1295,8 @@ export default function CharacterCreationView() {
       .filter((c) => {
         if (selectedSet.has(c.id)) return false;
         const costElements = categoryCostMap.get(c.id) ?? [];
-        return costElements.length > 0;
+        const tpRanks = tpGrantedCategoryRankCounts.get(c.id) ?? 0;
+        return getCategoryMaxDpPurchases(costElements, tpRanks) > 0;
       })
       .sort((a, b) => {
         const aLabel = categoryNameById.get(a.id) ?? a.id;
@@ -1069,11 +1305,12 @@ export default function CharacterCreationView() {
       })
       .map((c) => {
         const costElements = categoryCostMap.get(c.id) ?? [];
-        const nextRankCost = getCategoryOrSpellListPurchaseTotalCost(costElements, 1);
+        const tpRanks = tpGrantedCategoryRankCounts.get(c.id) ?? 0;
+        const nextRankCost = getCategoryDpCostWithTpOffset(costElements, 1, tpRanks);
         const baseLabel = categoryNameById.get(c.id) ?? c.id;
         return { value: c.id, label: `${baseLabel} — ${nextRankCost} DP` };
       });
-  }, [categories, apprenticeCategoryPurchases, categoryCostMap, categoryNameById]);
+  }, [categories, apprenticeCategoryPurchases, categoryCostMap, categoryNameById, tpGrantedCategoryRankCounts]);
 
   const apprenticeSpellCategoryOptions = useMemo(
     () => characterBuilder.categorySpellLists
@@ -1447,7 +1684,14 @@ export default function CharacterCreationView() {
   }, [backgroundState]);
 
   useEffect(() => {
-    // Aggregate ranks from all selected training packages (TP choices deferred to future prompt)
+    setTpResolutions((prev) => {
+      const resMap = new Map(prev.map((r) => [r.tpId, r]));
+      return selectedApprenticeTrainingPackages.map((tp) => resMap.get(tp.id) ?? createEmptyTpResolution(tp));
+    });
+  }, [selectedApprenticeTrainingPackages]);
+
+  useEffect(() => {
+    // Aggregate ranks from all selected training packages including resolved TP choices
     const tpSkillRanks: Array<{ id: string; subcategory?: string; value: number }> = [];
     const tpCategoryRanks: Array<{ id: string; value: number }> = [];
     const tpSpellListRanks: Array<{ id: string; value: number }> = [];
@@ -1462,6 +1706,46 @@ export default function CharacterCreationView() {
       for (const rank of (tp.spellListRanks ?? []).filter((r) => r.numChoices <= 0)) {
         if (rank.optionalCategory) {
           tpSpellListRanks.push({ id: rank.optionalCategory, value: rank.value });
+        }
+      }
+      // Include resolved choices
+      const res = tpResolutions.find((r) => r.tpId === tp.id);
+      if (res) {
+        for (let gi = 0; gi < (tp.skillRankChoices ?? []).length; gi++) {
+          const choice = (tp.skillRankChoices ?? [])[gi];
+          if (!choice) continue;
+          for (const slot of res.skillRankChoices[gi] ?? []) {
+            if (slot.id) tpSkillRanks.push({ id: slot.id, ...(slot.subcategory ? { subcategory: slot.subcategory } : {}), value: choice.value });
+          }
+        }
+        for (let gi = 0; gi < (tp.categoryMultiSkillRankChoices ?? []).length; gi++) {
+          const choice = (tp.categoryMultiSkillRankChoices ?? [])[gi];
+          if (!choice) continue;
+          for (const slot of res.categoryMultiSkillChoices[gi] ?? []) {
+            if (slot.id) tpSkillRanks.push({ id: slot.id, ...(slot.subcategory ? { subcategory: slot.subcategory } : {}), value: choice.value });
+          }
+        }
+        for (let gi = 0; gi < (tp.groupMultiSkillRankChoices ?? []).length; gi++) {
+          const choice = (tp.groupMultiSkillRankChoices ?? [])[gi];
+          if (!choice) continue;
+          for (const slot of res.groupMultiSkillChoices[gi] ?? []) {
+            if (slot.id) tpSkillRanks.push({ id: slot.id, ...(slot.subcategory ? { subcategory: slot.subcategory } : {}), value: choice.value });
+          }
+        }
+        const choiceableSlRanks = (tp.spellListRanks ?? []).filter((r) => r.numChoices > 0);
+        for (let gi = 0; gi < choiceableSlRanks.length; gi++) {
+          const choice = choiceableSlRanks[gi];
+          if (!choice) continue;
+          for (const slId of res.spellListChoices[gi] ?? []) {
+            if (slId) tpSpellListRanks.push({ id: slId, value: choice.value });
+          }
+        }
+        for (let gi = 0; gi < (tp.spellListCategoryRankChoices ?? []).length; gi++) {
+          const choice = (tp.spellListCategoryRankChoices ?? [])[gi];
+          if (!choice) continue;
+          for (const catId of res.spellListCategoryChoices[gi] ?? []) {
+            if (catId) tpSpellListRanks.push({ id: catId, value: choice.value });
+          }
         }
       }
     }
@@ -1502,7 +1786,7 @@ export default function CharacterCreationView() {
       numHobbySkillRanks: (prev.hobbySkillRanks ?? []).reduce((sum, row) => sum + row.value, 0),
       numAdolescentSpellListRanks: tpSpellListRanks.reduce((sum, row) => sum + row.value, 0),
     }));
-  }, [selectedApprenticeTrainingPackages, apprenticeSkillPurchases, apprenticeCategoryPurchases, apprenticeSpellListPurchases, skillCategoryMap, skillDevTypeMap]);
+  }, [selectedApprenticeTrainingPackages, apprenticeSkillPurchases, apprenticeCategoryPurchases, apprenticeSpellListPurchases, skillCategoryMap, skillDevTypeMap, tpResolutions]);
 
   const validateInitial = (): string | undefined => {
     if (!characterName.trim()) return 'Name is required.';
@@ -1864,6 +2148,17 @@ export default function CharacterCreationView() {
       return `Development points overspent by ${apprenticeTotalDpSpent - characterBuilder.developmentPoints}.`;
     }
 
+    // Require all TP choices to be resolved before completing apprenticeship
+    if (tpsRequiringResolution.length > 0 && apprenticeSubstep !== 'purchasing') {
+      return 'Resolve all training package choices before completing apprenticeship.';
+    }
+    for (const tp of tpsRequiringResolution) {
+      const res = tpResolutions.find((r) => r.tpId === tp.id);
+      if (!res) return `Training package choices not complete for ${tp.name}.`;
+      const resError = validateTpResolution(tp, res);
+      if (resError) return resError;
+    }
+
     // Check only one lifestyle package selected
     let lifestyleCount = 0;
     for (const tpId of apprenticeTrainingPackageIds) {
@@ -1962,6 +2257,8 @@ export default function CharacterCreationView() {
     apprenticeCategoryPurchases,
     apprenticeSpellListPurchases,
     apprenticeTotalDpSpent,
+    apprenticeSubstep,
+    tpResolutions,
   ]);
 
   const canGoNext = (() => {
@@ -2582,6 +2879,9 @@ export default function CharacterCreationView() {
     setApprenticeSpellListPurchases([]);
     setApprenticeSelectedSpellCategory('');
     setApprenticeAddingSpellList(false);
+    setApprenticeSubstep('selecting');
+    setApprenticeResolvingTpIndex(0);
+    setTpResolutions([]);
     setPreApprenticeshipRanks({ skillRanks: [], categoryRanks: [], spellListRanks: [] });
     setCharacterBuilder(createEmptyCharacterBuilder());
     setErrors({});
@@ -2641,6 +2941,16 @@ export default function CharacterCreationView() {
           spellListPurchases: apprenticeSpellListPurchases.filter((p) => p.purchases > 0).map((p) => ({
             id: p.id,
             purchases: p.purchases,
+          })),
+          tpResolutions: tpResolutions.map((res) => ({
+            tpId: res.tpId,
+            statGainChoices: res.statGainChoices.filter(Boolean) as string[],
+            skillRankChoices: res.skillRankChoices.map((g) => g.filter((s) => s.id)),
+            categoryMultiSkillChoices: res.categoryMultiSkillChoices.map((g) => g.filter((s) => s.id)),
+            groupMultiSkillChoices: res.groupMultiSkillChoices.map((g) => g.filter((s) => s.id)),
+            spellListChoices: res.spellListChoices.map((g) => g.filter(Boolean)),
+            spellListCategoryChoices: res.spellListCategoryChoices.map((g) => g.filter(Boolean)),
+            languageChoices: res.languageChoices.map((g) => g.filter(Boolean)),
           })),
         },
       };
@@ -3733,390 +4043,773 @@ export default function CharacterCreationView() {
             <section style={{ display: 'grid', gap: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ color: 'var(--muted)' }}>
-                  Spend development points on training packages, stat gains, skill ranks, category ranks, and spell list ranks. Unspent points carry to the next level.
+                  {apprenticeSubstep === 'selecting' && 'Select training packages. TPs with required choices must be resolved before spending extra development points.'}
+                  {apprenticeSubstep === 'resolving' && `Resolve training package choices (${apprenticeResolvingTpIndex + 1} of ${tpsRequiringResolution.length}).`}
+                  {apprenticeSubstep === 'purchasing' && 'Spend remaining development points on stat gains, skill ranks, category ranks, and spell list ranks. Unspent points carry to the next level.'}
                 </div>
                 <div style={{ fontWeight: 600, whiteSpace: 'nowrap', marginLeft: 16 }}>
                   DP: {apprenticeDpRemaining} / {characterBuilder.developmentPoints}
                 </div>
               </div>
 
-              {/* Training Packages */}
-              <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
-                <h4 style={{ margin: '0 0 8px' }}>Training Packages</h4>
-                {selectedApprenticeTrainingPackages.length > 0 && (
-                  <div style={{ display: 'grid', gap: 6, marginBottom: 8 }}>
-                    {selectedApprenticeTrainingPackages.map((tp) => {
-                      const cost = tpCostMap.get(tp.id) ?? 0;
-                      return (
-                        <div key={tp.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                          <span style={{ flex: 1 }}>
-                            {tp.name}{tp.lifestyle ? ' (Lifestyle)' : ''} — {cost} DP
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setApprenticeTrainingPackageIds((prev) => prev.filter((id) => id !== tp.id))}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                <LabeledSelect
-                  label="Add Training Package"
-                  hideLabel={true}
-                  value=""
-                  onChange={(v) => {
-                    if (v) setApprenticeTrainingPackageIds((prev) => [...prev, v]);
-                  }}
-                  options={apprenticeTrainingPackageOptions}
-                />
-                {selectedApprenticeTrainingPackages.length > 0 && (
-                  <div style={{ color: 'var(--muted)', marginTop: 6 }}>
-                    Training package choices (skill, stat, spell selections) will be configured in a future update.
-                  </div>
-                )}
-              </div>
-
-              {/* Stat Gain Rolls */}
-              <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
-                <h4 style={{ margin: '0 0 8px' }}>Stat Gain Rolls ({STAT_GAIN_DP_COST} DP each)</h4>
-                {apprenticeStatGains.length > 0 && (
-                  <div style={{ display: 'grid', gap: 6, marginBottom: 8 }}>
-                    {apprenticeStatGains.map((stat, i) => {
-                      const availableOptions = STATS
-                        .filter((s) => !apprenticeStatGainsUnavailable.has(s) && (s === stat || !apprenticeStatGains.includes(s)))
-                        .map((s) => ({ value: s, label: s }));
-                      return (
-                        <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                          <LabeledSelect
-                            label={`Stat Gain #${i + 1}`}
-                            value={stat}
-                            onChange={(v) => {
-                              setApprenticeStatGains((prev) => prev.map((s, idx) => (idx === i ? v as Stat : s)));
-                            }}
-                            options={availableOptions}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setApprenticeStatGains((prev) => prev.filter((_, idx) => idx !== i))}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextStat = STATS.find((s) => !apprenticeStatGainsUnavailable.has(s) && !apprenticeStatGains.includes(s));
-                    if (nextStat) setApprenticeStatGains((prev) => [...prev, nextStat]);
-                  }}
-                  disabled={
-                    apprenticeDpRemaining < STAT_GAIN_DP_COST
-                    || STATS.every((s) => apprenticeStatGainsUnavailable.has(s) || apprenticeStatGains.includes(s))
-                  }
-                >
-                  Add Stat Gain Roll
-                </button>
-              </div>
-
-              {/* Skill Rank Purchases */}
-              <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
-                <h4 style={{ margin: '0 0 8px' }}>Skill Ranks</h4>
-                {apprenticeSkillPurchases.length > 0 && (
-                  <div style={{ display: 'grid', gap: 8, marginBottom: 8 }}>
-                    {apprenticeSkillPurchases.map((purchase, i) => {
-                      const skillName = skillNameById.get(purchase.id) ?? purchase.id;
-                      const categoryId = skillCategoryMap.get(purchase.id) ?? '';
-                      const costElements = categoryCostMap.get(categoryId) ?? [];
-                      const devType = skillDevTypeMap.get(purchase.id);
-                      const maxPurch = getSkillMaxPurchases(costElements, devType);
-                      const ranksPerPurchase = getSkillRanksPerPurchase(devType);
-                      const totalRanks = devType === 'Restricted' ? purchase.purchases : purchase.purchases * ranksPerPurchase;
-                      const totalCost = getSkillPurchaseTotalCost(costElements, devType, purchase.purchases);
-                      const nextPurchaseCost = purchase.purchases < maxPurch
-                        ? getSkillPurchaseTotalCost(costElements, devType, purchase.purchases + 1) - totalCost
-                        : 0;
-                      const isWeaponGroupSkill = weaponGroupSkillIds.has(purchase.id);
-                      const needsSubcategory = mandatorySubcategorySkillIds.has(purchase.id);
-                      const existingSkillRanks = preApprenticeshipRanks.skillRanks
-                        .filter((r) => r.id === purchase.id && (purchase.subcategory ? r.subcategory === purchase.subcategory : true))
-                        .reduce((sum, r) => sum + r.value, 0);
-                      const afterSkillRanks = existingSkillRanks + totalRanks;
-
-                      return (
-                        <div key={purchase.id} style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center', gap: 8 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                              <div>
-                                <strong>{skillName}</strong>
-                                <span style={{ color: 'var(--muted)', marginLeft: 6 }}>({categoryGroupNameById.get(categoryId) ?? categoryId})</span>
-                                {devType && <span style={{ color: 'var(--muted)', marginLeft: 6 }}>[{devType}]</span>}
-                                <span style={{ color: 'var(--muted)', marginLeft: 6 }}>
-                                  — {existingSkillRanks} → {afterSkillRanks} rank{afterSkillRanks !== 1 ? 's' : ''}, {totalCost} DP
-                                </span>
-                              </div>
-                              {needsSubcategory && (
-                                isWeaponGroupSkill ? (
-                                  <LabeledSelect
-                                    label="Weapon type"
-                                    hideLabel={true}
-                                    value={purchase.subcategory}
-                                    onChange={(v) => setApprenticeSkillPurchases((prev) =>
-                                      prev.map((p, idx) => idx === i ? { ...p, subcategory: v } : p),
-                                    )}
-                                    options={weaponTypeOptionsBySkillId.get(purchase.id) ?? []}
-                                    placeholderOption="— Select weapon type —"
-                                  />
-                                ) : (
-                                  <LabeledInput
-                                    label="Subcategory"
-                                    hideLabel={true}
-                                    value={purchase.subcategory}
-                                    onChange={(v) => setApprenticeSkillPurchases((prev) =>
-                                      prev.map((p, idx) => idx === i ? { ...p, subcategory: v } : p),
-                                    )}
-                                    placeholder="Subcategory"
-                                  />
-                                )
-                              )}
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {/* SELECTING sub-step */}
+              {apprenticeSubstep === 'selecting' && (
+                <>
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
+                    <h4 style={{ margin: '0 0 8px' }}>Training Packages</h4>
+                    {selectedApprenticeTrainingPackages.length > 0 && (
+                      <div style={{ display: 'grid', gap: 6, marginBottom: 8 }}>
+                        {selectedApprenticeTrainingPackages.map((tp) => {
+                          const cost = tpCostMap.get(tp.id) ?? 0;
+                          return (
+                            <div key={tp.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                              <span style={{ flex: 1 }}>
+                                {tp.name}{tp.lifestyle ? ' (Lifestyle)' : ''} — {cost} DP
+                                {tpHasChoices(tp) && <span style={{ color: 'var(--muted)', marginLeft: 6 }}>(choices required)</span>}
+                              </span>
                               <button
                                 type="button"
-                                disabled={purchase.purchases <= 0}
-                                onClick={() => setApprenticeSkillPurchases((prev) =>
-                                  prev.map((p, idx) => idx === i ? { ...p, purchases: p.purchases - 1 } : p),
-                                )}
+                                onClick={() => setApprenticeTrainingPackageIds((prev) => prev.filter((id) => id !== tp.id))}
                               >
-                                −
-                              </button>
-                              <span style={{ minWidth: 20, textAlign: 'center' }}>{purchase.purchases}</span>
-                              <button
-                                type="button"
-                                disabled={purchase.purchases >= maxPurch || nextPurchaseCost > apprenticeDpRemaining}
-                                onClick={() => setApprenticeSkillPurchases((prev) =>
-                                  prev.map((p, idx) => idx === i ? { ...p, purchases: p.purchases + 1 } : p),
-                                )}
-                              >
-                                +
+                                Remove
                               </button>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => setApprenticeSkillPurchases((prev) => prev.filter((_, idx) => idx !== i))}
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                <LabeledSelect
-                  label="Add Skill"
-                  hideLabel={true}
-                  value=""
-                  onChange={(v) => {
-                    if (v) {
-                      setApprenticeSkillPurchases((prev) => [...prev, { id: v, subcategory: '', purchases: 1 }]);
-                    }
-                  }}
-                  options={apprenticeSkillOptions}
-                />
-              </div>
-
-              {/* Category Rank Purchases */}
-              <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
-                <h4 style={{ margin: '0 0 8px' }}>Skill Category Ranks</h4>
-                {apprenticeCategoryPurchases.length > 0 && (
-                  <div style={{ display: 'grid', gap: 6, marginBottom: 8 }}>
-                    {apprenticeCategoryPurchases.map((purchase, i) => {
-                      const catName = categoryNameById.get(purchase.id) ?? purchase.id;
-                      const costElements = categoryCostMap.get(purchase.id) ?? [];
-                      const maxPurch = getMaxPurchases(costElements);
-                      const totalCost = getCategoryOrSpellListPurchaseTotalCost(costElements, purchase.purchases);
-                      const nextCost = purchase.purchases < maxPurch
-                        ? getCategoryOrSpellListPurchaseTotalCost(costElements, purchase.purchases + 1) - totalCost
-                        : 0;
-                      const existingCatRanks = preApprenticeshipRanks.categoryRanks
-                        .filter((r) => r.id === purchase.id)
-                        .reduce((sum, r) => sum + r.value, 0);
-                      const afterCatRanks = existingCatRanks + purchase.purchases;
-
-                      return (
-                        <div key={purchase.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center', gap: 8 }}>
-                          <span>
-                            {catName}
-                            <span style={{ color: 'var(--muted)', marginLeft: 6 }}>
-                              — {existingCatRanks} → {afterCatRanks} rank{afterCatRanks !== 1 ? 's' : ''}, {totalCost} DP
-                            </span>
-                          </span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <button
-                              type="button"
-                              disabled={purchase.purchases <= 0}
-                              onClick={() => setApprenticeCategoryPurchases((prev) =>
-                                prev.map((p, idx) => idx === i ? { ...p, purchases: p.purchases - 1 } : p),
-                              )}
-                            >
-                              −
-                            </button>
-                            <span style={{ minWidth: 20, textAlign: 'center' }}>{purchase.purchases}</span>
-                            <button
-                              type="button"
-                              disabled={purchase.purchases >= maxPurch || nextCost > apprenticeDpRemaining}
-                              onClick={() => setApprenticeCategoryPurchases((prev) =>
-                                prev.map((p, idx) => idx === i ? { ...p, purchases: p.purchases + 1 } : p),
-                              )}
-                            >
-                              +
-                            </button>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setApprenticeCategoryPurchases((prev) => prev.filter((_, idx) => idx !== i))}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                <LabeledSelect
-                  label="Add Category"
-                  value=""
-                  hideLabel={true}
-                  onChange={(v) => {
-                    if (v) {
-                      setApprenticeCategoryPurchases((prev) => [...prev, { id: v, purchases: 1 }]);
-                    }
-                  }}
-                  options={apprenticeCategoryOptions}
-                />
-              </div>
-
-              {/* Spell List Rank Purchases */}
-              <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
-                <h4 style={{ margin: '0 0 8px' }}>Spell List Ranks</h4>
-                {apprenticeSpellListPurchases.length > 0 && (
-                  <div style={{ display: 'grid', gap: 6, marginBottom: 8 }}>
-                    {apprenticeSpellListPurchases.map((purchase, i) => {
-                      const slName = spellListNameById.get(purchase.id) ?? purchase.id;
-                      const catEntry = characterBuilder.categorySpellLists.find((c) => c.spellLists.includes(purchase.id));
-                      const costElements = catEntry ? (categoryCostMap.get(catEntry.category) ?? []) : [];
-                      const maxPurch = getMaxPurchases(costElements);
-                      const totalCost = getCategoryOrSpellListPurchaseTotalCost(costElements, purchase.purchases);
-                      const nextCost = purchase.purchases < maxPurch
-                        ? getCategoryOrSpellListPurchaseTotalCost(costElements, purchase.purchases + 1) - totalCost
-                        : 0;
-                      const existingSlRanks = preApprenticeshipRanks.spellListRanks
-                        .filter((r) => r.id === purchase.id)
-                        .reduce((sum, r) => sum + r.value, 0);
-                      const afterSlRanks = existingSlRanks + purchase.purchases;
-
-                      return (
-                        <div key={purchase.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center', gap: 8 }}>
-                          <span>
-                            {slName}
-                            <span style={{ color: 'var(--muted)', marginLeft: 6 }}>
-                              — {existingSlRanks} → {afterSlRanks} rank{afterSlRanks !== 1 ? 's' : ''}, {totalCost} DP
-                            </span>
-                          </span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <button
-                              type="button"
-                              disabled={purchase.purchases <= 0}
-                              onClick={() => setApprenticeSpellListPurchases((prev) =>
-                                prev.map((p, idx) => idx === i ? { ...p, purchases: p.purchases - 1 } : p),
-                              )}
-                            >
-                              −
-                            </button>
-                            <span style={{ minWidth: 20, textAlign: 'center' }}>{purchase.purchases}</span>
-                            <button
-                              type="button"
-                              disabled={purchase.purchases >= maxPurch || nextCost > apprenticeDpRemaining}
-                              onClick={() => setApprenticeSpellListPurchases((prev) =>
-                                prev.map((p, idx) => idx === i ? { ...p, purchases: p.purchases + 1 } : p),
-                              )}
-                            >
-                              +
-                            </button>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setApprenticeSpellListPurchases((prev) => prev.filter((_, idx) => idx !== i))}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                {apprenticeAddingSpellList ? (
-                  <div style={{ display: 'grid', gap: 8 }}>
+                          );
+                        })}
+                      </div>
+                    )}
                     <LabeledSelect
-                      label="Spell Category"
+                      label="Add Training Package"
                       hideLabel={true}
-                      value={apprenticeSelectedSpellCategory}
-                      onChange={(v) => setApprenticeSelectedSpellCategory(v)}
-                      options={apprenticeSpellCategoryOptions}
-                      placeholderOption="— Select category —"
+                      value=""
+                      onChange={(v) => {
+                        if (v) setApprenticeTrainingPackageIds((prev) => [...prev, v]);
+                      }}
+                      options={apprenticeTrainingPackageOptions}
                     />
-                    {apprenticeSelectedSpellCategory && apprenticeSpellListsInSelectedCategory.length > 0 && (
-                      <LabeledSelect
-                        label="Spell List"
-                        hideLabel={true}
-                        value=""
-                        onChange={(v) => {
-                          if (v) {
-                            setApprenticeSpellListPurchases((prev) => [...prev, { id: v, purchases: 1 }]);
-                            setApprenticeSelectedSpellCategory('');
-                            setApprenticeAddingSpellList(false);
-                          }
-                        }}
-                        options={apprenticeSpellListsInSelectedCategory.map((sl) => ({ value: sl.id, label: sl.name }))}
-                        placeholderOption="— Select spell list —"
-                      />
+                  </div>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (tpsRequiringResolution.length === 0) {
+                          setApprenticeSubstep('purchasing');
+                        } else {
+                          setApprenticeResolvingTpIndex(0);
+                          setApprenticeSubstep('resolving');
+                        }
+                      }}
+                    >
+                      {tpsRequiringResolution.length === 0 ? 'Proceed to Extra Purchases ?' : 'Proceed to Resolve TP Choices ?'}
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* RESOLVING sub-step */}
+              {apprenticeSubstep === 'resolving' && (() => {
+                const currentTp = tpsRequiringResolution[apprenticeResolvingTpIndex];
+                const currentResolution = currentTp ? tpResolutions.find((r) => r.tpId === currentTp.id) : undefined;
+                if (!currentTp || !currentResolution) return null;
+                const resError = validateTpResolution(currentTp, currentResolution);
+                const updateResolution = (updater: (r: TpResolution) => TpResolution) => {
+                  setTpResolutions((prev) => prev.map((r) => r.tpId === currentTp.id ? updater(r) : r));
+                };
+                return (
+                  <div style={{ display: 'grid', gap: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h4 style={{ margin: 0 }}>{currentTp.name} — {tpCostMap.get(currentTp.id) ?? 0} DP</h4>
+                      <span style={{ color: 'var(--muted)' }}>TP {apprenticeResolvingTpIndex + 1} of {tpsRequiringResolution.length}</span>
+                    </div>
+
+                    {currentTp.statGainChoices && currentTp.statGainChoices.numChoices > 0 && (
+                      <div style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}>
+                        <strong>Stat Gain Choices</strong>
+                        <div style={{ color: 'var(--muted)', fontSize: '0.9em', marginBottom: 8 }}>
+                          Choose {currentTp.statGainChoices.numChoices} stat{currentTp.statGainChoices.numChoices > 1 ? 's' : ''} to receive a gain roll.
+                        </div>
+                        <div style={{ display: 'grid', gap: 6 }}>
+                          {Array.from({ length: currentTp.statGainChoices.numChoices }, (_, si) => {
+                            const chosen = currentResolution.statGainChoices[si] ?? '';
+                            const otherChosen = new Set<string>(currentResolution.statGainChoices.filter((s, i) => i !== si && s));
+                            const opts = (currentTp.statGainChoices!.options as string[]).filter((s) => !otherChosen.has(s)).map((s) => ({ value: s, label: s }));
+                            return (
+                              <LabeledSelect
+                                key={si}
+                                label={`Stat ${si + 1}`}
+                                value={chosen}
+                                onChange={(v) => updateResolution((r) => ({
+                                  ...r,
+                                  statGainChoices: r.statGainChoices.map((s, i) => i === si ? v as Stat | '' : s),
+                                }))}
+                                options={opts}
+                                placeholderOption="— Select stat —"
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
                     )}
-                    {apprenticeSelectedSpellCategory && apprenticeSpellListsInSelectedCategory.length === 0 && (
-                      <div style={{ color: 'var(--muted)' }}>No more spell lists available in this category.</div>
+
+                    {(currentTp.skillRankChoices ?? []).some((c) => c.numChoices > 0) && (
+                      <div style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}>
+                        <strong>Skill Rank Choices</strong>
+                        <div style={{ display: 'grid', gap: 10, marginTop: 6 }}>
+                          {(currentTp.skillRankChoices ?? []).map((choice, gi) => {
+                            if (choice.numChoices <= 0) return null;
+                            const chosenInGroup = currentResolution.skillRankChoices[gi] ?? [];
+                            const usedIds = new Set(chosenInGroup.filter((s) => s.id).map((s) => s.id));
+                            const optionIds = new Set(choice.options.map((o) => o.id));
+                            return (
+                              <div key={gi}>
+                                <div style={{ color: 'var(--muted)', fontSize: '0.9em', marginBottom: 4 }}>
+                                  Choose {choice.numChoices} skill{choice.numChoices > 1 ? 's' : ''} — {choice.value} rank{choice.value > 1 ? 's' : ''} each
+                                </div>
+                                <div style={{ display: 'grid', gap: 4 }}>
+                                  {Array.from({ length: choice.numChoices }, (_, si) => {
+                                    const slot = chosenInGroup[si] ?? { id: '', subcategory: '' };
+                                    const opts = skills.filter((s) => optionIds.has(s.id) && (s.id === slot.id || !usedIds.has(s.id))).map((s) => ({ value: s.id, label: s.name }));
+                                    return (
+                                      <LabeledSelect
+                                        key={si}
+                                        label={`Slot ${si + 1}`}
+                                        value={slot.id}
+                                        onChange={(v) => updateResolution((r) => ({
+                                          ...r,
+                                          skillRankChoices: r.skillRankChoices.map((g, gIdx) =>
+                                            gIdx !== gi ? g : g.map((s, sIdx) => sIdx !== si ? s : { ...s, id: v }),
+                                          ),
+                                        }))}
+                                        options={opts}
+                                        placeholderOption="— Select skill —"
+                                      />
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
                     )}
-                    <div>
+
+                    {(currentTp.categoryMultiSkillRankChoices ?? []).some((c) => c.numChoices > 0) && (
+                      <div style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}>
+                        <strong>Category Skill Choices</strong>
+                        <div style={{ display: 'grid', gap: 10, marginTop: 6 }}>
+                          {(currentTp.categoryMultiSkillRankChoices ?? []).map((choice, gi) => {
+                            if (choice.numChoices <= 0) return null;
+                            const catName = categoryNameById.get(choice.id) ?? choice.id;
+                            const skillsInCat = (skillIdsByCategory.get(choice.id) ?? []).map((s) => ({ value: s.id, label: s.name }));
+                            const chosenInGroup = currentResolution.categoryMultiSkillChoices[gi] ?? [];
+                            const usedIds = new Set(chosenInGroup.filter((s) => s.id).map((s) => s.id));
+                            return (
+                              <div key={gi}>
+                                <div style={{ color: 'var(--muted)', fontSize: '0.9em', marginBottom: 4 }}>
+                                  {catName}: choose {choice.numChoices} skill{choice.numChoices > 1 ? 's' : ''} — {choice.value} rank{choice.value > 1 ? 's' : ''} each
+                                </div>
+                                <div style={{ display: 'grid', gap: 4 }}>
+                                  {Array.from({ length: choice.numChoices }, (_, si) => {
+                                    const slot = chosenInGroup[si] ?? { id: '', subcategory: '' };
+                                    const opts = skillsInCat.filter((o) => o.value === slot.id || !usedIds.has(o.value));
+                                    return (
+                                      <LabeledSelect
+                                        key={si}
+                                        label={`Slot ${si + 1}`}
+                                        value={slot.id}
+                                        onChange={(v) => updateResolution((r) => ({
+                                          ...r,
+                                          categoryMultiSkillChoices: r.categoryMultiSkillChoices.map((g, gIdx) =>
+                                            gIdx !== gi ? g : g.map((s, sIdx) => sIdx !== si ? s : { ...s, id: v }),
+                                          ),
+                                        }))}
+                                        options={opts}
+                                        placeholderOption="— Select skill —"
+                                      />
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {(currentTp.groupMultiSkillRankChoices ?? []).some((c) => c.numChoices > 0) && (
+                      <div style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}>
+                        <strong>Group Skill Choices</strong>
+                        <div style={{ display: 'grid', gap: 10, marginTop: 6 }}>
+                          {(currentTp.groupMultiSkillRankChoices ?? []).map((choice, gi) => {
+                            if (choice.numChoices <= 0) return null;
+                            const groupName = groups.find((g) => g.id === choice.id)?.name ?? choice.id;
+                            const groupSkills = (categoryIdsByGroup.get(choice.id) ?? []).flatMap((catId) => skillIdsByCategory.get(catId) ?? []).map((s) => ({ value: s.id, label: s.name }));
+                            const chosenInGroup = currentResolution.groupMultiSkillChoices[gi] ?? [];
+                            const usedIds = new Set(chosenInGroup.filter((s) => s.id).map((s) => s.id));
+                            return (
+                              <div key={gi}>
+                                <div style={{ color: 'var(--muted)', fontSize: '0.9em', marginBottom: 4 }}>
+                                  {groupName}: choose {choice.numChoices} skill{choice.numChoices > 1 ? 's' : ''} — {choice.value} rank{choice.value > 1 ? 's' : ''} each
+                                </div>
+                                <div style={{ display: 'grid', gap: 4 }}>
+                                  {Array.from({ length: choice.numChoices }, (_, si) => {
+                                    const slot = chosenInGroup[si] ?? { id: '', subcategory: '' };
+                                    const opts = groupSkills.filter((o) => o.value === slot.id || !usedIds.has(o.value));
+                                    return (
+                                      <LabeledSelect
+                                        key={si}
+                                        label={`Slot ${si + 1}`}
+                                        value={slot.id}
+                                        onChange={(v) => updateResolution((r) => ({
+                                          ...r,
+                                          groupMultiSkillChoices: r.groupMultiSkillChoices.map((g, gIdx) =>
+                                            gIdx !== gi ? g : g.map((s, sIdx) => sIdx !== si ? s : { ...s, id: v }),
+                                          ),
+                                        }))}
+                                        options={opts}
+                                        placeholderOption="— Select skill —"
+                                      />
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {(currentTp.spellListRanks ?? []).some((r) => r.numChoices > 0) && (
+                      <div style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}>
+                        <strong>Spell List Choices</strong>
+                        <div style={{ display: 'grid', gap: 10, marginTop: 6 }}>
+                          {(currentTp.spellListRanks ?? []).filter((r) => r.numChoices > 0).map((choice, gi) => {
+                            const chosenInGroup = currentResolution.spellListChoices[gi] ?? [];
+                            const usedIds = new Set(chosenInGroup.filter(Boolean));
+                            const baseOpts = choice.options.filter((slId) => slId && !usedIds.has(slId)).map((slId) => ({ value: slId, label: spellListNameById.get(slId) ?? slId }));
+                            return (
+                              <div key={gi}>
+                                <div style={{ color: 'var(--muted)', fontSize: '0.9em', marginBottom: 4 }}>
+                                  Choose {choice.numChoices} spell list{choice.numChoices > 1 ? 's' : ''} — {choice.value} rank{choice.value > 1 ? 's' : ''} each
+                                </div>
+                                <div style={{ display: 'grid', gap: 4 }}>
+                                  {Array.from({ length: choice.numChoices }, (_, si) => {
+                                    const chosen = chosenInGroup[si] ?? '';
+                                    const opts = chosen ? [{ value: chosen, label: spellListNameById.get(chosen) ?? chosen }, ...baseOpts.filter((o) => o.value !== chosen)] : baseOpts;
+                                    return (
+                                      <LabeledSelect
+                                        key={si}
+                                        label={`Slot ${si + 1}`}
+                                        value={chosen}
+                                        onChange={(v) => updateResolution((r) => ({
+                                          ...r,
+                                          spellListChoices: r.spellListChoices.map((g, gIdx) =>
+                                            gIdx !== gi ? g : g.map((s, sIdx) => sIdx !== si ? s : v),
+                                          ),
+                                        }))}
+                                        options={opts}
+                                        placeholderOption="— Select spell list —"
+                                      />
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {(currentTp.spellListCategoryRankChoices ?? []).some((c) => c.numChoices > 0) && (
+                      <div style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}>
+                        <strong>Spell List Category Choices</strong>
+                        <div style={{ display: 'grid', gap: 10, marginTop: 6 }}>
+                          {(currentTp.spellListCategoryRankChoices ?? []).map((choice, gi) => {
+                            if (choice.numChoices <= 0) return null;
+                            const chosenInGroup = currentResolution.spellListCategoryChoices[gi] ?? [];
+                            const usedIds = new Set(chosenInGroup.filter(Boolean));
+                            const baseOpts = choice.options.filter((cId) => cId && !usedIds.has(cId)).map((cId) => ({ value: cId, label: categoryNameById.get(cId) ?? cId }));
+                            return (
+                              <div key={gi}>
+                                <div style={{ color: 'var(--muted)', fontSize: '0.9em', marginBottom: 4 }}>
+                                  Choose {choice.numChoices} spell list categor{choice.numChoices > 1 ? 'ies' : 'y'} — {choice.value} rank{choice.value > 1 ? 's' : ''} each
+                                </div>
+                                <div style={{ display: 'grid', gap: 4 }}>
+                                  {Array.from({ length: choice.numChoices }, (_, si) => {
+                                    const chosen = chosenInGroup[si] ?? '';
+                                    const opts = chosen ? [{ value: chosen, label: categoryNameById.get(chosen) ?? chosen }, ...baseOpts.filter((o) => o.value !== chosen)] : baseOpts;
+                                    return (
+                                      <LabeledSelect
+                                        key={si}
+                                        label={`Slot ${si + 1}`}
+                                        value={chosen}
+                                        onChange={(v) => updateResolution((r) => ({
+                                          ...r,
+                                          spellListCategoryChoices: r.spellListCategoryChoices.map((g, gIdx) =>
+                                            gIdx !== gi ? g : g.map((s, sIdx) => sIdx !== si ? s : v),
+                                          ),
+                                        }))}
+                                        options={opts}
+                                        placeholderOption="— Select category —"
+                                      />
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {(currentTp.languageChoices ?? []).some((c) => c.numChoices > 0) && (
+                      <div style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}>
+                        <strong>Language Choices</strong>
+                        <div style={{ display: 'grid', gap: 10, marginTop: 6 }}>
+                          {(currentTp.languageChoices ?? []).map((choice, gi) => {
+                            if (choice.numChoices <= 0) return null;
+                            const chosenInGroup = currentResolution.languageChoices[gi] ?? [];
+                            const usedIds = new Set(chosenInGroup.filter(Boolean));
+                            const baseOpts = choice.options.filter((lId) => lId && !usedIds.has(lId)).map((lId) => ({ value: lId, label: languageNameById.get(lId) ?? lId }));
+                            return (
+                              <div key={gi}>
+                                <div style={{ color: 'var(--muted)', fontSize: '0.9em', marginBottom: 4 }}>
+                                  Choose {choice.numChoices} language{choice.numChoices > 1 ? 's' : ''} — {choice.value} rank{choice.value > 1 ? 's' : ''} each
+                                </div>
+                                <div style={{ display: 'grid', gap: 4 }}>
+                                  {Array.from({ length: choice.numChoices }, (_, si) => {
+                                    const chosen = chosenInGroup[si] ?? '';
+                                    const opts = chosen ? [{ value: chosen, label: languageNameById.get(chosen) ?? chosen }, ...baseOpts.filter((o) => o.value !== chosen)] : baseOpts;
+                                    return (
+                                      <LabeledSelect
+                                        key={si}
+                                        label={`Slot ${si + 1}`}
+                                        value={chosen}
+                                        onChange={(v) => updateResolution((r) => ({
+                                          ...r,
+                                          languageChoices: r.languageChoices.map((g, gIdx) =>
+                                            gIdx !== gi ? g : g.map((s, sIdx) => sIdx !== si ? s : v),
+                                          ),
+                                        }))}
+                                        options={opts}
+                                        placeholderOption="— Select language —"
+                                      />
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {resError && <div style={{ color: '#b00020' }}>{resError}</div>}
+
+                    <div style={{ display: 'flex', gap: 8 }}>
                       <button
                         type="button"
                         onClick={() => {
-                          setApprenticeAddingSpellList(false);
-                          setApprenticeSelectedSpellCategory('');
+                          if (apprenticeResolvingTpIndex === 0) {
+                            setApprenticeSubstep('selecting');
+                          } else {
+                            setApprenticeResolvingTpIndex(apprenticeResolvingTpIndex - 1);
+                          }
                         }}
                       >
-                        Cancel
+                        ← {apprenticeResolvingTpIndex === 0 ? 'TP Selection' : 'Previous TP'}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!!resError}
+                        onClick={() => {
+                          if (apprenticeResolvingTpIndex + 1 >= tpsRequiringResolution.length) {
+                            setApprenticeSubstep('purchasing');
+                          } else {
+                            setApprenticeResolvingTpIndex(apprenticeResolvingTpIndex + 1);
+                          }
+                        }}
+                      >
+                        {apprenticeResolvingTpIndex + 1 >= tpsRequiringResolution.length ? 'Finish Resolving →' : 'Next TP →'}
                       </button>
                     </div>
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={
-                      apprenticeDpRemaining <= 0
-                      || characterBuilder.categorySpellLists.every((c) =>
-                        c.spellLists.every((slId) => apprenticeSpellListPurchases.some((p) => p.id === slId)),
-                      )
-                    }
-                    onClick={() => setApprenticeAddingSpellList(true)}
-                  >
-                    Add Spell List
-                  </button>
-                )}
-              </div>
+                );
+              })()}
+
+              {/* PURCHASING sub-step */}
+              {apprenticeSubstep === 'purchasing' && (
+                <>
+                  {selectedApprenticeTrainingPackages.length > 0 && (
+                    <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
+                      <h4 style={{ margin: '0 0 4px' }}>Selected Training Packages</h4>
+                      {selectedApprenticeTrainingPackages.map((tp) => (
+                        <div key={tp.id} style={{ color: 'var(--muted)' }}>
+                          {tp.name}{tp.lifestyle ? ' (Lifestyle)' : ''} — {tpCostMap.get(tp.id) ?? 0} DP
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Stat Gain Rolls */}
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
+                    <h4 style={{ margin: '0 0 8px' }}>Stat Gain Rolls ({STAT_GAIN_DP_COST} DP each)</h4>
+                    {apprenticeStatGains.length > 0 && (
+                      <div style={{ display: 'grid', gap: 6, marginBottom: 8 }}>
+                        {apprenticeStatGains.map((stat, i) => {
+                          const availableOptions = STATS
+                            .filter((s) => !apprenticeStatGainsUnavailable.has(s) && (s === stat || !apprenticeStatGains.includes(s)))
+                            .map((s) => ({ value: s, label: s }));
+                          return (
+                            <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                              <LabeledSelect
+                                label={`Stat Gain #${i + 1}`}
+                                value={stat}
+                                onChange={(v) => {
+                                  setApprenticeStatGains((prev) => prev.map((s, idx) => (idx === i ? v as Stat : s)));
+                                }}
+                                options={availableOptions}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setApprenticeStatGains((prev) => prev.filter((_, idx) => idx !== i))}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextStat = STATS.find((s) => !apprenticeStatGainsUnavailable.has(s) && !apprenticeStatGains.includes(s));
+                        if (nextStat) setApprenticeStatGains((prev) => [...prev, nextStat]);
+                      }}
+                      disabled={
+                        apprenticeDpRemaining < STAT_GAIN_DP_COST
+                        || STATS.every((s) => apprenticeStatGainsUnavailable.has(s) || apprenticeStatGains.includes(s))
+                      }
+                    >
+                      Add Stat Gain Roll
+                    </button>
+                  </div>
+
+                  {/* Skill Rank Purchases */}
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
+                    <h4 style={{ margin: '0 0 8px' }}>Skill Ranks</h4>
+                    {apprenticeSkillPurchases.length > 0 && (
+                      <div style={{ display: 'grid', gap: 8, marginBottom: 8 }}>
+                        {apprenticeSkillPurchases.map((purchase, i) => {
+                          const skillName = skillNameById.get(purchase.id) ?? purchase.id;
+                          const categoryId = skillCategoryMap.get(purchase.id) ?? '';
+                          const costElements = categoryCostMap.get(categoryId) ?? [];
+                          const devType = skillDevTypeMap.get(purchase.id);
+                          const tpRanksForSkill = tpGrantedSkillRankCounts.get(purchase.id) ?? 0;
+                          const maxPurch = getSkillMaxDpPurchases(costElements, devType, tpRanksForSkill);
+                          const ranksPerPurchase = getSkillRanksPerPurchase(devType);
+                          const totalRanks = devType === 'Restricted' ? purchase.purchases : purchase.purchases * ranksPerPurchase;
+                          const totalCost = getSkillDpCostWithTpOffset(costElements, devType, purchase.purchases, tpRanksForSkill);
+                          const nextPurchaseCost = purchase.purchases < maxPurch
+                            ? getSkillDpCostWithTpOffset(costElements, devType, purchase.purchases + 1, tpRanksForSkill) - totalCost
+                            : 0;
+                          const isWeaponGroupSkill = weaponGroupSkillIds.has(purchase.id);
+                          const needsSubcategory = mandatorySubcategorySkillIds.has(purchase.id);
+                          const existingSkillRanks = preApprenticeshipRanks.skillRanks
+                            .filter((r) => r.id === purchase.id && (purchase.subcategory ? r.subcategory === purchase.subcategory : true))
+                            .reduce((sum, r) => sum + r.value, 0);
+                          const afterSkillRanks = existingSkillRanks + tpRanksForSkill + totalRanks;
+
+                          return (
+                            <div key={purchase.id} style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center', gap: 8 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                  <div>
+                                    <strong>{skillName}</strong>
+                                    <span style={{ color: 'var(--muted)', marginLeft: 6 }}>({categoryGroupNameById.get(categoryId) ?? categoryId})</span>
+                                    {devType && <span style={{ color: 'var(--muted)', marginLeft: 6 }}>[{devType}]</span>}
+                                    <span style={{ color: 'var(--muted)', marginLeft: 6 }}>
+                                      — {existingSkillRanks} → {afterSkillRanks} rank{afterSkillRanks !== 1 ? 's' : ''}, {totalCost} DP
+                                    </span>
+                                  </div>
+                                  {needsSubcategory && (
+                                    isWeaponGroupSkill ? (
+                                      <LabeledSelect
+                                        label="Weapon type"
+                                        hideLabel={true}
+                                        value={purchase.subcategory}
+                                        onChange={(v) => setApprenticeSkillPurchases((prev) =>
+                                          prev.map((p, idx) => idx === i ? { ...p, subcategory: v } : p),
+                                        )}
+                                        options={weaponTypeOptionsBySkillId.get(purchase.id) ?? []}
+                                        placeholderOption="— Select weapon type —"
+                                      />
+                                    ) : (
+                                      <LabeledInput
+                                        label="Subcategory"
+                                        hideLabel={true}
+                                        value={purchase.subcategory}
+                                        onChange={(v) => setApprenticeSkillPurchases((prev) =>
+                                          prev.map((p, idx) => idx === i ? { ...p, subcategory: v } : p),
+                                        )}
+                                        placeholder="Subcategory"
+                                      />
+                                    )
+                                  )}
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <button
+                                    type="button"
+                                    disabled={purchase.purchases <= 0}
+                                    onClick={() => setApprenticeSkillPurchases((prev) =>
+                                      prev.map((p, idx) => idx === i ? { ...p, purchases: p.purchases - 1 } : p),
+                                    )}
+                                  >
+                                    -
+                                  </button>
+                                  <span style={{ minWidth: 20, textAlign: 'center' }}>{purchase.purchases}</span>
+                                  <button
+                                    type="button"
+                                    disabled={purchase.purchases >= maxPurch || nextPurchaseCost > apprenticeDpRemaining}
+                                    onClick={() => setApprenticeSkillPurchases((prev) =>
+                                      prev.map((p, idx) => idx === i ? { ...p, purchases: p.purchases + 1 } : p),
+                                    )}
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setApprenticeSkillPurchases((prev) => prev.filter((_, idx) => idx !== i))}
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <LabeledSelect
+                      label="Add Skill"
+                      hideLabel={true}
+                      value=""
+                      onChange={(v) => {
+                        if (v) {
+                          setApprenticeSkillPurchases((prev) => [...prev, { id: v, subcategory: '', purchases: 1 }]);
+                        }
+                      }}
+                      options={apprenticeSkillOptions}
+                    />
+                  </div>
+
+                  {/* Category Rank Purchases */}
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
+                    <h4 style={{ margin: '0 0 8px' }}>Skill Category Ranks</h4>
+                    {apprenticeCategoryPurchases.length > 0 && (
+                      <div style={{ display: 'grid', gap: 6, marginBottom: 8 }}>
+                        {apprenticeCategoryPurchases.map((purchase, i) => {
+                          const catName = categoryNameById.get(purchase.id) ?? purchase.id;
+                          const costElements = categoryCostMap.get(purchase.id) ?? [];
+                          const tpRanksForCat = tpGrantedCategoryRankCounts.get(purchase.id) ?? 0;
+                          const maxPurch = getCategoryMaxDpPurchases(costElements, tpRanksForCat);
+                          const totalCost = getCategoryDpCostWithTpOffset(costElements, purchase.purchases, tpRanksForCat);
+                          const nextCost = purchase.purchases < maxPurch
+                            ? getCategoryDpCostWithTpOffset(costElements, purchase.purchases + 1, tpRanksForCat) - totalCost
+                            : 0;
+                          const existingCatRanks = preApprenticeshipRanks.categoryRanks
+                            .filter((r) => r.id === purchase.id)
+                            .reduce((sum, r) => sum + r.value, 0);
+                          const afterCatRanks = existingCatRanks + tpRanksForCat + purchase.purchases;
+
+                          return (
+                            <div key={purchase.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center', gap: 8 }}>
+                              <span>
+                                {catName}
+                                <span style={{ color: 'var(--muted)', marginLeft: 6 }}>
+                                  — {existingCatRanks} → {afterCatRanks} rank{afterCatRanks !== 1 ? 's' : ''}, {totalCost} DP
+                                </span>
+                              </span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <button
+                                  type="button"
+                                  disabled={purchase.purchases <= 0}
+                                  onClick={() => setApprenticeCategoryPurchases((prev) =>
+                                    prev.map((p, idx) => idx === i ? { ...p, purchases: p.purchases - 1 } : p),
+                                  )}
+                                >
+                                  -
+                                </button>
+                                <span style={{ minWidth: 20, textAlign: 'center' }}>{purchase.purchases}</span>
+                                <button
+                                  type="button"
+                                  disabled={purchase.purchases >= maxPurch || nextCost > apprenticeDpRemaining}
+                                  onClick={() => setApprenticeCategoryPurchases((prev) =>
+                                    prev.map((p, idx) => idx === i ? { ...p, purchases: p.purchases + 1 } : p),
+                                  )}
+                                >
+                                  +
+                                </button>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setApprenticeCategoryPurchases((prev) => prev.filter((_, idx) => idx !== i))}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <LabeledSelect
+                      label="Add Category"
+                      value=""
+                      hideLabel={true}
+                      onChange={(v) => {
+                        if (v) {
+                          setApprenticeCategoryPurchases((prev) => [...prev, { id: v, purchases: 1 }]);
+                        }
+                      }}
+                      options={apprenticeCategoryOptions}
+                    />
+                  </div>
+
+                  {/* Spell List Rank Purchases */}
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
+                    <h4 style={{ margin: '0 0 8px' }}>Spell List Ranks</h4>
+                    {apprenticeSpellListPurchases.length > 0 && (
+                      <div style={{ display: 'grid', gap: 6, marginBottom: 8 }}>
+                        {apprenticeSpellListPurchases.map((purchase, i) => {
+                          const slName = spellListNameById.get(purchase.id) ?? purchase.id;
+                          const catEntry = characterBuilder.categorySpellLists.find((c) => c.spellLists.includes(purchase.id));
+                          const costElements = catEntry ? (categoryCostMap.get(catEntry.category) ?? []) : [];
+                          const tpRanksForSl = tpGrantedSpellListRankCounts.get(purchase.id) ?? 0;
+                          const maxPurch = getCategoryMaxDpPurchases(costElements, tpRanksForSl);
+                          const totalCost = getCategoryDpCostWithTpOffset(costElements, purchase.purchases, tpRanksForSl);
+                          const nextCost = purchase.purchases < maxPurch
+                            ? getCategoryDpCostWithTpOffset(costElements, purchase.purchases + 1, tpRanksForSl) - totalCost
+                            : 0;
+                          const existingSlRanks = preApprenticeshipRanks.spellListRanks
+                            .filter((r) => r.id === purchase.id)
+                            .reduce((sum, r) => sum + r.value, 0);
+                          const afterSlRanks = existingSlRanks + tpRanksForSl + purchase.purchases;
+
+                          return (
+                            <div key={purchase.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', alignItems: 'center', gap: 8 }}>
+                              <span>
+                                {slName}
+                                <span style={{ color: 'var(--muted)', marginLeft: 6 }}>
+                                  — {existingSlRanks} → {afterSlRanks} rank{afterSlRanks !== 1 ? 's' : ''}, {totalCost} DP
+                                </span>
+                              </span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <button
+                                  type="button"
+                                  disabled={purchase.purchases <= 0}
+                                  onClick={() => setApprenticeSpellListPurchases((prev) =>
+                                    prev.map((p, idx) => idx === i ? { ...p, purchases: p.purchases - 1 } : p),
+                                  )}
+                                >
+                                  -
+                                </button>
+                                <span style={{ minWidth: 20, textAlign: 'center' }}>{purchase.purchases}</span>
+                                <button
+                                  type="button"
+                                  disabled={purchase.purchases >= maxPurch || nextCost > apprenticeDpRemaining}
+                                  onClick={() => setApprenticeSpellListPurchases((prev) =>
+                                    prev.map((p, idx) => idx === i ? { ...p, purchases: p.purchases + 1 } : p),
+                                  )}
+                                >
+                                  +
+                                </button>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setApprenticeSpellListPurchases((prev) => prev.filter((_, idx) => idx !== i))}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {apprenticeAddingSpellList ? (
+                      <div style={{ display: 'grid', gap: 8 }}>
+                        <LabeledSelect
+                          label="Spell Category"
+                          hideLabel={true}
+                          value={apprenticeSelectedSpellCategory}
+                          onChange={(v) => setApprenticeSelectedSpellCategory(v)}
+                          options={apprenticeSpellCategoryOptions}
+                          placeholderOption="— Select category —"
+                        />
+                        {apprenticeSelectedSpellCategory && apprenticeSpellListsInSelectedCategory.length > 0 && (
+                          <LabeledSelect
+                            label="Spell List"
+                            hideLabel={true}
+                            value=""
+                            onChange={(v) => {
+                              if (v) {
+                                setApprenticeSpellListPurchases((prev) => [...prev, { id: v, purchases: 1 }]);
+                                setApprenticeSelectedSpellCategory('');
+                                setApprenticeAddingSpellList(false);
+                              }
+                            }}
+                            options={apprenticeSpellListsInSelectedCategory.map((sl) => ({ value: sl.id, label: sl.name }))}
+                            placeholderOption="— Select spell list —"
+                          />
+                        )}
+                        {apprenticeSelectedSpellCategory && apprenticeSpellListsInSelectedCategory.length === 0 && (
+                          <div style={{ color: 'var(--muted)' }}>No more spell lists available in this category.</div>
+                        )}
+                        <div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setApprenticeAddingSpellList(false);
+                              setApprenticeSelectedSpellCategory('');
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={
+                          apprenticeDpRemaining <= 0
+                          || characterBuilder.categorySpellLists.every((c) =>
+                            c.spellLists.every((slId) => apprenticeSpellListPurchases.some((p) => p.id === slId)),
+                          )
+                        }
+                        onClick={() => setApprenticeAddingSpellList(true)}
+                      >
+                        Add Spell List
+                      </button>
+                    )}
+                  </div>
+
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (tpsRequiringResolution.length === 0) {
+                          setApprenticeSubstep('selecting');
+                        } else {
+                          setApprenticeResolvingTpIndex(tpsRequiringResolution.length - 1);
+                          setApprenticeSubstep('resolving');
+                        }
+                      }}
+                    >
+                      ← Back
+                    </button>
+                  </div>
+                </>
+              )}
 
               {errors.apprenticeship && <div style={{ color: '#b00020' }}>{errors.apprenticeship}</div>}
             </section>
