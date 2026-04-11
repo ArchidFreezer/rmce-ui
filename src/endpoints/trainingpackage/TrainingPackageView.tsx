@@ -505,7 +505,9 @@ export default function TrainingPackagesView() {
 
   const [query, setQuery] = useState('');
   const [lifestyleFilter, setLifestyleFilter] = useState('');
+  const [bookFilters, setBookFilters] = useState<string[]>([]);
   const [raceFilters, setRaceFilters] = useState<string[]>([]);
+  const [anyRaceOnlyFilter, setAnyRaceOnlyFilter] = useState(false);
   const [showDescriptionTooltip, setShowDescriptionTooltip] = useState<boolean>(() => {
     try {
       const raw = localStorage.getItem(showDescriptionTooltipStorageKey);
@@ -611,10 +613,26 @@ export default function TrainingPackagesView() {
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [rows, raceNameById]);
 
+  const bookFilterOptions = useMemo(() => {
+    const ids = new Set<string>();
+    for (const row of rows) {
+      if (row.book) ids.add(row.book);
+    }
+
+    return Array.from(ids)
+      .map((id) => ({ value: id, label: bookNameById.get(id) ?? id }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [rows, bookNameById]);
+
   useEffect(() => {
     const allowed = new Set(raceFilterOptions.map((o) => o.value));
     setRaceFilters((prev) => prev.filter((id) => allowed.has(id)));
   }, [raceFilterOptions]);
+
+  useEffect(() => {
+    const allowed = new Set(bookFilterOptions.map((o) => o.value));
+    setBookFilters((prev) => prev.filter((id) => allowed.has(id)));
+  }, [bookFilterOptions]);
 
   useEffect(() => {
     try {
@@ -1124,15 +1142,17 @@ export default function TrainingPackagesView() {
     () => rows.filter((r) => {
       const rowRaces = getRowRaces(r);
       if (lifestyleFilter !== '' && r.lifestyle !== (lifestyleFilter === 'true')) return false;
-      if (raceFilters.length > 0 && !raceFilters.every((raceId) => rowRaces.includes(raceId))) return false;
+      if (bookFilters.length > 0 && !bookFilters.includes(r.book)) return false;
+      if (anyRaceOnlyFilter && rowRaces.length > 0) return false;
+      if (!anyRaceOnlyFilter && raceFilters.length > 0 && !raceFilters.every((raceId) => rowRaces.includes(raceId))) return false;
       return true;
     }),
-    [rows, lifestyleFilter, raceFilters]
+    [rows, lifestyleFilter, bookFilters, raceFilters, anyRaceOnlyFilter]
   );
 
-  const hasActiveFilters = lifestyleFilter !== '' || raceFilters.length > 0;
+  const hasActiveFilters = lifestyleFilter !== '' || bookFilters.length > 0 || raceFilters.length > 0 || anyRaceOnlyFilter;
 
-  useEffect(() => { setPage(1); }, [lifestyleFilter, raceFilters]);
+  useEffect(() => { setPage(1); }, [lifestyleFilter, bookFilters, raceFilters, anyRaceOnlyFilter]);
 
   const globalFilter = (r: TrainingPackage, q: string) => {
     const rowRaces = getRowRaces(r);
@@ -1329,13 +1349,21 @@ export default function TrainingPackagesView() {
             <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <input
                 type="checkbox"
+                checked={anyRaceOnlyFilter}
+                onChange={(e) => setAnyRaceOnlyFilter(e.target.checked)}
+              />
+              Any race only
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input
+                type="checkbox"
                 checked={showDescriptionTooltip}
                 onChange={(e) => setShowDescriptionTooltip(e.target.checked)}
               />
               Show description tooltip
             </label>
             {hasActiveFilters && (
-              <button onClick={() => { setLifestyleFilter(''); setRaceFilters([]); }}>Clear filters</button>
+              <button onClick={() => { setLifestyleFilter(''); setBookFilters([]); setRaceFilters([]); setAnyRaceOnlyFilter(false); }}>Clear filters</button>
             )}
 
             {/* Reset and auto-fit column widths */}
@@ -1343,15 +1371,41 @@ export default function TrainingPackagesView() {
             <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
           </div>
 
-          <CheckboxGroup<string>
-            label="Races"
-            value={raceFilters}
-            options={raceFilterOptions}
-            onChange={setRaceFilters}
-            inline
-            showSelectAll
-            columns={4}
-          />
+          <details>
+            <summary style={{ cursor: 'pointer', userSelect: 'none' }}>
+              Books{bookFilters.length > 0 ? ` (${bookFilters.length} selected)` : ''}
+            </summary>
+            <div style={{ marginTop: 6 }}>
+              <CheckboxGroup<string>
+                label="Books"
+                value={bookFilters}
+                options={bookFilterOptions}
+                onChange={setBookFilters}
+                inline
+                showSelectAll
+                columns={4}
+              />
+            </div>
+          </details>
+
+          <details>
+            <summary style={{ cursor: 'pointer', userSelect: 'none' }}>
+              Races{raceFilters.length > 0 ? ` (${raceFilters.length} selected)` : ''}
+            </summary>
+            <div style={{ marginTop: 6 }}>
+              <CheckboxGroup<string>
+                label="Races"
+                value={raceFilters}
+                options={raceFilterOptions}
+                onChange={setRaceFilters}
+                disabled={anyRaceOnlyFilter}
+                {...(anyRaceOnlyFilter ? { helperText: 'Race filters are disabled while "Any race only" is active.' } : {})}
+                inline
+                showSelectAll
+                columns={4}
+              />
+            </div>
+          </details>
         </div>
       )}
 
