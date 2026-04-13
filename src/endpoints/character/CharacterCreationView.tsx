@@ -2999,45 +2999,161 @@ export default function CharacterCreationView() {
       return;
     }
 
-    const tempStatsAsNumbers = {} as Record<Stat, number>;
-    const potentialStatsAsNumbers = {} as Record<Stat, number>;
-    for (const roll of statRolls) {
-      if (!roll.assignedStat) continue;
-      tempStatsAsNumbers[roll.assignedStat] = Number(roll.temporary);
-      potentialStatsAsNumbers[roll.assignedStat] = roll.potential ?? 0;
-    }
-
     setApplying(true);
     try {
+      const totalStatGains: Stat[] = [];
+      for (const tp of selectedApprenticeTrainingPackages) {
+        for (const stat of tp.statGains ?? []) totalStatGains.push(stat);
+        const res = tpResolutions.find((r) => r.tpId === tp.id);
+        if (res) {
+          for (const stat of res.statGainChoices) {
+            if (stat) totalStatGains.push(stat);
+          }
+        }
+      }
+      totalStatGains.push(...apprenticeStatGains);
+
+      const totalSkillsByKey = new Map<string, { id: string; subcategory?: string | undefined; ranks: number }>();
+      const addSkillRanks = (id: string, subcategory: string | undefined, ranks: number) => {
+        if (!id || ranks <= 0) return;
+        const normalizedSubcategory = subcategory?.trim() || undefined;
+        const key = skillChoiceKey(id, normalizedSubcategory);
+        const existing = totalSkillsByKey.get(key);
+        if (existing) {
+          existing.ranks += ranks;
+        } else {
+          totalSkillsByKey.set(key, {
+            id,
+            ...(normalizedSubcategory ? { subcategory: normalizedSubcategory } : {}),
+            ranks,
+          });
+        }
+      };
+      for (const rank of preApprenticeshipRanks.skillRanks ?? []) {
+        addSkillRanks(rank.id, rank.subcategory, rank.value ?? 0);
+      }
+      for (const rank of characterBuilder.skillRanks ?? []) {
+        addSkillRanks(rank.id, rank.subcategory, rank.value ?? 0);
+      }
+
+      const totalCategoryRanks = new Map<string, number>();
+      const addCategoryRanks = (id: string, ranks: number) => {
+        if (!id || ranks <= 0) return;
+        totalCategoryRanks.set(id, (totalCategoryRanks.get(id) ?? 0) + ranks);
+      };
+      for (const rank of preApprenticeshipRanks.categoryRanks ?? []) {
+        addCategoryRanks(rank.id, rank.value ?? 0);
+      }
+      for (const rank of characterBuilder.categoryRanks ?? []) {
+        addCategoryRanks(rank.id, rank.value ?? 0);
+      }
+
+      const knownSpellListIds = new Set(spellLists.map((sl) => sl.id));
+      const spellListTotals = new Map<string, number>();
+      const spellListCategoryOverrides = new Map<string, string>();
+      const addSpellListRanks = (spellListId: string, ranks: number) => {
+        if (!spellListId || ranks <= 0 || !knownSpellListIds.has(spellListId)) return;
+        spellListTotals.set(spellListId, (spellListTotals.get(spellListId) ?? 0) + ranks);
+      };
+
+      for (const rank of preApprenticeshipRanks.spellListRanks ?? []) {
+        addSpellListRanks(rank.id, rank.value ?? 0);
+      }
+
+      for (const p of apprenticeSpellListPurchases) {
+        if (p.purchases > 0) addSpellListRanks(p.id, p.purchases);
+      }
+
+      for (const tp of selectedApprenticeTrainingPackages) {
+        const res = tpResolutions.find((r) => r.tpId === tp.id);
+
+        const fixedSpellRows = (tp.spellListRanks ?? []).filter((r) => r.numChoices <= 0);
+        for (const row of fixedSpellRows) {
+          for (const spellListId of row.options ?? []) {
+            addSpellListRanks(spellListId, row.value);
+            if (row.optionalCategory?.trim()) {
+              spellListCategoryOverrides.set(spellListId, row.optionalCategory.trim());
+            }
+          }
+        }
+
+        const choiceableSpellRows = (tp.spellListRanks ?? []).filter((r) => r.numChoices > 0);
+        for (let gi = 0; gi < choiceableSpellRows.length; gi++) {
+          const row = choiceableSpellRows[gi];
+          if (!row) continue;
+          const allocs = res?.spellListChoices[gi] ?? [];
+          for (const alloc of allocs) {
+            addSpellListRanks(alloc.id, alloc.ranks);
+            if (alloc.id && row.optionalCategory?.trim()) {
+              spellListCategoryOverrides.set(alloc.id, row.optionalCategory.trim());
+            }
+          }
+        }
+
+        for (let gi = 0; gi < (tp.spellListCategoryRankChoices ?? []).length; gi++) {
+          const allocs = res?.spellListCategoryChoices[gi] ?? [];
+          for (const alloc of allocs) {
+            addSpellListRanks(alloc.id, alloc.ranks);
+          }
+        }
+      }
+
+      const totalLanguages = new Map<string, { language: string; spoken: number; written: number; somatic: number }>();
+      const ensureLanguageRow = (languageId: string) => {
+        let row = totalLanguages.get(languageId);
+        if (!row) {
+          row = { language: languageId, spoken: 0, written: 0, somatic: 0 };
+          totalLanguages.set(languageId, row);
+        }
+        return row;
+      };
+      for (const row of characterBuilder.languageAbilities ?? []) {
+        if (!row.language) continue;
+        const target = ensureLanguageRow(row.language);
+        target.spoken += Math.max(0, row.spoken ?? 0);
+        target.written += Math.max(0, row.written ?? 0);
+        target.somatic += Math.max(0, row.somatic ?? 0);
+      }
+      for (const res of tpResolutions) {
+        for (const group of res.languageChoices ?? []) {
+          for (const alloc of group ?? []) {
+            if (!alloc.languageId) continue;
+            const target = ensureLanguageRow(alloc.languageId);
+            target.spoken += Math.max(0, alloc.spoken ?? 0);
+            target.written += Math.max(0, alloc.written ?? 0);
+            target.somatic += Math.max(0, alloc.somatic ?? 0);
+          }
+        }
+      }
+
       const payload = {
         id: characterBuilder.id,
-        trainingPackageIds: apprenticeTrainingPackageIds,
-        statGains: apprenticeStatGains,
-        skillPurchases: apprenticeSkillPurchases.filter((p) => p.purchases > 0).map((p) => ({
-          id: p.id,
-          subcategory: p.subcategory || undefined,
-          purchases: p.purchases,
-        })),
-        categoryPurchases: apprenticeCategoryPurchases.filter((p) => p.purchases > 0).map((p) => ({
-          id: p.id,
-          purchases: p.purchases,
-        })),
-        spellListPurchases: apprenticeSpellListPurchases.filter((p) => p.purchases > 0).map((p) => ({
-          id: p.id,
-          purchases: p.purchases,
-        })),
-        tpResolutions: tpResolutions.map((res) => ({
-          tpId: res.tpId,
-          statGainChoices: res.statGainChoices.filter(Boolean) as string[],
-          skillRankChoices: res.skillRankChoices.map((g) => g.filter((a) => a.id)),
-          categoryMultiSkillChoices: res.categoryMultiSkillChoices.map((g) => g.filter((a) => a.id)),
-          groupMultiSkillChoices: res.groupMultiSkillChoices.map((g) => g.filter((a) => a.id)),
-          groupCategoryAndSkillChoices: res.groupCategoryAndSkillChoices.filter((s) => s.skillId),
-          spellListChoices: res.spellListChoices.map((g) => g.filter((a) => a.id)),
-          spellListCategoryChoices: res.spellListCategoryChoices.map((g) => g.filter((a) => a.id)),
-          lifestyleCategorySkillChoices: res.lifestyleCategorySkillChoices.map((g) => g.filter(Boolean)),
-          languageChoices: res.languageChoices.map((g) => g.filter((a) => a.languageId)),
-        })),
+        tpIds: apprenticeTrainingPackageIds,
+        statGains: totalStatGains,
+        skills: Array.from(totalSkillsByKey.values())
+          .filter((row) => row.ranks > 0)
+          .sort((a, b) => skillChoiceKey(a.id, a.subcategory).localeCompare(skillChoiceKey(b.id, b.subcategory))),
+        skillCategories: Array.from(totalCategoryRanks.entries())
+          .filter(([, ranks]) => ranks > 0)
+          .map(([id, ranks]) => ({ id, ranks }))
+          .sort((a, b) => a.id.localeCompare(b.id)),
+        spellLists: Array.from(spellListTotals.entries())
+          .filter(([, ranks]) => ranks > 0)
+          .map(([id, ranks]) => ({
+            id,
+            ...(spellListCategoryOverrides.get(id) ? { skillcategory: spellListCategoryOverrides.get(id) } : {}),
+            ranks,
+          }))
+          .sort((a, b) => a.id.localeCompare(b.id)),
+        languages: Array.from(totalLanguages.values())
+          .filter((row) => row.spoken > 0 || row.written > 0 || row.somatic > 0)
+          .map((row) => ({
+            language: row.language,
+            ...(row.spoken > 0 ? { spoken: row.spoken } : {}),
+            ...(row.written > 0 ? { written: row.written } : {}),
+            ...(row.somatic > 0 ? { somatic: row.somatic } : {}),
+          }))
+          .sort((a, b) => a.language.localeCompare(b.language)),
       };
 
       const response = await applyLevelUpgrade(payload);

@@ -15,23 +15,12 @@ export type SetCharacterBackgroundChoicesRequest = {
 
 export type ApplyLevelUpgradeRequest = {
   id: string;
-  trainingPackageIds: string[];
+  tpIds: string[];
   statGains: Stat[];
-  skillPurchases: Array<{ id: string; subcategory?: string | undefined; purchases: number }>;
-  categoryPurchases: Array<{ id: string; purchases: number }>;
-  spellListPurchases: Array<{ id: string; purchases: number }>;
-  tpResolutions: Array<{
-    tpId: string;
-    statGainChoices: string[];
-    skillRankChoices: Array<Array<{ id: string; subcategory: string; ranks: number }>>;
-    categoryMultiSkillChoices: Array<Array<{ id: string; subcategory: string; ranks: number }>>;
-    groupMultiSkillChoices: Array<Array<{ id: string; subcategory: string; ranks: number }>>;
-    groupCategoryAndSkillChoices: Array<{ categoryId: string; skillId: string; subcategory: string }>;
-    spellListChoices: Array<Array<{ id: string; ranks: number }>>;
-    spellListCategoryChoices: Array<Array<{ id: string; ranks: number }>>;
-    lifestyleCategorySkillChoices: string[][];
-    languageChoices: Array<Array<{ languageId: string; spoken: number; written: number; somatic: number }>>;
-  }>;
+  skills: Array<{ id: string; subcategory?: string | undefined; ranks: number }>;
+  skillCategories: Array<{ id: string; ranks: number }>;
+  spellLists: Array<{ id: string; skillcategory?: string | undefined; ranks: number }>;
+  languages: Array<{ language: string; spoken?: number | undefined; written?: number | undefined; somatic?: number | undefined }>;
 };
 
 export type ApplyLevelUpgradeResponse = {
