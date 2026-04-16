@@ -35,7 +35,7 @@ const STAT_ROLLS_ENDPOINT = '/rmce/operations/character/stat-rolls';
 const SET_STATS_ENDPOINT = '/rmce/operations/character/set-stats';
 const SET_HOBBY_CHOICES_ENDPOINT = '/rmce/operations/character/set-hobby-choices';
 const SET_BACKGROUND_CHOICES_ENDPOINT = '/rmce/operations/character/set-background-choices';
-const APPLY_LEVEL_ENDPOINT = '/rmce/operations/character/apply-level-up';
+const SET_APPRENTICESHIP_CHOICES_ENDPOINT = '/rmce/operations/character/set-apprenticeship-choices';
 
 export type StatRollRequest = {
   temporary: number;
@@ -85,5 +85,5 @@ export async function setCharacterBackgroundChoices(
 export async function applyLevelUpgrade(
   payload: ApplyLevelUpgradeRequest,
 ): Promise<ApplyLevelUpgradeResponse> {
-  return sendJson<ApplyLevelUpgradeResponse>(APPLY_LEVEL_ENDPOINT, 'POST', payload);
+  return sendJson<ApplyLevelUpgradeResponse>(SET_APPRENTICESHIP_CHOICES_ENDPOINT, 'POST', payload);
 }
