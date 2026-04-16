@@ -89,7 +89,7 @@ export async function setCharacterBackgroundChoices(
   return sendJson<CharacterBuilder>(SET_BACKGROUND_CHOICES_ENDPOINT, 'POST', payload);
 }
 
-export async function applyLevelUpgrade(
+export async function applyApprenticeshipChoices(
   payload: ApplyLevelUpgradeRequest,
 ): Promise<ApplyLevelUpgradeResponse> {
   return sendJson<ApplyLevelUpgradeResponse>(SET_APPRENTICESHIP_CHOICES_ENDPOINT, 'POST', payload);

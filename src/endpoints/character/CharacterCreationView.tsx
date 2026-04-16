@@ -1,7 +1,7 @@
 ﻿import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 
 import {
-  applyLevelUpgrade,
+  applyApprenticeshipChoices,
   fetchCultureTypes,
   fetchCultures,
   fetchLanguages,
@@ -3240,17 +3240,17 @@ export default function CharacterCreationView() {
           .sort((a, b) => a.language.localeCompare(b.language)),
       };
 
-      const response = await applyLevelUpgrade(payload);
+      const response = await applyApprenticeshipChoices(payload);
 
       toast({
         variant: 'success',
-        title: 'Level upgrade applied',
-        description: response.message ?? 'Server accepted level-up application.',
+        title: 'Apprenticeship choices applied',
+        description: response.message ?? 'Server accepted apprenticeship choices.',
       });
     } catch (e) {
       toast({
         variant: 'danger',
-        title: 'Apply level upgrade failed',
+        title: 'Apply apprenticeship choices failed',
         description: String(e instanceof Error ? e.message : e),
       });
     } finally {
@@ -5382,16 +5382,14 @@ export default function CharacterCreationView() {
                   <li>Name: {characterName || 'None'}</li>
                   <li>Sex: {characterBuilder.male ? 'Male' : 'Female'}</li>
                   <li>Race: {race?.name ?? raceId}</li>
-                  <li>Culture: {culture?.name ?? cultureId}</li>
-                  <li>Profession: {profession?.name ?? professionId}</li>
-                  <li>Realms: {selectedRealms.join(', ') || 'None'}</li>
-                  <li>Builder ID: {characterBuilder.id || 'Not generated yet'}</li>
-                  <li>Prime Stats: {primeStats.join(', ') || 'None'}</li>
                   <li>Height: {characterBuilder.height > 0 ? `${Math.floor(characterBuilder.height / 12)}' ${characterBuilder.height % 12}"` : 'Not generated'}</li>
                   <li>Weight: {characterBuilder.weight > 0 ? `${characterBuilder.weight} lbs` : 'Not generated'}</li>
                   <li>Build: {characterBuilder.buildDescription || 'Not generated'}</li>
-                  <li>Expected Lifespan: {characterBuilder.lifespan > 0 ? characterBuilder.lifespan : 'Not generated'}</li>
-                  <li>Background selections: {selectedBackgroundPoints}</li>
+                  <li>Expected Lifespan: {characterBuilder.lifespan > 0 ? `${characterBuilder.lifespan} years` : 'Not generated'}</li>
+                  <li>Culture: {culture?.name ?? cultureId}</li>
+                  <li>Profession: {profession?.name ?? professionId}</li>
+                  <li>Realms: {selectedRealms.join(', ') || 'None'}</li>
+                  <li>Prime Stats: {primeStats.join(', ') || 'None'}</li>
                   <li>Training packages: {selectedApprenticeTrainingPackages.length > 0 ? selectedApprenticeTrainingPackages.map((tp) => tp.name).join(', ') : 'None'}</li>
                   <li>DP spent: {apprenticeTotalDpSpent} / {characterBuilder.developmentPoints}</li>
                 </ul>
