@@ -15,6 +15,7 @@ import {
   fetchWeaponTypes,
   getStatRollPotentials,
   setCharacterStats,
+  setCharacterPhysique,
   setCharacterBackgroundChoices,
   setCharacterHobbyChoices,
   setCharacterPrimaryChoices,
@@ -54,6 +55,7 @@ type CharacterStep =
   | 'primary'
   | 'initial'
   | 'stats'
+  | 'physique'
   | 'hobby'
   | 'background'
   | 'apprenticeship'
@@ -63,6 +65,7 @@ const STEP_ORDER: CharacterStep[] = [
   'primary',
   'initial',
   'stats',
+  'physique',
   'hobby',
   'background',
   'apprenticeship',
@@ -73,10 +76,11 @@ const STEP_LABELS: Record<CharacterStep, string> = {
   primary: '1. Primary Definition',
   initial: '2. Initial Choices',
   stats: '3. Stat Generation',
-  hobby: '4. Hobby Ranks',
-  background: '5. Background Options',
-  apprenticeship: '6. Apprenticeship Skills',
-  apply: '7. Apply Level Upgrade',
+  physique: '4. Physique',
+  hobby: '5. Hobby Ranks',
+  background: '6. Background Options',
+  apprenticeship: '7. Apprenticeship Skills',
+  apply: '8. Apply Level Upgrade',
 };
 
 const OWN_REALM_OPEN_LISTS_CATEGORY_ID = 'SKILLCATEGORY_SPELLS_OWN_REALM_OPEN_LISTS';
@@ -85,6 +89,7 @@ type StepErrors = {
   primary?: string | undefined;
   initial?: string | undefined;
   stats?: string | undefined;
+  physique?: string | undefined;
   hobby?: string | undefined;
   background?: string | undefined;
   apprenticeship?: string | undefined;
@@ -586,6 +591,18 @@ function getCategoryDpCostWithTpOffset(costElements: number[], purchases: number
   return costElements.slice(tpRanks, tpRanks + purchases).reduce((s, c) => s + c, 0);
 }
 
+function getBuildLabel(modifier: number): string {
+  if (modifier <= -10) return 'Skeletal';
+  if (modifier <= -7) return 'Wasted';
+  if (modifier <= -4) return 'Thin';
+  if (modifier <= -2) return 'Slender';
+  if (modifier <= 1) return 'Normal';
+  if (modifier <= 4) return 'Stocky';
+  if (modifier <= 7) return 'Large';
+  if (modifier <= 10) return 'Obese';
+  return 'Blubbery';
+}
+
 export default function CharacterCreationView() {
   const toast = useToast();
 
@@ -626,6 +643,13 @@ export default function CharacterCreationView() {
   const [generatingStats, setGeneratingStats] = useState(false);
 
   const [characterName, setCharacterName] = useState('');
+
+  const [isMale, setIsMale] = useState(true);
+  const [physiqueAutoHeight, setPhysiqueAutoHeight] = useState(true);
+  const [physiqueEnteredHeightStr, setPhysiqueEnteredHeightStr] = useState('');
+  const [physiqueAutoBuildMod, setPhysiqueAutoBuildMod] = useState(true);
+  const [physiqueEnteredBuildMod, setPhysiqueEnteredBuildMod] = useState(0);
+  const [savingPhysique, setSavingPhysique] = useState(false);
 
   const [hobbyRanksBudget, setHobbyRanksBudget] = useState(0);
   const [hobbySkillRows, setHobbySkillRows] = useState<HobbySkillRow[]>([]);
@@ -1582,6 +1606,7 @@ export default function CharacterCreationView() {
     setCharacterBuilder((prev) => ({
       ...prev,
       name: characterName,
+      male: isMale,
       race: raceId,
       culture: cultureId,
       cultureType: cultureTypeId,
@@ -1611,7 +1636,7 @@ export default function CharacterCreationView() {
             + apprenticeStatGains.filter((s) => s === roll.assignedStat).length,
         })),
     }));
-  }, [characterName, raceId, cultureTypeId, cultureId, professionId, selectedRealms, statRolls, race, apprenticeStatGains]);
+  }, [characterName, isMale, raceId, cultureTypeId, cultureId, professionId, selectedRealms, statRolls, race, apprenticeStatGains]);
 
   useEffect(() => {
     setCharacterBuilder((prev) => ({
@@ -2291,11 +2316,25 @@ export default function CharacterCreationView() {
     return undefined;
   };
 
+  const validatePhysique = (): string | undefined => {
+    if (!physiqueAutoHeight) {
+      if (!physiqueEnteredHeightStr.trim()) return 'Enter height in inches or enable auto-generate.';
+      if (!isValidUnsignedInt(physiqueEnteredHeightStr)) return 'Height must be a positive integer.';
+      const h = Number(physiqueEnteredHeightStr);
+      if (h <= 0) return 'Height must be a positive integer greater than zero.';
+    }
+    if (!physiqueAutoBuildMod) {
+      if (physiqueEnteredBuildMod < -10 || physiqueEnteredBuildMod > 10) return 'Build modifier must be between -10 and 10.';
+    }
+    return undefined;
+  };
+
   const recomputeErrors = () => {
     const next: StepErrors = {
       primary: validateInitial(),
       initial: validateInitialChoices(),
       stats: validateStats(),
+      physique: validatePhysique(),
       hobby: validateHobby(),
       background: validateBackground(),
       apprenticeship: validateApprenticeship(),
@@ -2336,6 +2375,10 @@ export default function CharacterCreationView() {
     spellListNameById,
     statRolls,
     statRollsLocked,
+    physiqueAutoHeight,
+    physiqueEnteredHeightStr,
+    physiqueAutoBuildMod,
+    physiqueEnteredBuildMod,
     hobbyRankSpent,
     hobbyRanksBudget,
     languageRankSpent,
@@ -2621,6 +2664,42 @@ export default function CharacterCreationView() {
         return;
       } finally {
         setSavingStats(false);
+      }
+    }
+
+    if (step === 'physique') {
+      if (!characterBuilder.id) {
+        toast({
+          variant: 'danger',
+          title: 'Save physique failed',
+          description: 'Character builder id is missing. Complete primary definition first.',
+        });
+        return;
+      }
+
+      setSavingPhysique(true);
+      try {
+        const heightValue = physiqueAutoHeight ? null : (Number(physiqueEnteredHeightStr) || null);
+        const buildModValue = physiqueAutoBuildMod ? null : physiqueEnteredBuildMod;
+
+        const response = await setCharacterPhysique({
+          ...characterBuilder,
+          male: isMale,
+          autoHeight: physiqueAutoHeight,
+          enteredHeight: heightValue,
+          autoBuildModifier: physiqueAutoBuildMod,
+          enteredBuildModifier: buildModValue,
+        });
+        setCharacterBuilder(response);
+      } catch (e) {
+        toast({
+          variant: 'danger',
+          title: 'Save physique failed',
+          description: String(e instanceof Error ? e.message : e),
+        });
+        return;
+      } finally {
+        setSavingPhysique(false);
       }
     }
 
@@ -2948,6 +3027,11 @@ export default function CharacterCreationView() {
   const resetWorkflow = () => {
     setStep('primary');
     setCharacterName('');
+    setIsMale(true);
+    setPhysiqueAutoHeight(true);
+    setPhysiqueEnteredHeightStr('');
+    setPhysiqueAutoBuildMod(true);
+    setPhysiqueEnteredBuildMod(0);
     setRaceId('');
     setCultureTypeId('');
     setCultureId('');
@@ -3228,7 +3312,7 @@ export default function CharacterCreationView() {
 
         {/* Form panels for each step. Only the active step is interactable, but previous steps are shown for context. */}
         <div className="form-container">
-          {(generatingStats || applying || savingPrimaryDefinition || savingInitialChoices || savingStats || savingHobbyChoices || savingBackgroundChoices) && (
+          {(generatingStats || applying || savingPrimaryDefinition || savingInitialChoices || savingStats || savingPhysique || savingHobbyChoices || savingBackgroundChoices) && (
             <div className="overlay">
               <Spinner size={24} />
               <span>
@@ -3238,13 +3322,15 @@ export default function CharacterCreationView() {
                     ? 'Saving initial choices…'
                     : savingStats
                       ? 'Saving stats…'
-                      : savingHobbyChoices
-                        ? 'Saving hobby choices…'
-                        : savingBackgroundChoices
-                          ? 'Saving background choices…'
-                          : applying
-                            ? 'Applying level upgrade…'
-                            : 'Generating stats…'}
+                      : savingPhysique
+                        ? 'Saving physique…'
+                        : savingHobbyChoices
+                          ? 'Saving hobby choices…'
+                          : savingBackgroundChoices
+                            ? 'Saving background choices…'
+                            : applying
+                              ? 'Applying level upgrade…'
+                              : 'Generating stats…'}
               </span>
             </div>
           )}
@@ -3259,9 +3345,24 @@ export default function CharacterCreationView() {
                   value={characterName}
                   onChange={(v) => setCharacterName(v)}
                   placeholder="Character name"
-                  containerStyle={{ gridColumn: '1 / -1' }}
                   error={errors.primary && !characterName.trim() ? 'Required' : undefined}
                 />
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, justifyContent: 'flex-end', paddingBottom: 2 }}>
+                  <span style={{ fontSize: 14, fontWeight: 500 }}>Sex</span>
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    <CheckboxInput
+                      label="Male"
+                      checked={isMale}
+                      onChange={(checked) => { if (checked) setIsMale(true); }}
+                    />
+                    <CheckboxInput
+                      label="Female"
+                      checked={!isMale}
+                      onChange={(checked) => { if (checked) setIsMale(false); }}
+                    />
+                  </div>
+                </div>
 
                 <LabeledSelect
                   label="Race"
@@ -3827,6 +3928,77 @@ export default function CharacterCreationView() {
               </div>
 
               {errors.stats && <div style={{ color: '#b00020' }}>{errors.stats}</div>}
+            </section>
+          )}
+
+          {step === 'physique' && (
+            <section style={{ display: 'grid', gap: 14 }}>
+              <div>
+                <h4 style={{ margin: '0 0 4px' }}>Height</h4>
+                <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 10 }}>
+                  <CheckboxInput
+                    label="Auto-generate height"
+                    checked={physiqueAutoHeight}
+                    onChange={(checked) => {
+                      setPhysiqueAutoHeight(checked);
+                      if (checked) setPhysiqueEnteredHeightStr('');
+                    }}
+                  />
+                  {!physiqueAutoHeight && (
+                    <LabeledInput
+                      label="Height (inches)"
+                      value={physiqueEnteredHeightStr}
+                      onChange={(v) => setPhysiqueEnteredHeightStr(sanitizeUnsignedInt(v))}
+                      placeholder="e.g. 70"
+                      helperText="Positive integer (inches)"
+                      error={errors.physique && !physiqueAutoHeight && (!physiqueEnteredHeightStr.trim() || !isValidUnsignedInt(physiqueEnteredHeightStr) || Number(physiqueEnteredHeightStr) <= 0) ? 'Enter a valid positive integer' : undefined}
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <h4 style={{ margin: '0 0 4px' }}>Build Modifier</h4>
+                <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 10 }}>
+                  <CheckboxInput
+                    label="Auto-generate build modifier"
+                    checked={physiqueAutoBuildMod}
+                    onChange={(checked) => {
+                      setPhysiqueAutoBuildMod(checked);
+                      if (checked) setPhysiqueEnteredBuildMod(0);
+                    }}
+                  />
+                  {!physiqueAutoBuildMod && (
+                    <div style={{ display: 'grid', gap: 8 }}>
+                      <div style={{ color: 'var(--muted)', fontSize: 13 }}>
+                        A value of 0 indicates average build for the selected race. Negative values indicate a more slender character; positive values indicate a larger frame.
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <button
+                          type="button"
+                          onClick={() => setPhysiqueEnteredBuildMod((v) => Math.max(-10, v - 1))}
+                          disabled={physiqueEnteredBuildMod <= -10}
+                        >
+                          -
+                        </button>
+                        <span style={{ minWidth: 28, textAlign: 'center', fontWeight: 600 }}>{physiqueEnteredBuildMod}</span>
+                        <button
+                          type="button"
+                          onClick={() => setPhysiqueEnteredBuildMod((v) => Math.min(10, v + 1))}
+                          disabled={physiqueEnteredBuildMod >= 10}
+                        >
+                          +
+                        </button>
+                        <span style={{ color: 'var(--muted)', marginLeft: 8 }}>
+                          Build: <strong>{getBuildLabel(physiqueEnteredBuildMod)}</strong>
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {errors.physique && <div style={{ color: '#b00020' }}>{errors.physique}</div>}
             </section>
           )}
 
@@ -5208,12 +5380,17 @@ export default function CharacterCreationView() {
                 <h4 style={{ margin: '0 0 8px' }}>Summary</h4>
                 <ul style={{ margin: 0, paddingLeft: 20 }}>
                   <li>Name: {characterName || 'None'}</li>
+                  <li>Sex: {characterBuilder.male ? 'Male' : 'Female'}</li>
                   <li>Race: {race?.name ?? raceId}</li>
                   <li>Culture: {culture?.name ?? cultureId}</li>
                   <li>Profession: {profession?.name ?? professionId}</li>
                   <li>Realms: {selectedRealms.join(', ') || 'None'}</li>
                   <li>Builder ID: {characterBuilder.id || 'Not generated yet'}</li>
                   <li>Prime Stats: {primeStats.join(', ') || 'None'}</li>
+                  <li>Height: {characterBuilder.height > 0 ? `${Math.floor(characterBuilder.height / 12)}' ${characterBuilder.height % 12}"` : 'Not generated'}</li>
+                  <li>Weight: {characterBuilder.weight > 0 ? `${characterBuilder.weight} lbs` : 'Not generated'}</li>
+                  <li>Build: {characterBuilder.buildDescription || 'Not generated'}</li>
+                  <li>Expected Lifespan: {characterBuilder.lifespan > 0 ? characterBuilder.lifespan : 'Not generated'}</li>
                   <li>Background selections: {selectedBackgroundPoints}</li>
                   <li>Training packages: {selectedApprenticeTrainingPackages.length > 0 ? selectedApprenticeTrainingPackages.map((tp) => tp.name).join(', ') : 'None'}</li>
                   <li>DP spent: {apprenticeTotalDpSpent} / {characterBuilder.developmentPoints}</li>
@@ -5243,7 +5420,7 @@ export default function CharacterCreationView() {
 
           <div style={{ display: 'flex', gap: 8 }}>
             <button type="button" onClick={goPrev} disabled={step === 'primary'}>Back</button>
-            <button type="button" onClick={goNext} disabled={!canGoNext || step === 'apply' || savingPrimaryDefinition || savingInitialChoices || savingStats || savingHobbyChoices || savingBackgroundChoices}>Next</button>
+            <button type="button" onClick={goNext} disabled={!canGoNext || step === 'apply' || savingPrimaryDefinition || savingInitialChoices || savingStats || savingPhysique || savingHobbyChoices || savingBackgroundChoices}>Next</button>
           </div>
         </div>
       </div>

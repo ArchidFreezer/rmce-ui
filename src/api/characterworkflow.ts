@@ -33,6 +33,7 @@ const PRIMARY_DEFINITION_ENDPOINT = '/rmce/operations/character/primary-definiti
 const PRIMARY_CHOICES_ENDPOINT = '/rmce/operations/character/primary-choices';
 const STAT_ROLLS_ENDPOINT = '/rmce/operations/character/stat-rolls';
 const SET_STATS_ENDPOINT = '/rmce/operations/character/set-stats';
+const SET_PHYSIQUE_ENDPOINT = '/rmce/operations/character/set-physique';
 const SET_HOBBY_CHOICES_ENDPOINT = '/rmce/operations/character/set-hobby-choices';
 const SET_BACKGROUND_CHOICES_ENDPOINT = '/rmce/operations/character/set-background-choices';
 const SET_APPRENTICESHIP_CHOICES_ENDPOINT = '/rmce/operations/character/set-apprenticeship-choices';
@@ -68,6 +69,12 @@ export async function setCharacterStats(
   payload: CharacterBuilder,
 ): Promise<CharacterBuilder> {
   return sendJson<CharacterBuilder>(SET_STATS_ENDPOINT, 'POST', payload);
+}
+
+export async function setCharacterPhysique(
+  payload: CharacterBuilder,
+): Promise<CharacterBuilder> {
+  return sendJson<CharacterBuilder>(SET_PHYSIQUE_ENDPOINT, 'POST', payload);
 }
 
 export async function setCharacterHobbyChoices(
