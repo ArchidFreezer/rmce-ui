@@ -633,6 +633,7 @@ export default function CharacterCreationView() {
   const [cultureTypeId, setCultureTypeId] = useState('');
   const [cultureId, setCultureId] = useState('');
   const [professionId, setProfessionId] = useState('');
+  const [showDescriptions, setShowDescriptions] = useState(false);
   const [selectedRealms, setSelectedRealms] = useState<Realm[]>([]);
 
   const [raceEverymanChoiceRows, setRaceEverymanChoiceRows] = useState<SkillChoiceRow[][]>([]);
@@ -1060,6 +1061,7 @@ export default function CharacterCreationView() {
         value: p.id,
         label: isRaceMatched ? `${p.name} (Racial)` : (isPreferred ? `${p.name} (Culture Preferred)` : p.name),
         disabled: isRestricted || isRaceDisallowed,
+        description: p.description,
       };
     });
   }, [professions, preferredProfessions, raceDisallowedProfessionIds, raceMatchedProfessionIds, restrictedProfessions]);
@@ -3331,6 +3333,16 @@ export default function CharacterCreationView() {
           />
         )}
 
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--muted)' }}>
+          <input
+            type="checkbox"
+            id="show-descriptions"
+            checked={showDescriptions}
+            onChange={(e) => setShowDescriptions(e.target.checked)}
+          />
+          <label htmlFor="show-descriptions" style={{ fontSize: 14, cursor: 'pointer' }}>Show descriptions</label>
+        </div>
+
         <div style={{ color: 'var(--muted)' }}>
           Complete each step in order. Progression is locked until the current step is valid.
         </div>
@@ -3472,7 +3484,7 @@ export default function CharacterCreationView() {
                     setSelectedRealms([]);
                     resetBackgroundState();
                   }}
-                  options={professionOptions}
+                  options={professionOptions.map((o) => ({ ...o, title: showDescriptions ? o.description : undefined }))}
                   helperText={
                     culture
                       ? `Preferred: ${culture.preferredProfessions.length}, Restricted: ${culture.restrictedProfessions.length}`
