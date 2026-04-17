@@ -84,6 +84,8 @@ const STEP_LABELS: Record<CharacterStep, string> = {
 };
 
 const OWN_REALM_OPEN_LISTS_CATEGORY_ID = 'SKILLCATEGORY_SPELLS_OWN_REALM_OPEN_LISTS';
+const OWN_REALM_CLOSED_LISTS_CATEGORY_ID = 'SKILLCATEGORY_SPELLS_OWN_REALM_CLOSED_LISTS';
+const PURE_EXTRA_SPELL_LIST_COUNT = 4;
 
 type StepErrors = {
   primary?: string | undefined;
@@ -990,6 +992,22 @@ export default function CharacterCreationView() {
     return map;
   }, [spellLists]);
 
+  const pureExtraSpellListOptions = useMemo(() => {
+    const fromCategories = [OWN_REALM_OPEN_LISTS_CATEGORY_ID, OWN_REALM_CLOSED_LISTS_CATEGORY_ID]
+      .flatMap((catId) => {
+        const entry = characterBuilder.categorySpellLists.find((c) => c.category === catId);
+        return entry?.spellLists ?? [];
+      });
+    // Include any already-selected IDs even if the server has since moved them
+    // out of the Open/Closed categories into the Base category.
+    const pureGroupIndex = professionBaseSpellListChoiceDefinitions.length;
+    const currentSelections = (professionBaseSpellListChoiceRows[pureGroupIndex] ?? []).filter(Boolean);
+    const allIds = Array.from(new Set([...fromCategories, ...currentSelections]));
+    return allIds
+      .map((id) => ({ value: id, label: spellListNameById.get(id) ?? id }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [characterBuilder.categorySpellLists, spellListNameById, professionBaseSpellListChoiceDefinitions.length, professionBaseSpellListChoiceRows]);
+
   const restrictedProfessions = useMemo(
     () => new Set(culture?.restrictedProfessions ?? []),
     [culture],
@@ -1566,11 +1584,19 @@ export default function CharacterCreationView() {
   }, [professionGroupDevelopmentChoiceDefinitions]);
 
   useEffect(() => {
-    setProfessionBaseSpellListChoiceRows((prev) => professionBaseSpellListChoiceDefinitions.map((choice, i) => {
-      const existing = prev[i] ?? [];
-      return Array.from({ length: choice.numChoices }, (_, slot) => existing[slot] ?? '');
-    }));
-  }, [professionBaseSpellListChoiceDefinitions]);
+    setProfessionBaseSpellListChoiceRows((prev) => {
+      const rows = professionBaseSpellListChoiceDefinitions.map((choice, i) => {
+        const existing = prev[i] ?? [];
+        return Array.from({ length: choice.numChoices }, (_, slot) => existing[slot] ?? '');
+      });
+      if (profession?.spellUserType === 'Pure') {
+        const pureGroupIndex = professionBaseSpellListChoiceDefinitions.length;
+        const existingPure = prev[pureGroupIndex] ?? [];
+        rows.push(Array.from({ length: PURE_EXTRA_SPELL_LIST_COUNT }, (_, slot) => existingPure[slot] ?? ''));
+      }
+      return rows;
+    });
+  }, [professionBaseSpellListChoiceDefinitions, profession?.spellUserType]);
 
   useEffect(() => {
     const allowedIds = new Set(weaponSkillCategoryOptions.map((opt) => opt.value));
@@ -2129,6 +2155,26 @@ export default function CharacterCreationView() {
         if (selectedSpellListIds.has(spellListId)) {
           const spellListName = spellListNameById.get(spellListId) ?? spellListId;
           return `Profession Base Spell Lists: ${spellListName} can only be selected once.`;
+        }
+        selectedSpellListIds.add(spellListId);
+      }
+    }
+
+    if (profession?.spellUserType === 'Pure') {
+      const pureGroupIndex = professionBaseSpellListChoiceDefinitions.length;
+      const pureRows = professionBaseSpellListChoiceRows[pureGroupIndex] ?? [];
+      const pureOptionIds = new Set(pureExtraSpellListOptions.map((o) => o.value));
+      for (let slot = 0; slot < PURE_EXTRA_SPELL_LIST_COUNT; slot++) {
+        const spellListId = pureRows[slot] ?? '';
+        if (!spellListId) {
+          return `Pure Spell User Extra Lists: select spell list for slot ${slot + 1}.`;
+        }
+        if (!pureOptionIds.has(spellListId)) {
+          return `Pure Spell User Extra Lists: invalid spell list in slot ${slot + 1}.`;
+        }
+        if (selectedSpellListIds.has(spellListId)) {
+          const spellListName = spellListNameById.get(spellListId) ?? spellListId;
+          return `Pure Spell User Extra Lists: ${spellListName} can only be selected once.`;
         }
         selectedSpellListIds.add(spellListId);
       }
@@ -3819,6 +3865,45 @@ export default function CharacterCreationView() {
                   })}
                 </div>
               )}
+
+              {profession?.spellUserType === 'Pure' && (() => {
+                const pureGroupIndex = professionBaseSpellListChoiceDefinitions.length;
+                const pureRows = professionBaseSpellListChoiceRows[pureGroupIndex] ?? [];
+                return (
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    <h4 style={{ margin: 0 }}>Pure Spell User Extra Lists</h4>
+                    <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
+                      <div style={{ color: 'var(--muted)' }}>
+                        Select {PURE_EXTRA_SPELL_LIST_COUNT} additional spell lists from Open and Closed lists.
+                      </div>
+                      {pureRows.map((spellListId, rowIndex) => {
+                        const selectedOtherIds = new Set(
+                          professionBaseSpellListChoiceRows
+                            .flatMap((group, groupIndex) => group
+                              .map((value, index) => ({ value, groupIndex, index })),
+                            )
+                            .filter((entry) => !(entry.groupIndex === pureGroupIndex && entry.index === rowIndex))
+                            .map((entry) => entry.value)
+                            .filter(Boolean),
+                        );
+                        const availableOptions = pureExtraSpellListOptions.filter(
+                          (opt) => !selectedOtherIds.has(opt.value) || opt.value === spellListId,
+                        );
+                        return (
+                          <LabeledSelect
+                            key={`pure-extra-spell-${rowIndex}`}
+                            label={`Spell List ${rowIndex + 1}`}
+                            value={spellListId}
+                            onChange={(value) => updateBaseSpellListChoiceRow(pureGroupIndex, rowIndex, value)}
+                            options={availableOptions}
+                            placeholderOption="— Select spell list —"
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {professionWeaponCategoryCostDefinitions.length > 0 && (
                 <div style={{ display: 'grid', gap: 8 }}>
