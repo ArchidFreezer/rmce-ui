@@ -48,7 +48,7 @@ import type {
   WeaponType,
 } from '../../types';
 
-import { DEVELOPMENT_STATS, SPELL_REALMS, STATS, type Realm, type SkillDevelopmentType, type Stat } from '../../types/enum';
+import { DEVELOPMENT_STATS, SPELL_REALMS, STATS, getStatForRealm, type Realm, type SkillDevelopmentType, type Stat } from '../../types/enum';
 import { isValidUnsignedInt, sanitizeUnsignedInt } from '../../utils';
 
 type CharacterStep =
@@ -413,10 +413,13 @@ function createEmptyTpResolution(tp: TrainingPackage): TpResolution {
   };
 }
 
-function validateTpResolution(tp: TrainingPackage, resolution: TpResolution): string | undefined {
+function validateTpResolution(tp: TrainingPackage, resolution: TpResolution, excludedStats: ReadonlySet<Stat> = new Set()): string | undefined {
   if (tp.statGainChoices && tp.statGainChoices.numChoices > 0) {
     for (let i = 0; i < tp.statGainChoices.numChoices; i++) {
       if (!resolution.statGainChoices[i]) return `${tp.name}: select stat for gain choice ${i + 1}.`;
+      if (excludedStats.has(resolution.statGainChoices[i] as Stat)) {
+        return `${tp.name}: stat gain choice ${i + 1} is already claimed by a realm stat gain.`;
+      }
     }
     const chosen = resolution.statGainChoices.filter(Boolean);
     if (new Set(chosen).size < chosen.length) return `${tp.name}: stat gain choices must be unique.`;
@@ -1261,6 +1264,12 @@ export default function CharacterCreationView() {
       for (const stat of tp.statGains ?? []) {
         claimed.add(stat);
       }
+      if (tp.realmStatGain) {
+        for (const realm of characterBuilder.magicalRealms) {
+          const stat = getStatForRealm(realm);
+          if (stat) claimed.add(stat);
+        }
+      }
       const res = tpResolutions.find((r) => r.tpId === tp.id);
       if (res) {
         for (const stat of res.statGainChoices) {
@@ -1269,7 +1278,7 @@ export default function CharacterCreationView() {
       }
     }
     return claimed;
-  }, [selectedApprenticeTrainingPackages, tpResolutions]);
+  }, [selectedApprenticeTrainingPackages, tpResolutions, characterBuilder.magicalRealms]);
 
   useEffect(() => {
     if (apprenticeStatGainsUnavailable.size === 0) return;
@@ -4568,7 +4577,15 @@ export default function CharacterCreationView() {
                 const currentTp = tpsRequiringResolution[apprenticeResolvingTpIndex];
                 const currentResolution = currentTp ? tpResolutions.find((r) => r.tpId === currentTp.id) : undefined;
                 if (!currentTp || !currentResolution) return null;
-                const resError = validateTpResolution(currentTp, currentResolution);
+                const tpRealmStatGains = new Set<Stat>(
+                  currentTp.realmStatGain
+                    ? characterBuilder.magicalRealms.flatMap((realm) => {
+                      const stat = getStatForRealm(realm);
+                      return stat ? [stat] : [];
+                    })
+                    : [],
+                );
+                const resError = validateTpResolution(currentTp, currentResolution, tpRealmStatGains);
                 const updateResolution = (updater: (r: TpResolution) => TpResolution) => {
                   setTpResolutions((prev) => prev.map((r) => r.tpId === currentTp.id ? updater(r) : r));
                 };
@@ -4583,7 +4600,7 @@ export default function CharacterCreationView() {
                       <div style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}>
                         <strong>Realm Stat Gain</strong>
                         <div style={{ color: 'var(--muted)', fontSize: '0.9em', marginTop: 4 }}>
-                          This TP grants a stat gain roll for each of your magical realm stats ({characterBuilder.magicalRealms.join(', ')}).
+                          This TP grants a stat gain roll for the following stats: {[...tpRealmStatGains].join(', ')}.
                         </div>
                       </div>
                     )}
@@ -4598,7 +4615,9 @@ export default function CharacterCreationView() {
                           {Array.from({ length: currentTp.statGainChoices.numChoices }, (_, si) => {
                             const chosen = currentResolution.statGainChoices[si] ?? '';
                             const otherChosen = new Set<string>(currentResolution.statGainChoices.filter((s, i) => i !== si && s));
-                            const opts = (currentTp.statGainChoices!.options as string[]).filter((s) => !otherChosen.has(s)).map((s) => ({ value: s, label: s }));
+                            const opts = (currentTp.statGainChoices!.options as string[])
+                              .filter((s) => !otherChosen.has(s) && !tpRealmStatGains.has(s as Stat))
+                              .map((s) => ({ value: s, label: s }));
                             return (
                               <LabeledSelect
                                 key={si}

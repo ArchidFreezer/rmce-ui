@@ -10,7 +10,7 @@ export const PRECIPITATIONS: ReadonlyArray<Precipitation> = [
 
 /** Enum plus reusable list for form checkboxes */
 export type Temperature = 'Hot' | 'Warm' | 'Temperate' | 'Cool' | 'Cold';
-export const TEMPERATURES: ReadonlyArray<Temperature> = [ 'Hot', 'Warm', 'Temperate', 'Cool', 'Cold'] as const;
+export const TEMPERATURES: ReadonlyArray<Temperature> = ['Hot', 'Warm', 'Temperate', 'Cool', 'Cold'] as const;
 
 /** Enum for moving manoeuvres reusable list for form checkboxes */
 export type ManoeuvreDifficulty = 'Normal' | 'Routine' | 'Easy' | 'Light' | 'Medium' | 'Hard' | 'Very Hard' | 'Extremely Hard' | 'Sheer Folly' | 'Absurd'
@@ -35,6 +35,21 @@ export const SPELL_TYPES: ReadonlyArray<SpellType> = ['Base', 'Closed', 'Open', 
 export type Stat = 'Agility' | 'Constitution' | 'Empathy' | 'Intuition' | 'Memory' | 'Presence' | 'Quickness' | 'Reasoning' | 'Self Discipline' | 'Strength';
 export const STATS: ReadonlyArray<Stat> = ['Agility', 'Constitution', 'Empathy', 'Intuition', 'Memory', 'Presence', 'Quickness', 'Reasoning', 'Self Discipline', 'Strength'] as const;
 export const DEVELOPMENT_STATS: ReadonlyArray<Stat> = ['Agility', 'Constitution', 'Empathy', 'Intuition', 'Memory'] as const;
+export const REALM_STATS: ReadonlyArray<Stat> = ['Empathy', 'Intuition', 'Presence'] as const;
+
+export function getRealmForStat(stat: Stat): Realm | undefined {
+  if (stat === 'Empathy') return 'Essence';
+  if (stat === 'Intuition') return 'Mentalism';
+  if (stat === 'Presence') return 'Channeling';
+  return undefined;
+}
+
+export function getStatForRealm(realm: Realm): Stat | undefined {
+  if (realm === 'Essence') return 'Empathy';
+  if (realm === 'Mentalism') return 'Presence';
+  if (realm === 'Channeling') return 'Intuition';
+  return undefined;
+}
 
 /** Enum for treasure value types */
 export type TreasureValueType = 'Very Poor' | 'Poor' | 'Normal' | 'Rich' | 'Very Rich' | 'Special';
