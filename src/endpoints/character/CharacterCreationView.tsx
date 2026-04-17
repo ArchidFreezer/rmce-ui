@@ -997,6 +997,15 @@ export default function CharacterCreationView() {
   }, [spellLists]);
 
   const pureExtraSpellListOptions = useMemo(() => {
+    // Build a map of spellListId → categoryId for Open/Closed categories
+    const spellListCategoryMap = new Map<string, string>();
+    for (const catId of [OWN_REALM_OPEN_LISTS_CATEGORY_ID, OWN_REALM_CLOSED_LISTS_CATEGORY_ID]) {
+      const entry = characterBuilder.categorySpellLists.find((c) => c.category === catId);
+      for (const slId of entry?.spellLists ?? []) {
+        spellListCategoryMap.set(slId, catId);
+      }
+    }
+
     const fromCategories = [OWN_REALM_OPEN_LISTS_CATEGORY_ID, OWN_REALM_CLOSED_LISTS_CATEGORY_ID]
       .flatMap((catId) => {
         const entry = characterBuilder.categorySpellLists.find((c) => c.category === catId);
@@ -1008,9 +1017,15 @@ export default function CharacterCreationView() {
     const currentSelections = (professionBaseSpellListChoiceRows[pureGroupIndex] ?? []).filter(Boolean);
     const allIds = Array.from(new Set([...fromCategories, ...currentSelections]));
     return allIds
-      .map((id) => ({ value: id, label: spellListNameById.get(id) ?? id }))
+      .map((id) => {
+        const catId = spellListCategoryMap.get(id);
+        const rawCatName = catId ? (categoryNameById.get(catId) ?? catId) : undefined;
+        const catName = rawCatName?.replace(/^.*?\s-\s/, '');
+        const slName = spellListNameById.get(id) ?? id;
+        return { value: id, label: catName ? `${slName} — ${catName}` : slName };
+      })
       .sort((a, b) => a.label.localeCompare(b.label));
-  }, [characterBuilder.categorySpellLists, spellListNameById, professionBaseSpellListChoiceDefinitions.length, professionBaseSpellListChoiceRows]);
+  }, [characterBuilder.categorySpellLists, spellListNameById, categoryNameById, professionBaseSpellListChoiceDefinitions.length, professionBaseSpellListChoiceRows]);
 
   const restrictedProfessions = useMemo(
     () => new Set(culture?.restrictedProfessions ?? []),
