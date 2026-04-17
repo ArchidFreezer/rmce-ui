@@ -235,7 +235,7 @@ export function RichSelect({
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div ref={containerRef} style={{ display: 'grid', gap: 6, fontSize: 14 }}>
+    <div ref={containerRef} style={{ display: 'grid', gap: 6, fontSize: 14, width: '100%' }}>
       {!hideLabel && (
         <label htmlFor={selectId}>
           {label}
