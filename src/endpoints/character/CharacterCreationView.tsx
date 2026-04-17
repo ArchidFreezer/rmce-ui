@@ -59,7 +59,7 @@ type CharacterStep =
   | 'hobby'
   | 'background'
   | 'apprenticeship'
-  | 'apply';
+  | 'summary';
 
 const STEP_ORDER: CharacterStep[] = [
   'primary',
@@ -69,7 +69,7 @@ const STEP_ORDER: CharacterStep[] = [
   'hobby',
   'background',
   'apprenticeship',
-  'apply',
+  'summary',
 ];
 
 const STEP_LABELS: Record<CharacterStep, string> = {
@@ -80,7 +80,7 @@ const STEP_LABELS: Record<CharacterStep, string> = {
   hobby: '5. Hobby Ranks',
   background: '6. Background Options',
   apprenticeship: '7. Apprenticeship Skills',
-  apply: '8. Apply Level Upgrade',
+  summary: '8. Summary',
 };
 
 const OWN_REALM_OPEN_LISTS_CATEGORY_ID = 'SKILLCATEGORY_SPELLS_OWN_REALM_OPEN_LISTS';
@@ -93,7 +93,7 @@ type StepErrors = {
   hobby?: string | undefined;
   background?: string | undefined;
   apprenticeship?: string | undefined;
-  apply?: string | undefined;
+  summary?: string | undefined;
 };
 
 type HobbySkillRow = {
@@ -2404,7 +2404,7 @@ export default function CharacterCreationView() {
   ]);
 
   const canGoNext = (() => {
-    if (step === 'apply') return false;
+    if (step === 'summary') return false;
     const e = errors[step];
     return !e;
   })();
@@ -3070,8 +3070,8 @@ export default function CharacterCreationView() {
     setErrors({});
   };
 
-  const submitLevelUpgrade = async () => {
-    if (!raceId || !cultureId || !professionId || selectedRealms.length === 0) return;
+  const submitLevelUpgrade = async (): Promise<boolean> => {
+    if (!raceId || !cultureId || !professionId || selectedRealms.length === 0) return false;
 
     const nextErrors = recomputeErrors();
     if (Object.values(nextErrors).some(Boolean)) {
@@ -3080,7 +3080,7 @@ export default function CharacterCreationView() {
         title: 'Cannot apply level upgrade',
         description: 'Please resolve validation issues in earlier steps.',
       });
-      return;
+      return false;
     }
 
     setApplying(true);
@@ -3244,13 +3244,14 @@ export default function CharacterCreationView() {
         title: 'Apprenticeship choices applied',
         description: 'Your character has been successfully built.',
       });
-
+      return true;
     } catch (e) {
       toast({
         variant: 'danger',
         title: 'Apply apprenticeship choices failed',
         description: String(e instanceof Error ? e.message : e),
       });
+      return false;
     } finally {
       setApplying(false);
     }
@@ -5350,7 +5351,7 @@ export default function CharacterCreationView() {
                     )}
                   </div>
 
-                  <div>
+                  <div style={{ display: 'flex', gap: 8 }}>
                     <button
                       type="button"
                       onClick={() => {
@@ -5364,6 +5365,13 @@ export default function CharacterCreationView() {
                     >
                       ← Back
                     </button>
+                    <button
+                      type="button"
+                      onClick={async () => { if (await submitLevelUpgrade()) setStep('summary'); }}
+                      disabled={applying || Boolean(errors.apprenticeship)}
+                    >
+                      {applying ? 'Applying…' : 'Complete Apprenticeship'}
+                    </button>
                   </div>
                 </>
               )}
@@ -5372,7 +5380,7 @@ export default function CharacterCreationView() {
             </section>
           )}
 
-          {step === 'apply' && (
+          {step === 'summary' && (
             <section style={{ display: 'grid', gap: 12 }}>
               <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
                 <h4 style={{ margin: '0 0 8px' }}>Summary</h4>
@@ -5393,31 +5401,20 @@ export default function CharacterCreationView() {
                 </ul>
               </div>
 
-              {(errors.primary || errors.stats || errors.hobby || errors.background || errors.apprenticeship) && (
-                <div style={{ color: '#b00020' }}>
-                  There are validation issues in previous steps. Please go back and correct them before applying level upgrade.
-                </div>
-              )}
-
               <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  type="button"
-                  onClick={submitLevelUpgrade}
-                  disabled={applying || Boolean(errors.primary || errors.stats || errors.hobby || errors.background || errors.apprenticeship)}
-                >
-                  {applying ? 'Applying…' : 'Apply Level Upgrade'}
-                </button>
                 <button type="button" onClick={resetWorkflow}>
-                  Start Over
+                  New Character
                 </button>
               </div>
             </section>
           )}
 
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button type="button" onClick={goPrev} disabled={step === 'primary'}>Back</button>
-            <button type="button" onClick={goNext} disabled={!canGoNext || step === 'apply' || savingPrimaryDefinition || savingInitialChoices || savingStats || savingPhysique || savingHobbyChoices || savingBackgroundChoices}>Next</button>
-          </div>
+          {step !== 'summary' && (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" onClick={goPrev} disabled={step === 'primary'}>Back</button>
+              <button type="button" onClick={goNext} disabled={!canGoNext || savingPrimaryDefinition || savingInitialChoices || savingStats || savingPhysique || savingHobbyChoices || savingBackgroundChoices}>Next</button>
+            </div>
+          )}
         </div>
       </div>
     </>
