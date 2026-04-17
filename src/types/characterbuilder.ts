@@ -1,4 +1,4 @@
-import type { Named, PersistentValue, PersistentDevelopmentTypeValue, SkillValue, SkillDevelopmentTypeValue } from './base';
+import type { Named, PersistentValue, SkillValue, SkillDevelopmentTypeValue } from './base';
 import type { Realm, Stat } from './enum';
 import type { LanguageAbility } from './language';
 
@@ -35,6 +35,13 @@ export interface CharacterBuilder extends Named {
   culture: string;
   cultureType: string;
   profession: string;
+  male: boolean;
+
+  autoHeight: boolean;
+  enteredHeight: number | null;
+  autoBuildModifier: boolean;
+  enteredBuildModifier: number | null;
+
 
   magicalRealms: Realm[];
   numHobbySkillRanks: number;
@@ -64,6 +71,12 @@ export interface CharacterBuilder extends Named {
   /* Initial Stats */
   initialStats: CharacterBuilderStatValue[];
 
+  /* Physique */
+  height: number;
+  weight: number;
+  lifespan: number;
+  buildDescription: string;
+
   /* Hobby/Adolescent choices */
   hobbySkillRanks: SkillValue[];
   hobbyCategoryRanks: PersistentValue[];
@@ -77,6 +90,10 @@ export interface CharacterBuilder extends Named {
   backgroundSkillSpecialBonuses: SkillValue[];
   backgroundCategorySpecialBonuses: PersistentValue[];
   backgroundItems?: string[] | undefined; // Item.id[]
+
+  /* Apprenticeship choices */
+  apprenticeshipTrainingPackages: string[]; // TrainingPackage.id[]
+  apprenticeshipStatGains: Stat[];
 
   /* Aggregated State */
   totalGold: number;
@@ -112,6 +129,12 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
     cultureType: '',
     profession: '',
 
+    male: true,
+    autoHeight: true,
+    enteredHeight: null,
+    autoBuildModifier: true,
+    enteredBuildModifier: null,
+
     magicalRealms: [],
     numHobbySkillRanks: 0,
     numAdolescentLanguageRanks: 0,
@@ -140,6 +163,12 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
     /* Initial Stats */
     initialStats: [],
 
+    /* Physique */
+    height: 0,
+    weight: 0,
+    lifespan: 0,
+    buildDescription: '',
+
     /* Hobby/Adolescent choices */
     hobbySkillRanks: [],
     hobbyCategoryRanks: [],
@@ -153,6 +182,10 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
     backgroundSkillSpecialBonuses: [],
     backgroundCategorySpecialBonuses: [],
     backgroundItems: [],
+
+    /* Apprenticeship choices */
+    apprenticeshipTrainingPackages: [],
+    apprenticeshipStatGains: [],
 
     /* Aggregated State */
     totalGold: 0,
