@@ -23,17 +23,17 @@ export interface RichSelectOption {
 
 export interface RichSelectProps {
   label: string;
-  hideLabel?: boolean;
-  ariaLabel?: string;
+  hideLabel?: boolean | undefined;
+  ariaLabel?: string | undefined;
   value: string;
   onChange: (val: string) => void;
   options: readonly RichSelectOption[];
-  disabled?: boolean;
-  id?: string;
-  required?: boolean;
-  error?: string;
-  helperText?: string;
-  placeholderOption?: string;
+  disabled?: boolean | undefined;
+  id?: string | undefined;
+  required?: boolean | undefined;
+  error?: string | undefined;
+  helperText?: string | undefined;
+  placeholderOption?: string | undefined;
 }
 
 // ---------------------------------------------------------------------------

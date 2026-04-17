@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 
 import {
   applyApprenticeshipChoices,
@@ -27,6 +27,9 @@ import {
   CheckboxInput,
   LabeledInput,
   LabeledSelect,
+  RichOptionLabel,
+  RichSelect,
+  type RichSelectOption,
   Spinner,
   useToast,
 } from '../../components';
@@ -996,16 +999,31 @@ export default function CharacterCreationView() {
     return map;
   }, [spellLists]);
 
-  const pureExtraSpellListOptions = useMemo(() => {
-    // Build a map of spellListId → categoryId for Open/Closed categories
-    const spellListCategoryMap = new Map<string, string>();
-    for (const catId of [OWN_REALM_OPEN_LISTS_CATEGORY_ID, OWN_REALM_CLOSED_LISTS_CATEGORY_ID]) {
-      const entry = characterBuilder.categorySpellLists.find((c) => c.category === catId);
-      for (const slId of entry?.spellLists ?? []) {
-        spellListCategoryMap.set(slId, catId);
+  /** Global reverse map: spellListId → categoryId, covering all categories. */
+  const spellListCategoryById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const entry of characterBuilder.categorySpellLists) {
+      for (const slId of entry.spellLists) {
+        map.set(slId, entry.category);
       }
     }
+    return map;
+  }, [characterBuilder.categorySpellLists]);
 
+  /** Convert a spell list ID to a RichSelectOption with category shown muted. */
+  const toSpellListRichOption = useCallback((id: string): RichSelectOption => {
+    const catId = spellListCategoryById.get(id);
+    const rawCatName = catId ? (categoryNameById.get(catId) ?? catId) : undefined;
+    const catName = rawCatName?.replace(/^.*?\s-\s/, '');
+    const slName = spellListNameById.get(id) ?? id;
+    return {
+      value: id,
+      label: <RichOptionLabel primary={slName} {...(catName ? { secondary: catName } : {})} />,
+      searchText: catName ? `${slName} — ${catName}` : slName,
+    };
+  }, [spellListCategoryById, categoryNameById, spellListNameById]);
+
+  const pureExtraSpellListOptions = useMemo(() => {
     const fromCategories = [OWN_REALM_OPEN_LISTS_CATEGORY_ID, OWN_REALM_CLOSED_LISTS_CATEGORY_ID]
       .flatMap((catId) => {
         const entry = characterBuilder.categorySpellLists.find((c) => c.category === catId);
@@ -1017,15 +1035,9 @@ export default function CharacterCreationView() {
     const currentSelections = (professionBaseSpellListChoiceRows[pureGroupIndex] ?? []).filter(Boolean);
     const allIds = Array.from(new Set([...fromCategories, ...currentSelections]));
     return allIds
-      .map((id) => {
-        const catId = spellListCategoryMap.get(id);
-        const rawCatName = catId ? (categoryNameById.get(catId) ?? catId) : undefined;
-        const catName = rawCatName?.replace(/^.*?\s-\s/, '');
-        const slName = spellListNameById.get(id) ?? id;
-        return { value: id, label: catName ? `${slName} — ${catName}` : slName };
-      })
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }, [characterBuilder.categorySpellLists, spellListNameById, categoryNameById, professionBaseSpellListChoiceDefinitions.length, professionBaseSpellListChoiceRows]);
+      .map(toSpellListRichOption)
+      .sort((a, b) => a.searchText!.localeCompare(b.searchText!));
+  }, [characterBuilder.categorySpellLists, toSpellListRichOption, professionBaseSpellListChoiceDefinitions.length, professionBaseSpellListChoiceRows]);
 
   const restrictedProfessions = useMemo(
     () => new Set(culture?.restrictedProfessions ?? []),
@@ -3865,8 +3877,8 @@ export default function CharacterCreationView() {
                   {professionBaseSpellListChoiceDefinitions.map((choice, choiceIndex) => {
                     const rows = professionBaseSpellListChoiceRows[choiceIndex] ?? [];
                     const options = choice.options
-                      .map((id) => ({ value: id, label: spellListNameById.get(id) ?? id }))
-                      .sort((a, b) => a.label.localeCompare(b.label));
+                      .map(toSpellListRichOption)
+                      .sort((a, b) => a.searchText!.localeCompare(b.searchText!));
                     return (
                       <div key={`prof-base-spell-${choiceIndex}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
                         <div style={{ color: 'var(--muted)' }}>
@@ -3885,7 +3897,7 @@ export default function CharacterCreationView() {
                             );
                             const availableOptions = options.filter((opt) => !selectedOtherIds.has(opt.value) || opt.value === spellListId);
                             return (
-                              <LabeledSelect
+                              <RichSelect
                                 key={`prof-base-spell-${choiceIndex}-${rowIndex}`}
                                 label={`Spell List ${rowIndex + 1}`}
                                 value={spellListId}
@@ -3926,7 +3938,7 @@ export default function CharacterCreationView() {
                           (opt) => !selectedOtherIds.has(opt.value) || opt.value === spellListId,
                         );
                         return (
-                          <LabeledSelect
+                          <RichSelect
                             key={`pure-extra-spell-${rowIndex}`}
                             label={`Spell List ${rowIndex + 1}`}
                             value={spellListId}
@@ -4288,11 +4300,11 @@ export default function CharacterCreationView() {
               </div>
 
               {spellListRanksBudget > 0 && (
-                <LabeledSelect
+                <RichSelect
                   label={`Hobby Spell List (${spellListRanksBudget} ranks)`}
                   value={hobbySpellListId}
                   onChange={(v) => setHobbySpellListId(v)}
-                  options={hobbySpellListOptions.map((id) => ({ value: id, label: spellListNameById.get(id) ?? id }))}
+                  options={hobbySpellListOptions.map(toSpellListRichOption)}
                   error={errors.hobby && !hobbySpellListId ? 'Required' : undefined}
                 />
               )}
@@ -4884,7 +4896,7 @@ export default function CharacterCreationView() {
                             const totalAllocated = allocs.reduce((s, a) => s + a.ranks, 0);
                             const remainingRanks = choiceDef.value - totalAllocated;
                             const usedIds = new Set(allocs.map((a) => a.id).filter(Boolean));
-                            const availableSlOpts = choiceDef.options.filter((slId) => slId).map((slId) => ({ value: slId, label: spellListNameById.get(slId) ?? slId }));
+                            const availableSlOpts = choiceDef.options.filter((slId) => slId).map(toSpellListRichOption);
                             return (
                               <div key={gi}>
                                 <div style={{ color: 'var(--muted)', fontSize: '0.9em', marginBottom: 4 }}>
@@ -4897,7 +4909,7 @@ export default function CharacterCreationView() {
                                     return (
                                       <div key={ai} style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
                                         <div style={{ flex: 1 }}>
-                                          <LabeledSelect
+                                          <RichSelect
                                             label={`Spell List ${ai + 1}`}
                                             value={alloc.id}
                                             onChange={(v) => updateResolution((r) => ({ ...r, spellListChoices: r.spellListChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, id: v })) }))}
@@ -4937,7 +4949,7 @@ export default function CharacterCreationView() {
                             const usedIds = new Set(allocs.map((a) => a.id).filter(Boolean));
                             const aggregatedSlOpts = choiceDef.options.flatMap((catId) =>
                               (characterBuilder.categorySpellLists.find((c) => c.category === catId)?.spellLists ?? [])
-                                .map((slId) => ({ value: slId, label: spellListNameById.get(slId) ?? slId }))
+                                .map(toSpellListRichOption)
                             );
                             return (
                               <div key={gi}>
@@ -4951,7 +4963,7 @@ export default function CharacterCreationView() {
                                     return (
                                       <div key={ai} style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
                                         <div style={{ flex: 1 }}>
-                                          <LabeledSelect
+                                          <RichSelect
                                             label={`Spell List ${ai + 1}`}
                                             value={alloc.id}
                                             onChange={(v) => updateResolution((r) => ({ ...r, spellListCategoryChoices: r.spellListCategoryChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, id: v })) }))}
@@ -5436,7 +5448,7 @@ export default function CharacterCreationView() {
                           placeholderOption="— Select category —"
                         />
                         {apprenticeSelectedSpellCategory && apprenticeSpellListsInSelectedCategory.length > 0 && (
-                          <LabeledSelect
+                          <RichSelect
                             label="Spell List"
                             hideLabel={true}
                             value=""
@@ -5447,7 +5459,7 @@ export default function CharacterCreationView() {
                                 setApprenticeAddingSpellList(false);
                               }
                             }}
-                            options={apprenticeSpellListsInSelectedCategory.map((sl) => ({ value: sl.id, label: sl.name }))}
+                            options={apprenticeSpellListsInSelectedCategory.map((sl) => toSpellListRichOption(sl.id))}
                             placeholderOption="— Select spell list —"
                           />
                         )}
