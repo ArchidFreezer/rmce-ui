@@ -48,7 +48,7 @@ import type {
   WeaponType,
 } from '../../types';
 
-import { DEVELOPMENT_STATS, SPELL_REALMS, STATS, type Realm, type SkillDevelopmentType, type Stat } from '../../types/enum';
+import { DEVELOPMENT_STATS, SPELL_REALMS, STATS, getStatForRealm, type Realm, type SkillDevelopmentType, type Stat } from '../../types/enum';
 import { isValidUnsignedInt, sanitizeUnsignedInt } from '../../utils';
 
 type CharacterStep =
@@ -84,6 +84,8 @@ const STEP_LABELS: Record<CharacterStep, string> = {
 };
 
 const OWN_REALM_OPEN_LISTS_CATEGORY_ID = 'SKILLCATEGORY_SPELLS_OWN_REALM_OPEN_LISTS';
+const OWN_REALM_CLOSED_LISTS_CATEGORY_ID = 'SKILLCATEGORY_SPELLS_OWN_REALM_CLOSED_LISTS';
+const PURE_EXTRA_SPELL_LIST_COUNT = 4;
 
 type StepErrors = {
   primary?: string | undefined;
@@ -411,10 +413,13 @@ function createEmptyTpResolution(tp: TrainingPackage): TpResolution {
   };
 }
 
-function validateTpResolution(tp: TrainingPackage, resolution: TpResolution): string | undefined {
+function validateTpResolution(tp: TrainingPackage, resolution: TpResolution, excludedStats: ReadonlySet<Stat> = new Set()): string | undefined {
   if (tp.statGainChoices && tp.statGainChoices.numChoices > 0) {
     for (let i = 0; i < tp.statGainChoices.numChoices; i++) {
       if (!resolution.statGainChoices[i]) return `${tp.name}: select stat for gain choice ${i + 1}.`;
+      if (excludedStats.has(resolution.statGainChoices[i] as Stat)) {
+        return `${tp.name}: stat gain choice ${i + 1} is already claimed by a realm stat gain.`;
+      }
     }
     const chosen = resolution.statGainChoices.filter(Boolean);
     if (new Set(chosen).size < chosen.length) return `${tp.name}: stat gain choices must be unique.`;
@@ -990,6 +995,22 @@ export default function CharacterCreationView() {
     return map;
   }, [spellLists]);
 
+  const pureExtraSpellListOptions = useMemo(() => {
+    const fromCategories = [OWN_REALM_OPEN_LISTS_CATEGORY_ID, OWN_REALM_CLOSED_LISTS_CATEGORY_ID]
+      .flatMap((catId) => {
+        const entry = characterBuilder.categorySpellLists.find((c) => c.category === catId);
+        return entry?.spellLists ?? [];
+      });
+    // Include any already-selected IDs even if the server has since moved them
+    // out of the Open/Closed categories into the Base category.
+    const pureGroupIndex = professionBaseSpellListChoiceDefinitions.length;
+    const currentSelections = (professionBaseSpellListChoiceRows[pureGroupIndex] ?? []).filter(Boolean);
+    const allIds = Array.from(new Set([...fromCategories, ...currentSelections]));
+    return allIds
+      .map((id) => ({ value: id, label: spellListNameById.get(id) ?? id }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [characterBuilder.categorySpellLists, spellListNameById, professionBaseSpellListChoiceDefinitions.length, professionBaseSpellListChoiceRows]);
+
   const restrictedProfessions = useMemo(
     () => new Set(culture?.restrictedProfessions ?? []),
     [culture],
@@ -1243,6 +1264,12 @@ export default function CharacterCreationView() {
       for (const stat of tp.statGains ?? []) {
         claimed.add(stat);
       }
+      if (tp.realmStatGain) {
+        for (const realm of characterBuilder.magicalRealms) {
+          const stat = getStatForRealm(realm);
+          if (stat) claimed.add(stat);
+        }
+      }
       const res = tpResolutions.find((r) => r.tpId === tp.id);
       if (res) {
         for (const stat of res.statGainChoices) {
@@ -1251,7 +1278,7 @@ export default function CharacterCreationView() {
       }
     }
     return claimed;
-  }, [selectedApprenticeTrainingPackages, tpResolutions]);
+  }, [selectedApprenticeTrainingPackages, tpResolutions, characterBuilder.magicalRealms]);
 
   useEffect(() => {
     if (apprenticeStatGainsUnavailable.size === 0) return;
@@ -1566,11 +1593,19 @@ export default function CharacterCreationView() {
   }, [professionGroupDevelopmentChoiceDefinitions]);
 
   useEffect(() => {
-    setProfessionBaseSpellListChoiceRows((prev) => professionBaseSpellListChoiceDefinitions.map((choice, i) => {
-      const existing = prev[i] ?? [];
-      return Array.from({ length: choice.numChoices }, (_, slot) => existing[slot] ?? '');
-    }));
-  }, [professionBaseSpellListChoiceDefinitions]);
+    setProfessionBaseSpellListChoiceRows((prev) => {
+      const rows = professionBaseSpellListChoiceDefinitions.map((choice, i) => {
+        const existing = prev[i] ?? [];
+        return Array.from({ length: choice.numChoices }, (_, slot) => existing[slot] ?? '');
+      });
+      if (profession?.spellUserType === 'Pure') {
+        const pureGroupIndex = professionBaseSpellListChoiceDefinitions.length;
+        const existingPure = prev[pureGroupIndex] ?? [];
+        rows.push(Array.from({ length: PURE_EXTRA_SPELL_LIST_COUNT }, (_, slot) => existingPure[slot] ?? ''));
+      }
+      return rows;
+    });
+  }, [professionBaseSpellListChoiceDefinitions, profession?.spellUserType]);
 
   useEffect(() => {
     const allowedIds = new Set(weaponSkillCategoryOptions.map((opt) => opt.value));
@@ -2129,6 +2164,26 @@ export default function CharacterCreationView() {
         if (selectedSpellListIds.has(spellListId)) {
           const spellListName = spellListNameById.get(spellListId) ?? spellListId;
           return `Profession Base Spell Lists: ${spellListName} can only be selected once.`;
+        }
+        selectedSpellListIds.add(spellListId);
+      }
+    }
+
+    if (profession?.spellUserType === 'Pure') {
+      const pureGroupIndex = professionBaseSpellListChoiceDefinitions.length;
+      const pureRows = professionBaseSpellListChoiceRows[pureGroupIndex] ?? [];
+      const pureOptionIds = new Set(pureExtraSpellListOptions.map((o) => o.value));
+      for (let slot = 0; slot < PURE_EXTRA_SPELL_LIST_COUNT; slot++) {
+        const spellListId = pureRows[slot] ?? '';
+        if (!spellListId) {
+          return `Pure Spell User Extra Lists: select spell list for slot ${slot + 1}.`;
+        }
+        if (!pureOptionIds.has(spellListId)) {
+          return `Pure Spell User Extra Lists: invalid spell list in slot ${slot + 1}.`;
+        }
+        if (selectedSpellListIds.has(spellListId)) {
+          const spellListName = spellListNameById.get(spellListId) ?? spellListId;
+          return `Pure Spell User Extra Lists: ${spellListName} can only be selected once.`;
         }
         selectedSpellListIds.add(spellListId);
       }
@@ -3820,6 +3875,45 @@ export default function CharacterCreationView() {
                 </div>
               )}
 
+              {profession?.spellUserType === 'Pure' && (() => {
+                const pureGroupIndex = professionBaseSpellListChoiceDefinitions.length;
+                const pureRows = professionBaseSpellListChoiceRows[pureGroupIndex] ?? [];
+                return (
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    <h4 style={{ margin: 0 }}>Pure Spell User Extra Lists</h4>
+                    <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
+                      <div style={{ color: 'var(--muted)' }}>
+                        Select {PURE_EXTRA_SPELL_LIST_COUNT} additional spell lists from Open and Closed lists.
+                      </div>
+                      {pureRows.map((spellListId, rowIndex) => {
+                        const selectedOtherIds = new Set(
+                          professionBaseSpellListChoiceRows
+                            .flatMap((group, groupIndex) => group
+                              .map((value, index) => ({ value, groupIndex, index })),
+                            )
+                            .filter((entry) => !(entry.groupIndex === pureGroupIndex && entry.index === rowIndex))
+                            .map((entry) => entry.value)
+                            .filter(Boolean),
+                        );
+                        const availableOptions = pureExtraSpellListOptions.filter(
+                          (opt) => !selectedOtherIds.has(opt.value) || opt.value === spellListId,
+                        );
+                        return (
+                          <LabeledSelect
+                            key={`pure-extra-spell-${rowIndex}`}
+                            label={`Spell List ${rowIndex + 1}`}
+                            value={spellListId}
+                            onChange={(value) => updateBaseSpellListChoiceRow(pureGroupIndex, rowIndex, value)}
+                            options={availableOptions}
+                            placeholderOption="— Select spell list —"
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {professionWeaponCategoryCostDefinitions.length > 0 && (
                 <div style={{ display: 'grid', gap: 8 }}>
                   <h4 style={{ margin: 0 }}>Allocate Weapon Costs</h4>
@@ -4483,7 +4577,15 @@ export default function CharacterCreationView() {
                 const currentTp = tpsRequiringResolution[apprenticeResolvingTpIndex];
                 const currentResolution = currentTp ? tpResolutions.find((r) => r.tpId === currentTp.id) : undefined;
                 if (!currentTp || !currentResolution) return null;
-                const resError = validateTpResolution(currentTp, currentResolution);
+                const tpRealmStatGains = new Set<Stat>(
+                  currentTp.realmStatGain
+                    ? characterBuilder.magicalRealms.flatMap((realm) => {
+                      const stat = getStatForRealm(realm);
+                      return stat ? [stat] : [];
+                    })
+                    : [],
+                );
+                const resError = validateTpResolution(currentTp, currentResolution, tpRealmStatGains);
                 const updateResolution = (updater: (r: TpResolution) => TpResolution) => {
                   setTpResolutions((prev) => prev.map((r) => r.tpId === currentTp.id ? updater(r) : r));
                 };
@@ -4498,7 +4600,7 @@ export default function CharacterCreationView() {
                       <div style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}>
                         <strong>Realm Stat Gain</strong>
                         <div style={{ color: 'var(--muted)', fontSize: '0.9em', marginTop: 4 }}>
-                          This TP grants a stat gain roll for each of your magical realm stats ({characterBuilder.magicalRealms.join(', ')}).
+                          This TP grants a stat gain roll for the following stats: {[...tpRealmStatGains].join(', ')}.
                         </div>
                       </div>
                     )}
@@ -4513,7 +4615,9 @@ export default function CharacterCreationView() {
                           {Array.from({ length: currentTp.statGainChoices.numChoices }, (_, si) => {
                             const chosen = currentResolution.statGainChoices[si] ?? '';
                             const otherChosen = new Set<string>(currentResolution.statGainChoices.filter((s, i) => i !== si && s));
-                            const opts = (currentTp.statGainChoices!.options as string[]).filter((s) => !otherChosen.has(s)).map((s) => ({ value: s, label: s }));
+                            const opts = (currentTp.statGainChoices!.options as string[])
+                              .filter((s) => !otherChosen.has(s) && !tpRealmStatGains.has(s as Stat))
+                              .map((s) => ({ value: s, label: s }));
                             return (
                               <LabeledSelect
                                 key={si}
