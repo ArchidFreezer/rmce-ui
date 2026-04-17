@@ -1,6 +1,5 @@
 import { sendJson } from './client';
 
-import type { Stat } from '../types/enum';
 import type { CharacterBuilder, PersistentValue, LanguageAbility, SkillValue } from '../types';
 
 export type SetCharacterBackgroundChoicesRequest = {
@@ -11,22 +10,6 @@ export type SetCharacterBackgroundChoicesRequest = {
   backgroundSkillBonus: SkillValue[];
   backgroundCategoryBonus: PersistentValue[];
   backgroundItemCount: 0 | 1 | 2;
-};
-
-export type ApplyLevelUpgradeRequest = {
-  id: string;
-  tpIds: string[];
-  statGains: Stat[];
-  skills: Array<{ id: string; subcategory?: string | undefined; ranks: number }>;
-  skillCategories: Array<{ id: string; ranks: number }>;
-  spellLists: Array<{ id: string; skillcategory?: string | undefined; ranks: number }>;
-  languages: Array<{ language: string; spoken?: number | undefined; written?: number | undefined; somatic?: number | undefined }>;
-};
-
-export type ApplyLevelUpgradeResponse = {
-  message?: string | undefined;
-  level?: number | undefined;
-  [key: string]: unknown;
 };
 
 const PRIMARY_DEFINITION_ENDPOINT = '/rmce/operations/character/primary-definition';
@@ -90,7 +73,7 @@ export async function setCharacterBackgroundChoices(
 }
 
 export async function applyApprenticeshipChoices(
-  payload: ApplyLevelUpgradeRequest,
-): Promise<ApplyLevelUpgradeResponse> {
-  return sendJson<ApplyLevelUpgradeResponse>(SET_APPRENTICESHIP_CHOICES_ENDPOINT, 'POST', payload);
+  payload: CharacterBuilder,
+): Promise<CharacterBuilder> {
+  return sendJson<CharacterBuilder>(SET_APPRENTICESHIP_CHOICES_ENDPOINT, 'POST', payload);
 }

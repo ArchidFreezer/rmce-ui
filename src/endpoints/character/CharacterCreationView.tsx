@@ -3210,26 +3210,23 @@ export default function CharacterCreationView() {
         }
       }
 
-      const payload = {
-        id: characterBuilder.id,
-        tpIds: apprenticeTrainingPackageIds,
-        statGains: totalStatGains,
-        skills: Array.from(totalSkillsByKey.values())
+      const payload: CharacterBuilder = {
+        ...characterBuilder,
+        apprenticeshipTrainingPackages: apprenticeTrainingPackageIds,
+        apprenticeshipStatGains: totalStatGains,
+        skillRanks: Array.from(totalSkillsByKey.values())
           .filter((row) => row.ranks > 0)
-          .sort((a, b) => skillChoiceKey(a.id, a.subcategory).localeCompare(skillChoiceKey(b.id, b.subcategory))),
-        skillCategories: Array.from(totalCategoryRanks.entries())
+          .sort((a, b) => skillChoiceKey(a.id, a.subcategory).localeCompare(skillChoiceKey(b.id, b.subcategory)))
+          .map(({ id, subcategory, ranks }) => ({ id, ...(subcategory ? { subcategory } : {}), value: ranks })),
+        categoryRanks: Array.from(totalCategoryRanks.entries())
           .filter(([, ranks]) => ranks > 0)
-          .map(([id, ranks]) => ({ id, ranks }))
+          .map(([id, ranks]) => ({ id, value: ranks }))
           .sort((a, b) => a.id.localeCompare(b.id)),
-        spellLists: Array.from(spellListTotals.entries())
+        spellListRanks: Array.from(spellListTotals.entries())
           .filter(([, ranks]) => ranks > 0)
-          .map(([id, ranks]) => ({
-            id,
-            ...(spellListCategoryOverrides.get(id) ? { skillcategory: spellListCategoryOverrides.get(id) } : {}),
-            ranks,
-          }))
+          .map(([id, ranks]) => ({ id, value: ranks }))
           .sort((a, b) => a.id.localeCompare(b.id)),
-        languages: Array.from(totalLanguages.values())
+        languageAbilities: Array.from(totalLanguages.values())
           .filter((row) => row.spoken > 0 || row.written > 0 || row.somatic > 0)
           .map((row) => ({
             language: row.language,
@@ -3241,12 +3238,13 @@ export default function CharacterCreationView() {
       };
 
       const response = await applyApprenticeshipChoices(payload);
-
+      setCharacterBuilder(response);
       toast({
         variant: 'success',
         title: 'Apprenticeship choices applied',
-        description: response.message ?? 'Server accepted apprenticeship choices.',
+        description: 'Your character has been successfully built.',
       });
+
     } catch (e) {
       toast({
         variant: 'danger',
