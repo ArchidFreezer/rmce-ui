@@ -1453,11 +1453,17 @@ export default function CharacterCreationView() {
         return true;
       })
       .sort((a, b) => a.name.localeCompare(b.name))
-      .map((tp) => ({
-        value: tp.id,
-        label: `${tp.name}${tp.lifestyle ? ' (Lifestyle)' : ''} — ${tpCostMap.get(tp.id) ?? '?'} DP`,
-      }));
-  }, [availableTrainingPackages, apprenticeTrainingPackageIds, apprenticeSelectedLifestylePackageId, tpCostMap, apprenticeDpRemaining]);
+      .map((tp): RichSelectOption => {
+        const cost = tpCostMap.get(tp.id) ?? '?';
+        const secondary = tp.lifestyle ? `(Lifestyle) \u2014 ${cost} DP` : `${cost} DP`;
+        return {
+          value: tp.id,
+          label: <RichOptionLabel primary={tp.name} secondary={secondary} />,
+          searchText: `${tp.name} ${secondary}`,
+          title: showDescriptions && tp.description ? tp.description : undefined,
+        };
+      });
+  }, [availableTrainingPackages, apprenticeTrainingPackageIds, apprenticeSelectedLifestylePackageId, tpCostMap, apprenticeDpRemaining, showDescriptions]);
 
   const apprenticeSkillOptions = useMemo(() => {
     const selectedSet = new Set(apprenticeSkillPurchases.map((p) => p.id));
@@ -1470,13 +1476,18 @@ export default function CharacterCreationView() {
         return getSkillMaxDpPurchases(costElements, devType, tpRanks) > 0;
       })
       .sort((a, b) => a.name.localeCompare(b.name))
-      .map((s) => {
+      .map((s): RichSelectOption => {
         const costElements = categoryCostMap.get(s.category) ?? [];
         const devType = skillDevTypeMap.get(s.id);
         const tpRanks = tpGrantedSkillRankCounts.get(s.id) ?? 0;
         const nextRankCost = getSkillDpCostWithTpOffset(costElements, devType, 1, tpRanks);
         const groupLabel = categoryGroupNameById.get(s.category) ?? s.category;
-        return { value: s.id, label: `${s.name} (${groupLabel}) — ${nextRankCost} DP` };
+        const secondary = `(${groupLabel}) \u2014 ${nextRankCost} DP`;
+        return {
+          value: s.id,
+          label: <RichOptionLabel primary={s.name} secondary={secondary} />,
+          searchText: `${s.name} ${secondary}`,
+        };
       });
   }, [skills, apprenticeSkillPurchases, categoryCostMap, skillDevTypeMap, categoryGroupNameById, tpGrantedSkillRankCounts]);
 
@@ -1494,24 +1505,34 @@ export default function CharacterCreationView() {
         const bLabel = categoryNameById.get(b.id) ?? b.id;
         return aLabel.localeCompare(bLabel);
       })
-      .map((c) => {
+      .map((c): RichSelectOption => {
         const costElements = categoryCostMap.get(c.id) ?? [];
         const tpRanks = tpGrantedCategoryRankCounts.get(c.id) ?? 0;
         const nextRankCost = getCategoryDpCostWithTpOffset(costElements, 1, tpRanks);
         const baseLabel = categoryNameById.get(c.id) ?? c.id;
-        return { value: c.id, label: `${baseLabel} — ${nextRankCost} DP` };
+        const secondary = `${nextRankCost} DP`;
+        return {
+          value: c.id,
+          label: <RichOptionLabel primary={baseLabel} secondary={secondary} />,
+          searchText: `${baseLabel} \u2014 ${secondary}`,
+        };
       });
   }, [categories, apprenticeCategoryPurchases, categoryCostMap, categoryNameById, tpGrantedCategoryRankCounts]);
 
   const apprenticeSpellCategoryOptions = useMemo(
     () => characterBuilder.categorySpellLists
-      .map((c) => {
+      .map((c): RichSelectOption => {
         const costElements = categoryCostMap.get(c.category) ?? [];
         const nextRankCost = getCategoryOrSpellListPurchaseTotalCost(costElements, 1);
         const catName = categoryNameById.get(c.category) ?? c.category;
-        return { value: c.category, label: `${catName} — ${nextRankCost} DP / rank` };
+        const secondary = `${nextRankCost} DP / rank`;
+        return {
+          value: c.category,
+          label: <RichOptionLabel primary={catName} secondary={secondary} />,
+          searchText: `${catName} \u2014 ${secondary}`,
+        };
       })
-      .sort((a, b) => a.label.localeCompare(b.label)),
+      .sort((a, b) => (a.searchText ?? '').localeCompare(b.searchText ?? '')),
     [characterBuilder.categorySpellLists, categoryNameById, categoryCostMap],
   );
 
@@ -4604,7 +4625,7 @@ export default function CharacterCreationView() {
                         })}
                       </div>
                     )}
-                    <LabeledSelect
+                    <RichSelect
                       label="Add Training Package"
                       hideLabel={true}
                       value=""
@@ -4612,6 +4633,7 @@ export default function CharacterCreationView() {
                         if (v) setApprenticeTrainingPackageIds((prev) => [...prev, v]);
                       }}
                       options={apprenticeTrainingPackageOptions}
+                      placeholderOption="— Add training package —"
                     />
                   </div>
                   <div>
@@ -5313,7 +5335,7 @@ export default function CharacterCreationView() {
                         })}
                       </div>
                     )}
-                    <LabeledSelect
+                    <RichSelect
                       label="Add Skill"
                       hideLabel={true}
                       value=""
@@ -5323,6 +5345,7 @@ export default function CharacterCreationView() {
                         }
                       }}
                       options={apprenticeSkillOptions}
+                      placeholderOption="— Add skill —"
                     />
                   </div>
 
@@ -5385,7 +5408,7 @@ export default function CharacterCreationView() {
                         })}
                       </div>
                     )}
-                    <LabeledSelect
+                    <RichSelect
                       label="Add Category"
                       value=""
                       hideLabel={true}
@@ -5395,6 +5418,7 @@ export default function CharacterCreationView() {
                         }
                       }}
                       options={apprenticeCategoryOptions}
+                      placeholderOption="— Add category —"
                     />
                   </div>
 
@@ -5460,7 +5484,7 @@ export default function CharacterCreationView() {
                     )}
                     {apprenticeAddingSpellList ? (
                       <div style={{ display: 'grid', gap: 8 }}>
-                        <LabeledSelect
+                        <RichSelect
                           label="Spell Category"
                           hideLabel={true}
                           value={apprenticeSelectedSpellCategory}

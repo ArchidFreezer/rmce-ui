@@ -15,6 +15,8 @@ export interface RichSelectOption {
    */
   searchText?: string;
   disabled?: boolean;
+  /** Native tooltip shown on hover over the dropdown item. */
+  title?: string | undefined;
 }
 
 // ---------------------------------------------------------------------------
@@ -320,6 +322,7 @@ export function RichSelect({
                   aria-selected={isSelected}
                   aria-disabled={opt.disabled}
                   aria-label={text}
+                  title={opt.title}
                   onMouseEnter={() => !opt.disabled && setActiveIndex(i)}
                   onMouseLeave={() => setActiveIndex(-1)}
                   onMouseDown={(e) => { e.preventDefault(); selectOption(opt); }}
