@@ -4,6 +4,7 @@ export interface LabeledSelectOption {
   label: string;
   value: string;
   disabled?: boolean | undefined;   // Fix A-compatible
+  title?: string | undefined;
 }
 
 export interface LabeledSelectProps {
@@ -81,7 +82,7 @@ export function LabeledSelect({
       >
         <option value="">{placeholderOption}</option>
         {norm.map((opt) => (
-          <option key={opt.value} value={opt.value} disabled={!!opt.disabled}>
+          <option key={opt.value} value={opt.value} disabled={!!opt.disabled} title={opt.title}>
             {opt.label}
           </option>
         ))}

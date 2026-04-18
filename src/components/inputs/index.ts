@@ -19,5 +19,6 @@ export * from './SkillTypeListEditor';
 export * from './SkillValueListEditor';
 export * from './SpellListCategoryRankEditor';
 export * from './SpellListRankEditor';
+export * from './RichSelect';
 export * from './StatGainChoiceEditor';
 export * from './TextNumberListEditor';

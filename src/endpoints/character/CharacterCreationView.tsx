@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 
 import {
   applyApprenticeshipChoices,
@@ -27,6 +27,9 @@ import {
   CheckboxInput,
   LabeledInput,
   LabeledSelect,
+  RichOptionLabel,
+  RichSelect,
+  type RichSelectOption,
   Spinner,
   useToast,
 } from '../../components';
@@ -633,6 +636,7 @@ export default function CharacterCreationView() {
   const [cultureTypeId, setCultureTypeId] = useState('');
   const [cultureId, setCultureId] = useState('');
   const [professionId, setProfessionId] = useState('');
+  const [showDescriptions, setShowDescriptions] = useState(false);
   const [selectedRealms, setSelectedRealms] = useState<Realm[]>([]);
 
   const [raceEverymanChoiceRows, setRaceEverymanChoiceRows] = useState<SkillChoiceRow[][]>([]);
@@ -854,62 +858,6 @@ export default function CharacterCreationView() {
     [profession],
   );
 
-  const raceEverymanSkillOptions = useMemo(() => {
-    return raceEverymanChoiceDefinitions.map((choice) => {
-      const categorySet = new Set(choice.options);
-      const rows = skills
-        .filter((s) => categorySet.has(s.category))
-        .slice()
-        .sort((a, b) => a.name.localeCompare(b.name));
-      return rows.map((s) => ({ value: s.id, label: s.name }));
-    });
-  }, [raceEverymanChoiceDefinitions, skills]);
-
-  const cultureTypeCategorySkillOptions = useMemo(() => {
-    return cultureTypeCategorySkillRankDefinitions.map((choice) => {
-      const rows = skillIdsByCategory.get(choice.id) ?? [];
-      return rows.map((s) => ({ value: s.id, label: s.name }));
-    });
-  }, [cultureTypeCategorySkillRankDefinitions, skillIdsByCategory]);
-
-  const professionSkillDevelopmentOptions = useMemo(() => {
-    return professionSkillDevelopmentChoiceDefinitions.map((choice) => {
-      const ids = new Set(choice.options.map((option) => option.id));
-      return skills
-        .filter((s) => ids.has(s.id))
-        .slice()
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((s) => ({ value: s.id, label: s.name }));
-    });
-  }, [professionSkillDevelopmentChoiceDefinitions, skills]);
-
-  const professionCategoryDevelopmentOptions = useMemo(() => {
-    return professionCategoryDevelopmentChoiceDefinitions.map((choice) => {
-      const categorySet = new Set(choice.options);
-      return skills
-        .filter((s) => categorySet.has(s.category))
-        .slice()
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((s) => ({ value: s.id, label: s.name }));
-    });
-  }, [professionCategoryDevelopmentChoiceDefinitions, skills]);
-
-  const professionGroupDevelopmentOptions = useMemo(() => {
-    return professionGroupDevelopmentChoiceDefinitions.map((choice) => {
-      const categorySet = new Set<string>();
-      for (const groupId of choice.options) {
-        for (const categoryId of categoryIdsByGroup.get(groupId) ?? []) {
-          categorySet.add(categoryId);
-        }
-      }
-      return skills
-        .filter((s) => categorySet.has(s.category))
-        .slice()
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((s) => ({ value: s.id, label: s.name }));
-    });
-  }, [professionGroupDevelopmentChoiceDefinitions, categoryIdsByGroup, skills]);
-
   const categoryNameById = useMemo(() => {
     const groupNameById = new Map<string, string>();
     for (const g of groups) groupNameById.set(g.id, g.name);
@@ -995,6 +943,96 @@ export default function CharacterCreationView() {
     return map;
   }, [spellLists]);
 
+  /** Global reverse map: spellListId → categoryId, covering all categories. */
+  const spellListCategoryById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const entry of characterBuilder.categorySpellLists) {
+      for (const slId of entry.spellLists) {
+        map.set(slId, entry.category);
+      }
+    }
+    return map;
+  }, [characterBuilder.categorySpellLists]);
+
+  /** Convert a spell list ID to a RichSelectOption with category shown muted. */
+  const toSpellListRichOption = useCallback((id: string): RichSelectOption => {
+    const catId = spellListCategoryById.get(id);
+    const rawCatName = catId ? (categoryNameById.get(catId) ?? catId) : undefined;
+    const catName = rawCatName?.replace(/^.*?\s-\s/, '');
+    const slName = spellListNameById.get(id) ?? id;
+    return {
+      value: id,
+      label: <RichOptionLabel primary={slName} {...(catName ? { secondary: catName } : {})} />,
+      searchText: catName ? `${slName} — ${catName}` : slName,
+    };
+  }, [spellListCategoryById, categoryNameById, spellListNameById]);
+
+  /** Convert a Skill to a RichSelectOption with category name shown muted. */
+  const toSkillRichOption = useCallback((s: { id: string; name: string; category: string }): RichSelectOption => {
+    const catName = categoryNameById.get(s.category);
+    return {
+      value: s.id,
+      label: <RichOptionLabel primary={s.name} {...(catName ? { secondary: catName } : {})} />,
+      searchText: catName ? `${s.name} — ${catName}` : s.name,
+    };
+  }, [categoryNameById]);
+
+  const raceEverymanSkillOptions = useMemo(() => {
+    return raceEverymanChoiceDefinitions.map((choice) => {
+      const categorySet = new Set(choice.options);
+      return skills
+        .filter((s) => categorySet.has(s.category))
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(toSkillRichOption);
+    });
+  }, [raceEverymanChoiceDefinitions, skills, toSkillRichOption]);
+
+  const cultureTypeCategorySkillOptions = useMemo(() => {
+    return cultureTypeCategorySkillRankDefinitions.map((choice) => {
+      const rows = skillIdsByCategory.get(choice.id) ?? [];
+      return rows.map(toSkillRichOption);
+    });
+  }, [cultureTypeCategorySkillRankDefinitions, skillIdsByCategory, toSkillRichOption]);
+
+  const professionSkillDevelopmentOptions = useMemo(() => {
+    return professionSkillDevelopmentChoiceDefinitions.map((choice) => {
+      const ids = new Set(choice.options.map((option) => option.id));
+      return skills
+        .filter((s) => ids.has(s.id))
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(toSkillRichOption);
+    });
+  }, [professionSkillDevelopmentChoiceDefinitions, skills, toSkillRichOption]);
+
+  const professionCategoryDevelopmentOptions = useMemo(() => {
+    return professionCategoryDevelopmentChoiceDefinitions.map((choice) => {
+      const categorySet = new Set(choice.options);
+      return skills
+        .filter((s) => categorySet.has(s.category))
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(toSkillRichOption);
+    });
+  }, [professionCategoryDevelopmentChoiceDefinitions, skills, toSkillRichOption]);
+
+  const professionGroupDevelopmentOptions = useMemo(() => {
+    return professionGroupDevelopmentChoiceDefinitions.map((choice) => {
+      const categorySet = new Set<string>();
+      for (const groupId of choice.options) {
+        for (const categoryId of categoryIdsByGroup.get(groupId) ?? []) {
+          categorySet.add(categoryId);
+        }
+      }
+      return skills
+        .filter((s) => categorySet.has(s.category))
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(toSkillRichOption);
+    });
+  }, [professionGroupDevelopmentChoiceDefinitions, categoryIdsByGroup, skills, toSkillRichOption]);
+
   const pureExtraSpellListOptions = useMemo(() => {
     const fromCategories = [OWN_REALM_OPEN_LISTS_CATEGORY_ID, OWN_REALM_CLOSED_LISTS_CATEGORY_ID]
       .flatMap((catId) => {
@@ -1007,9 +1045,9 @@ export default function CharacterCreationView() {
     const currentSelections = (professionBaseSpellListChoiceRows[pureGroupIndex] ?? []).filter(Boolean);
     const allIds = Array.from(new Set([...fromCategories, ...currentSelections]));
     return allIds
-      .map((id) => ({ value: id, label: spellListNameById.get(id) ?? id }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }, [characterBuilder.categorySpellLists, spellListNameById, professionBaseSpellListChoiceDefinitions.length, professionBaseSpellListChoiceRows]);
+      .map(toSpellListRichOption)
+      .sort((a, b) => a.searchText!.localeCompare(b.searchText!));
+  }, [characterBuilder.categorySpellLists, toSpellListRichOption, professionBaseSpellListChoiceDefinitions.length, professionBaseSpellListChoiceRows]);
 
   const restrictedProfessions = useMemo(
     () => new Set(culture?.restrictedProfessions ?? []),
@@ -1060,6 +1098,7 @@ export default function CharacterCreationView() {
         value: p.id,
         label: isRaceMatched ? `${p.name} (Racial)` : (isPreferred ? `${p.name} (Culture Preferred)` : p.name),
         disabled: isRestricted || isRaceDisallowed,
+        description: p.description,
       };
     });
   }, [professions, preferredProfessions, raceDisallowedProfessionIds, raceMatchedProfessionIds, restrictedProfessions]);
@@ -1163,12 +1202,12 @@ export default function CharacterCreationView() {
   }, [backgroundState]);
 
   const backgroundSkillBonusOptions = useMemo(
-    () =>
+    (): RichSelectOption[] =>
       skills
         .slice()
         .sort((a, b) => a.name.localeCompare(b.name))
-        .map((s) => ({ value: s.id, label: s.name })),
-    [skills],
+        .map(toSkillRichOption),
+    [skills, toSkillRichOption],
   );
 
   const selectedBackgroundSkillSet = useMemo(
@@ -1414,11 +1453,17 @@ export default function CharacterCreationView() {
         return true;
       })
       .sort((a, b) => a.name.localeCompare(b.name))
-      .map((tp) => ({
-        value: tp.id,
-        label: `${tp.name}${tp.lifestyle ? ' (Lifestyle)' : ''} — ${tpCostMap.get(tp.id) ?? '?'} DP`,
-      }));
-  }, [availableTrainingPackages, apprenticeTrainingPackageIds, apprenticeSelectedLifestylePackageId, tpCostMap, apprenticeDpRemaining]);
+      .map((tp): RichSelectOption => {
+        const cost = tpCostMap.get(tp.id) ?? '?';
+        const secondary = tp.lifestyle ? `(Lifestyle) \u2014 ${cost} DP` : `${cost} DP`;
+        return {
+          value: tp.id,
+          label: <RichOptionLabel primary={tp.name} secondary={secondary} />,
+          searchText: `${tp.name} ${secondary}`,
+          title: showDescriptions && tp.description ? tp.description : undefined,
+        };
+      });
+  }, [availableTrainingPackages, apprenticeTrainingPackageIds, apprenticeSelectedLifestylePackageId, tpCostMap, apprenticeDpRemaining, showDescriptions]);
 
   const apprenticeSkillOptions = useMemo(() => {
     const selectedSet = new Set(apprenticeSkillPurchases.map((p) => p.id));
@@ -1431,13 +1476,18 @@ export default function CharacterCreationView() {
         return getSkillMaxDpPurchases(costElements, devType, tpRanks) > 0;
       })
       .sort((a, b) => a.name.localeCompare(b.name))
-      .map((s) => {
+      .map((s): RichSelectOption => {
         const costElements = categoryCostMap.get(s.category) ?? [];
         const devType = skillDevTypeMap.get(s.id);
         const tpRanks = tpGrantedSkillRankCounts.get(s.id) ?? 0;
         const nextRankCost = getSkillDpCostWithTpOffset(costElements, devType, 1, tpRanks);
         const groupLabel = categoryGroupNameById.get(s.category) ?? s.category;
-        return { value: s.id, label: `${s.name} (${groupLabel}) — ${nextRankCost} DP` };
+        const secondary = `(${groupLabel}) \u2014 ${nextRankCost} DP`;
+        return {
+          value: s.id,
+          label: <RichOptionLabel primary={s.name} secondary={secondary} />,
+          searchText: `${s.name} ${secondary}`,
+        };
       });
   }, [skills, apprenticeSkillPurchases, categoryCostMap, skillDevTypeMap, categoryGroupNameById, tpGrantedSkillRankCounts]);
 
@@ -1455,24 +1505,34 @@ export default function CharacterCreationView() {
         const bLabel = categoryNameById.get(b.id) ?? b.id;
         return aLabel.localeCompare(bLabel);
       })
-      .map((c) => {
+      .map((c): RichSelectOption => {
         const costElements = categoryCostMap.get(c.id) ?? [];
         const tpRanks = tpGrantedCategoryRankCounts.get(c.id) ?? 0;
         const nextRankCost = getCategoryDpCostWithTpOffset(costElements, 1, tpRanks);
         const baseLabel = categoryNameById.get(c.id) ?? c.id;
-        return { value: c.id, label: `${baseLabel} — ${nextRankCost} DP` };
+        const secondary = `${nextRankCost} DP`;
+        return {
+          value: c.id,
+          label: <RichOptionLabel primary={baseLabel} secondary={secondary} />,
+          searchText: `${baseLabel} \u2014 ${secondary}`,
+        };
       });
   }, [categories, apprenticeCategoryPurchases, categoryCostMap, categoryNameById, tpGrantedCategoryRankCounts]);
 
   const apprenticeSpellCategoryOptions = useMemo(
     () => characterBuilder.categorySpellLists
-      .map((c) => {
+      .map((c): RichSelectOption => {
         const costElements = categoryCostMap.get(c.category) ?? [];
         const nextRankCost = getCategoryOrSpellListPurchaseTotalCost(costElements, 1);
         const catName = categoryNameById.get(c.category) ?? c.category;
-        return { value: c.category, label: `${catName} — ${nextRankCost} DP / rank` };
+        const secondary = `${nextRankCost} DP / rank`;
+        return {
+          value: c.category,
+          label: <RichOptionLabel primary={catName} secondary={secondary} />,
+          searchText: `${catName} \u2014 ${secondary}`,
+        };
       })
-      .sort((a, b) => a.label.localeCompare(b.label)),
+      .sort((a, b) => (a.searchText ?? '').localeCompare(b.searchText ?? '')),
     [characterBuilder.categorySpellLists, categoryNameById, categoryCostMap],
   );
 
@@ -3331,6 +3391,16 @@ export default function CharacterCreationView() {
           />
         )}
 
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--muted)' }}>
+          <input
+            type="checkbox"
+            id="show-descriptions"
+            checked={showDescriptions}
+            onChange={(e) => setShowDescriptions(e.target.checked)}
+          />
+          <label htmlFor="show-descriptions" style={{ fontSize: 14, cursor: 'pointer' }}>Show descriptions</label>
+        </div>
+
         <div style={{ color: 'var(--muted)' }}>
           Complete each step in order. Progression is locked until the current step is valid.
         </div>
@@ -3472,7 +3542,7 @@ export default function CharacterCreationView() {
                     setSelectedRealms([]);
                     resetBackgroundState();
                   }}
-                  options={professionOptions}
+                  options={professionOptions.map((o) => ({ ...o, title: showDescriptions ? o.description : undefined }))}
                   helperText={
                     culture
                       ? `Preferred: ${culture.preferredProfessions.length}, Restricted: ${culture.restrictedProfessions.length}`
@@ -3520,33 +3590,44 @@ export default function CharacterCreationView() {
                         <div style={{ color: 'var(--muted)' }}>
                           Choice #{choiceIndex + 1}: select {choice.numChoices} skill{choice.numChoices === 1 ? '' : 's'}.
                         </div>
-                        {rows.map((row, rowIndex) => (
-                          <div key={`race-everyman-${choiceIndex}-${rowIndex}`} style={{ display: 'grid', gap: 6, gridTemplateColumns: 'minmax(260px, 1fr) minmax(220px, 1fr)' }}>
-                            <LabeledSelect
-                              label={`Skill ${rowIndex + 1}`}
-                              value={row.id}
-                              onChange={(value) => updateGroupedSkillChoiceRow(setRaceEverymanChoiceRows, choiceIndex, rowIndex, {
-                                id: value,
-                                subcategory: '',
-                              })}
-                              options={optionList}
-                              placeholderOption="— Select skill —"
-                            />
-                            {row.id && mandatorySubcategorySkillIds.has(row.id) ? (
-                              <LabeledInput
-                                label="Subcategory"
-                                value={row.subcategory}
+                        {rows.map((row, rowIndex) => {
+                          const selectedOtherIds = new Set(
+                            rows
+                              .filter((_, i) => i !== rowIndex)
+                              .map((r) => r.id)
+                              .filter(Boolean),
+                          );
+                          const availableOptions = optionList.filter(
+                            (opt) => opt.value === row.id || !selectedOtherIds.has(opt.value),
+                          );
+                          return (
+                            <div key={`race-everyman-${choiceIndex}-${rowIndex}`} style={{ display: 'grid', gap: 6, gridTemplateColumns: 'minmax(260px, 1fr) minmax(220px, 1fr)' }}>
+                              <RichSelect
+                                label={`Skill ${rowIndex + 1}`}
+                                value={row.id}
                                 onChange={(value) => updateGroupedSkillChoiceRow(setRaceEverymanChoiceRows, choiceIndex, rowIndex, {
-                                  subcategory: value,
+                                  id: value,
+                                  subcategory: '',
                                 })}
-                                placeholder="Enter subcategory"
-                                error={errors.initial && !row.subcategory.trim() ? 'Required' : undefined}
+                                options={availableOptions}
+                                placeholderOption="— Select skill —"
                               />
-                            ) : (
-                              <div />
-                            )}
-                          </div>
-                        ))}
+                              {row.id && mandatorySubcategorySkillIds.has(row.id) ? (
+                                <LabeledInput
+                                  label="Subcategory"
+                                  value={row.subcategory}
+                                  onChange={(value) => updateGroupedSkillChoiceRow(setRaceEverymanChoiceRows, choiceIndex, rowIndex, {
+                                    subcategory: value,
+                                  })}
+                                  placeholder="Enter subcategory"
+                                  error={errors.initial && !row.subcategory.trim() ? 'Required' : undefined}
+                                />
+                              ) : (
+                                <div />
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   })}
@@ -3566,7 +3647,7 @@ export default function CharacterCreationView() {
                           {categoryNameById.get(def.id) ?? def.id}: select one skill to gain {def.value} rank{def.value === 1 ? '' : 's'}.
                         </div>
                         <div style={{ display: 'grid', gap: 6, gridTemplateColumns: 'minmax(260px, 1fr) minmax(220px, 1fr)' }}>
-                          <LabeledSelect
+                          <RichSelect
                             label="Skill"
                             value={row.id}
                             onChange={(value) => updateFlatSkillChoiceRow(setCultureTypeCategorySkillRankRows, index, {
@@ -3634,7 +3715,7 @@ export default function CharacterCreationView() {
                                 return row.subcategory.trim().length > 0 && !state.hasEmptySubcategory;
                               });
                               return (
-                                <LabeledSelect
+                                <RichSelect
                                   label={`Skill ${rowIndex + 1}`}
                                   value={row.id}
                                   onChange={(value) => updateGroupedSkillChoiceRow(setProfessionSkillDevelopmentChoiceRows, choiceIndex, rowIndex, {
@@ -3710,7 +3791,7 @@ export default function CharacterCreationView() {
                                 return row.subcategory.trim().length > 0 && !state.hasEmptySubcategory;
                               });
                               return (
-                                <LabeledSelect
+                                <RichSelect
                                   label={`Skill ${rowIndex + 1}`}
                                   value={row.id}
                                   onChange={(value) => updateGroupedSkillChoiceRow(setProfessionCategoryDevelopmentChoiceRows, choiceIndex, rowIndex, {
@@ -3786,7 +3867,7 @@ export default function CharacterCreationView() {
                                 return row.subcategory.trim().length > 0 && !state.hasEmptySubcategory;
                               });
                               return (
-                                <LabeledSelect
+                                <RichSelect
                                   label={`Skill ${rowIndex + 1}`}
                                   value={row.id}
                                   onChange={(value) => updateGroupedSkillChoiceRow(setProfessionGroupDevelopmentChoiceRows, choiceIndex, rowIndex, {
@@ -3838,8 +3919,8 @@ export default function CharacterCreationView() {
                   {professionBaseSpellListChoiceDefinitions.map((choice, choiceIndex) => {
                     const rows = professionBaseSpellListChoiceRows[choiceIndex] ?? [];
                     const options = choice.options
-                      .map((id) => ({ value: id, label: spellListNameById.get(id) ?? id }))
-                      .sort((a, b) => a.label.localeCompare(b.label));
+                      .map(toSpellListRichOption)
+                      .sort((a, b) => a.searchText!.localeCompare(b.searchText!));
                     return (
                       <div key={`prof-base-spell-${choiceIndex}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
                         <div style={{ color: 'var(--muted)' }}>
@@ -3858,7 +3939,7 @@ export default function CharacterCreationView() {
                             );
                             const availableOptions = options.filter((opt) => !selectedOtherIds.has(opt.value) || opt.value === spellListId);
                             return (
-                              <LabeledSelect
+                              <RichSelect
                                 key={`prof-base-spell-${choiceIndex}-${rowIndex}`}
                                 label={`Spell List ${rowIndex + 1}`}
                                 value={spellListId}
@@ -3899,7 +3980,7 @@ export default function CharacterCreationView() {
                           (opt) => !selectedOtherIds.has(opt.value) || opt.value === spellListId,
                         );
                         return (
-                          <LabeledSelect
+                          <RichSelect
                             key={`pure-extra-spell-${rowIndex}`}
                             label={`Spell List ${rowIndex + 1}`}
                             value={spellListId}
@@ -4261,11 +4342,11 @@ export default function CharacterCreationView() {
               </div>
 
               {spellListRanksBudget > 0 && (
-                <LabeledSelect
+                <RichSelect
                   label={`Hobby Spell List (${spellListRanksBudget} ranks)`}
                   value={hobbySpellListId}
                   onChange={(v) => setHobbySpellListId(v)}
-                  options={hobbySpellListOptions.map((id) => ({ value: id, label: spellListNameById.get(id) ?? id }))}
+                  options={hobbySpellListOptions.map(toSpellListRichOption)}
                   error={errors.hobby && !hobbySpellListId ? 'Required' : undefined}
                 />
               )}
@@ -4382,7 +4463,7 @@ export default function CharacterCreationView() {
                   <strong>Skill Bonus</strong>
                   <div style={{ color: 'var(--muted)' }}>Each selected skill grants +10 and costs 1 point.</div>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'end', flexWrap: 'wrap' }}>
-                    <LabeledSelect
+                    <RichSelect
                       label="Add Skill Bonus"
                       hideLabel={true}
                       value=""
@@ -4544,7 +4625,7 @@ export default function CharacterCreationView() {
                         })}
                       </div>
                     )}
-                    <LabeledSelect
+                    <RichSelect
                       label="Add Training Package"
                       hideLabel={true}
                       value=""
@@ -4552,6 +4633,7 @@ export default function CharacterCreationView() {
                         if (v) setApprenticeTrainingPackageIds((prev) => [...prev, v]);
                       }}
                       options={apprenticeTrainingPackageOptions}
+                      placeholderOption="— Add training package —"
                     />
                   </div>
                   <div>
@@ -4655,11 +4737,11 @@ export default function CharacterCreationView() {
                                 </div>
                                 <div style={{ display: 'grid', gap: 6 }}>
                                   {allocs.map((alloc, ai) => {
-                                    const availableOpts = skills.filter((s) => optionIds.has(s.id) && (s.id === alloc.id || !usedIds.has(s.id))).map((s) => ({ value: s.id, label: s.name }));
+                                    const availableOpts = skills.filter((s) => optionIds.has(s.id) && (s.id === alloc.id || !usedIds.has(s.id))).map(toSkillRichOption);
                                     return (
                                       <div key={ai} style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
                                         <div style={{ flex: 1 }}>
-                                          <LabeledSelect
+                                          <RichSelect
                                             label={`Skill ${ai + 1}`}
                                             value={alloc.id}
                                             onChange={(v) => updateResolution((r) => ({ ...r, skillRankChoices: r.skillRankChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, id: v, subcategory: '' })) }))}
@@ -4707,11 +4789,11 @@ export default function CharacterCreationView() {
                                 </div>
                                 <div style={{ display: 'grid', gap: 6 }}>
                                   {allocs.map((alloc, ai) => {
-                                    const availableOpts = catSkills.filter((s) => s.id === alloc.id || !usedIds.has(s.id)).map((s) => ({ value: s.id, label: s.name }));
+                                    const availableOpts = catSkills.filter((s) => s.id === alloc.id || !usedIds.has(s.id)).map(toSkillRichOption);
                                     return (
                                       <div key={ai} style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
                                         <div style={{ flex: 1 }}>
-                                          <LabeledSelect
+                                          <RichSelect
                                             label={`Skill ${ai + 1}`}
                                             value={alloc.id}
                                             onChange={(v) => updateResolution((r) => ({ ...r, categoryMultiSkillChoices: r.categoryMultiSkillChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, id: v, subcategory: '' })) }))}
@@ -4759,11 +4841,11 @@ export default function CharacterCreationView() {
                                 </div>
                                 <div style={{ display: 'grid', gap: 6 }}>
                                   {allocs.map((alloc, ai) => {
-                                    const availableOpts = grpSkills.filter((s) => s.id === alloc.id || !usedIds.has(s.id)).map((s) => ({ value: s.id, label: s.name }));
+                                    const availableOpts = grpSkills.filter((s) => s.id === alloc.id || !usedIds.has(s.id)).map(toSkillRichOption);
                                     return (
                                       <div key={ai} style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
                                         <div style={{ flex: 1 }}>
-                                          <LabeledSelect
+                                          <RichSelect
                                             label={`Skill ${ai + 1}`}
                                             value={alloc.id}
                                             onChange={(v) => updateResolution((r) => ({ ...r, groupMultiSkillChoices: r.groupMultiSkillChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, id: v, subcategory: '' })) }))}
@@ -4800,7 +4882,7 @@ export default function CharacterCreationView() {
                             const grpName = groups.find((g) => g.id === choiceDef.id)?.name ?? choiceDef.id;
                             const isWeaponsGroup = choiceDef.id === 'SKILLGROUP_WEAPON';
                             const catsInGroup = categories.filter((c) => c.group === choiceDef.id).map((c) => ({ value: c.id, label: c.name }));
-                            const skillsInSelectedCat = slot.categoryId ? (skillIdsByCategory.get(slot.categoryId) ?? []).map((s) => ({ value: s.id, label: s.name })) : [];
+                            const skillsInSelectedCat = slot.categoryId ? (skillIdsByCategory.get(slot.categoryId) ?? []).map(toSkillRichOption) : [];
                             const weaponTypeOpts = slot.skillId && isWeaponsGroup ? (weaponTypeOptionsBySkillId.get(slot.skillId) ?? []) : [];
                             return (
                               <div key={gi} style={{ display: 'grid', gap: 6 }}>
@@ -4818,7 +4900,7 @@ export default function CharacterCreationView() {
                                   placeholderOption="— Select category —"
                                 />
                                 {slot.categoryId && (
-                                  <LabeledSelect
+                                  <RichSelect
                                     label="Skill"
                                     value={slot.skillId}
                                     onChange={(v) => updateResolution((r) => ({
@@ -4857,7 +4939,7 @@ export default function CharacterCreationView() {
                             const totalAllocated = allocs.reduce((s, a) => s + a.ranks, 0);
                             const remainingRanks = choiceDef.value - totalAllocated;
                             const usedIds = new Set(allocs.map((a) => a.id).filter(Boolean));
-                            const availableSlOpts = choiceDef.options.filter((slId) => slId).map((slId) => ({ value: slId, label: spellListNameById.get(slId) ?? slId }));
+                            const availableSlOpts = choiceDef.options.filter((slId) => slId).map(toSpellListRichOption);
                             return (
                               <div key={gi}>
                                 <div style={{ color: 'var(--muted)', fontSize: '0.9em', marginBottom: 4 }}>
@@ -4870,7 +4952,7 @@ export default function CharacterCreationView() {
                                     return (
                                       <div key={ai} style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
                                         <div style={{ flex: 1 }}>
-                                          <LabeledSelect
+                                          <RichSelect
                                             label={`Spell List ${ai + 1}`}
                                             value={alloc.id}
                                             onChange={(v) => updateResolution((r) => ({ ...r, spellListChoices: r.spellListChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, id: v })) }))}
@@ -4910,7 +4992,7 @@ export default function CharacterCreationView() {
                             const usedIds = new Set(allocs.map((a) => a.id).filter(Boolean));
                             const aggregatedSlOpts = choiceDef.options.flatMap((catId) =>
                               (characterBuilder.categorySpellLists.find((c) => c.category === catId)?.spellLists ?? [])
-                                .map((slId) => ({ value: slId, label: spellListNameById.get(slId) ?? slId }))
+                                .map(toSpellListRichOption)
                             );
                             return (
                               <div key={gi}>
@@ -4924,7 +5006,7 @@ export default function CharacterCreationView() {
                                     return (
                                       <div key={ai} style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
                                         <div style={{ flex: 1 }}>
-                                          <LabeledSelect
+                                          <RichSelect
                                             label={`Spell List ${ai + 1}`}
                                             value={alloc.id}
                                             onChange={(v) => updateResolution((r) => ({ ...r, spellListCategoryChoices: r.spellListCategoryChoices.map((g, gIdx) => gIdx !== gi ? g : g.map((a, aIdx) => aIdx !== ai ? a : { ...a, id: v })) }))}
@@ -4969,9 +5051,9 @@ export default function CharacterCreationView() {
                                   {Array.from({ length: choiceDef.numChoices }, (_, si) => {
                                     const val = chosen[si] ?? '';
                                     const usedOthers = new Set(chosen.filter((s, i) => i !== si && s));
-                                    const opts = poolSkills.filter((s) => s.id === val || !usedOthers.has(s.id)).map((s) => ({ value: s.id, label: s.name }));
+                                    const opts = poolSkills.filter((s) => s.id === val || !usedOthers.has(s.id)).map(toSkillRichOption);
                                     return (
-                                      <LabeledSelect
+                                      <RichSelect
                                         key={si}
                                         label={`Skill ${si + 1}`}
                                         value={val}
@@ -5253,7 +5335,7 @@ export default function CharacterCreationView() {
                         })}
                       </div>
                     )}
-                    <LabeledSelect
+                    <RichSelect
                       label="Add Skill"
                       hideLabel={true}
                       value=""
@@ -5263,6 +5345,7 @@ export default function CharacterCreationView() {
                         }
                       }}
                       options={apprenticeSkillOptions}
+                      placeholderOption="— Add skill —"
                     />
                   </div>
 
@@ -5325,7 +5408,7 @@ export default function CharacterCreationView() {
                         })}
                       </div>
                     )}
-                    <LabeledSelect
+                    <RichSelect
                       label="Add Category"
                       value=""
                       hideLabel={true}
@@ -5335,6 +5418,7 @@ export default function CharacterCreationView() {
                         }
                       }}
                       options={apprenticeCategoryOptions}
+                      placeholderOption="— Add category —"
                     />
                   </div>
 
@@ -5400,7 +5484,7 @@ export default function CharacterCreationView() {
                     )}
                     {apprenticeAddingSpellList ? (
                       <div style={{ display: 'grid', gap: 8 }}>
-                        <LabeledSelect
+                        <RichSelect
                           label="Spell Category"
                           hideLabel={true}
                           value={apprenticeSelectedSpellCategory}
@@ -5409,7 +5493,7 @@ export default function CharacterCreationView() {
                           placeholderOption="— Select category —"
                         />
                         {apprenticeSelectedSpellCategory && apprenticeSpellListsInSelectedCategory.length > 0 && (
-                          <LabeledSelect
+                          <RichSelect
                             label="Spell List"
                             hideLabel={true}
                             value=""
@@ -5420,7 +5504,7 @@ export default function CharacterCreationView() {
                                 setApprenticeAddingSpellList(false);
                               }
                             }}
-                            options={apprenticeSpellListsInSelectedCategory.map((sl) => ({ value: sl.id, label: sl.name }))}
+                            options={apprenticeSpellListsInSelectedCategory.map((sl) => toSpellListRichOption(sl.id))}
                             placeholderOption="— Select spell list —"
                           />
                         )}
