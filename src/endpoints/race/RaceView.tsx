@@ -41,6 +41,7 @@ import type {
 import {
   CREATURE_SIZES, type CreatureSize,
   CRITICAL_TABLE_TYPES, type CriticalTableType,
+  BASE_RESISTANCE_TYPES, type ResistanceType,
   STATS, type Stat,
 } from '../../types/enum';
 
@@ -74,6 +75,11 @@ type SkillBonusVM = {
 
 type StatBonusVM = {
   id: Stat | '';
+  value: string;
+};
+
+type ResistanceBonusVM = {
+  id: ResistanceType | '';
   value: string;
 };
 
@@ -117,6 +123,7 @@ type FormState = {
   adolescentLanguages: LanguageRankVM[];
 
   statBonuses: StatBonusVM[];
+  resistanceBonuses: ResistanceBonusVM[];
 
   everymanSkills: SkillRefVM[];
   restrictedSkills: SkillRefVM[];
@@ -156,6 +163,7 @@ type FormErrors = {
   startingLanguages?: string;
   adolescentLanguages?: string;
   statBonuses?: string;
+  resistanceBonuses?: string;
   everymanSkills?: string;
   restrictedSkills?: string;
   skillBonuses?: string;
@@ -197,7 +205,7 @@ const emptyVM = (): FormState => ({
   adolescentLanguages: [],
 
   statBonuses: [],
-
+  resistanceBonuses: [],
   everymanSkills: [],
   restrictedSkills: [],
 
@@ -254,6 +262,11 @@ const toVM = (x: Race): FormState => ({
   })),
 
   statBonuses: (x.statBonuses ?? []).map((r) => ({
+    id: r.id,
+    value: String(r.value),
+  })),
+
+  resistanceBonuses: (x.resistanceBonuses ?? []).map((r) => ({
     id: r.id,
     value: String(r.value),
   })),
@@ -329,6 +342,11 @@ const fromVM = (vm: FormState): Race => ({
 
   statBonuses: vm.statBonuses.map((r) => ({
     id: r.id as Stat,
+    value: Number(r.value),
+  })),
+
+  resistanceBonuses: vm.resistanceBonuses.map((r) => ({
+    id: r.id as ResistanceType,
     value: Number(r.value),
   })),
 
@@ -495,6 +513,11 @@ export default function RaceView() {
 
   const statOptions = useMemo(
     () => STATS.map((v) => ({ value: v, label: v })),
+    [],
+  );
+
+  const resistanceOptions = useMemo(
+    () => BASE_RESISTANCE_TYPES.map((v) => ({ value: v, label: v })),
     [],
   );
 
@@ -975,6 +998,7 @@ export default function RaceView() {
               showSomatic
             />
 
+
             {/* Stat bonuses */}
             <IdValueListEditor
               title="Stat Bonuses"
@@ -984,6 +1008,18 @@ export default function RaceView() {
               options={statOptions}
               viewing={viewing}
               error={errors.statBonuses}
+              signedValues
+            />
+
+            {/* Resistance bonuses */}
+            <IdValueListEditor
+              title="Resistance Bonuses"
+              addButtonLabel='+ Add resistance bonus'
+              rows={form.resistanceBonuses}
+              onChangeRows={(next) => setForm((s) => ({ ...s, resistanceBonuses: next }))}
+              options={resistanceOptions}
+              viewing={viewing}
+              error={errors.resistanceBonuses}
               signedValues
             />
 
