@@ -5,6 +5,7 @@ import type {
   LanguageAbility,
   Race,
   RacesPayload,
+  RaceResistanceBonus,
   RaceSkillRef,
   RaceStatBonus,
   RaceSkillCategoryChoice,
@@ -60,6 +61,13 @@ function statBonusFromJson(x: any): RaceStatBonus {
   };
 }
 
+function resistanceBonusFromJson(x: any): RaceResistanceBonus {
+  return {
+    id: asString(x?.id) as RaceResistanceBonus['id'],
+    value: asInt(x?.value),
+  };
+}
+
 function categoryChoiceFromJson(x: any): RaceSkillCategoryChoice {
   return {
     numChoices: asInt(x?.['num-choices'] ?? x?.numChoices),
@@ -108,6 +116,10 @@ function fromJson(x: any): Race {
 
     statBonuses: Array.isArray(x?.statBonuses)
       ? x.statBonuses.map(statBonusFromJson)
+      : [],
+
+    resistanceBonuses: Array.isArray(x?.resistanceBonuses)
+      ? x.resistanceBonuses.map(resistanceBonusFromJson)
       : [],
 
     everymanSkills: Array.isArray(x?.everymanSkills)

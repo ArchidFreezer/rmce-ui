@@ -1,5 +1,5 @@
 // src/types/race.ts
-import type { CreatureSize, CriticalTableType, Stat } from './enum';
+import type { CreatureSize, CriticalTableType, ResistanceType, Stat } from './enum';
 import type { Named, SkillValue } from './base';
 import type { LanguageAbility } from './language';
 
@@ -12,6 +12,12 @@ export interface RaceStatBonus {
   id: Stat;
   value: number;
 }
+
+export interface RaceResistanceBonus {
+  id: ResistanceType;             // ResistanceType enum
+  value: number;
+}
+
 
 export interface RaceSkillCategoryChoice {
   numChoices: number;
@@ -50,6 +56,7 @@ export interface Race extends Named {
   startingLanguages: LanguageAbility[];
   adolescentLanguages: LanguageAbility[];
 
+  resistanceBonuses: RaceResistanceBonus[];
   statBonuses: RaceStatBonus[];
 
   everymanSkills: RaceSkillRef[];

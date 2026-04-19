@@ -174,3 +174,8 @@ export const CRITICAL_SIZES: ReadonlyArray<CriticalSize> = ['A', 'B', 'C', 'D', 
 /** Enum for CriticalTableType */
 export type CriticalTableType = 'Normal' | 'Large Creature Physical' | 'Huge Creature Physical' | 'Large Creature Spell' | 'Huge Creature Spell';
 export const CRITICAL_TABLE_TYPES: ReadonlyArray<CriticalTableType> = ['Normal', 'Large Creature Physical', 'Huge Creature Physical', 'Large Creature Spell', 'Huge Creature Spell'] as const;
+
+/** Enum for resistance types */
+export type ResistanceType = 'Arcane' | 'Channeling' | 'ChannelingEssence' | 'ChannelingMentalism' | 'Cold' | 'Disease' | 'Essence' | 'EssenceMentalism' | 'Fear' | 'Heat' | 'Mentalism' | 'Poison';
+export const RESISTANCE_TYPES: ReadonlyArray<ResistanceType> = ['Arcane', 'Channeling', 'ChannelingEssence', 'ChannelingMentalism', 'Cold', 'Disease', 'Essence', 'EssenceMentalism', 'Fear', 'Heat', 'Mentalism', 'Poison'] as const;
+export const BASE_RESISTANCE_TYPES: ReadonlyArray<ResistanceType> = ['Arcane', 'Channeling', 'Cold', 'Disease', 'Essence', 'Fear', 'Heat', 'Mentalism', 'Poison'] as const;
