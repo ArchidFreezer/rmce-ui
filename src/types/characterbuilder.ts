@@ -16,7 +16,7 @@ export interface CharacterBuilderStatValue {
   stat: Stat;
   temporary: number;
   potential: number;
-  bonus: number;
+  racialBonus: number;
 }
 
 export interface CharacterBuilderCategoryCost {
