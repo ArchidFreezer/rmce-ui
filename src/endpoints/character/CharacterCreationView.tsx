@@ -1727,7 +1727,7 @@ export default function CharacterCreationView() {
           stat: roll.assignedStat,
           temporary: Number(roll.temporary) || 0,
           potential: roll.potential ?? 0,
-          bonus: (race?.statBonuses.find((b) => b.id === roll.assignedStat)?.value ?? 0)
+          racialBonus: (race?.statBonuses.find((b) => b.id === roll.assignedStat)?.value ?? 0)
             + apprenticeStatGains.filter((s) => s === roll.assignedStat).length,
         })),
     }));
@@ -2650,7 +2650,7 @@ export default function CharacterCreationView() {
             stat,
             temporary: Number(assigned.temporary) || 0,
             potential: assigned.potential ?? 0,
-            bonus: (race?.statBonuses.find((b) => b.id === stat)?.value ?? 0)
+            racialBonus: (race?.statBonuses.find((b) => b.id === stat)?.value ?? 0)
               + apprenticeStatGains.filter((s) => s === stat).length,
           };
         });
