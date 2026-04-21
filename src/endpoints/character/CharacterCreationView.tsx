@@ -682,6 +682,9 @@ export default function CharacterCreationView() {
   const [apprenticeTrainingPackageIds, setApprenticeTrainingPackageIds] = useState<string[]>([]);
   const [apprenticeStatGains, setApprenticeStatGains] = useState<Stat[]>([]);
   const [apprenticeSkillPurchases, setApprenticeSkillPurchases] = useState<ApprenticeSkillPurchase[]>([]);
+  const [apprenticeSkillCategoryFilter, setApprenticeSkillCategoryFilter] = useState('');
+  const [apprenticeSkillPendingId, setApprenticeSkillPendingId] = useState('');
+  const [apprenticeSkillPendingSubcategory, setApprenticeSkillPendingSubcategory] = useState('');
   const [apprenticeCategoryPurchases, setApprenticeCategoryPurchases] = useState<ApprenticeCategoryPurchase[]>([]);
   const [apprenticeSpellListPurchases, setApprenticeSpellListPurchases] = useState<ApprenticeSpellListPurchase[]>([]);
   const [apprenticeSelectedSpellCategory, setApprenticeSelectedSpellCategory] = useState('');
@@ -1465,31 +1468,51 @@ export default function CharacterCreationView() {
       });
   }, [availableTrainingPackages, apprenticeTrainingPackageIds, apprenticeSelectedLifestylePackageId, tpCostMap, apprenticeDpRemaining, showDescriptions]);
 
-  const apprenticeSkillOptions = useMemo(() => {
+  const apprenticeAvailableSkills = useMemo(() => {
     const selectedSet = new Set(apprenticeSkillPurchases.map((p) => p.id));
-    return skills
-      .filter((s) => {
-        if (selectedSet.has(s.id)) return false;
-        const costElements = categoryCostMap.get(s.category) ?? [];
-        const devType = skillDevTypeMap.get(s.id);
-        const tpRanks = tpGrantedSkillRankCounts.get(s.id) ?? 0;
-        return getSkillMaxDpPurchases(costElements, devType, tpRanks) > 0;
+    return skills.filter((s) => {
+      if (selectedSet.has(s.id)) return false;
+      const costElements = categoryCostMap.get(s.category) ?? [];
+      const devType = skillDevTypeMap.get(s.id);
+      const tpRanks = tpGrantedSkillRankCounts.get(s.id) ?? 0;
+      return getSkillMaxDpPurchases(costElements, devType, tpRanks) > 0;
+    });
+  }, [skills, apprenticeSkillPurchases, categoryCostMap, skillDevTypeMap, tpGrantedSkillRankCounts]);
+
+  const apprenticeSkillCategoryOptions = useMemo((): RichSelectOption[] => {
+    const catIds = new Set(apprenticeAvailableSkills.map((s) => s.category));
+    return Array.from(catIds)
+      .map((id): RichSelectOption => {
+        const costElements = categoryCostMap.get(id) ?? [];
+        const firstRankCost = getSkillDpCostWithTpOffset(costElements, undefined, 1, 0);
+        const name = categoryNameById.get(id) ?? id;
+        const secondary = `${firstRankCost} DP`;
+        return {
+          value: id,
+          label: <RichOptionLabel primary={name} secondary={secondary} />,
+          searchText: `${name} \u2014 ${secondary}`,
+        };
       })
+      .sort((a, b) => (a.searchText ?? '').localeCompare(b.searchText ?? ''));
+  }, [apprenticeAvailableSkills, categoryNameById, categoryCostMap]);
+
+  const apprenticeSkillOptions = useMemo(() => {
+    return apprenticeAvailableSkills
+      .filter((s) => !apprenticeSkillCategoryFilter || s.category === apprenticeSkillCategoryFilter)
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((s): RichSelectOption => {
         const costElements = categoryCostMap.get(s.category) ?? [];
         const devType = skillDevTypeMap.get(s.id);
         const tpRanks = tpGrantedSkillRankCounts.get(s.id) ?? 0;
         const nextRankCost = getSkillDpCostWithTpOffset(costElements, devType, 1, tpRanks);
-        const groupLabel = categoryGroupNameById.get(s.category) ?? s.category;
-        const secondary = `(${groupLabel}) \u2014 ${nextRankCost} DP`;
+        const secondary = devType ? `${devType} \u2014 ${nextRankCost} DP` : `${nextRankCost} DP`;
         return {
           value: s.id,
           label: <RichOptionLabel primary={s.name} secondary={secondary} />,
           searchText: `${s.name} ${secondary}`,
         };
       });
-  }, [skills, apprenticeSkillPurchases, categoryCostMap, skillDevTypeMap, categoryGroupNameById, tpGrantedSkillRankCounts]);
+  }, [apprenticeAvailableSkills, apprenticeSkillCategoryFilter, categoryCostMap, skillDevTypeMap, tpGrantedSkillRankCounts]);
 
   const apprenticeCategoryOptions = useMemo(() => {
     const selectedSet = new Set(apprenticeCategoryPurchases.map((p) => p.id));
@@ -3173,6 +3196,9 @@ export default function CharacterCreationView() {
     setApprenticeTrainingPackageIds([]);
     setApprenticeStatGains([]);
     setApprenticeSkillPurchases([]);
+    setApprenticeSkillCategoryFilter('');
+    setApprenticeSkillPendingId('');
+    setApprenticeSkillPendingSubcategory('');
     setApprenticeCategoryPurchases([]);
     setApprenticeSpellListPurchases([]);
     setApprenticeSelectedSpellCategory('');
@@ -5335,18 +5361,83 @@ export default function CharacterCreationView() {
                         })}
                       </div>
                     )}
-                    <RichSelect
-                      label="Add Skill"
-                      hideLabel={true}
-                      value=""
-                      onChange={(v) => {
-                        if (v) {
-                          setApprenticeSkillPurchases((prev) => [...prev, { id: v, subcategory: '', purchases: 1 }]);
-                        }
-                      }}
-                      options={apprenticeSkillOptions}
-                      placeholderOption="— Add skill —"
-                    />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                        <RichSelect
+                          label="Skill Category"
+                          hideLabel={true}
+                          value={apprenticeSkillCategoryFilter}
+                          onChange={(v) => {
+                            setApprenticeSkillCategoryFilter(v);
+                            setApprenticeSkillPendingId('');
+                            setApprenticeSkillPendingSubcategory('');
+                          }}
+                          options={apprenticeSkillCategoryOptions}
+                          placeholderOption="— Filter by category —"
+                        />
+                        <RichSelect
+                          label="Add Skill"
+                          hideLabel={true}
+                          value=""
+                          onChange={(v) => {
+                            if (!v) return;
+                            if (mandatorySubcategorySkillIds.has(v)) {
+                              setApprenticeSkillPendingId(v);
+                              setApprenticeSkillPendingSubcategory('');
+                            } else {
+                              setApprenticeSkillPurchases((prev) => [...prev, { id: v, subcategory: '', purchases: 1 }]);
+                              setApprenticeSkillPendingId('');
+                              setApprenticeSkillPendingSubcategory('');
+                            }
+                          }}
+                          options={apprenticeSkillOptions}
+                          placeholderOption={apprenticeSkillCategoryFilter ? '— Select skill —' : '— Select a category first —'}
+                        />
+                      </div>
+                      {apprenticeSkillPendingId && (
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <span style={{ fontWeight: 500 }}>{skillNameById.get(apprenticeSkillPendingId) ?? apprenticeSkillPendingId}:</span>
+                          {weaponGroupSkillIds.has(apprenticeSkillPendingId) ? (
+                            <LabeledSelect
+                              label="Weapon type"
+                              hideLabel={true}
+                              value={apprenticeSkillPendingSubcategory}
+                              onChange={(v) => setApprenticeSkillPendingSubcategory(v)}
+                              options={weaponTypeOptionsBySkillId.get(apprenticeSkillPendingId) ?? []}
+                              placeholderOption="— Select weapon type —"
+                            />
+                          ) : (
+                            <LabeledInput
+                              label="Subcategory"
+                              hideLabel={true}
+                              value={apprenticeSkillPendingSubcategory}
+                              onChange={(v) => setApprenticeSkillPendingSubcategory(v)}
+                              placeholder="Subcategory"
+                            />
+                          )}
+                          <button
+                            type="button"
+                            disabled={!apprenticeSkillPendingSubcategory.trim()}
+                            onClick={() => {
+                              setApprenticeSkillPurchases((prev) => [...prev, { id: apprenticeSkillPendingId, subcategory: apprenticeSkillPendingSubcategory.trim(), purchases: 1 }]);
+                              setApprenticeSkillPendingId('');
+                              setApprenticeSkillPendingSubcategory('');
+                            }}
+                          >
+                            Add
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setApprenticeSkillPendingId('');
+                              setApprenticeSkillPendingSubcategory('');
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Category Rank Purchases */}
