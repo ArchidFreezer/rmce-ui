@@ -4070,8 +4070,23 @@ export default function CharacterCreationView() {
           {step === 'stats' && (
             <section style={{ display: 'grid', gap: 10 }}>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <button type="button" onClick={generateAllTemporary}>Generate 10 Temporary Rolls (d100)</button>
-                <button type="button" onClick={getPotentials} disabled={statRollsLocked || generatingStats}>Get potentials</button>
+                <button
+                  type="button"
+                  onClick={generateAllTemporary}
+                  disabled={statRollsLocked}
+                  title={statRollsLocked ? 'Stat rolls are locked. Reset to generate new rolls.' : undefined}
+                >Generate 10 Temporary Rolls (d100)</button>
+                <button
+                  type="button"
+                  onClick={getPotentials}
+                  disabled={statRollsLocked || generatingStats || !raceId || !cultureId || !professionId || selectedRealms.length === 0}
+                  title={
+                    statRollsLocked ? 'Stat rolls are already locked.' :
+                      generatingStats ? 'Generating potentials…' :
+                        (!raceId || !cultureId || !professionId || selectedRealms.length === 0) ? 'Race, culture, profession, and realm must be selected before generating potentials.' :
+                          undefined
+                  }
+                >Get potentials</button>
               </div>
 
               <div style={{ color: 'var(--muted)' }}>
