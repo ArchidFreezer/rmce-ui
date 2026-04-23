@@ -2066,9 +2066,22 @@ export default function CharacterCreationView() {
         if (!row?.id) {
           return `Racial Everyman Skills choice ${choiceIndex + 1}: select a skill for slot ${slot + 1}.`;
         }
-        if (mandatorySubcategorySkillIds.has(row.id) && !row.subcategory.trim()) {
+        const weaponTypeOptions = weaponTypeOptionsBySkillId.get(row.id) ?? [];
+        if (weaponTypeOptions.length > 0 && !row.subcategory.trim()) {
+          const skillName = skillNameById.get(row.id) ?? row.id;
+          return `Racial Everyman Skills choice ${choiceIndex + 1}: select weapon type for ${skillName}.`;
+        }
+        if (weaponTypeOptions.length === 0 && mandatorySubcategorySkillIds.has(row.id) && !row.subcategory.trim()) {
           const skillName = skillNameById.get(row.id) ?? row.id;
           return `Racial Everyman Skills choice ${choiceIndex + 1}: enter subcategory for ${skillName}.`;
+        }
+        // Check for duplicate id+subcategory combinations within the same choice
+        const duplicateExists = rows.slice(0, slot).some(
+          (other) => other.id === row.id && other.subcategory === row.subcategory,
+        );
+        if (duplicateExists) {
+          const skillName = skillNameById.get(row.id) ?? row.id;
+          return `Racial Everyman Skills choice ${choiceIndex + 1}: duplicate selection for ${skillName} — choose a different subcategory.`;
         }
       }
     }
@@ -3617,15 +3630,17 @@ export default function CharacterCreationView() {
                           Choice #{choiceIndex + 1}: select {choice.numChoices} skill{choice.numChoices === 1 ? '' : 's'}.
                         </div>
                         {rows.map((row, rowIndex) => {
-                          const selectedOtherIds = new Set(
-                            rows
-                              .filter((_, i) => i !== rowIndex)
-                              .map((r) => r.id)
-                              .filter(Boolean),
-                          );
-                          const availableOptions = optionList.filter(
-                            (opt) => opt.value === row.id || !selectedOtherIds.has(opt.value),
-                          );
+                          const otherRows = rows.filter((_, i) => i !== rowIndex);
+                          const availableOptions = optionList.filter((opt) => {
+                            const otherWithSameId = otherRows.filter((r) => r.id === opt.value);
+                            if (otherWithSameId.length === 0) return true;
+                            // Allow reselection if the skill supports subcategories (weapon or mandatory)
+                            const weaponOpts = weaponTypeOptionsBySkillId.get(opt.value) ?? [];
+                            const hasSubcategorySupport = weaponOpts.length > 0 || mandatorySubcategorySkillIds.has(opt.value);
+                            return hasSubcategorySupport;
+                          });
+                          const weaponTypeOptions = row.id ? (weaponTypeOptionsBySkillId.get(row.id) ?? []) : [];
+                          const isWeaponSkill = weaponTypeOptions.length > 0;
                           return (
                             <div key={`race-everyman-${choiceIndex}-${rowIndex}`} style={{ display: 'grid', gap: 6, gridTemplateColumns: 'minmax(260px, 1fr) minmax(220px, 1fr)' }}>
                               <RichSelect
@@ -3638,7 +3653,18 @@ export default function CharacterCreationView() {
                                 options={availableOptions}
                                 placeholderOption="— Select skill —"
                               />
-                              {row.id && mandatorySubcategorySkillIds.has(row.id) ? (
+                              {row.id && isWeaponSkill ? (
+                                <LabeledSelect
+                                  label="Weapon Type"
+                                  value={row.subcategory}
+                                  onChange={(value) => updateGroupedSkillChoiceRow(setRaceEverymanChoiceRows, choiceIndex, rowIndex, {
+                                    subcategory: value,
+                                  })}
+                                  options={weaponTypeOptions}
+                                  placeholderOption="— Select weapon type —"
+                                  error={errors.initial && !row.subcategory.trim() ? 'Required' : undefined}
+                                />
+                              ) : row.id && mandatorySubcategorySkillIds.has(row.id) ? (
                                 <LabeledInput
                                   label="Subcategory"
                                   value={row.subcategory}
