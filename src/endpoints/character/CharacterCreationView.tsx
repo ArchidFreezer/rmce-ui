@@ -676,6 +676,9 @@ export default function CharacterCreationView() {
   const [backgroundExtraLanguages, setBackgroundExtraLanguages] = useState(false);
   const [backgroundLanguageRows, setBackgroundLanguageRows] = useState<BackgroundLanguageRow[]>([]);
   const [backgroundSkillBonusRows, setBackgroundSkillBonusRows] = useState<BackgroundSkillBonusRow[]>([]);
+  const [backgroundSkillCategoryFilter, setBackgroundSkillCategoryFilter] = useState('');
+  const [backgroundSkillPendingId, setBackgroundSkillPendingId] = useState('');
+  const [backgroundSkillPendingSubcategory, setBackgroundSkillPendingSubcategory] = useState('');
   const [backgroundCategoryBonusIds, setBackgroundCategoryBonusIds] = useState<string[]>([]);
   const [backgroundSpecialItemsPoints, setBackgroundSpecialItemsPoints] = useState(0);
 
@@ -1217,12 +1220,26 @@ export default function CharacterCreationView() {
     () => new Set(backgroundSkillBonusRows.map((row) => row.id)),
     [backgroundSkillBonusRows],
   );
+
+  const backgroundSkillCategoryOptions = useMemo((): RichSelectOption[] => {
+    const catIds = new Set(skills.map((s) => s.category));
+    return Array.from(catIds)
+      .map((id): RichSelectOption => ({
+        value: id,
+        label: categoryNameById.get(id) ?? id,
+        searchText: categoryNameById.get(id) ?? id,
+      }))
+      .sort((a, b) => (a.searchText ?? '').localeCompare(b.searchText ?? ''));
+  }, [skills, categoryNameById]);
+
   const availableBackgroundSkillBonusOptions = useMemo(
     () => backgroundSkillBonusOptions.filter((opt) => {
+      const skill = skills.find((s) => s.id === opt.value);
+      if (backgroundSkillCategoryFilter && skill?.category !== backgroundSkillCategoryFilter) return false;
       const hasSubcategorySupport = (weaponTypeOptionsBySkillId.get(opt.value) ?? []).length > 0 || mandatorySubcategorySkillIds.has(opt.value);
       return hasSubcategorySupport || !selectedBackgroundSkillSet.has(opt.value);
     }),
-    [backgroundSkillBonusOptions, selectedBackgroundSkillSet, weaponTypeOptionsBySkillId, mandatorySubcategorySkillIds],
+    [backgroundSkillBonusOptions, selectedBackgroundSkillSet, weaponTypeOptionsBySkillId, mandatorySubcategorySkillIds, backgroundSkillCategoryFilter, skills],
   );
 
   const backgroundCategoryBonusOptions = useMemo(
@@ -3109,7 +3126,24 @@ export default function CharacterCreationView() {
       const hasSubcategorySupport = (weaponTypeOptionsBySkillId.get(id) ?? []).length > 0 || mandatorySubcategorySkillIds.has(id);
       if (!hasSubcategorySupport && selectedBackgroundSkillSet.has(id)) return;
       if (!canSpendBackgroundPoints(1)) return;
-      setBackgroundSkillBonusRows((prev) => [...prev, { id, subcategory: '' }]);
+      if (hasSubcategorySupport) {
+        setBackgroundSkillPendingId(id);
+        setBackgroundSkillPendingSubcategory('');
+      } else {
+        setBackgroundSkillBonusRows((prev) => [...prev, { id, subcategory: '' }]);
+      }
+    },
+
+    confirmSkillBonusPending() {
+      if (!backgroundSkillPendingId) return;
+      setBackgroundSkillBonusRows((prev) => [...prev, { id: backgroundSkillPendingId, subcategory: backgroundSkillPendingSubcategory.trim() }]);
+      setBackgroundSkillPendingId('');
+      setBackgroundSkillPendingSubcategory('');
+    },
+
+    cancelSkillBonusPending() {
+      setBackgroundSkillPendingId('');
+      setBackgroundSkillPendingSubcategory('');
     },
 
     removeSkillBonus(index: number) {
@@ -3178,6 +3212,9 @@ export default function CharacterCreationView() {
     setBackgroundExtraLanguages(reset.extraLanguages);
     setBackgroundLanguageRows(reset.languageRows);
     setBackgroundSkillBonusRows(reset.skillBonuses);
+    setBackgroundSkillCategoryFilter('');
+    setBackgroundSkillPendingId('');
+    setBackgroundSkillPendingSubcategory('');
     setBackgroundCategoryBonusIds(reset.categoryBonusIds);
     setBackgroundSpecialItemsPoints(reset.specialItemsPoints);
   };
@@ -4542,16 +4579,66 @@ export default function CharacterCreationView() {
                 <div style={{ ...backgroundOptionCardShellStyle, display: 'grid', gap: 8 }}>
                   <strong>Skill Bonus</strong>
                   <div style={{ color: 'var(--muted)' }}>Each selected skill grants +10 and costs 1 point.</div>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'end', flexWrap: 'wrap' }}>
-                    <RichSelect
-                      label="Add Skill Bonus"
-                      hideLabel={true}
-                      value=""
-                      onChange={backgroundActions.addSkillBonus}
-                      options={availableBackgroundSkillBonusOptions}
-                      placeholderOption="— Select skill —"
-                      disabled={availableBackgroundSkillBonusOptions.length === 0 || !canSpendBackgroundPoints(1)}
-                    />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                      <RichSelect
+                        label="Skill Category"
+                        hideLabel={true}
+                        value={backgroundSkillCategoryFilter}
+                        onChange={(v) => {
+                          setBackgroundSkillCategoryFilter(v);
+                          setBackgroundSkillPendingId('');
+                          setBackgroundSkillPendingSubcategory('');
+                        }}
+                        options={backgroundSkillCategoryOptions}
+                        placeholderOption="— Filter by category —"
+                      />
+                      <RichSelect
+                        label="Add Skill Bonus"
+                        hideLabel={true}
+                        value=""
+                        onChange={backgroundActions.addSkillBonus}
+                        options={availableBackgroundSkillBonusOptions}
+                        placeholderOption={backgroundSkillCategoryFilter ? '— Select skill —' : '— Select a category first —'}
+                        disabled={!backgroundSkillCategoryFilter || !canSpendBackgroundPoints(1)}
+                      />
+                    </div>
+                    {backgroundSkillPendingId && (
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 500 }}>{skillNameById.get(backgroundSkillPendingId) ?? backgroundSkillPendingId}:</span>
+                        {weaponGroupSkillIds.has(backgroundSkillPendingId) ? (
+                          <LabeledSelect
+                            label="Weapon type"
+                            hideLabel={true}
+                            value={backgroundSkillPendingSubcategory}
+                            onChange={(v) => setBackgroundSkillPendingSubcategory(v)}
+                            options={weaponTypeOptionsBySkillId.get(backgroundSkillPendingId) ?? []}
+                            placeholderOption="— Select weapon type —"
+                          />
+                        ) : (
+                          <LabeledInput
+                            label="Subcategory"
+                            hideLabel={true}
+                            value={backgroundSkillPendingSubcategory}
+                            onChange={(v) => setBackgroundSkillPendingSubcategory(v)}
+                            placeholder="Subcategory"
+                          />
+                        )}
+                        <button
+                          type="button"
+                          disabled={!backgroundSkillPendingSubcategory.trim()}
+                          onClick={backgroundActions.confirmSkillBonusPending}
+                        >
+                          Add
+                        </button>
+                        <button
+                          type="button"
+                          onClick={backgroundActions.cancelSkillBonusPending}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
                   </div>
                   {backgroundSkillBonusRows.length > 0 && (
                     <div style={{ display: 'grid', gap: 6 }}>
