@@ -1,16 +1,80 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { fetchCharacters, deleteCharacter } from '../../api';
+import {
+  fetchCharacters, deleteCharacter,
+  fetchRaces, fetchCultures, fetchProfessions,
+  fetchSkills, fetchSkillCategories, fetchSpellLists,
+  fetchSkillProgressionTypes, fetchLanguages,
+} from '../../api';
 
 import {
   DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
+  PillList,
   Spinner,
   useConfirm, useToast,
 } from '../../components';
 
 import type {
-  Character, CharacterCategory, CharacterSkill,
+  Character, CharacterCategory, CharacterCategorySpellLists, CharacterSkill, Profession,
 } from '../../types';
+
+/* ------------------------------------------------------------------ */
+/* Reference data lookup                                              */
+/* ------------------------------------------------------------------ */
+
+type NameMap = Map<string, string>;
+
+interface RefData {
+  races: NameMap;
+  cultures: NameMap;
+  professions: NameMap;
+  professionStats: Map<string, Set<string>>;
+  skills: NameMap;
+  skillCategories: NameMap;
+  spellLists: NameMap;
+  progressionTypes: NameMap;
+  languages: NameMap;
+}
+
+const emptyRefData = (): RefData => ({
+  races: new Map(),
+  cultures: new Map(),
+  professions: new Map(),
+  professionStats: new Map(),
+  skills: new Map(),
+  skillCategories: new Map(),
+  spellLists: new Map(),
+  progressionTypes: new Map(),
+  languages: new Map(),
+});
+
+function buildMap(items: { id: string; name: string }[]): NameMap {
+  return new Map(items.map(i => [i.id, i.name]));
+}
+
+/** Returns the display name for an id, falling back to the id itself */
+function resolve(map: NameMap, id: string): string {
+  return map.get(id) ?? id;
+}
+
+/** Converts total inches to feet and inches string, e.g. 69 → 5' 9" */
+function formatHeight(totalInches: number): string {
+  const feet = Math.floor(totalInches / 12);
+  const inches = totalInches % 12;
+  return `${feet}' ${inches}"`;
+}
+
+/** Converts pounds to stones and pounds string, e.g. 175 → 12 st 7 lbs */
+function formatWeight(lbs: number): string {
+  const stones = Math.floor(lbs / 14);
+  const remainingLbs = lbs % 14;
+  return `${stones} st ${remainingLbs} lbs`;
+}
+
+/** Formats a lifespan in years, using comma separators for long-lived races */
+function formatLifespan(years: number): string {
+  return `${years.toLocaleString()} years`;
+}
 
 /* ------------------------------------------------------------------ */
 /* Tab types                                                           */
@@ -38,156 +102,256 @@ function SectionHeading({ title }: { title: string }) {
   );
 }
 
-function DetailsTab({ char }: { char: Character }) {
+function Card({ title, children, fullWidth }: { title: string; children: React.ReactNode; fullWidth?: boolean }) {
   return (
-    <div style={{ padding: '12px 0' }}>
-      <SectionHeading title="General" />
-      <table style={{ borderCollapse: 'collapse' }}>
-        <tbody>
-          <DetailRow label="ID" value={char.id} />
-          <DetailRow label="Name" value={char.name} />
-          <DetailRow label="Gender" value={char.male ? 'Male' : 'Female'} />
-          <DetailRow label="Player Character" value={char.playerCharacter ? 'Yes' : 'No'} />
-          <DetailRow label="Level" value={char.level} />
-          <DetailRow label="Experience Points" value={char.experiencePoints.toLocaleString()} />
-          <DetailRow label="Gold" value={char.gold} />
-          <DetailRow label="Development Points" value={char.developmentPoints} />
-        </tbody>
-      </table>
-
-      <SectionHeading title="Origin" />
-      <table style={{ borderCollapse: 'collapse' }}>
-        <tbody>
-          <DetailRow label="Race" value={char.race} />
-          <DetailRow label="Culture" value={char.culture} />
-          <DetailRow label="Profession" value={char.profession} />
-        </tbody>
-      </table>
-
-      <SectionHeading title="Physique" />
-      <table style={{ borderCollapse: 'collapse' }}>
-        <tbody>
-          <DetailRow label="Height (in)" value={char.height} />
-          <DetailRow label="Weight (lbs)" value={char.weight} />
-          <DetailRow label="Build" value={char.buildDescription} />
-          <DetailRow label="Lifespan (days)" value={char.lifespan.toLocaleString()} />
-        </tbody>
-      </table>
-
-      <SectionHeading title="Stats" />
-      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-        <thead>
-          <tr>
-            {['Stat', 'Temporary', 'Potential', 'Racial Bonus'].map(h => (
-              <th key={h} style={{ textAlign: 'left', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)' }}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {char.stats.map(s => (
-            <tr key={s.stat}>
-              <td style={{ padding: '3px 10px 3px 0' }}>{s.stat}</td>
-              <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{s.temporary}</td>
-              <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{s.potential}</td>
-              <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{s.racialBonus}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <SectionHeading title="Combat" />
-      <table style={{ borderCollapse: 'collapse' }}>
-        <tbody>
-          <DetailRow label="Hits" value={`${char.hits} / ${char.maxHits}`} />
-          <DetailRow label="Power Points" value={`${char.powerPoints} / ${char.maxPowerPoints}`} />
-          <DetailRow label="Magical Realms" value={char.magicalRealms.join(', ') || '—'} />
-        </tbody>
-      </table>
-
-      {char.resistances.length > 0 && (
-        <>
-          <SectionHeading title="Resistances" />
-          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-            <thead>
-              <tr>
-                {['Resistance Type', 'Bonus'].map(h => (
-                  <th key={h} style={{ textAlign: 'left', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {char.resistances.map(r => (
-                <tr key={r.id}>
-                  <td style={{ padding: '3px 10px 3px 0' }}>{r.id}</td>
-                  <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{r.value}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
-      )}
-
-      {char.spellListCategories.length > 0 && (
-        <>
-          <SectionHeading title="Spell List Categories" />
-          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-            <thead>
-              <tr>
-                {['Category', 'Spell Lists'].map(h => (
-                  <th key={h} style={{ textAlign: 'left', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {char.spellListCategories.map(c => (
-                <tr key={c.category}>
-                  <td style={{ padding: '3px 10px 3px 0', verticalAlign: 'top' }}>{c.category}</td>
-                  <td style={{ padding: '3px 0' }}>{c.spellLists.join(', ')}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
-      )}
-
-      {char.languageAbilities.length > 0 && (
-        <>
-          <SectionHeading title="Language Abilities" />
-          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-            <thead>
-              <tr>
-                {['Language', 'Spoken', 'Written', 'Somatic'].map(h => (
-                  <th key={h} style={{ textAlign: 'left', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {char.languageAbilities.map(la => (
-                <tr key={la.language}>
-                  <td style={{ padding: '3px 10px 3px 0' }}>{la.language}</td>
-                  <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{la.spoken ?? '—'}</td>
-                  <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{la.written ?? '—'}</td>
-                  <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{la.somatic ?? '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
-      )}
-
-      {char.items && char.items.length > 0 && (
-        <>
-          <SectionHeading title="Items" />
-          <ul style={{ margin: '4px 0', paddingLeft: 20 }}>
-            {char.items.map((item, i) => <li key={i}>{item}</li>)}
-          </ul>
-        </>
-      )}
+    <div style={{
+      border: '1px solid var(--border, #ccc)',
+      borderRadius: 6,
+      padding: '10px 14px',
+      flex: fullWidth ? '1 1 100%' : '1 1 280px',
+      minWidth: fullWidth ? undefined : 240,
+      maxWidth: fullWidth ? undefined : 480,
+      boxSizing: 'border-box',
+    }}>
+      <h4 style={{ margin: '0 0 8px', fontSize: '0.95em', fontWeight: 700, borderBottom: '1px solid var(--border, #ccc)', paddingBottom: 4 }}>
+        {title}
+      </h4>
+      {children}
     </div>
   );
 }
 
-function SkillGroup({ title, skills }: { title: string; skills: CharacterSkill[] }) {
+function CollapsibleCard({ title, children }: { title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div style={{
+      border: '1px solid var(--border, #ccc)',
+      borderRadius: 6,
+      padding: '10px 14px',
+      flex: '1 1 100%',
+      boxSizing: 'border-box',
+    }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          padding: 0, width: '100%', textAlign: 'left',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          fontSize: '0.95em', fontWeight: 700,
+          borderBottom: open ? '1px solid var(--border, #ccc)' : 'none',
+          paddingBottom: open ? 4 : 0, marginBottom: open ? 8 : 0,
+        }}
+        aria-expanded={open}
+      >
+        <span>{title}</span>
+        <span style={{ fontSize: '0.8em' }}>{open ? '▲' : '▼'}</span>
+      </button>
+      {open && children}
+    </div>
+  );
+}
+
+function SpellListCategoriesTable({ rows, refs, charId }: { rows: CharacterCategorySpellLists[]; refs: RefData; charId: string }) {
+  const columns: ColumnDef<CharacterCategorySpellLists>[] = useMemo(() => [
+    {
+      id: 'category',
+      header: 'Category',
+      accessor: (r) => resolve(refs.skillCategories, r.category),
+      sortType: 'string',
+      minWidth: 120,
+    },
+    {
+      id: 'spellLists',
+      header: 'Spell Lists',
+      render: (r) => (
+        <PillList
+          values={r.spellLists}
+          getLabel={(sl) => resolve(refs.spellLists, sl)}
+        />
+      ),
+      sortable: false,
+      minWidth: 160,
+    },
+  ], [refs]);
+
+  return (
+    <DataTable
+      rows={rows}
+      columns={columns}
+      rowId={(r) => r.category}
+      mode="client"
+      showPagination={false}
+      resizable
+      persistKey={`dt.char.spellListCats.${charId}.v1`}
+      tableMinWidth={0}
+    />
+  );
+}
+
+function DetailsTab({ char, ref: refs }: { char: Character; ref: RefData }) {
+  return (
+    <div style={{ padding: '12px 0' }}>
+      {/* Wrapping card row */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+
+        {/* Basic */}
+        <Card title="Basic">
+          <table style={{ borderCollapse: 'collapse' }}>
+            <tbody>
+              <DetailRow label="Name" value={char.name} />
+              <DetailRow label="Gender" value={char.male ? 'Male' : 'Female'} />
+              <DetailRow label="Race" value={resolve(refs.races, char.race)} />
+              <DetailRow label="Culture" value={resolve(refs.cultures, char.culture)} />
+              <DetailRow label="Profession" value={resolve(refs.professions, char.profession)} />
+              <DetailRow label="Magical Realm" value={char.magicalRealms.join(', ') || '—'} />
+              <DetailRow label="Hits" value={`${char.hits} / ${char.maxHits}`} />
+              <DetailRow label="Power Points" value={`${char.powerPoints} / ${char.maxPowerPoints}`} />
+            </tbody>
+          </table>
+        </Card>
+
+        {/* General */}
+        <Card title="General">
+          <table style={{ borderCollapse: 'collapse' }}>
+            <tbody>
+              <DetailRow label="Height" value={formatHeight(char.height)} />
+              <DetailRow label="Weight" value={formatWeight(char.weight)} />
+              <DetailRow label="Build" value={char.buildDescription} />
+              <DetailRow label="Lifespan" value={formatLifespan(char.lifespan)} />
+              <DetailRow label="Level" value={char.level} />
+              <DetailRow label="Experience Points" value={char.experiencePoints.toLocaleString()} />
+              <DetailRow label="Development Points" value={char.developmentPoints} />
+            </tbody>
+          </table>
+        </Card>
+
+        {/* Stats */}
+        <Card title="Stats">
+          {(() => {
+            const primaryStats = refs.professionStats.get(char.profession) ?? new Set<string>();
+            return (
+              <table style={{ borderCollapse: 'collapse' }}>
+                <colgroup>
+                  <col style={{ width: 140 }} />
+                  <col style={{ width: 80 }} />
+                  <col style={{ width: 80 }} />
+                  <col style={{ width: 90 }} />
+                  <col style={{ width: 80 }} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)', fontSize: '0.85em' }}>Stat</th>
+                    {['Tmp', 'Pot', 'Racial', 'Total'].map(h => (
+                      <th key={h} style={{ textAlign: 'center', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)', fontSize: '0.85em' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {char.stats.map(s => {
+                    const isPrimary = primaryStats.has(s.stat);
+                    return (
+                      <tr key={s.stat} style={isPrimary ? { background: 'var(--primary-weak)' } : undefined}>
+                        <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em', fontWeight: isPrimary ? 600 : undefined }}>
+                          {s.stat}
+                        </td>
+                        <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.temporary}</td>
+                        <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.potential}</td>
+                        <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.racialBonus}</td>
+                        <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.totalBonus}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            );
+          })()}
+        </Card>
+
+        {/* Languages */}
+        {char.languageAbilities.length > 0 && (
+          <Card title="Languages">
+            <table style={{ borderCollapse: 'collapse' }}>
+              <colgroup>
+                <col style={{ width: 180 }} />
+                <col style={{ width: 65 }} />
+                <col style={{ width: 65 }} />
+                <col style={{ width: 70 }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)', fontSize: '0.85em' }}>Language</th>
+                  {['Spoken', 'Written', 'Somatic'].map(h => (
+                    <th key={h} style={{ textAlign: 'center', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)', fontSize: '0.85em' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {char.languageAbilities.map(la => (
+                  <tr key={la.language}>
+                    <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{resolve(refs.languages, la.language)}</td>
+                    <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{la.spoken ?? '—'}</td>
+                    <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{la.written ?? '—'}</td>
+                    <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{la.somatic ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        )}
+
+        {/* Resistances */}
+        {char.resistances.length > 0 && (
+          <Card title="Resistances">
+            <table style={{ borderCollapse: 'collapse' }}>
+              <colgroup>
+                <col style={{ width: 180 }} />
+                <col style={{ width: 70 }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)', fontSize: '0.85em' }}>Resistance Type</th>
+                  <th style={{ textAlign: 'center', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)', fontSize: '0.85em' }}>Bonus</th>
+                </tr>
+              </thead>
+              <tbody>
+                {char.resistances.map(r => (
+                  <tr key={r.id}>
+                    <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{r.id}</td>
+                    <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{r.value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        )}
+
+        {/* Items */}
+        <Card title="Items">
+          <table style={{ borderCollapse: 'collapse', marginBottom: char.items && char.items.length > 0 ? 8 : 0 }}>
+            <tbody>
+              <DetailRow label="Gold" value={char.gold} />
+            </tbody>
+          </table>
+          {char.items && char.items.length > 0 && (
+            <ul style={{ margin: '4px 0', paddingLeft: 20 }}>
+              {char.items.map((item, i) => <li key={i} style={{ fontSize: '0.9em', marginBottom: 2 }}>{item}</li>)}
+            </ul>
+          )}
+        </Card>
+
+        {/* Spell List Categories — full-width, collapsible */}
+        {char.spellListCategories.length > 0 && (
+          <CollapsibleCard title="Spell List Categories">
+            <SpellListCategoriesTable rows={char.spellListCategories} refs={refs} charId={char.id} />
+          </CollapsibleCard>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+function SkillGroup({ title, skills, refs }: { title: string; skills: CharacterSkill[]; refs: RefData }) {
   if (skills.length === 0) return null;
   return (
     <div style={{ marginBottom: 16 }}>
@@ -203,9 +367,9 @@ function SkillGroup({ title, skills }: { title: string; skills: CharacterSkill[]
         <tbody>
           {skills.map((s, i) => (
             <tr key={i}>
-              <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{s.skillData.id}</td>
+              <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{resolve(refs.skills, s.skillData.id)}</td>
               <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{s.skillData.subcategory ?? '—'}</td>
-              <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{s.progression}</td>
+              <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{resolve(refs.progressionTypes, s.progression)}</td>
               <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{s.developmentType}</td>
               <td style={{ padding: '3px 10px 3px 0', textAlign: 'right', fontSize: '0.9em' }}>{s.ranks}</td>
               <td style={{ padding: '3px 10px 3px 0', textAlign: 'right', fontSize: '0.9em' }}>{s.professionBonus}</td>
@@ -219,23 +383,24 @@ function SkillGroup({ title, skills }: { title: string; skills: CharacterSkill[]
   );
 }
 
-function groupSkillsByCategory(skills: CharacterSkill[]): Map<string, CharacterSkill[]> {
+function groupSkillsByCategory(skills: CharacterSkill[], refs: RefData): Map<string, CharacterSkill[]> {
   const groups = new Map<string, CharacterSkill[]>();
   for (const skill of skills) {
-    const cat = skill.category ?? 'Uncategorized';
-    const arr = groups.get(cat) ?? [];
+    const catId = skill.category ?? '';
+    const catName = catId ? resolve(refs.skillCategories, catId) : 'Uncategorized';
+    const arr = groups.get(catName) ?? [];
     arr.push(skill);
-    groups.set(cat, arr);
+    groups.set(catName, arr);
   }
   return groups;
 }
 
-function SkillsTab({ char }: { char: Character }) {
+function SkillsTab({ char, refs }: { char: Character; refs: RefData }) {
   const developed = char.skills.filter(s => s.ranks > 0);
   const undeveloped = char.skills.filter(s => s.ranks <= 0);
 
-  const developedGroups = groupSkillsByCategory(developed);
-  const undevelopedGroups = groupSkillsByCategory(undeveloped);
+  const developedGroups = groupSkillsByCategory(developed, refs);
+  const undevelopedGroups = groupSkillsByCategory(undeveloped, refs);
 
   return (
     <div style={{ padding: '12px 0' }}>
@@ -244,7 +409,7 @@ function SkillsTab({ char }: { char: Character }) {
         <p style={{ color: 'var(--muted, #666)' }}>No developed skills.</p>
       ) : (
         Array.from(developedGroups.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([cat, skills]) => (
-          <SkillGroup key={cat} title={cat} skills={skills} />
+          <SkillGroup key={cat} title={cat} skills={skills} refs={refs} />
         ))
       )}
 
@@ -253,17 +418,19 @@ function SkillsTab({ char }: { char: Character }) {
         <p style={{ color: 'var(--muted, #666)' }}>No undeveloped skills.</p>
       ) : (
         Array.from(undevelopedGroups.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([cat, skills]) => (
-          <SkillGroup key={cat} title={cat} skills={skills} />
+          <SkillGroup key={cat} title={cat} skills={skills} refs={refs} />
         ))
       )}
     </div>
   );
 }
 
-function CategoriesTab({ char }: { char: Character }) {
+function CategoriesTab({ char, refs }: { char: Character; refs: RefData }) {
   const sorted = useMemo(
-    () => [...char.categories].sort((a, b) => a.id.localeCompare(b.id)),
-    [char.categories]
+    () => [...char.categories].sort((a, b) =>
+      resolve(refs.skillCategories, a.id).localeCompare(resolve(refs.skillCategories, b.id))
+    ),
+    [char.categories, refs]
   );
 
   if (sorted.length === 0) {
@@ -283,8 +450,8 @@ function CategoriesTab({ char }: { char: Character }) {
         <tbody>
           {sorted.map((cat: CharacterCategory) => (
             <tr key={cat.id}>
-              <td style={{ padding: '3px 10px 3px 0' }}>{cat.id}</td>
-              <td style={{ padding: '3px 10px 3px 0' }}>{cat.progression}</td>
+              <td style={{ padding: '3px 10px 3px 0' }}>{resolve(refs.skillCategories, cat.id)}</td>
+              <td style={{ padding: '3px 10px 3px 0' }}>{resolve(refs.progressionTypes, cat.progression)}</td>
               <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{cat.developmentCost}</td>
               <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{cat.ranks}</td>
               <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{cat.professionBonus}</td>
@@ -304,6 +471,7 @@ export default function CharacterView() {
   const dtRef = useRef<DataTableHandle>(null);
 
   const [rows, setRows] = useState<Character[]>([]);
+  const [refs, setRefs] = useState<RefData>(emptyRefData);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -321,8 +489,33 @@ export default function CharacterView() {
   useEffect(() => {
     (async () => {
       try {
-        const data = await fetchCharacters();
-        setRows(data);
+        const [
+          characters, races, cultures, professions,
+          skills, skillCategories, spellLists,
+          progressionTypes, languages,
+        ] = await Promise.all([
+          fetchCharacters(),
+          fetchRaces(),
+          fetchCultures(),
+          fetchProfessions(),
+          fetchSkills(),
+          fetchSkillCategories(),
+          fetchSpellLists(),
+          fetchSkillProgressionTypes(),
+          fetchLanguages(),
+        ]);
+        setRows(characters);
+        setRefs({
+          races: buildMap(races),
+          cultures: buildMap(cultures),
+          professions: buildMap(professions),
+          professionStats: new Map((professions as Profession[]).map(p => [p.id, new Set<string>(p.stats)])),
+          skills: buildMap(skills),
+          skillCategories: buildMap(skillCategories),
+          spellLists: buildMap(spellLists),
+          progressionTypes: buildMap(progressionTypes),
+          languages: buildMap(languages),
+        });
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
       } finally {
@@ -334,8 +527,8 @@ export default function CharacterView() {
   const columns: ColumnDef<Character>[] = useMemo(() => [
     { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
     { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 160 },
-    { id: 'race', header: 'Race', accessor: (r) => r.race, sortType: 'string' },
-    { id: 'profession', header: 'Profession', accessor: (r) => r.profession, sortType: 'string' },
+    { id: 'race', header: 'Race', accessor: (r) => resolve(refs.races, r.race), sortType: 'string' },
+    { id: 'profession', header: 'Profession', accessor: (r) => resolve(refs.professions, r.profession), sortType: 'string' },
     { id: 'level', header: 'Level', accessor: (r) => r.level, sortType: 'number', align: 'right' },
     { id: 'gender', header: 'Gender', accessor: (r) => r.male ? 'Male' : 'Female', sortType: 'string' },
     { id: 'pc', header: 'PC', accessor: (r) => r.playerCharacter ? 'Yes' : 'No', sortType: 'string' },
@@ -351,7 +544,7 @@ export default function CharacterView() {
         </>
       ),
     },
-  ], [rows]);
+  ], [rows, refs]);
 
   const globalFilter = (c: Character, q: string) =>
     [c.id, c.name, c.race, c.culture, c.profession]
@@ -405,36 +598,43 @@ export default function CharacterView() {
 
       {submitting && <Spinner size={20} />}
 
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-        <DataTableSearchInput
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search characters…"
-          aria-label="Search characters"
-        />
-        <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset column widths" style={{ marginLeft: 'auto' }}>
-          Reset column widths
-        </button>
-        <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit columns</button>
-      </div>
+      {!selected && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+          <DataTableSearchInput
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search characters…"
+            aria-label="Search characters"
+          />
+          <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset column widths" style={{ marginLeft: 'auto' }}>
+            Reset column widths
+          </button>
+          <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit columns</button>
+        </div>
+      )}
 
-      <DataTable
-        ref={dtRef}
-        rows={rows}
-        columns={columns}
-        rowId={(r) => r.id}
-        globalFilter={globalFilter}
-        searchQuery={query}
-        page={page}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        persistKey="character"
-      />
+      {!selected && (
+        <DataTable
+          ref={dtRef}
+          rows={rows}
+          columns={columns}
+          rowId={(r) => r.id}
+          globalFilter={globalFilter}
+          searchQuery={query}
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          persistKey="character"
+        />
+      )}
 
       {selected && (
         <div style={{ marginTop: 24, border: '1px solid var(--border, #ccc)', borderRadius: 4 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderBottom: '1px solid var(--border, #ccc)' }}>
-            <strong>{selected.name}</strong>
+            <strong>
+              {selected.name}
+              <span style={{ fontWeight: 400, color: 'var(--muted, #888)', marginLeft: 6, fontSize: '0.85em' }}>({selected.id})</span>
+            </strong>
             <button onClick={() => setSelected(null)} aria-label="Close detail panel">✕</button>
           </div>
 
@@ -449,9 +649,9 @@ export default function CharacterView() {
           </div>
 
           <div style={{ padding: '0 12px 12px' }}>
-            {activeTab === 'details' && <DetailsTab char={selected} />}
-            {activeTab === 'skills' && <SkillsTab char={selected} />}
-            {activeTab === 'categories' && <CategoriesTab char={selected} />}
+            {activeTab === 'details' && <DetailsTab char={selected} ref={refs} />}
+            {activeTab === 'skills' && <SkillsTab char={selected} refs={refs} />}
+            {activeTab === 'categories' && <CategoriesTab char={selected} refs={refs} />}
           </div>
         </div>
       )}

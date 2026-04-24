@@ -17,6 +17,7 @@ export interface CharacterStatValue {
   temporary: number;
   potential: number;
   racialBonus: number;
+  totalBonus: number;
 }
 
 export interface CharacterCategoryCost {
