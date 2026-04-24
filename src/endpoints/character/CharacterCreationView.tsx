@@ -654,6 +654,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
   const [characterName, setCharacterName] = useState('');
 
   const [isMale, setIsMale] = useState(true);
+  const [isPC, setIsPC] = useState(false);
   const [physiqueAutoHeight, setPhysiqueAutoHeight] = useState(true);
   const [physiqueEnteredHeightStr, setPhysiqueEnteredHeightStr] = useState('');
   const [physiqueAutoBuildMod, setPhysiqueAutoBuildMod] = useState(true);
@@ -1745,6 +1746,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
       ...prev,
       name: characterName,
       male: isMale,
+      pc: isPC,
       race: raceId,
       culture: cultureId,
       cultureType: cultureTypeId,
@@ -1775,7 +1777,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
           totalBonus: 0,
         })),
     }));
-  }, [characterName, isMale, raceId, cultureTypeId, cultureId, professionId, selectedRealms, statRolls, race, apprenticeStatGains]);
+  }, [characterName, isMale, isPC, raceId, cultureTypeId, cultureId, professionId, selectedRealms, statRolls, race, apprenticeStatGains]);
 
   useEffect(() => {
     setCharacterBuilder((prev) => ({
@@ -2645,6 +2647,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
         const response = await setPrimaryDefinition({
           ...characterBuilder,
           name: characterName.trim(),
+          pc: isPC,
           race: raceId,
           culture: cultureId,
           profession: professionId,
@@ -3231,6 +3234,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
     setStep('primary');
     setCharacterName('');
     setIsMale(true);
+    setIsPC(false);
     setPhysiqueAutoHeight(true);
     setPhysiqueEnteredHeightStr('');
     setPhysiqueAutoBuildMod(true);
@@ -3555,13 +3559,15 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
           {step === 'primary' && (
             <section style={{ display: 'grid', gap: 12 }}>
               <div style={{ display: 'grid', gap: 10, gridTemplateColumns: '1fr 1fr' }}>
-                <LabeledInput
-                  label="Name"
-                  value={characterName}
-                  onChange={(v) => setCharacterName(v)}
-                  placeholder="Character name"
-                  error={errors.primary && !characterName.trim() ? 'Required' : undefined}
-                />
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <LabeledInput
+                    label="Name"
+                    value={characterName}
+                    onChange={(v) => setCharacterName(v)}
+                    placeholder="Character name"
+                    error={errors.primary && !characterName.trim() ? 'Required' : undefined}
+                  />
+                </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, justifyContent: 'flex-end', paddingBottom: 2 }}>
                   <span style={{ fontSize: 14, fontWeight: 500 }}>Sex</span>
@@ -3575,6 +3581,22 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                       label="Female"
                       checked={!isMale}
                       onChange={(checked) => { if (checked) setIsMale(false); }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, justifyContent: 'flex-end', paddingBottom: 2 }}>
+                  <span style={{ fontSize: 14, fontWeight: 500 }}>Character Type</span>
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    <CheckboxInput
+                      label="NPC"
+                      checked={!isPC}
+                      onChange={(checked) => { if (checked) setIsPC(false); }}
+                    />
+                    <CheckboxInput
+                      label="PC"
+                      checked={isPC}
+                      onChange={(checked) => { if (checked) setIsPC(true); }}
                     />
                   </div>
                 </div>

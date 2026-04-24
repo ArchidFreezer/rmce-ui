@@ -32,6 +32,7 @@ export interface CharacterCategorySpellLists {
 
 export interface CharacterBuilder extends Named {
   built: boolean;
+  pc: boolean;
   race: string; // Race.id
   culture: string; // Culture.id
   cultureType: string;  // CultureType.id
@@ -125,6 +126,7 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
     id: '',
     name: '',
     built: false,
+    pc: false,
     race: '',
     culture: '',
     cultureType: '',
