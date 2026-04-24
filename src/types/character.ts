@@ -2,39 +2,39 @@ import type { Named, PersistentValue, SkillValue, SkillDevelopmentTypeValue } fr
 import type { Realm, Stat } from './enum';
 import type { LanguageAbility } from './language';
 
-export interface CharacterBuilderIdOptionalSubcategory {
+export interface SkillSubcategory {
   id: string;
   subcategory?: string | undefined;
 }
 
-export interface CharacterBuilderRealmProgression {
+export interface CharacterRealmProgression {
   id: Realm;
   value: string;
 }
 
-export interface CharacterBuilderStatValue {
+export interface CharacterStatValue {
   stat: Stat;
   temporary: number;
   potential: number;
   racialBonus: number;
 }
 
-export interface CharacterBuilderCategoryCost {
+export interface CharacterCategoryCost {
   category: string; // SkillCategory.id
   cost: string;     // 0 to 3 colon-separated positive numbers
 }
 
-export interface CharacterBuilderCategorySpellLists {
+export interface CharacterCategorySpellLists {
   category: string; // SkillCategory.id
   spellLists: string[]; // SpellList.id[]
 }
 
 export interface CharacterBuilder extends Named {
   built: boolean;
-  race: string;
-  culture: string;
-  cultureType: string;
-  profession: string;
+  race: string; // Race.id
+  culture: string; // Culture.id
+  cultureType: string;  // CultureType.id
+  profession: string; // Profession.id
   male: boolean;
 
   autoHeight: boolean;
@@ -49,12 +49,12 @@ export interface CharacterBuilder extends Named {
   numAdolescentSpellListRanks: number;
   developmentPoints: number;
 
-  categorySpellLists: CharacterBuilderCategorySpellLists[];
+  categorySpellLists: CharacterCategorySpellLists[];
   trainingPackageCosts: PersistentValue[]; // TrainingPackage.id and cost
 
   /* Initial Choices */
   // Race
-  raceCategoryEverymanChoices: CharacterBuilderIdOptionalSubcategory[];
+  raceCategoryEverymanChoices: SkillSubcategory[];
   // Culture Type
   cultureTypeCategorySkillRanks: SkillValue[];
   // Culture
@@ -65,11 +65,11 @@ export interface CharacterBuilder extends Named {
   profCategoryDevelopmentTypeChoices: SkillDevelopmentTypeValue[];
   profGroupDevelopmentTypeChoices: SkillDevelopmentTypeValue[];
   baseSpellListChoices: string[]; // SpellList.id[]
-  weaponCategoryCostChoices: CharacterBuilderCategoryCost[];
+  weaponCategoryCostChoices: CharacterCategoryCost[];
   // Realms
 
   /* Initial Stats */
-  initialStats: CharacterBuilderStatValue[];
+  initialStats: CharacterStatValue[];
 
   /* Physique */
   height: number;
@@ -84,7 +84,7 @@ export interface CharacterBuilder extends Named {
   adolescentLanguageChoices: LanguageAbility[];
 
   /* Background choices */
-  backgroundStats: CharacterBuilderStatValue[];
+  backgroundStats: CharacterStatValue[];
   backgroundExtraGold: number;
   backgroundLanguageChoices: LanguageAbility[];
   backgroundSkillSpecialBonuses: SkillValue[];
@@ -98,8 +98,8 @@ export interface CharacterBuilder extends Named {
   /* Aggregated State */
   totalGold: number;
   languageAbilities: LanguageAbility[];
-  realmProgressions: CharacterBuilderRealmProgression[];
-  stats: CharacterBuilderStatValue[];
+  realmProgressions: CharacterRealmProgression[];
+  stats: CharacterStatValue[];
 
   skillRanks: SkillValue[];
   skillProfessionalBonuses: SkillValue[];
@@ -109,7 +109,7 @@ export interface CharacterBuilder extends Named {
   categoryRanks: PersistentValue[];
   categoryProfessionalBonuses: PersistentValue[];
   categorySpecialBonuses: PersistentValue[];
-  categoryCosts: CharacterBuilderCategoryCost[];
+  categoryCosts: CharacterCategoryCost[];
 
   groupProfessionalBonuses: PersistentValue[];
   groupSpecialBonuses: PersistentValue[];
