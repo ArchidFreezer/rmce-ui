@@ -478,7 +478,7 @@ function CategoriesTab({ char, refs }: { char: Character; refs: RefData }) {
       <table style={{ borderCollapse: 'collapse', width: '100%' }}>
         <thead>
           <tr>
-            {['Category', 'Progression', 'Dev Cost', 'Ranks', 'Prof Bonus', 'Special Bonus'].map(h => (
+            {['Category', 'Progression', 'Dev Cost', 'Ranks', 'Prof Bonus', 'Special Bonus', 'Total Bonus'].map(h => (
               <th key={h} style={{ textAlign: 'left', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)' }}>{h}</th>
             ))}
           </tr>
@@ -492,6 +492,7 @@ function CategoriesTab({ char, refs }: { char: Character; refs: RefData }) {
               <td style={{ padding: '3px 10px 3px 0', textAlign: 'center' }}>{cat.ranks}</td>
               <td style={{ padding: '3px 10px 3px 0', textAlign: 'center' }}>{cat.professionBonus}</td>
               <td style={{ padding: '3px 10px 3px 0', textAlign: 'center' }}>{cat.specialBonus}</td>
+              <td style={{ padding: '3px 10px 3px 0', textAlign: 'center' }}>{cat.totalBonus}</td>
             </tr>
           ))}
         </tbody>

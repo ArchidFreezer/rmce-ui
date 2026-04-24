@@ -228,6 +228,7 @@ export interface CharacterCategory {
   professionBonus: number;
   ranks: number;
   specialBonus: number;
+  totalBonus: number;
 }
 
 export interface CharacterSkill {
