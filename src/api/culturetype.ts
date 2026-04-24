@@ -13,7 +13,7 @@ import {
   asWaterBodyArray,
 } from '../types/enum';
 
-const BASE = '/rmce/objects/culturetype';
+const BASE = '/rmce/data/culturetype';
 
 // Coercion helpers
 const asString = (v: unknown) => String(v ?? '');

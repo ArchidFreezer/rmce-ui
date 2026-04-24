@@ -1,10 +1,10 @@
 import { fetchJson, sendJson } from './client';
 
-import type { 
+import type {
   Disease, DiseasesPayload,
- } from '../types';
+} from '../types';
 
-const BASE = '/rmce/objects/disease';
+const BASE = '/rmce/data/disease';
 
 export async function fetchDiseases(): Promise<Disease[]> {
   const data = await fetchJson<DiseasesPayload>(`${BASE}`);

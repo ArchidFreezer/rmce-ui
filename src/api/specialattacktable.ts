@@ -1,11 +1,11 @@
 import { fetchJson, sendJson } from './client';
 
-import type { 
+import type {
   AttackTableRow,
   SpecialAttackTable, SpecialAttackTablesPayload,
- } from '../types';
+} from '../types';
 
-const BASE = '/rmce/objects/specialattacktable';
+const BASE = '/rmce/data/specialattacktable';
 
 const asInt = (v: unknown) => {
   const n = Number(v);
@@ -14,8 +14,8 @@ const asInt = (v: unknown) => {
 const asString = (v: unknown) => String(v ?? '-');
 
 function normalizeCells(obj: any): Pick<AttackTableRow,
-  'at1'|'at2'|'at3'|'at4'|'at5'|'at6'|'at7'|'at8'|'at9'|'at10'|
-  'at11'|'at12'|'at13'|'at14'|'at15'|'at16'|'at17'|'at18'|'at19'|'at20'
+  'at1' | 'at2' | 'at3' | 'at4' | 'at5' | 'at6' | 'at7' | 'at8' | 'at9' | 'at10' |
+  'at11' | 'at12' | 'at13' | 'at14' | 'at15' | 'at16' | 'at17' | 'at18' | 'at19' | 'at20'
 > {
   const out: any = {};
   for (let i = 1; i <= 20; i++) {
@@ -31,7 +31,7 @@ function rowFromJson(r: any): AttackTableRow {
   return { min, max, ...normalizeCells(r) };
 }
 
-/** GET /rmce/objects/specialattacktable → { specialattacktables: SpecialAttackTable[] } */
+/** GET /rmce/data/specialattacktable → { specialattacktables: SpecialAttackTable[] } */
 export async function fetchSpecialAttackTables(): Promise<SpecialAttackTable[]> {
   const data = await fetchJson<SpecialAttackTablesPayload>(BASE);
   if (!data || !Array.isArray((data as any).specialattacktables)) {
@@ -60,7 +60,7 @@ export async function upsertSpecialAttackTable(
   return sendJson(url, method, at);
 }
 
-/** DELETE /rmce/objects/specialattacktable/{id} */
+/** DELETE /rmce/data/specialattacktable/{id} */
 export async function deleteSpecialAttackTable(id: string) {
   if (!id) throw new Error('deleteSpecialAttackTable: id is required');
   await fetchJson<void>(`${BASE}/${encodeURIComponent(id)}`, { method: 'DELETE' });

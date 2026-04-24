@@ -35,7 +35,7 @@ import {
   type LevelVarianceType,
 } from '../types/enum';
 
-const BASE = '/rmce/objects/animal';
+const BASE = '/rmce/data/animal';
 
 const asString = (v: unknown) => String(v ?? '');
 const asInt = (v: unknown) => {
@@ -168,12 +168,12 @@ function fromJson(x: any): Animal {
     numberYoungRange: rangeFromJson(x?.numberYoungRange),
     location: x?.location != null
       ? {
-          features: asFeatureArray(x.location.features),
-          terrains: asTerrainArray(x.location.terrains),
-          vegetation: asVegetationArray(x.location.vegetation),
-          waterSources: asWaterBodyArray(x.location.waterSources),
-          climates: asStringArray(x.location.climates),
-        }
+        features: asFeatureArray(x.location.features),
+        terrains: asTerrainArray(x.location.terrains),
+        vegetation: asVegetationArray(x.location.vegetation),
+        waterSources: asWaterBodyArray(x.location.waterSources),
+        climates: asStringArray(x.location.climates),
+      }
       : undefined,
     standardAttacks: Array.isArray(x?.standardAttacks) ? x.standardAttacks.map(standardAttackFromJson) : [],
     rangedAttacks: Array.isArray(x?.rangedAttacks) ? x.rangedAttacks.map(rangedAttackFromJson) : [],

@@ -1,14 +1,14 @@
 import { fetchJson, sendJson } from './client';
 
-import type { 
+import type {
   TreasureCode, TreasureCodesPayload,
- } from '../types';
+} from '../types';
 
- import { 
+import {
   TREASUREVALUETYPES, type TreasureValueType,
- } from '../types/enum';
+} from '../types/enum';
 
-const BASE = '/rmce/objects/treasurecode';
+const BASE = '/rmce/data/treasurecode';
 
 const asString = (v: unknown) => String(v ?? '');
 
@@ -19,7 +19,7 @@ function asTreasureValueType(v: unknown): TreasureValueType {
     : 'Normal'; // fallback if server ever sends an unknown value
 }
 
-/** GET /rmce/objects/treasurecode → { treasurecodes: TreasureCode[] } */
+/** GET /rmce/data/treasurecode → { treasurecodes: TreasureCode[] } */
 export async function fetchTreasureCodes(): Promise<TreasureCode[]> {
   const data = await fetchJson<TreasureCodesPayload>(BASE);
   if (!data || !Array.isArray((data as any).treasurecodes)) {
@@ -42,7 +42,7 @@ export async function upsertTreasureCode(
   return sendJson(url, method, tc);
 }
 
-/** DELETE /rmce/objects/treasurecode/{id} */
+/** DELETE /rmce/data/treasurecode/{id} */
 export async function deleteTreasureCode(id: string) {
   if (!id) throw new Error('deleteTreasureCode: id is required');
   await fetchJson<void>(`${BASE}/${encodeURIComponent(id)}`, { method: 'DELETE' });

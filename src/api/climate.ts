@@ -9,7 +9,7 @@ import {
   TEMPERATURES, Temperature,
 } from '../types/enum';
 
-const BASE = '/rmce/objects/climate';
+const BASE = '/rmce/data/climate';
 
 const PRECIP_ENUM: ReadonlySet<Precipitation> = new Set(PRECIPITATIONS);
 
@@ -31,7 +31,7 @@ function sanitizeTemperature(v: unknown): Temperature {
 }
 
 /**
- * GET /rmce/objects/climate  ->  { climates: Climate[] }
+ * GET /rmce/data/climate  ->  { climates: Climate[] }
  */
 export async function fetchClimates(): Promise<Climate[]> {
   const data = await fetchJson<ClimatesPayload>(BASE);
@@ -48,8 +48,8 @@ export async function fetchClimates(): Promise<Climate[]> {
 
 /**
  * Create or update a single climate.
- * - Create: POST /rmce/objects/climate   (body = Climate)
- * - Edit:   PUT  /rmce/objects/climate   (body = Climate)
+ * - Create: POST /rmce/data/climate   (body = Climate)
+ * - Edit:   PUT  /rmce/data/climate   (body = Climate)
  */
 export async function upsertClimate(
   climate: Climate,
@@ -61,7 +61,7 @@ export async function upsertClimate(
 }
 
 /**
- * DELETE /rmce/objects/climate/{id}
+ * DELETE /rmce/data/climate/{id}
  */
 export async function deleteClimate(id: string): Promise<void> {
   if (!id) throw new Error('deleteClimate: id is required');

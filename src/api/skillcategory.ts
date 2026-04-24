@@ -1,14 +1,14 @@
 import { fetchJson, sendJson } from './client';
 
-import type { 
+import type {
   SkillCategory, SkillCategoriesPayload,
 } from '../types';
 
-import { 
+import {
   STATS, type Stat,
- } from '../types/enum';
+} from '../types/enum';
 
-const BASE = '/rmce/objects/skillcategory';
+const BASE = '/rmce/data/skillcategory';
 
 const asString = (v: unknown) => String(v ?? '');
 const asBool = (v: unknown) => v === true || v === 'true' || v === 1 || v === '1';
@@ -25,7 +25,7 @@ function asStatArray(v: unknown): Stat[] {
   return out;
 }
 
-/** GET /rmce/objects/skillcategory → { skillcategories: SkillCategory[] } */
+/** GET /rmce/data/skillcategory → { skillcategories: SkillCategory[] } */
 export async function fetchSkillCategories(): Promise<SkillCategory[]> {
   const data = await fetchJson<SkillCategoriesPayload>(BASE);
   if (!data || !Array.isArray((data as any).skillcategories)) {
@@ -52,7 +52,7 @@ export async function upsertSkillCategory(
   return sendJson(url, method, sc);
 }
 
-/** DELETE /rmce/objects/skillcategory/{id} */
+/** DELETE /rmce/data/skillcategory/{id} */
 export async function deleteSkillCategory(id: string) {
   if (!id) throw new Error('deleteSkillCategory: id is required');
   await fetchJson<void>(`${BASE}/${encodeURIComponent(id)}`, { method: 'DELETE' });

@@ -1,10 +1,10 @@
 import { fetchJson, sendJson } from './client';
 
-import type { 
+import type {
   Skill, SkillsPayload,
- } from '../types';
+} from '../types';
 
-const BASE = '/rmce/objects/skill';
+const BASE = '/rmce/data/skill';
 
 const asString = (v: unknown) => String(v ?? '');
 const asBool = (v: unknown) => v === true || v === 'true' || v === 1 || v === '1';

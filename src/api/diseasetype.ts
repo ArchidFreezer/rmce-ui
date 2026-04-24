@@ -9,7 +9,7 @@ import {
   MALADY_SEVERITIES, MaladySeverity,
 } from '../types/enum';
 
-const BASE = '/rmce/objects/diseasetype';
+const BASE = '/rmce/data/diseasetype';
 
 // sanitize helpers
 function isSeverity(v: unknown): v is MaladySeverity {
@@ -28,7 +28,7 @@ function sanitizeSymptoms(arr: unknown): MaladySymptom[] {
   return out;
 }
 
-/** GET /rmce/objects/diseasetype → { diseasetypes: DiseaseType[] } */
+/** GET /rmce/data/diseasetype → { diseasetypes: DiseaseType[] } */
 export async function fetchDiseaseTypes(): Promise<DiseaseType[]> {
   const data = await fetchJson<DiseaseTypesPayload>(BASE);
   if (!data || !Array.isArray(data.diseasetypes)) {
@@ -53,7 +53,7 @@ export async function upsertDiseaseType(
   return sendJson(url, method, dt);
 }
 
-/** DELETE /rmce/objects/diseasetype/{id} */
+/** DELETE /rmce/data/diseasetype/{id} */
 export async function deleteDiseaseType(id: string): Promise<void> {
   if (!id) throw new Error('deleteDiseaseType: id is required');
   const url = `${BASE}/${encodeURIComponent(id)}`;

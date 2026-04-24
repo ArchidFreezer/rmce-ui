@@ -1,10 +1,10 @@
 import { fetchJson, sendJson } from './client';
 
-import type { 
+import type {
   Book, BooksPayload,
- } from '../types';
+} from '../types';
 
-const BASE = '/rmce/objects/book';
+const BASE = '/rmce/data/book';
 
 export async function fetchBooks(): Promise<Book[]> {
   const data = await fetchJson<BooksPayload>(`${BASE}`);
@@ -24,7 +24,7 @@ export async function upsertBook(
   return sendJson(url, method, book);
 }
 
-/** DELETE /rmce/objects/book/{id} */
+/** DELETE /rmce/data/book/{id} */
 export async function deleteBook(id: string): Promise<unknown> {
   if (!id) throw new Error('deleteBook: id is required');
   const url = `${BASE}/${encodeURIComponent(id)}`;

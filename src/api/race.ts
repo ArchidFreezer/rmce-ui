@@ -12,7 +12,7 @@ import type {
   SkillValue,
 } from '../types';
 
-const BASE = '/rmce/objects/race';
+const BASE = '/rmce/data/race';
 
 const asString = (v: unknown) => String(v ?? '');
 const asBool = (v: unknown) => v === true || v === 'true' || v === 1 || v === '1';

@@ -1,15 +1,15 @@
 import { fetchJson, sendJson } from './client';
 
-import type { 
+import type {
   Language, LanguagesPayload,
- } from '../types';
+} from '../types';
 
-const BASE = '/rmce/objects/language';
+const BASE = '/rmce/data/language';
 
 const asString = (v: unknown) => String(v ?? '');
 const asBool = (v: unknown) => v === true || v === 'true' || v === 1 || v === '1';
 
-/** GET /rmce/objects/language → { languages: Language[] } */
+/** GET /rmce/data/language → { languages: Language[] } */
 export async function fetchLanguages(): Promise<Language[]> {
   const data = await fetchJson<LanguagesPayload>(BASE);
   if (!data || !Array.isArray((data as any).languages)) {
@@ -36,7 +36,7 @@ export async function upsertLanguage(
   return sendJson(url, method, lang);
 }
 
-/** DELETE /rmce/objects/language/{id} */
+/** DELETE /rmce/data/language/{id} */
 export async function deleteLanguage(id: string) {
   if (!id) throw new Error('deleteLanguage: id is required');
   await fetchJson<void>(`${BASE}/${encodeURIComponent(id)}`, { method: 'DELETE' });
