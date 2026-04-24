@@ -3,7 +3,7 @@ import { fetchJson, sendJson } from './client';
 
 import type { Culture, CulturesPayload } from '../types';
 
-const BASE = '/rmce/objects/culture';
+const BASE = '/rmce/data/culture';
 
 const asString = (v: unknown) => String(v ?? '');
 const asFloat = (v: unknown) => {

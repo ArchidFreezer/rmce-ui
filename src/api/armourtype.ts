@@ -1,10 +1,10 @@
 import { fetchJson, sendJson } from './client';
 
-import type { 
+import type {
   ArmourType, ArmourTypesPayload,
- } from '../types';
+} from '../types';
 
-const BASE = '/rmce/objects/armourtype';
+const BASE = '/rmce/data/armourtype';
 
 export async function fetchArmourTypes(): Promise<ArmourType[]> {
   const data = await fetchJson<ArmourTypesPayload>(`${BASE}`);
@@ -24,7 +24,7 @@ export async function upsertArmourType(
   return sendJson(url, method, armourtype);
 }
 
-/** DELETE /rmce/objects/armourtype/{id} */
+/** DELETE /rmce/data/armourtype/{id} */
 export async function deleteArmourType(id: string): Promise<unknown> {
   if (!id) throw new Error('deleteArmourType: id is required');
   const url = `${BASE}/${encodeURIComponent(id)}`;

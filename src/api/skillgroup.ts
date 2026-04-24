@@ -1,16 +1,16 @@
 import { fetchJson, sendJson } from './client';
 
-import type { 
+import type {
   SkillGroup, SkillGroupsPayload,
- } from '../types';
+} from '../types';
 
-const BASE = '/rmce/objects/skillgroup';
+const BASE = '/rmce/data/skillgroup';
 
 function asString(v: unknown): string {
   return String(v ?? '');
 }
 
-/** GET /rmce/objects/skillgroup → { skillgroups: SkillGroup[] } */
+/** GET /rmce/data/skillgroup → { skillgroups: SkillGroup[] } */
 export async function fetchSkillGroups(): Promise<SkillGroup[]> {
   const data = await fetchJson<SkillGroupsPayload>(BASE);
   if (!data || !Array.isArray((data as any).skillgroups)) {
@@ -32,7 +32,7 @@ export async function upsertSkillGroup(
   return sendJson(url, method, sg);
 }
 
-/** DELETE /rmce/objects/skillgroup/{id} */
+/** DELETE /rmce/data/skillgroup/{id} */
 export async function deleteSkillGroup(id: string): Promise<void> {
   if (!id) throw new Error('deleteSkillGroup: id is required');
   await fetchJson<void>(`${BASE}/${encodeURIComponent(id)}`, { method: 'DELETE' });

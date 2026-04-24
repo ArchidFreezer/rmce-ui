@@ -1,15 +1,15 @@
 // src/api/creaturepace.ts
 import { fetchJson, sendJson } from './client';
 
-import type { 
+import type {
   CreaturePace, CreaturePacesPayload,
- } from '../types';
+} from '../types';
 
-import { 
+import {
   MANOEUVRE_DIFFICULTIES, ManoeuvreDifficulty,
- } from '../types/enum';
+} from '../types/enum';
 
-const BASE = '/rmce/objects/creaturepace';
+const BASE = '/rmce/data/creaturepace';
 
 function asNumber(n: unknown): number {
   const v = Number(n);
@@ -23,7 +23,7 @@ function asDifficulty(v: unknown): ManoeuvreDifficulty {
     : 'Normal'; // fallback if server ever sends an unknown value
 }
 
-/** GET /rmce/objects/creaturepace → { creaturepaces: CreaturePace[] } */
+/** GET /rmce/data/creaturepace → { creaturepaces: CreaturePace[] } */
 export async function fetchCreaturePaces(): Promise<CreaturePace[]> {
   const data = await fetchJson<CreaturePacesPayload>(BASE);
   if (!data || !Array.isArray(data.creaturepaces)) {

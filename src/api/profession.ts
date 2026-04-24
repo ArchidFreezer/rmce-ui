@@ -16,7 +16,7 @@ import type {
   SkillValue,
 } from '../types';
 
-const BASE = '/rmce/objects/profession';
+const BASE = '/rmce/data/profession';
 
 const asString = (v: unknown) => String(v ?? '');
 const asInt = (v: unknown) => {

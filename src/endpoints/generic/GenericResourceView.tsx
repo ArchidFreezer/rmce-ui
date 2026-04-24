@@ -28,8 +28,8 @@ export default function GenericResourceView() {
       setLoading(true);
       setError(null);
       try {
-        // Generic API: GET /rmce/objects/{prefix}
-        const data = await fetchJson(`/rmce/objects/${encodeURIComponent(prefix)}`);
+        // Generic API: GET /rmce/data/{prefix}
+        const data = await fetchJson(`/rmce/data/${encodeURIComponent(prefix)}`);
         if (!mounted) return;
         setPayload(data);
 
@@ -93,7 +93,7 @@ export default function GenericResourceView() {
     // (re-run code)
     (async () => {
       try {
-        const data = await fetchJson(`/rmce/objects/${encodeURIComponent(prefix ?? '')}`);
+        const data = await fetchJson(`/rmce/data/${encodeURIComponent(prefix ?? '')}`);
         setPayload(data);
         const { arr, key } = extractArray(data);
         setItems(arr);

@@ -1,10 +1,10 @@
 import { fetchJson, sendJson } from './client';
 
-import type { 
+import type {
   SkillProgressionType, SkillProgressionTypesPayload,
- } from '../types';
+} from '../types';
 
-const BASE = '/rmce/objects/skillprogressiontype';
+const BASE = '/rmce/data/skillprogressiontype';
 
 function asInt(v: unknown): number {
   const n = Number(v);

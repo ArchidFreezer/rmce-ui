@@ -9,7 +9,7 @@ import {
   MALADY_SEVERITIES, MaladySeverity,
 } from '../types/enum';
 
-const BASE = '/rmce/objects/poisontype';
+const BASE = '/rmce/data/poisontype';
 
 function isSeverity(s: unknown): s is MaladySeverity {
   return typeof s === 'string' && (MALADY_SEVERITIES as readonly string[]).includes(s);
@@ -39,7 +39,7 @@ function sanitizeSymptoms(arr: unknown): MaladySymptom[] {
   return out;
 }
 
-/** GET /rmce/objects/poisontype → { poisontypes: PoisonType[] } */
+/** GET /rmce/data/poisontype → { poisontypes: PoisonType[] } */
 export async function fetchPoisonTypes(): Promise<PoisonType[]> {
   const data = await fetchJson<PoisonTypesPayload>(`${BASE}`);
   if (!data || !Array.isArray(data.poisontypes)) {
@@ -65,7 +65,7 @@ export async function upsertPoisonType(
   return sendJson(url, method, pt);
 }
 
-/** DELETE /rmce/objects/poisontype/{id} */
+/** DELETE /rmce/data/poisontype/{id} */
 export async function deletePoisonType(id: string): Promise<void> {
   if (!id) throw new Error('deletePoisonType: id is required');
   const url = `${BASE}/${encodeURIComponent(id)}`;

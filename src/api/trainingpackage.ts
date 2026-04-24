@@ -4,7 +4,7 @@ import type {
   TrainingPackage, TrainingPackagesPayload,
 } from '../types';
 
-const BASE = '/rmce/objects/trainingpackage';
+const BASE = '/rmce/data/trainingpackage';
 
 const asString = (v: unknown) => String(v ?? '');
 const asInt = (v: unknown) => {

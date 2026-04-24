@@ -1,15 +1,15 @@
 import { fetchJson, sendJson } from './client';
 
-import type { 
+import type {
   SpellList, SpellListsPayload,
- } from '../types';
+} from '../types';
 
-import { 
-  SPELL_TYPES, SpellType, 
+import {
+  SPELL_TYPES, SpellType,
   SPELL_REALMS, Realm,
- } from '../types/enum';
+} from '../types/enum';
 
-const BASE = '/rmce/objects/spelllist';
+const BASE = '/rmce/data/spelllist';
 
 // Sanitizers
 function asSpellType(v: unknown): SpellType {
@@ -27,7 +27,7 @@ function asBool(v: unknown): boolean {
   return v === true || v === 'true' || v === 1 || v === '1';
 }
 
-/** GET /rmce/objects/spelllist → { spelllists: SpellList[] } */
+/** GET /rmce/data/spelllist → { spelllists: SpellList[] } */
 export async function fetchSpellLists(): Promise<SpellList[]> {
   const data = await fetchJson<SpellListsPayload>(BASE);
   if (!data || !Array.isArray(data.spelllists)) {
@@ -54,7 +54,7 @@ export async function upsertSpellList(
   return sendJson(url, method, sl);
 }
 
-/** DELETE /rmce/objects/spelllist/{id} */
+/** DELETE /rmce/data/spelllist/{id} */
 export async function deleteSpellList(id: string): Promise<void> {
   if (!id) throw new Error('deleteSpellList: id is required');
   await fetchJson<void>(`${BASE}/${encodeURIComponent(id)}`, { method: 'DELETE' });

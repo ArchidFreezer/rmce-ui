@@ -10,12 +10,12 @@ import type {
 
 /**
  * REST base for WeaponType
- * GET    /rmce/objects/weapontype
- * POST   /rmce/objects/weapontype
- * PUT    /rmce/objects/weapontype
- * DELETE /rmce/objects/weapontype/{id}
+ * GET    /rmce/data/weapontype
+ * POST   /rmce/data/weapontype
+ * PUT    /rmce/data/weapontype
+ * DELETE /rmce/data/weapontype/{id}
  */
-const BASE = '/rmce/objects/weapontype';
+const BASE = '/rmce/data/weapontype';
 
 // ---------- small coercion helpers ----------
 const asString = (v: unknown) => String(v ?? '');
@@ -95,8 +95,8 @@ export async function fetchWeaponTypes(): Promise<WeaponType[]> {
 
 /**
  * Create or update a weapon type.
- * - POST to /rmce/objects/weapontype
- * - PUT  to /rmce/objects/weapontype
+ * - POST to /rmce/data/weapontype
+ * - PUT  to /rmce/data/weapontype
  */
 export async function upsertWeaponType(
   w: WeaponType,
