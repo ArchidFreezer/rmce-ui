@@ -232,7 +232,6 @@ export interface CharacterCategory {
 
 export interface CharacterSkill {
   skillData: SkillSubcategory; // skill id + optional subcategory
-  category?: string | undefined; // SkillCategory.id — populated by server
   progression: string;          // SkillProgressionType.id
   developmentType: SkillDevelopmentType;
   professionBonus: number;

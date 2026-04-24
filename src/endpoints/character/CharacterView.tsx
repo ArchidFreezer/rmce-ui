@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   fetchCharacters, deleteCharacter,
   fetchRaces, fetchCultures, fetchProfessions,
-  fetchSkills, fetchSkillCategories, fetchSpellLists,
+  fetchSkills, fetchSkillCategories, fetchSkillGroups, fetchSpellLists,
   fetchSkillProgressionTypes, fetchLanguages,
   fetchWeaponTypes,
 } from '../../api';
@@ -17,6 +17,7 @@ import {
 
 import type {
   Character, CharacterCategory, CharacterCategorySpellLists, CharacterSkill, Profession,
+  Skill, SkillCategory, SkillGroup,
 } from '../../types';
 
 /* ------------------------------------------------------------------ */
@@ -32,6 +33,8 @@ interface RefData {
   professionStats: Map<string, Set<string>>;
   skills: NameMap;
   skillCategories: NameMap;
+  skillCategoryLabels: NameMap;
+  skillToCategory: Map<string, string>;
   spellLists: NameMap;
   progressionTypes: NameMap;
   languages: NameMap;
@@ -45,6 +48,8 @@ const emptyRefData = (): RefData => ({
   professionStats: new Map(),
   skills: new Map(),
   skillCategories: new Map(),
+  skillCategoryLabels: new Map(),
+  skillToCategory: new Map(),
   spellLists: new Map(),
   progressionTypes: new Map(),
   languages: new Map(),
@@ -354,75 +359,103 @@ function DetailsTab({ char, ref: refs }: { char: Character; ref: RefData }) {
   );
 }
 
-function SkillGroup({ title, skills, refs }: { title: string; skills: CharacterSkill[]; refs: RefData }) {
+function SkillTable({ skills, refs }: { skills: CharacterSkill[]; refs: RefData }) {
   if (skills.length === 0) return null;
+  const effectiveCatId = (s: CharacterSkill) => refs.skillToCategory.get(s.skillData.id) ?? '';
+  const sorted = [...skills].sort((a, b) => {
+    const catA = resolve(refs.skillCategoryLabels, effectiveCatId(a));
+    const catB = resolve(refs.skillCategoryLabels, effectiveCatId(b));
+    const cmp = catA.localeCompare(catB);
+    return cmp !== 0 ? cmp : resolve(refs.skills, a.skillData.id).localeCompare(resolve(refs.skills, b.skillData.id));
+  });
   return (
-    <div style={{ marginBottom: 16 }}>
-      <h5 style={{ margin: '8px 0 4px', color: 'var(--muted, #666)' }}>{title}</h5>
-      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-        <thead>
-          <tr>
-            {['Skill', 'Subcategory', 'Progression', 'Dev Type', 'Ranks', 'Prof Bonus', 'Special Bonus', 'Total Bonus'].map(h => (
-              <th key={h} style={{ textAlign: 'left', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)', fontSize: '0.85em' }}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {skills.map((s, i) => (
-            <tr key={i}>
-              <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{resolve(refs.skills, s.skillData.id)}</td>
-              <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{s.skillData.subcategory ? resolve(refs.weaponTypes, s.skillData.subcategory) : '—'}</td>
-              <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{resolve(refs.progressionTypes, s.progression)}</td>
-              <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{s.developmentType}</td>
-              <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.ranks}</td>
-              <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.professionBonus}</td>
-              <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.specialBonus}</td>
-              <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.totalBonus}</td>
-            </tr>
+    <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+      <thead>
+        <tr>
+          {['Category', 'Skill', 'Subcategory', 'Progression', 'Dev Type', 'Ranks', 'Prof Bonus', 'Special Bonus', 'Total Bonus'].map(h => (
+            <th key={h} style={{ textAlign: 'left', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)', fontSize: '0.85em' }}>{h}</th>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </tr>
+      </thead>
+      <tbody>
+        {sorted.map((s, i) => (
+          <tr key={i}>
+            <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{(() => { const cId = refs.skillToCategory.get(s.skillData.id) ?? ''; return cId ? resolve(refs.skillCategoryLabels, cId) : '—'; })()}</td>
+            <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{resolve(refs.skills, s.skillData.id)}</td>
+            <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{s.skillData.subcategory ? resolve(refs.weaponTypes, s.skillData.subcategory) : '—'}</td>
+            <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{resolve(refs.progressionTypes, s.progression)}</td>
+            <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{s.developmentType}</td>
+            <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.ranks}</td>
+            <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.professionBonus}</td>
+            <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.specialBonus}</td>
+            <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.totalBonus}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
-function groupSkillsByCategory(skills: CharacterSkill[], refs: RefData): Map<string, CharacterSkill[]> {
-  const groups = new Map<string, CharacterSkill[]>();
-  for (const skill of skills) {
-    const catId = skill.category ?? '';
-    const catName = catId ? resolve(refs.skillCategories, catId) : 'Uncategorized';
-    const arr = groups.get(catName) ?? [];
-    arr.push(skill);
-    groups.set(catName, arr);
-  }
-  return groups;
-}
-
 function SkillsTab({ char, refs }: { char: Character; refs: RefData }) {
-  const developed = char.skills.filter(s => s.ranks > 0);
-  const undeveloped = char.skills.filter(s => s.ranks <= 0);
+  const [categoryFilter, setCategoryFilter] = useState('');
 
-  const developedGroups = groupSkillsByCategory(developed, refs);
-  const undevelopedGroups = groupSkillsByCategory(undeveloped, refs);
+  const categoryOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const opts: { value: string; label: string }[] = [];
+    for (const s of char.skills) {
+      const catId = refs.skillToCategory.get(s.skillData.id) ?? '';
+      if (catId && !seen.has(catId)) {
+        seen.add(catId);
+        opts.push({ value: catId, label: resolve(refs.skillCategoryLabels, catId) });
+      }
+    }
+    return opts.sort((a, b) => a.label.localeCompare(b.label));
+  }, [char.skills, refs.skillCategoryLabels, refs.skillToCategory]);
+
+  const filteredSkills = useMemo(
+    () => categoryFilter
+      ? char.skills.filter(s => refs.skillToCategory.get(s.skillData.id) === categoryFilter)
+      : char.skills,
+    [char.skills, categoryFilter, refs.skillToCategory]
+  );
+
+  const developed = filteredSkills.filter(s => s.ranks > 0);
+  const undeveloped = filteredSkills.filter(s => s.ranks <= 0);
 
   return (
     <div style={{ padding: '12px 0' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 14 }}>Category</span>
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            aria-label="Filter by category"
+            style={{ padding: '6px 8px' }}
+          >
+            <option value="">All</option>
+            {categoryOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </label>
+        {categoryFilter && (
+          <button type="button" onClick={() => setCategoryFilter('')}>Clear filter</button>
+        )}
+      </div>
+
       <SectionHeading title={`Developed Skills (${developed.length})`} />
       {developed.length === 0 ? (
         <p style={{ color: 'var(--muted, #666)' }}>No developed skills.</p>
       ) : (
-        Array.from(developedGroups.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([cat, skills]) => (
-          <SkillGroup key={cat} title={cat} skills={skills} refs={refs} />
-        ))
+        <SkillTable skills={developed} refs={refs} />
       )}
 
       <SectionHeading title={`Undeveloped Skills (${undeveloped.length})`} />
       {undeveloped.length === 0 ? (
         <p style={{ color: 'var(--muted, #666)' }}>No undeveloped skills.</p>
       ) : (
-        Array.from(undevelopedGroups.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([cat, skills]) => (
-          <SkillGroup key={cat} title={cat} skills={skills} refs={refs} />
-        ))
+        <SkillTable skills={undeveloped} refs={refs} />
       )}
     </div>
   );
@@ -431,7 +464,7 @@ function SkillsTab({ char, refs }: { char: Character; refs: RefData }) {
 function CategoriesTab({ char, refs }: { char: Character; refs: RefData }) {
   const sorted = useMemo(
     () => [...char.categories].sort((a, b) =>
-      resolve(refs.skillCategories, a.id).localeCompare(resolve(refs.skillCategories, b.id))
+      resolve(refs.skillCategoryLabels, a.id).localeCompare(resolve(refs.skillCategoryLabels, b.id))
     ),
     [char.categories, refs]
   );
@@ -453,7 +486,7 @@ function CategoriesTab({ char, refs }: { char: Character; refs: RefData }) {
         <tbody>
           {sorted.map((cat: CharacterCategory) => (
             <tr key={cat.id}>
-              <td style={{ padding: '3px 10px 3px 0' }}>{resolve(refs.skillCategories, cat.id)}</td>
+              <td style={{ padding: '3px 10px 3px 0' }}>{resolve(refs.skillCategoryLabels, cat.id)}</td>
               <td style={{ padding: '3px 10px 3px 0' }}>{resolve(refs.progressionTypes, cat.progression)}</td>
               <td style={{ padding: '3px 10px 3px 0', textAlign: 'center' }}>{cat.developmentCost}</td>
               <td style={{ padding: '3px 10px 3px 0', textAlign: 'center' }}>{cat.ranks}</td>
@@ -494,7 +527,7 @@ export default function CharacterView() {
       try {
         const [
           characters, races, cultures, professions,
-          skills, skillCategories, spellLists,
+          skills, skillCategories, skillGroups, spellLists,
           progressionTypes, languages, weaponTypes,
         ] = await Promise.all([
           fetchCharacters(),
@@ -503,11 +536,19 @@ export default function CharacterView() {
           fetchProfessions(),
           fetchSkills(),
           fetchSkillCategories(),
+          fetchSkillGroups(),
           fetchSpellLists(),
           fetchSkillProgressionTypes(),
           fetchLanguages(),
           fetchWeaponTypes(),
         ]);
+        const sgMap = new Map((skillGroups as SkillGroup[]).map(g => [g.id, g.name]));
+        const skillCategoryLabels = new Map(
+          (skillCategories as SkillCategory[]).map(c => [c.id, `(${sgMap.get(c.group) ?? c.group}) - ${c.name}`])
+        );
+        const skillToCategory = new Map(
+          (skills as Skill[]).map(s => [s.id, s.category])
+        );
         setRows(characters);
         setRefs({
           races: buildMap(races),
@@ -516,6 +557,8 @@ export default function CharacterView() {
           professionStats: new Map((professions as Profession[]).map(p => [p.id, new Set<string>(p.stats)])),
           skills: buildMap(skills),
           skillCategories: buildMap(skillCategories),
+          skillCategoryLabels,
+          skillToCategory,
           spellLists: buildMap(spellLists),
           progressionTypes: buildMap(progressionTypes),
           languages: buildMap(languages),
