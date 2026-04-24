@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { fetchCharacters, deleteCharacter } from '../../api';
+import {
+  fetchCharacters, deleteCharacter,
+  fetchRaces, fetchCultures, fetchProfessions,
+  fetchSkills, fetchSkillCategories, fetchSpellLists,
+  fetchSkillProgressionTypes, fetchLanguages,
+} from '../../api';
 
 import {
   DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
@@ -11,6 +16,43 @@ import {
 import type {
   Character, CharacterCategory, CharacterSkill,
 } from '../../types';
+
+/* ------------------------------------------------------------------ */
+/* Reference data lookup                                              */
+/* ------------------------------------------------------------------ */
+
+type NameMap = Map<string, string>;
+
+interface RefData {
+  races: NameMap;
+  cultures: NameMap;
+  professions: NameMap;
+  skills: NameMap;
+  skillCategories: NameMap;
+  spellLists: NameMap;
+  progressionTypes: NameMap;
+  languages: NameMap;
+}
+
+const emptyRefData = (): RefData => ({
+  races: new Map(),
+  cultures: new Map(),
+  professions: new Map(),
+  skills: new Map(),
+  skillCategories: new Map(),
+  spellLists: new Map(),
+  progressionTypes: new Map(),
+  languages: new Map(),
+});
+
+function buildMap(items: { id: string; name: string }[]): NameMap {
+  return new Map(items.map(i => [i.id, i.name]));
+}
+
+/** Returns the display name for an id, falling back to the id itself */
+function resolve(map: NameMap, id: string): string {
+  return map.get(id) ?? id;
+}
 
 /* ------------------------------------------------------------------ */
 /* Tab types                                                           */
@@ -38,7 +80,7 @@ function SectionHeading({ title }: { title: string }) {
   );
 }
 
-function DetailsTab({ char }: { char: Character }) {
+function DetailsTab({ char, ref: refs }: { char: Character; ref: RefData }) {
   return (
     <div style={{ padding: '12px 0' }}>
       <SectionHeading title="General" />
@@ -58,9 +100,9 @@ function DetailsTab({ char }: { char: Character }) {
       <SectionHeading title="Origin" />
       <table style={{ borderCollapse: 'collapse' }}>
         <tbody>
-          <DetailRow label="Race" value={char.race} />
-          <DetailRow label="Culture" value={char.culture} />
-          <DetailRow label="Profession" value={char.profession} />
+          <DetailRow label="Race" value={resolve(refs.races, char.race)} />
+          <DetailRow label="Culture" value={resolve(refs.cultures, char.culture)} />
+          <DetailRow label="Profession" value={resolve(refs.professions, char.profession)} />
         </tbody>
       </table>
 
@@ -141,8 +183,8 @@ function DetailsTab({ char }: { char: Character }) {
             <tbody>
               {char.spellListCategories.map(c => (
                 <tr key={c.category}>
-                  <td style={{ padding: '3px 10px 3px 0', verticalAlign: 'top' }}>{c.category}</td>
-                  <td style={{ padding: '3px 0' }}>{c.spellLists.join(', ')}</td>
+                  <td style={{ padding: '3px 10px 3px 0', verticalAlign: 'top' }}>{resolve(refs.skillCategories, c.category)}</td>
+                  <td style={{ padding: '3px 0' }}>{c.spellLists.map(sl => resolve(refs.spellLists, sl)).join(', ')}</td>
                 </tr>
               ))}
             </tbody>
@@ -164,7 +206,7 @@ function DetailsTab({ char }: { char: Character }) {
             <tbody>
               {char.languageAbilities.map(la => (
                 <tr key={la.language}>
-                  <td style={{ padding: '3px 10px 3px 0' }}>{la.language}</td>
+                  <td style={{ padding: '3px 10px 3px 0' }}>{resolve(refs.languages, la.language)}</td>
                   <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{la.spoken ?? '—'}</td>
                   <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{la.written ?? '—'}</td>
                   <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{la.somatic ?? '—'}</td>
@@ -187,7 +229,7 @@ function DetailsTab({ char }: { char: Character }) {
   );
 }
 
-function SkillGroup({ title, skills }: { title: string; skills: CharacterSkill[] }) {
+function SkillGroup({ title, skills, refs }: { title: string; skills: CharacterSkill[]; refs: RefData }) {
   if (skills.length === 0) return null;
   return (
     <div style={{ marginBottom: 16 }}>
@@ -203,9 +245,9 @@ function SkillGroup({ title, skills }: { title: string; skills: CharacterSkill[]
         <tbody>
           {skills.map((s, i) => (
             <tr key={i}>
-              <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{s.skillData.id}</td>
+              <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{resolve(refs.skills, s.skillData.id)}</td>
               <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{s.skillData.subcategory ?? '—'}</td>
-              <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{s.progression}</td>
+              <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{resolve(refs.progressionTypes, s.progression)}</td>
               <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{s.developmentType}</td>
               <td style={{ padding: '3px 10px 3px 0', textAlign: 'right', fontSize: '0.9em' }}>{s.ranks}</td>
               <td style={{ padding: '3px 10px 3px 0', textAlign: 'right', fontSize: '0.9em' }}>{s.professionBonus}</td>
@@ -219,23 +261,24 @@ function SkillGroup({ title, skills }: { title: string; skills: CharacterSkill[]
   );
 }
 
-function groupSkillsByCategory(skills: CharacterSkill[]): Map<string, CharacterSkill[]> {
+function groupSkillsByCategory(skills: CharacterSkill[], refs: RefData): Map<string, CharacterSkill[]> {
   const groups = new Map<string, CharacterSkill[]>();
   for (const skill of skills) {
-    const cat = skill.category ?? 'Uncategorized';
-    const arr = groups.get(cat) ?? [];
+    const catId = skill.category ?? '';
+    const catName = catId ? resolve(refs.skillCategories, catId) : 'Uncategorized';
+    const arr = groups.get(catName) ?? [];
     arr.push(skill);
-    groups.set(cat, arr);
+    groups.set(catName, arr);
   }
   return groups;
 }
 
-function SkillsTab({ char }: { char: Character }) {
+function SkillsTab({ char, refs }: { char: Character; refs: RefData }) {
   const developed = char.skills.filter(s => s.ranks > 0);
   const undeveloped = char.skills.filter(s => s.ranks <= 0);
 
-  const developedGroups = groupSkillsByCategory(developed);
-  const undevelopedGroups = groupSkillsByCategory(undeveloped);
+  const developedGroups = groupSkillsByCategory(developed, refs);
+  const undevelopedGroups = groupSkillsByCategory(undeveloped, refs);
 
   return (
     <div style={{ padding: '12px 0' }}>
@@ -244,7 +287,7 @@ function SkillsTab({ char }: { char: Character }) {
         <p style={{ color: 'var(--muted, #666)' }}>No developed skills.</p>
       ) : (
         Array.from(developedGroups.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([cat, skills]) => (
-          <SkillGroup key={cat} title={cat} skills={skills} />
+          <SkillGroup key={cat} title={cat} skills={skills} refs={refs} />
         ))
       )}
 
@@ -253,17 +296,19 @@ function SkillsTab({ char }: { char: Character }) {
         <p style={{ color: 'var(--muted, #666)' }}>No undeveloped skills.</p>
       ) : (
         Array.from(undevelopedGroups.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([cat, skills]) => (
-          <SkillGroup key={cat} title={cat} skills={skills} />
+          <SkillGroup key={cat} title={cat} skills={skills} refs={refs} />
         ))
       )}
     </div>
   );
 }
 
-function CategoriesTab({ char }: { char: Character }) {
+function CategoriesTab({ char, refs }: { char: Character; refs: RefData }) {
   const sorted = useMemo(
-    () => [...char.categories].sort((a, b) => a.id.localeCompare(b.id)),
-    [char.categories]
+    () => [...char.categories].sort((a, b) =>
+      resolve(refs.skillCategories, a.id).localeCompare(resolve(refs.skillCategories, b.id))
+    ),
+    [char.categories, refs]
   );
 
   if (sorted.length === 0) {
@@ -283,8 +328,8 @@ function CategoriesTab({ char }: { char: Character }) {
         <tbody>
           {sorted.map((cat: CharacterCategory) => (
             <tr key={cat.id}>
-              <td style={{ padding: '3px 10px 3px 0' }}>{cat.id}</td>
-              <td style={{ padding: '3px 10px 3px 0' }}>{cat.progression}</td>
+              <td style={{ padding: '3px 10px 3px 0' }}>{resolve(refs.skillCategories, cat.id)}</td>
+              <td style={{ padding: '3px 10px 3px 0' }}>{resolve(refs.progressionTypes, cat.progression)}</td>
               <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{cat.developmentCost}</td>
               <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{cat.ranks}</td>
               <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{cat.professionBonus}</td>
@@ -304,6 +349,7 @@ export default function CharacterView() {
   const dtRef = useRef<DataTableHandle>(null);
 
   const [rows, setRows] = useState<Character[]>([]);
+  const [refs, setRefs] = useState<RefData>(emptyRefData);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -321,8 +367,32 @@ export default function CharacterView() {
   useEffect(() => {
     (async () => {
       try {
-        const data = await fetchCharacters();
-        setRows(data);
+        const [
+          characters, races, cultures, professions,
+          skills, skillCategories, spellLists,
+          progressionTypes, languages,
+        ] = await Promise.all([
+          fetchCharacters(),
+          fetchRaces(),
+          fetchCultures(),
+          fetchProfessions(),
+          fetchSkills(),
+          fetchSkillCategories(),
+          fetchSpellLists(),
+          fetchSkillProgressionTypes(),
+          fetchLanguages(),
+        ]);
+        setRows(characters);
+        setRefs({
+          races: buildMap(races),
+          cultures: buildMap(cultures),
+          professions: buildMap(professions),
+          skills: buildMap(skills),
+          skillCategories: buildMap(skillCategories),
+          spellLists: buildMap(spellLists),
+          progressionTypes: buildMap(progressionTypes),
+          languages: buildMap(languages),
+        });
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
       } finally {
@@ -334,8 +404,8 @@ export default function CharacterView() {
   const columns: ColumnDef<Character>[] = useMemo(() => [
     { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
     { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 160 },
-    { id: 'race', header: 'Race', accessor: (r) => r.race, sortType: 'string' },
-    { id: 'profession', header: 'Profession', accessor: (r) => r.profession, sortType: 'string' },
+    { id: 'race', header: 'Race', accessor: (r) => resolve(refs.races, r.race), sortType: 'string' },
+    { id: 'profession', header: 'Profession', accessor: (r) => resolve(refs.professions, r.profession), sortType: 'string' },
     { id: 'level', header: 'Level', accessor: (r) => r.level, sortType: 'number', align: 'right' },
     { id: 'gender', header: 'Gender', accessor: (r) => r.male ? 'Male' : 'Female', sortType: 'string' },
     { id: 'pc', header: 'PC', accessor: (r) => r.playerCharacter ? 'Yes' : 'No', sortType: 'string' },
@@ -351,7 +421,7 @@ export default function CharacterView() {
         </>
       ),
     },
-  ], [rows]);
+  ], [rows, refs]);
 
   const globalFilter = (c: Character, q: string) =>
     [c.id, c.name, c.race, c.culture, c.profession]
@@ -449,9 +519,9 @@ export default function CharacterView() {
           </div>
 
           <div style={{ padding: '0 12px 12px' }}>
-            {activeTab === 'details' && <DetailsTab char={selected} />}
-            {activeTab === 'skills' && <SkillsTab char={selected} />}
-            {activeTab === 'categories' && <CategoriesTab char={selected} />}
+            {activeTab === 'details' && <DetailsTab char={selected} ref={refs} />}
+            {activeTab === 'skills' && <SkillsTab char={selected} refs={refs} />}
+            {activeTab === 'categories' && <CategoriesTab char={selected} refs={refs} />}
           </div>
         </div>
       )}
