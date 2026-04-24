@@ -611,7 +611,7 @@ function getBuildLabel(modifier: number): string {
   return 'Blubbery';
 }
 
-export default function CharacterCreationView() {
+export default function CharacterCreationView({ onFinish }: { onFinish?: () => void } = {}) {
   const toast = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -1772,6 +1772,7 @@ export default function CharacterCreationView() {
           potential: roll.potential ?? 0,
           racialBonus: (race?.statBonuses.find((b) => b.id === roll.assignedStat)?.value ?? 0)
             + apprenticeStatGains.filter((s) => s === roll.assignedStat).length,
+          totalBonus: 0,
         })),
     }));
   }, [characterName, isMale, raceId, cultureTypeId, cultureId, professionId, selectedRealms, statRolls, race, apprenticeStatGains]);
@@ -2717,6 +2718,7 @@ export default function CharacterCreationView() {
             potential: assigned.potential ?? 0,
             racialBonus: (race?.statBonuses.find((b) => b.id === stat)?.value ?? 0)
               + apprenticeStatGains.filter((s) => s === stat).length,
+            totalBonus: 0,
           };
         });
 
@@ -5825,6 +5827,11 @@ export default function CharacterCreationView() {
                 <button type="button" onClick={resetWorkflow}>
                   New Character
                 </button>
+                {onFinish && (
+                  <button type="button" onClick={onFinish}>
+                    Finish
+                  </button>
+                )}
               </div>
             </section>
           )}

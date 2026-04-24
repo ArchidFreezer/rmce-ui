@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
+
+const CharacterCreationView = lazy(() => import('./CharacterCreationView'));
 
 import {
   fetchCharacters, deleteCharacter,
@@ -519,6 +521,8 @@ export default function CharacterView() {
 
   const [selected, setSelected] = useState<Character | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('details');
+  const [showCreation, setShowCreation] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const toast = useToast();
   const confirm = useConfirm();
@@ -571,7 +575,7 @@ export default function CharacterView() {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [refreshKey]);
 
   const columns: ColumnDef<Character>[] = useMemo(() => [
     { id: 'id', header: 'ID', accessor: (r) => r.id, sortType: 'string', minWidth: 220 },
@@ -647,8 +651,15 @@ export default function CharacterView() {
 
       {submitting && <Spinner size={20} />}
 
-      {!selected && (
+      {showCreation && (
+        <Suspense fallback={<Spinner size={24} />}>
+          <CharacterCreationView onFinish={() => { setShowCreation(false); setRefreshKey(k => k + 1); }} />
+        </Suspense>
+      )}
+
+      {!showCreation && !selected && (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+          <button onClick={() => setShowCreation(true)}>New Character</button>
           <DataTableSearchInput
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -662,7 +673,7 @@ export default function CharacterView() {
         </div>
       )}
 
-      {!selected && (
+      {!showCreation && !selected && (
         <DataTable
           ref={dtRef}
           rows={rows}
