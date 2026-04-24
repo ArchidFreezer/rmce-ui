@@ -54,6 +54,25 @@ function resolve(map: NameMap, id: string): string {
   return map.get(id) ?? id;
 }
 
+/** Converts total inches to feet and inches string, e.g. 69 → 5' 9" */
+function formatHeight(totalInches: number): string {
+  const feet = Math.floor(totalInches / 12);
+  const inches = totalInches % 12;
+  return `${feet}' ${inches}"`;
+}
+
+/** Converts pounds to stones and pounds string, e.g. 175 → 12 st 7 lbs */
+function formatWeight(lbs: number): string {
+  const stones = Math.floor(lbs / 14);
+  const remainingLbs = lbs % 14;
+  return `${stones} st ${remainingLbs} lbs`;
+}
+
+/** Formats a lifespan in years, using comma separators for long-lived races */
+function formatLifespan(years: number): string {
+  return `${years.toLocaleString()} years`;
+}
+
 /* ------------------------------------------------------------------ */
 /* Tab types                                                           */
 /* ------------------------------------------------------------------ */
@@ -109,15 +128,21 @@ function DetailsTab({ char, ref: refs }: { char: Character; ref: RefData }) {
       <SectionHeading title="Physique" />
       <table style={{ borderCollapse: 'collapse' }}>
         <tbody>
-          <DetailRow label="Height (in)" value={char.height} />
-          <DetailRow label="Weight (lbs)" value={char.weight} />
+          <DetailRow label="Height" value={formatHeight(char.height)} />
+          <DetailRow label="Weight" value={formatWeight(char.weight)} />
           <DetailRow label="Build" value={char.buildDescription} />
-          <DetailRow label="Lifespan (days)" value={char.lifespan.toLocaleString()} />
+          <DetailRow label="Lifespan" value={formatLifespan(char.lifespan)} />
         </tbody>
       </table>
 
       <SectionHeading title="Stats" />
-      <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+      <table style={{ borderCollapse: 'collapse' }}>
+        <colgroup>
+          <col style={{ width: 160 }} />
+          <col style={{ width: 90 }} />
+          <col style={{ width: 90 }} />
+          <col style={{ width: 100 }} />
+        </colgroup>
         <thead>
           <tr>
             {['Stat', 'Temporary', 'Potential', 'Racial Bonus'].map(h => (
@@ -149,7 +174,11 @@ function DetailsTab({ char, ref: refs }: { char: Character; ref: RefData }) {
       {char.resistances.length > 0 && (
         <>
           <SectionHeading title="Resistances" />
-          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+          <table style={{ borderCollapse: 'collapse' }}>
+            <colgroup>
+              <col style={{ width: 200 }} />
+              <col style={{ width: 80 }} />
+            </colgroup>
             <thead>
               <tr>
                 {['Resistance Type', 'Bonus'].map(h => (
