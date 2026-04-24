@@ -5,6 +5,7 @@ import {
   fetchRaces, fetchCultures, fetchProfessions,
   fetchSkills, fetchSkillCategories, fetchSpellLists,
   fetchSkillProgressionTypes, fetchLanguages,
+  fetchWeaponTypes,
 } from '../../api';
 
 import {
@@ -34,6 +35,7 @@ interface RefData {
   spellLists: NameMap;
   progressionTypes: NameMap;
   languages: NameMap;
+  weaponTypes: NameMap;
 }
 
 const emptyRefData = (): RefData => ({
@@ -46,6 +48,7 @@ const emptyRefData = (): RefData => ({
   spellLists: new Map(),
   progressionTypes: new Map(),
   languages: new Map(),
+  weaponTypes: new Map(),
 });
 
 function buildMap(items: { id: string; name: string }[]): NameMap {
@@ -368,13 +371,13 @@ function SkillGroup({ title, skills, refs }: { title: string; skills: CharacterS
           {skills.map((s, i) => (
             <tr key={i}>
               <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{resolve(refs.skills, s.skillData.id)}</td>
-              <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{s.skillData.subcategory ?? '—'}</td>
+              <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{s.skillData.subcategory ? resolve(refs.weaponTypes, s.skillData.subcategory) : '—'}</td>
               <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{resolve(refs.progressionTypes, s.progression)}</td>
               <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{s.developmentType}</td>
-              <td style={{ padding: '3px 10px 3px 0', textAlign: 'right', fontSize: '0.9em' }}>{s.ranks}</td>
-              <td style={{ padding: '3px 10px 3px 0', textAlign: 'right', fontSize: '0.9em' }}>{s.professionBonus}</td>
-              <td style={{ padding: '3px 10px 3px 0', textAlign: 'right', fontSize: '0.9em' }}>{s.specialBonus}</td>
-              <td style={{ padding: '3px 10px 3px 0', textAlign: 'right', fontSize: '0.9em' }}>{s.totalBonus}</td>
+              <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.ranks}</td>
+              <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.professionBonus}</td>
+              <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.specialBonus}</td>
+              <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.totalBonus}</td>
             </tr>
           ))}
         </tbody>
@@ -452,10 +455,10 @@ function CategoriesTab({ char, refs }: { char: Character; refs: RefData }) {
             <tr key={cat.id}>
               <td style={{ padding: '3px 10px 3px 0' }}>{resolve(refs.skillCategories, cat.id)}</td>
               <td style={{ padding: '3px 10px 3px 0' }}>{resolve(refs.progressionTypes, cat.progression)}</td>
-              <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{cat.developmentCost}</td>
-              <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{cat.ranks}</td>
-              <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{cat.professionBonus}</td>
-              <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{cat.specialBonus}</td>
+              <td style={{ padding: '3px 10px 3px 0', textAlign: 'center' }}>{cat.developmentCost}</td>
+              <td style={{ padding: '3px 10px 3px 0', textAlign: 'center' }}>{cat.ranks}</td>
+              <td style={{ padding: '3px 10px 3px 0', textAlign: 'center' }}>{cat.professionBonus}</td>
+              <td style={{ padding: '3px 10px 3px 0', textAlign: 'center' }}>{cat.specialBonus}</td>
             </tr>
           ))}
         </tbody>
@@ -492,7 +495,7 @@ export default function CharacterView() {
         const [
           characters, races, cultures, professions,
           skills, skillCategories, spellLists,
-          progressionTypes, languages,
+          progressionTypes, languages, weaponTypes,
         ] = await Promise.all([
           fetchCharacters(),
           fetchRaces(),
@@ -503,6 +506,7 @@ export default function CharacterView() {
           fetchSpellLists(),
           fetchSkillProgressionTypes(),
           fetchLanguages(),
+          fetchWeaponTypes(),
         ]);
         setRows(characters);
         setRefs({
@@ -515,6 +519,7 @@ export default function CharacterView() {
           spellLists: buildMap(spellLists),
           progressionTypes: buildMap(progressionTypes),
           languages: buildMap(languages),
+          weaponTypes: buildMap(weaponTypes),
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
