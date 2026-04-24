@@ -5,7 +5,7 @@ import { ToastProvider } from './components/Toast';
 import { ThemeProvider } from './components/ThemeProvider';
 import { Sidebar, SidebarItem } from './components/Sidebar';
 import { fetchPrefixes } from './api/prefix';
-import { splitResources, FALLBACK_RESOURCES, type ResourceDef } from './resources/registry';
+import { splitResources, FALLBACK_RESOURCES, FALLBACK_OBJECTS, type ResourceDef, type ObjectDef } from './resources/registry';
 import GenericResourceView from './endpoints/generic/GenericResourceView'; // <-- generic
 
 const CharacterCreationView = lazy(() => import('./endpoints/character/CharacterCreationView'));
@@ -18,6 +18,7 @@ function Shell() {
   const [error, setError] = useState<string | null>(null);
   const [resources, setResources] = useState<ResourceDef[]>([]);
   const [unknown, setUnknown] = useState<string[]>([]);
+  const objects: ObjectDef[] = FALLBACK_OBJECTS;
 
   useEffect(() => {
     let mounted = true;
@@ -69,6 +70,11 @@ function Shell() {
     },
   ]), []);
 
+  const objectItems: SidebarItem[] = useMemo(() =>
+    objects.map(({ label, path }) => ({ label, path, isKnown: true })),
+    [objects]
+  );
+
 
   // Default redirect path
   const defaultPath = useMemo(() => {
@@ -96,6 +102,7 @@ function Shell() {
       <Sidebar
         sections={[
           { heading: 'Workflow', items: workflowItems, collapsible: true },
+          { heading: 'Objects', items: objectItems, collapsible: true },
           { heading: 'Resources', items: sidebarItems, collapsible: true },
         ]}
         open={sidebarOpen}
@@ -117,6 +124,10 @@ function Shell() {
           <Suspense fallback={<div>Loading view…</div>}>
             <Routes>
               <Route path="/character/create" element={<CharacterCreationView />} />
+              {/* Object screens */}
+              {objects.map((o) => (
+                <Route key={o.path} path={o.path} element={<o.Component />} />
+              ))}
               {/* Known resource screens */}
               {resources.map((r) => (
                 <Route key={r.path} path={r.path} element={<r.Component />} />

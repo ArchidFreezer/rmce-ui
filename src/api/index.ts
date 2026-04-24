@@ -2,6 +2,7 @@ export * from './armourtype';
 export * from './animal';
 export * from './attacktable';
 export * from './book';
+export * from './character';
 export * from './characterworkflow';
 export * from './client';
 export * from './climate';
