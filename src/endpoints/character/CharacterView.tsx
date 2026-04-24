@@ -9,12 +9,13 @@ import {
 
 import {
   DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
+  PillList,
   Spinner,
   useConfirm, useToast,
 } from '../../components';
 
 import type {
-  Character, CharacterCategory, CharacterSkill,
+  Character, CharacterCategory, CharacterCategorySpellLists, CharacterSkill,
 } from '../../types';
 
 /* ------------------------------------------------------------------ */
@@ -99,161 +100,236 @@ function SectionHeading({ title }: { title: string }) {
   );
 }
 
+function Card({ title, children, fullWidth }: { title: string; children: React.ReactNode; fullWidth?: boolean }) {
+  return (
+    <div style={{
+      border: '1px solid var(--border, #ccc)',
+      borderRadius: 6,
+      padding: '10px 14px',
+      flex: fullWidth ? '1 1 100%' : '1 1 280px',
+      minWidth: fullWidth ? undefined : 240,
+      maxWidth: fullWidth ? undefined : 480,
+      boxSizing: 'border-box',
+    }}>
+      <h4 style={{ margin: '0 0 8px', fontSize: '0.95em', fontWeight: 700, borderBottom: '1px solid var(--border, #ccc)', paddingBottom: 4 }}>
+        {title}
+      </h4>
+      {children}
+    </div>
+  );
+}
+
+function CollapsibleCard({ title, children }: { title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div style={{
+      border: '1px solid var(--border, #ccc)',
+      borderRadius: 6,
+      padding: '10px 14px',
+      flex: '1 1 100%',
+      boxSizing: 'border-box',
+    }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          padding: 0, width: '100%', textAlign: 'left',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          fontSize: '0.95em', fontWeight: 700,
+          borderBottom: open ? '1px solid var(--border, #ccc)' : 'none',
+          paddingBottom: open ? 4 : 0, marginBottom: open ? 8 : 0,
+        }}
+        aria-expanded={open}
+      >
+        <span>{title}</span>
+        <span style={{ fontSize: '0.8em' }}>{open ? '▲' : '▼'}</span>
+      </button>
+      {open && children}
+    </div>
+  );
+}
+
+function SpellListCategoriesTable({ rows, refs, charId }: { rows: CharacterCategorySpellLists[]; refs: RefData; charId: string }) {
+  const columns: ColumnDef<CharacterCategorySpellLists>[] = useMemo(() => [
+    {
+      id: 'category',
+      header: 'Category',
+      accessor: (r) => resolve(refs.skillCategories, r.category),
+      sortType: 'string',
+      minWidth: 120,
+    },
+    {
+      id: 'spellLists',
+      header: 'Spell Lists',
+      render: (r) => (
+        <PillList
+          values={r.spellLists}
+          getLabel={(sl) => resolve(refs.spellLists, sl)}
+        />
+      ),
+      sortable: false,
+      minWidth: 160,
+    },
+  ], [refs]);
+
+  return (
+    <DataTable
+      rows={rows}
+      columns={columns}
+      rowId={(r) => r.category}
+      mode="client"
+      showPagination={false}
+      resizable
+      persistKey={`dt.char.spellListCats.${charId}.v1`}
+      tableMinWidth={0}
+    />
+  );
+}
+
 function DetailsTab({ char, ref: refs }: { char: Character; ref: RefData }) {
   return (
     <div style={{ padding: '12px 0' }}>
-      <SectionHeading title="General" />
-      <table style={{ borderCollapse: 'collapse' }}>
-        <tbody>
-          <DetailRow label="ID" value={char.id} />
-          <DetailRow label="Name" value={char.name} />
-          <DetailRow label="Gender" value={char.male ? 'Male' : 'Female'} />
-          <DetailRow label="Player Character" value={char.playerCharacter ? 'Yes' : 'No'} />
-          <DetailRow label="Level" value={char.level} />
-          <DetailRow label="Experience Points" value={char.experiencePoints.toLocaleString()} />
-          <DetailRow label="Gold" value={char.gold} />
-          <DetailRow label="Development Points" value={char.developmentPoints} />
-        </tbody>
-      </table>
+      {/* Wrapping card row */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
 
-      <SectionHeading title="Origin" />
-      <table style={{ borderCollapse: 'collapse' }}>
-        <tbody>
-          <DetailRow label="Race" value={resolve(refs.races, char.race)} />
-          <DetailRow label="Culture" value={resolve(refs.cultures, char.culture)} />
-          <DetailRow label="Profession" value={resolve(refs.professions, char.profession)} />
-        </tbody>
-      </table>
+        {/* Basic */}
+        <Card title="Basic">
+          <table style={{ borderCollapse: 'collapse' }}>
+            <tbody>
+              <DetailRow label="ID" value={char.id} />
+              <DetailRow label="Name" value={char.name} />
+              <DetailRow label="Gender" value={char.male ? 'Male' : 'Female'} />
+              <DetailRow label="Race" value={resolve(refs.races, char.race)} />
+              <DetailRow label="Culture" value={resolve(refs.cultures, char.culture)} />
+              <DetailRow label="Profession" value={resolve(refs.professions, char.profession)} />
+              <DetailRow label="Level" value={char.level} />
+              <DetailRow label="Gold" value={char.gold} />
+            </tbody>
+          </table>
+        </Card>
 
-      <SectionHeading title="Physique" />
-      <table style={{ borderCollapse: 'collapse' }}>
-        <tbody>
-          <DetailRow label="Height" value={formatHeight(char.height)} />
-          <DetailRow label="Weight" value={formatWeight(char.weight)} />
-          <DetailRow label="Build" value={char.buildDescription} />
-          <DetailRow label="Lifespan" value={formatLifespan(char.lifespan)} />
-        </tbody>
-      </table>
+        {/* General */}
+        <Card title="General">
+          <table style={{ borderCollapse: 'collapse' }}>
+            <tbody>
+              <DetailRow label="Hits" value={`${char.hits} / ${char.maxHits}`} />
+              <DetailRow label="Power Points" value={`${char.powerPoints} / ${char.maxPowerPoints}`} />
+              <DetailRow label="Magical Realm" value={char.magicalRealms.join(', ') || '—'} />
+              <DetailRow label="Experience Points" value={char.experiencePoints.toLocaleString()} />
+              <DetailRow label="Development Points" value={char.developmentPoints} />
+              <DetailRow label="Height" value={formatHeight(char.height)} />
+              <DetailRow label="Weight" value={formatWeight(char.weight)} />
+              <DetailRow label="Build" value={char.buildDescription} />
+              <DetailRow label="Lifespan" value={formatLifespan(char.lifespan)} />
+            </tbody>
+          </table>
+        </Card>
 
-      <SectionHeading title="Stats" />
-      <table style={{ borderCollapse: 'collapse' }}>
-        <colgroup>
-          <col style={{ width: 160 }} />
-          <col style={{ width: 90 }} />
-          <col style={{ width: 90 }} />
-          <col style={{ width: 100 }} />
-        </colgroup>
-        <thead>
-          <tr>
-            {['Stat', 'Temporary', 'Potential', 'Racial Bonus'].map(h => (
-              <th key={h} style={{ textAlign: 'left', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)' }}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {char.stats.map(s => (
-            <tr key={s.stat}>
-              <td style={{ padding: '3px 10px 3px 0' }}>{s.stat}</td>
-              <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{s.temporary}</td>
-              <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{s.potential}</td>
-              <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{s.racialBonus}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <SectionHeading title="Combat" />
-      <table style={{ borderCollapse: 'collapse' }}>
-        <tbody>
-          <DetailRow label="Hits" value={`${char.hits} / ${char.maxHits}`} />
-          <DetailRow label="Power Points" value={`${char.powerPoints} / ${char.maxPowerPoints}`} />
-          <DetailRow label="Magical Realms" value={char.magicalRealms.join(', ') || '—'} />
-        </tbody>
-      </table>
-
-      {char.resistances.length > 0 && (
-        <>
-          <SectionHeading title="Resistances" />
+        {/* Stats */}
+        <Card title="Stats">
           <table style={{ borderCollapse: 'collapse' }}>
             <colgroup>
-              <col style={{ width: 200 }} />
+              <col style={{ width: 140 }} />
               <col style={{ width: 80 }} />
+              <col style={{ width: 80 }} />
+              <col style={{ width: 90 }} />
             </colgroup>
             <thead>
               <tr>
-                {['Resistance Type', 'Bonus'].map(h => (
-                  <th key={h} style={{ textAlign: 'left', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)' }}>{h}</th>
+                <th style={{ textAlign: 'left', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)', fontSize: '0.85em' }}>Stat</th>
+                {['Tmp', 'Pot', 'Racial'].map(h => (
+                  <th key={h} style={{ textAlign: 'center', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)', fontSize: '0.85em' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {char.resistances.map(r => (
-                <tr key={r.id}>
-                  <td style={{ padding: '3px 10px 3px 0' }}>{r.id}</td>
-                  <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{r.value}</td>
+              {char.stats.map(s => (
+                <tr key={s.stat}>
+                  <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{s.stat}</td>
+                  <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.temporary}</td>
+                  <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.potential}</td>
+                  <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.racialBonus}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </>
-      )}
+        </Card>
 
-      {char.spellListCategories.length > 0 && (
-        <>
-          <SectionHeading title="Spell List Categories" />
-          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-            <thead>
-              <tr>
-                {['Category', 'Spell Lists'].map(h => (
-                  <th key={h} style={{ textAlign: 'left', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)' }}>{h}</th>
+        {/* Languages */}
+        {char.languageAbilities.length > 0 && (
+          <Card title="Languages">
+            <table style={{ borderCollapse: 'collapse' }}>
+              <colgroup>
+                <col style={{ width: 180 }} />
+                <col style={{ width: 65 }} />
+                <col style={{ width: 65 }} />
+                <col style={{ width: 70 }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)', fontSize: '0.85em' }}>Language</th>
+                  {['Spoken', 'Written', 'Somatic'].map(h => (
+                    <th key={h} style={{ textAlign: 'center', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)', fontSize: '0.85em' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {char.languageAbilities.map(la => (
+                  <tr key={la.language}>
+                    <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{resolve(refs.languages, la.language)}</td>
+                    <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{la.spoken ?? '—'}</td>
+                    <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{la.written ?? '—'}</td>
+                    <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{la.somatic ?? '—'}</td>
+                  </tr>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
-              {char.spellListCategories.map(c => (
-                <tr key={c.category}>
-                  <td style={{ padding: '3px 10px 3px 0', verticalAlign: 'top' }}>{resolve(refs.skillCategories, c.category)}</td>
-                  <td style={{ padding: '3px 0' }}>{c.spellLists.map(sl => resolve(refs.spellLists, sl)).join(', ')}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
-      )}
+              </tbody>
+            </table>
+          </Card>
+        )}
 
-      {char.languageAbilities.length > 0 && (
-        <>
-          <SectionHeading title="Language Abilities" />
-          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-            <thead>
-              <tr>
-                {['Language', 'Spoken', 'Written', 'Somatic'].map(h => (
-                  <th key={h} style={{ textAlign: 'left', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)' }}>{h}</th>
+        {/* Resistances */}
+        {char.resistances.length > 0 && (
+          <Card title="Resistances">
+            <table style={{ borderCollapse: 'collapse' }}>
+              <colgroup>
+                <col style={{ width: 180 }} />
+                <col style={{ width: 70 }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)', fontSize: '0.85em' }}>Resistance Type</th>
+                  <th style={{ textAlign: 'center', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)', fontSize: '0.85em' }}>Bonus</th>
+                </tr>
+              </thead>
+              <tbody>
+                {char.resistances.map(r => (
+                  <tr key={r.id}>
+                    <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{r.id}</td>
+                    <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{r.value}</td>
+                  </tr>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
-              {char.languageAbilities.map(la => (
-                <tr key={la.language}>
-                  <td style={{ padding: '3px 10px 3px 0' }}>{resolve(refs.languages, la.language)}</td>
-                  <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{la.spoken ?? '—'}</td>
-                  <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{la.written ?? '—'}</td>
-                  <td style={{ padding: '3px 10px 3px 0', textAlign: 'right' }}>{la.somatic ?? '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
-      )}
+              </tbody>
+            </table>
+          </Card>
+        )}
 
-      {char.items && char.items.length > 0 && (
-        <>
-          <SectionHeading title="Items" />
-          <ul style={{ margin: '4px 0', paddingLeft: 20 }}>
-            {char.items.map((item, i) => <li key={i}>{item}</li>)}
-          </ul>
-        </>
-      )}
+        {/* Items */}
+        {char.items && char.items.length > 0 && (
+          <Card title="Items">
+            <ul style={{ margin: '4px 0', paddingLeft: 20 }}>
+              {char.items.map((item, i) => <li key={i} style={{ fontSize: '0.9em', marginBottom: 2 }}>{item}</li>)}
+            </ul>
+          </Card>
+        )}
+
+        {/* Spell List Categories — full-width, collapsible */}
+        {char.spellListCategories.length > 0 && (
+          <CollapsibleCard title="Spell List Categories">
+            <SpellListCategoriesTable rows={char.spellListCategories} refs={refs} charId={char.id} />
+          </CollapsibleCard>
+        )}
+
+      </div>
     </div>
   );
 }
@@ -504,31 +580,35 @@ export default function CharacterView() {
 
       {submitting && <Spinner size={20} />}
 
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-        <DataTableSearchInput
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search characters…"
-          aria-label="Search characters"
-        />
-        <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset column widths" style={{ marginLeft: 'auto' }}>
-          Reset column widths
-        </button>
-        <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit columns</button>
-      </div>
+      {!selected && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
+          <DataTableSearchInput
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search characters…"
+            aria-label="Search characters"
+          />
+          <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset column widths" style={{ marginLeft: 'auto' }}>
+            Reset column widths
+          </button>
+          <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit columns</button>
+        </div>
+      )}
 
-      <DataTable
-        ref={dtRef}
-        rows={rows}
-        columns={columns}
-        rowId={(r) => r.id}
-        globalFilter={globalFilter}
-        searchQuery={query}
-        page={page}
-        pageSize={pageSize}
-        onPageChange={setPage}
-        persistKey="character"
-      />
+      {!selected && (
+        <DataTable
+          ref={dtRef}
+          rows={rows}
+          columns={columns}
+          rowId={(r) => r.id}
+          globalFilter={globalFilter}
+          searchQuery={query}
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          persistKey="character"
+        />
+      )}
 
       {selected && (
         <div style={{ marginTop: 24, border: '1px solid var(--border, #ccc)', borderRadius: 4 }}>
