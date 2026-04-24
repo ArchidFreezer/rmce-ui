@@ -236,11 +236,12 @@ function DetailsTab({ char, ref: refs }: { char: Character; ref: RefData }) {
                   <col style={{ width: 80 }} />
                   <col style={{ width: 80 }} />
                   <col style={{ width: 90 }} />
+                  <col style={{ width: 80 }} />
                 </colgroup>
                 <thead>
                   <tr>
                     <th style={{ textAlign: 'left', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)', fontSize: '0.85em' }}>Stat</th>
-                    {['Tmp', 'Pot', 'Racial'].map(h => (
+                    {['Tmp', 'Pot', 'Racial', 'Total'].map(h => (
                       <th key={h} style={{ textAlign: 'center', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)', fontSize: '0.85em' }}>{h}</th>
                     ))}
                   </tr>
@@ -256,6 +257,7 @@ function DetailsTab({ char, ref: refs }: { char: Character; ref: RefData }) {
                         <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.temporary}</td>
                         <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.potential}</td>
                         <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.racialBonus}</td>
+                        <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.totalBonus}</td>
                       </tr>
                     );
                   })}
