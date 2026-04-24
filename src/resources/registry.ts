@@ -4,6 +4,7 @@ const AnimalView = lazy(() => import('../endpoints/animal/AnimalView'));
 const ArmourTypeView = lazy(() => import('../endpoints/armourtype/ArmourTypeView'));
 const AttackTableView = lazy(() => import('../endpoints/attacktable/AttackTableView'));
 const BookView = lazy(() => import('../endpoints/book/BookView'));
+const CharacterView = lazy(() => import('../endpoints/character/CharacterView'));
 const ClimateView = lazy(() => import('../endpoints/climate/ClimateView'));
 const CreaturePaceView = lazy(() => import('../endpoints/creaturepace/CreaturePaceView'));
 const CultureView = lazy(() => import('../endpoints/culture/CultureView'));
@@ -104,3 +105,21 @@ export const FALLBACK_RESOURCES: ResourceDef[] = [
   known.treasurecode,
   known.weapontype,
 ].filter((r): r is ResourceDef => Boolean(r));
+
+/* ------------------------------------------------------------------ */
+/* Objects (base path: /rest/objects)                                 */
+/* ------------------------------------------------------------------ */
+
+export interface ObjectDef {
+  label: string;
+  path: `/${string}`;
+  Component: LazyExoticComponent<ComponentType>;
+}
+
+const knownObjects: Record<string, ObjectDef> = {
+  character: { label: 'Characters', path: '/characters', Component: CharacterView },
+};
+
+export const FALLBACK_OBJECTS: ObjectDef[] = [
+  knownObjects.character,
+].filter((o): o is ObjectDef => Boolean(o));

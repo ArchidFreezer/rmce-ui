@@ -1,5 +1,5 @@
 import type { Named, PersistentValue, SkillValue, SkillDevelopmentTypeValue } from './base';
-import type { Realm, Stat } from './enum';
+import type { Realm, ResistanceType, Stat, SkillDevelopmentType } from './enum';
 import type { LanguageAbility } from './language';
 
 export interface SkillSubcategory {
@@ -209,4 +209,70 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
     spellListRanks: [],
     items: [],
   };
+}
+
+/* ------------------------------------------------------------------ */
+/* Character (built / in-play)                                        */
+/* ------------------------------------------------------------------ */
+
+export interface CharacterResistance {
+  id: ResistanceType;
+  value: number;
+}
+
+export interface CharacterCategory {
+  id: string;            // SkillCategory.id
+  progression: string;   // SkillProgressionType.id
+  developmentCost: string;
+  professionBonus: number;
+  ranks: number;
+  specialBonus: number;
+}
+
+export interface CharacterSkill {
+  skillData: SkillSubcategory; // skill id + optional subcategory
+  category?: string | undefined; // SkillCategory.id — populated by server
+  progression: string;          // SkillProgressionType.id
+  developmentType: SkillDevelopmentType;
+  professionBonus: number;
+  ranks: number;
+  specialBonus: number;
+  totalBonus: number;
+}
+
+export interface Character extends Named {
+  male: boolean;
+  level: number;
+  experiencePoints: number;
+  playerCharacter: boolean;
+  gold: number;
+  items?: string[] | undefined;
+
+  race: string;       // Race.id
+  culture: string;    // Culture.id
+  profession: string; // Profession.id
+
+  stats: CharacterStatValue[];
+  height: number;
+  weight: number;
+  buildDescription: string;
+  lifespan: number;
+
+  developmentPoints: number;
+  magicalRealms: Realm[];
+  resistances: CharacterResistance[];
+  spellListCategories: CharacterCategorySpellLists[];
+
+  maxHits: number;
+  hits: number;
+  maxPowerPoints: number;
+  powerPoints: number;
+
+  languageAbilities: LanguageAbility[];
+  categories: CharacterCategory[];
+  skills: CharacterSkill[];
+}
+
+export interface CharactersPayload {
+  characters: Character[];
 }
