@@ -15,7 +15,7 @@ import {
 } from '../../components';
 
 import type {
-  Character, CharacterCategory, CharacterCategorySpellLists, CharacterSkill,
+  Character, CharacterCategory, CharacterCategorySpellLists, CharacterSkill, Profession,
 } from '../../types';
 
 /* ------------------------------------------------------------------ */
@@ -28,6 +28,7 @@ interface RefData {
   races: NameMap;
   cultures: NameMap;
   professions: NameMap;
+  professionStats: Map<string, Set<string>>;
   skills: NameMap;
   skillCategories: NameMap;
   spellLists: NameMap;
@@ -39,6 +40,7 @@ const emptyRefData = (): RefData => ({
   races: new Map(),
   cultures: new Map(),
   professions: new Map(),
+  professionStats: new Map(),
   skills: new Map(),
   skillCategories: new Map(),
   spellLists: new Map(),
@@ -196,14 +198,14 @@ function DetailsTab({ char, ref: refs }: { char: Character; ref: RefData }) {
         <Card title="Basic">
           <table style={{ borderCollapse: 'collapse' }}>
             <tbody>
-              <DetailRow label="ID" value={char.id} />
               <DetailRow label="Name" value={char.name} />
               <DetailRow label="Gender" value={char.male ? 'Male' : 'Female'} />
               <DetailRow label="Race" value={resolve(refs.races, char.race)} />
               <DetailRow label="Culture" value={resolve(refs.cultures, char.culture)} />
               <DetailRow label="Profession" value={resolve(refs.professions, char.profession)} />
-              <DetailRow label="Level" value={char.level} />
-              <DetailRow label="Gold" value={char.gold} />
+              <DetailRow label="Magical Realm" value={char.magicalRealms.join(', ') || '—'} />
+              <DetailRow label="Hits" value={`${char.hits} / ${char.maxHits}`} />
+              <DetailRow label="Power Points" value={`${char.powerPoints} / ${char.maxPowerPoints}`} />
             </tbody>
           </table>
         </Card>
@@ -212,47 +214,55 @@ function DetailsTab({ char, ref: refs }: { char: Character; ref: RefData }) {
         <Card title="General">
           <table style={{ borderCollapse: 'collapse' }}>
             <tbody>
-              <DetailRow label="Hits" value={`${char.hits} / ${char.maxHits}`} />
-              <DetailRow label="Power Points" value={`${char.powerPoints} / ${char.maxPowerPoints}`} />
-              <DetailRow label="Magical Realm" value={char.magicalRealms.join(', ') || '—'} />
-              <DetailRow label="Experience Points" value={char.experiencePoints.toLocaleString()} />
-              <DetailRow label="Development Points" value={char.developmentPoints} />
               <DetailRow label="Height" value={formatHeight(char.height)} />
               <DetailRow label="Weight" value={formatWeight(char.weight)} />
               <DetailRow label="Build" value={char.buildDescription} />
               <DetailRow label="Lifespan" value={formatLifespan(char.lifespan)} />
+              <DetailRow label="Level" value={char.level} />
+              <DetailRow label="Experience Points" value={char.experiencePoints.toLocaleString()} />
+              <DetailRow label="Development Points" value={char.developmentPoints} />
             </tbody>
           </table>
         </Card>
 
         {/* Stats */}
         <Card title="Stats">
-          <table style={{ borderCollapse: 'collapse' }}>
-            <colgroup>
-              <col style={{ width: 140 }} />
-              <col style={{ width: 80 }} />
-              <col style={{ width: 80 }} />
-              <col style={{ width: 90 }} />
-            </colgroup>
-            <thead>
-              <tr>
-                <th style={{ textAlign: 'left', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)', fontSize: '0.85em' }}>Stat</th>
-                {['Tmp', 'Pot', 'Racial'].map(h => (
-                  <th key={h} style={{ textAlign: 'center', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)', fontSize: '0.85em' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {char.stats.map(s => (
-                <tr key={s.stat}>
-                  <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{s.stat}</td>
-                  <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.temporary}</td>
-                  <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.potential}</td>
-                  <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.racialBonus}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {(() => {
+            const primaryStats = refs.professionStats.get(char.profession) ?? new Set<string>();
+            return (
+              <table style={{ borderCollapse: 'collapse' }}>
+                <colgroup>
+                  <col style={{ width: 140 }} />
+                  <col style={{ width: 80 }} />
+                  <col style={{ width: 80 }} />
+                  <col style={{ width: 90 }} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)', fontSize: '0.85em' }}>Stat</th>
+                    {['Tmp', 'Pot', 'Racial'].map(h => (
+                      <th key={h} style={{ textAlign: 'center', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)', fontSize: '0.85em' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {char.stats.map(s => {
+                    const isPrimary = primaryStats.has(s.stat);
+                    return (
+                      <tr key={s.stat} style={isPrimary ? { background: 'var(--primary-weak)' } : undefined}>
+                        <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em', fontWeight: isPrimary ? 600 : undefined }}>
+                          {s.stat}
+                        </td>
+                        <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.temporary}</td>
+                        <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.potential}</td>
+                        <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{s.racialBonus}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            );
+          })()}
         </Card>
 
         {/* Languages */}
@@ -314,13 +324,18 @@ function DetailsTab({ char, ref: refs }: { char: Character; ref: RefData }) {
         )}
 
         {/* Items */}
-        {char.items && char.items.length > 0 && (
-          <Card title="Items">
+        <Card title="Items">
+          <table style={{ borderCollapse: 'collapse', marginBottom: char.items && char.items.length > 0 ? 8 : 0 }}>
+            <tbody>
+              <DetailRow label="Gold" value={char.gold} />
+            </tbody>
+          </table>
+          {char.items && char.items.length > 0 && (
             <ul style={{ margin: '4px 0', paddingLeft: 20 }}>
               {char.items.map((item, i) => <li key={i} style={{ fontSize: '0.9em', marginBottom: 2 }}>{item}</li>)}
             </ul>
-          </Card>
-        )}
+          )}
+        </Card>
 
         {/* Spell List Categories — full-width, collapsible */}
         {char.spellListCategories.length > 0 && (
@@ -492,6 +507,7 @@ export default function CharacterView() {
           races: buildMap(races),
           cultures: buildMap(cultures),
           professions: buildMap(professions),
+          professionStats: new Map((professions as Profession[]).map(p => [p.id, new Set<string>(p.stats)])),
           skills: buildMap(skills),
           skillCategories: buildMap(skillCategories),
           spellLists: buildMap(spellLists),
@@ -613,7 +629,10 @@ export default function CharacterView() {
       {selected && (
         <div style={{ marginTop: 24, border: '1px solid var(--border, #ccc)', borderRadius: 4 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderBottom: '1px solid var(--border, #ccc)' }}>
-            <strong>{selected.name}</strong>
+            <strong>
+              {selected.name}
+              <span style={{ fontWeight: 400, color: 'var(--muted, #888)', marginLeft: 6, fontSize: '0.85em' }}>({selected.id})</span>
+            </strong>
             <button onClick={() => setSelected(null)} aria-label="Close detail panel">✕</button>
           </div>
 
