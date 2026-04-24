@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { ConfirmProvider } from './components/ConfirmDialog';
 import { ToastProvider } from './components/Toast';
 import { ThemeProvider } from './components/ThemeProvider';
@@ -9,6 +9,15 @@ import { splitResources, FALLBACK_RESOURCES, FALLBACK_OBJECTS, type ResourceDef,
 import GenericResourceView from './endpoints/generic/GenericResourceView'; // <-- generic
 
 const CharacterCreationView = lazy(() => import('./endpoints/character/CharacterCreationView'));
+
+function CharacterCreationRoute() {
+  const navigate = useNavigate();
+  return (
+    <Suspense fallback={<div>Loading view…</div>}>
+      <CharacterCreationView onFinish={() => navigate('/characters')} />
+    </Suspense>
+  );
+}
 
 import './layout.css';
 
@@ -123,7 +132,7 @@ function Shell() {
         ) : (
           <Suspense fallback={<div>Loading view…</div>}>
             <Routes>
-              <Route path="/character/create" element={<CharacterCreationView />} />
+              <Route path="/character/create" element={<CharacterCreationRoute />} />
               {/* Object screens */}
               {objects.map((o) => (
                 <Route key={o.path} path={o.path} element={<o.Component />} />
