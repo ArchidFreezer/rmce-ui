@@ -3,7 +3,7 @@ export * from './animal';
 export * from './attacktable';
 export * from './base';
 export * from './book';
-export * from './characterbuilder';
+export * from './character';
 export * from './climate';
 export * from './creaturepace';
 export * from './culture';
