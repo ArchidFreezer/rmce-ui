@@ -89,7 +89,7 @@ function formatLifespan(years: number): string {
 /* ------------------------------------------------------------------ */
 /* Tab types                                                           */
 /* ------------------------------------------------------------------ */
-type Tab = 'details' | 'skills' | 'categories';
+type Tab = 'details' | 'skills' | 'categories' | 'spells';
 
 /* ------------------------------------------------------------------ */
 /* Detail sub-components                                              */
@@ -349,14 +349,48 @@ function DetailsTab({ char, ref: refs }: { char: Character; ref: RefData }) {
           )}
         </Card>
 
-        {/* Spell List Categories — full-width, collapsible */}
-        {char.spellListCategories.length > 0 && (
-          <CollapsibleCard title="Spell List Categories">
-            <SpellListCategoriesTable rows={char.spellListCategories} refs={refs} charId={char.id} />
-          </CollapsibleCard>
-        )}
-
       </div>
+    </div>
+  );
+}
+
+function SpellsTab({ char, refs }: { char: Character; refs: RefData }) {
+  const sorted = useMemo(
+    () => [...char.spellListRanks].sort((a, b) =>
+      resolve(refs.spellLists, a.id).localeCompare(resolve(refs.spellLists, b.id))
+    ),
+    [char.spellListRanks, refs.spellLists]
+  );
+
+  return (
+    <div style={{ padding: '12px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <CollapsibleCard title={`Spell Lists (${sorted.length})`}>
+        {sorted.length === 0 ? (
+          <p style={{ margin: 0, color: 'var(--muted, #666)' }}>No spell list ranks.</p>
+        ) : (
+          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+            <thead>
+              <tr>
+                {['Spell List', 'Ranks'].map(h => (
+                  <th key={h} style={{ textAlign: h === 'Ranks' ? 'center' : 'left', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((sl) => (
+                <tr key={sl.id}>
+                  <td style={{ padding: '3px 10px 3px 0' }}>{resolve(refs.spellLists, sl.id)}</td>
+                  <td style={{ padding: '3px 10px 3px 0', textAlign: 'center' }}>{sl.value}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </CollapsibleCard>
+
+      <CollapsibleCard title="Spell List Categories">
+        <SpellListCategoriesTable rows={char.spellListCategories} refs={refs} charId={char.id} />
+      </CollapsibleCard>
     </div>
   );
 }
@@ -706,12 +740,16 @@ export default function CharacterView() {
             <button style={tabStyle('categories')} onClick={() => setActiveTab('categories')}>
               Categories ({selected.categories.length})
             </button>
+            <button style={tabStyle('spells')} onClick={() => setActiveTab('spells')}>
+              Spells ({selected.spellListRanks.length})
+            </button>
           </div>
 
           <div style={{ padding: '0 12px 12px' }}>
             {activeTab === 'details' && <DetailsTab char={selected} ref={refs} />}
             {activeTab === 'skills' && <SkillsTab char={selected} refs={refs} />}
             {activeTab === 'categories' && <CategoriesTab char={selected} refs={refs} />}
+            {activeTab === 'spells' && <SpellsTab char={selected} refs={refs} />}
           </div>
         </div>
       )}

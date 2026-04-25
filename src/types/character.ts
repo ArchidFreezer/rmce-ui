@@ -274,6 +274,7 @@ export interface Character extends Named {
   languageAbilities: LanguageAbility[];
   categories: CharacterCategory[];
   skills: CharacterSkill[];
+  spellListRanks: PersistentValue[];
 }
 
 export interface CharactersPayload {
