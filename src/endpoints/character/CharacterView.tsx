@@ -639,7 +639,6 @@ export default function CharacterView() {
 
   const onDelete = async (row: Character) => {
     if (submitting) return;
-    setSubmitting(true);
 
     const ok = await confirm({
       title: 'Delete Character',
@@ -648,7 +647,9 @@ export default function CharacterView() {
       cancelText: 'Cancel',
       tone: 'danger',
     });
-    if (!ok) { setSubmitting(false); return; }
+    if (!ok) return;
+
+    setSubmitting(true);
 
     const prev = rows;
     setRows(current => current.filter(r => r.id !== row.id));
