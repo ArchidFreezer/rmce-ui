@@ -776,6 +776,12 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
     return map;
   }, [skills]);
 
+  const skillDescriptionById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const s of skills) if (s.description) map.set(s.id, s.description);
+    return map;
+  }, [skills]);
+
   const mandatorySubcategorySkillIds = useMemo(
     () => new Set(skills.filter((s) => s.mandatorySubcategory).map((s) => s.id)),
     [skills],
@@ -4337,7 +4343,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))' }}>
                           {sortedHobbySkillRows.map(({ row, index, label }) => (
                             <div key={`hskill-${row.id}-${index}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
-                              <strong style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={label}>{label}</strong>
+                              <strong style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={showDescriptions ? (skillDescriptionById.get(row.id) ?? label) : label}>{label}</strong>
                               {mandatorySubcategorySkillIds.has(row.id) && (
                                 <LabeledInput
                                   label="Subcategory"
