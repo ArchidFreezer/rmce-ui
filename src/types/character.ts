@@ -1,4 +1,4 @@
-import type { Named, PersistentValue, SkillValue, SkillDevelopmentTypeValue } from './base';
+import type { Named, PersistentValue, SkillValue, SkillDevelopmentTypeValue, Persistent } from './base';
 import type { Realm, ResistanceType, Stat, SkillDevelopmentType } from './enum';
 import type { LanguageAbility } from './language';
 
@@ -279,4 +279,14 @@ export interface Character extends Named {
 
 export interface CharactersPayload {
   characters: Character[];
+}
+
+export interface CharacterLeveller extends Persistent {
+  trainingPackageCosts: PersistentValue[]; // TrainingPackage.id and cost
+  trainingPackages: string[];              // TrainingPackage.id[]
+  statGains: Stat[];
+  skills: SkillValue[];                    // value = total ranks after the level up
+  categories: PersistentValue[];           // value = total ranks after the level up
+  spellListRanks: PersistentValue[];       // value = total ranks after the level up
+  languageAbilities: LanguageAbility[];
 }

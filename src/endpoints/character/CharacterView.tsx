@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, lazy, Suspense } from 'react';
 
 const CharacterCreationView = lazy(() => import('./CharacterCreationView'));
+const CharacterLevellingView = lazy(() => import('./CharacterLevellingView'));
 
 import {
   fetchCharacters, deleteCharacter,
@@ -556,6 +557,7 @@ export default function CharacterView() {
   const [selected, setSelected] = useState<Character | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('details');
   const [showCreation, setShowCreation] = useState(false);
+  const [levellingCharacter, setLevellingCharacter] = useState<Character | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const toast = useToast();
@@ -627,6 +629,7 @@ export default function CharacterView() {
       render: (row) => (
         <>
           <button onClick={() => { setSelected(row); setActiveTab('details'); }}>View</button>
+          <button onClick={() => setLevellingCharacter(row)} style={{ marginLeft: 8 }}>Level up</button>
           <button onClick={() => onDelete(row)} style={{ color: '#b00020', marginLeft: 8 }}>Delete</button>
         </>
       ),
@@ -692,7 +695,20 @@ export default function CharacterView() {
         </Suspense>
       )}
 
-      {!showCreation && !selected && (
+      {levellingCharacter && (
+        <Suspense fallback={<Spinner size={24} />}>
+          <CharacterLevellingView
+            character={levellingCharacter}
+            onFinish={(updated) => {
+              setLevellingCharacter(null);
+              setRows(prev => prev.map(r => r.id === updated.id ? updated : r));
+            }}
+            onCancel={() => setLevellingCharacter(null)}
+          />
+        </Suspense>
+      )}
+
+      {!showCreation && !levellingCharacter && !selected && (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
           <button onClick={() => setShowCreation(true)}>New Character</button>
           <DataTableSearchInput
@@ -708,7 +724,7 @@ export default function CharacterView() {
         </div>
       )}
 
-      {!showCreation && !selected && (
+      {!showCreation && !levellingCharacter && !selected && (
         <DataTable
           ref={dtRef}
           rows={rows}
