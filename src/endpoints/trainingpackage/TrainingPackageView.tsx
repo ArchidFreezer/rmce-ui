@@ -981,17 +981,14 @@ export default function TrainingPackagesView() {
       }
 
       if (!isValidUnsignedInt(r.numChoices) || Number(r.numChoices) <= 0) {
-        e.spellListCategoryRankChoices = `SpellListCategoryRankChoices[${i + 1}]: number of categories to select must be positive`;
+        e.spellListCategoryRankChoices = `SpellListCategoryRankChoices[${i + 1}]: number of spell lists to select must be positive`;
         break;
       } else if (Number(r.value) < Number(r.numChoices)) {
-        e.spellListCategoryRankChoices = `SpellListCategoryRankChoices[${i + 1}]: number of categories to select cannot exceed total ranks`;
+        e.spellListCategoryRankChoices = `SpellListCategoryRankChoices[${i + 1}]: number of spell lists to select cannot exceed total ranks`;
         break;
       }
       if (!r.options.length) {
-        e.spellListCategoryRankChoices = `SpellListCategoryRankChoices[${i + 1}]: select at least one category`;
-        break;
-      } else if (r.options.length < Number(r.numChoices)) {
-        e.spellListCategoryRankChoices = `SpellListCategoryRankChoices[${i + 1}]: number of categories to select from must be at least as many as the number of categories to select`;
+        e.spellListCategoryRankChoices = `SpellListCategoryRankChoices[${i + 1}]: select at least one category to select spells from`;
         break;
       }
 
