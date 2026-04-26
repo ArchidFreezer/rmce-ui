@@ -19,7 +19,7 @@ const SET_STATS_ENDPOINT = '/rmce/operations/character/set-stats';
 const SET_PHYSIQUE_ENDPOINT = '/rmce/operations/character/set-physique';
 const SET_HOBBY_CHOICES_ENDPOINT = '/rmce/operations/character/set-hobby-choices';
 const SET_BACKGROUND_CHOICES_ENDPOINT = '/rmce/operations/character/set-background-choices';
-const SET_APPRENTICESHIP_CHOICES_ENDPOINT = '/rmce/operations/character/set-apprenticeship-choices';
+const SET_LEVELLING_CHOICES_ENDPOINT = '/rmce/operations/character/set-levelling-choices';
 
 export type StatRollRequest = {
   temporary: number;
@@ -72,8 +72,8 @@ export async function setCharacterBackgroundChoices(
   return sendJson<CharacterBuilder>(SET_BACKGROUND_CHOICES_ENDPOINT, 'POST', payload);
 }
 
-export async function applyApprenticeshipChoices(
+export async function applyLevellingChoices(
   payload: CharacterBuilder,
 ): Promise<CharacterBuilder> {
-  return sendJson<CharacterBuilder>(SET_APPRENTICESHIP_CHOICES_ENDPOINT, 'POST', payload);
+  return sendJson<CharacterBuilder>(SET_LEVELLING_CHOICES_ENDPOINT, 'POST', payload);
 }

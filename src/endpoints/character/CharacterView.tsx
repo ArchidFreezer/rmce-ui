@@ -356,7 +356,7 @@ function DetailsTab({ char, ref: refs }: { char: Character; ref: RefData }) {
 
 function SpellsTab({ char, refs }: { char: Character; refs: RefData }) {
   const sorted = useMemo(
-    () => [...char.spellListRanks].sort((a, b) =>
+    () => [...(char.spellListRanks ?? [])].sort((a, b) =>
       resolve(refs.spellLists, a.id).localeCompare(resolve(refs.spellLists, b.id))
     ),
     [char.spellListRanks, refs.spellLists]
@@ -639,7 +639,6 @@ export default function CharacterView() {
 
   const onDelete = async (row: Character) => {
     if (submitting) return;
-    setSubmitting(true);
 
     const ok = await confirm({
       title: 'Delete Character',
@@ -648,7 +647,9 @@ export default function CharacterView() {
       cancelText: 'Cancel',
       tone: 'danger',
     });
-    if (!ok) { setSubmitting(false); return; }
+    if (!ok) return;
+
+    setSubmitting(true);
 
     const prev = rows;
     setRows(current => current.filter(r => r.id !== row.id));
@@ -740,16 +741,18 @@ export default function CharacterView() {
             <button style={tabStyle('categories')} onClick={() => setActiveTab('categories')}>
               Categories ({selected.categories.length})
             </button>
-            <button style={tabStyle('spells')} onClick={() => setActiveTab('spells')}>
-              Spells ({selected.spellListRanks.length})
-            </button>
+            {(selected.spellListRanks?.length ?? 0) > 0 && (
+              <button style={tabStyle('spells')} onClick={() => setActiveTab('spells')}>
+                Spells ({selected.spellListRanks!.length})
+              </button>
+            )}
           </div>
 
           <div style={{ padding: '0 12px 12px' }}>
             {activeTab === 'details' && <DetailsTab char={selected} ref={refs} />}
             {activeTab === 'skills' && <SkillsTab char={selected} refs={refs} />}
             {activeTab === 'categories' && <CategoriesTab char={selected} refs={refs} />}
-            {activeTab === 'spells' && <SpellsTab char={selected} refs={refs} />}
+            {activeTab === 'spells' && (selected.spellListRanks?.length ?? 0) > 0 && <SpellsTab char={selected} refs={refs} />}
           </div>
         </div>
       )}

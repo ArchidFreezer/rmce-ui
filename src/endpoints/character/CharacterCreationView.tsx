@@ -1,7 +1,7 @@
 ﻿import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 
 import {
-  applyApprenticeshipChoices,
+  applyLevellingChoices,
   fetchCultureTypes,
   fetchCultures,
   fetchLanguages,
@@ -158,18 +158,18 @@ type BackgroundOptionState = {
   specialItemsPoints: number;
 };
 
-type ApprenticeSkillPurchase = {
+type LevellingSkillPurchase = {
   id: string;
   subcategory: string;
   purchases: number;
 };
 
-type ApprenticeCategoryPurchase = {
+type LevellingCategoryPurchase = {
   id: string;
   purchases: number;
 };
 
-type ApprenticeSpellListPurchase = {
+type LevellingSpellListPurchase = {
   id: string;
   purchases: number;
 };
@@ -192,7 +192,7 @@ type TpResolution = {
   languageChoices: TpLanguageAllocation[][];
 };
 
-type ApprenticeSubstep = 'selecting' | 'resolving' | 'purchasing';
+type LevellingSubstep = 'selecting' | 'resolving' | 'purchasing';
 
 type StatRoll = {
   slot: number;
@@ -683,20 +683,20 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
   const [backgroundCategoryBonusIds, setBackgroundCategoryBonusIds] = useState<string[]>([]);
   const [backgroundSpecialItemsPoints, setBackgroundSpecialItemsPoints] = useState(0);
 
-  const [apprenticeTrainingPackageIds, setApprenticeTrainingPackageIds] = useState<string[]>([]);
-  const [apprenticeStatGains, setApprenticeStatGains] = useState<Stat[]>([]);
-  const [apprenticeSkillPurchases, setApprenticeSkillPurchases] = useState<ApprenticeSkillPurchase[]>([]);
-  const [apprenticeSkillCategoryFilter, setApprenticeSkillCategoryFilter] = useState('');
-  const [apprenticeSkillPendingId, setApprenticeSkillPendingId] = useState('');
-  const [apprenticeSkillPendingSubcategory, setApprenticeSkillPendingSubcategory] = useState('');
-  const [apprenticeCategoryPurchases, setApprenticeCategoryPurchases] = useState<ApprenticeCategoryPurchase[]>([]);
-  const [apprenticeSpellListPurchases, setApprenticeSpellListPurchases] = useState<ApprenticeSpellListPurchase[]>([]);
-  const [apprenticeSelectedSpellCategory, setApprenticeSelectedSpellCategory] = useState('');
-  const [apprenticeAddingSpellList, setApprenticeAddingSpellList] = useState(false);
-  const [apprenticeSubstep, setApprenticeSubstep] = useState<ApprenticeSubstep>('selecting');
-  const [apprenticeResolvingTpIndex, setApprenticeResolvingTpIndex] = useState(0);
+  const [levellingTrainingPackageIds, setLevellingTrainingPackageIds] = useState<string[]>([]);
+  const [levellingStatGains, setLevellingStatGains] = useState<Stat[]>([]);
+  const [levellingSkillPurchases, setLevellingSkillPurchases] = useState<LevellingSkillPurchase[]>([]);
+  const [levellingSkillCategoryFilter, setLevellingSkillCategoryFilter] = useState('');
+  const [levellingSkillPendingId, setLevellingSkillPendingId] = useState('');
+  const [levellingSkillPendingSubcategory, setLevellingSkillPendingSubcategory] = useState('');
+  const [levellingCategoryPurchases, setLevellingCategoryPurchases] = useState<LevellingCategoryPurchase[]>([]);
+  const [levellingSpellListPurchases, setLevellingSpellListPurchases] = useState<LevellingSpellListPurchase[]>([]);
+  const [levellingSelectedSpellCategory, setLevellingSelectedSpellCategory] = useState('');
+  const [levellingAddingSpellList, setLevellingAddingSpellList] = useState(false);
+  const [levellingSubstep, setLevellingSubstep] = useState<LevellingSubstep>('selecting');
+  const [levellingResolvingTpIndex, setLevellingResolvingTpIndex] = useState(0);
   const [tpResolutions, setTpResolutions] = useState<TpResolution[]>([]);
-  const [preApprenticeshipRanks, setPreApprenticeshipRanks] = useState<{
+  const [preLevellingRanks, setPreLevellingRanks] = useState<{
     skillRanks: CharacterBuilder['skillRanks'];
     categoryRanks: CharacterBuilder['categoryRanks'];
     spellListRanks: CharacterBuilder['spellListRanks'];
@@ -773,6 +773,12 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
   const skillNameById = useMemo(() => {
     const map = new Map<string, string>();
     for (const s of skills) map.set(s.id, s.name);
+    return map;
+  }, [skills]);
+
+  const skillDescriptionById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const s of skills) if (s.description) map.set(s.id, s.description);
     return map;
   }, [skills]);
 
@@ -1277,11 +1283,11 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
     return [...preferred, ...rest];
   }, [trainingPackages, raceId, culture]);
 
-  const selectedApprenticeTrainingPackages = useMemo(
-    () => apprenticeTrainingPackageIds
+  const selectedLevellingTrainingPackages = useMemo(
+    () => levellingTrainingPackageIds
       .map((id) => availableTrainingPackages.find((tp) => tp.id === id))
       .filter((tp): tp is TrainingPackage => tp !== undefined),
-    [availableTrainingPackages, apprenticeTrainingPackageIds],
+    [availableTrainingPackages, levellingTrainingPackageIds],
   );
 
   const tpCostMap = useMemo(() => {
@@ -1314,16 +1320,16 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
     return map;
   }, [skills]);
 
-  const apprenticeSelectedLifestylePackageId = useMemo(() => {
-    return apprenticeTrainingPackageIds.find((tpId) => {
+  const levellingSelectedLifestylePackageId = useMemo(() => {
+    return levellingTrainingPackageIds.find((tpId) => {
       const tp = trainingPackages.find((t) => t.id === tpId);
       return tp?.lifestyle;
     }) ?? null;
-  }, [apprenticeTrainingPackageIds, trainingPackages]);
+  }, [levellingTrainingPackageIds, trainingPackages]);
 
-  const apprenticeStatGainsUnavailable = useMemo((): Set<Stat> => {
+  const levellingStatGainsUnavailable = useMemo((): Set<Stat> => {
     const claimed = new Set<Stat>();
-    for (const tp of selectedApprenticeTrainingPackages) {
+    for (const tp of selectedLevellingTrainingPackages) {
       for (const stat of tp.statGains ?? []) {
         claimed.add(stat);
       }
@@ -1341,16 +1347,16 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
       }
     }
     return claimed;
-  }, [selectedApprenticeTrainingPackages, tpResolutions, characterBuilder.magicalRealms]);
+  }, [selectedLevellingTrainingPackages, tpResolutions, characterBuilder.magicalRealms]);
 
   useEffect(() => {
-    if (apprenticeStatGainsUnavailable.size === 0) return;
-    setApprenticeStatGains((prev) => prev.filter((s) => !apprenticeStatGainsUnavailable.has(s)));
-  }, [apprenticeStatGainsUnavailable]);
+    if (levellingStatGainsUnavailable.size === 0) return;
+    setLevellingStatGains((prev) => prev.filter((s) => !levellingStatGainsUnavailable.has(s)));
+  }, [levellingStatGainsUnavailable]);
 
   const tpGrantedSkillRankCounts = useMemo(() => {
     const map = new Map<string, number>();
-    for (const tp of selectedApprenticeTrainingPackages) {
+    for (const tp of selectedLevellingTrainingPackages) {
       for (const rank of tp.skillRanks ?? []) {
         map.set(rank.id, (map.get(rank.id) ?? 0) + rank.value);
       }
@@ -1380,11 +1386,11 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
       }
     }
     return map;
-  }, [selectedApprenticeTrainingPackages, tpResolutions]);
+  }, [selectedLevellingTrainingPackages, tpResolutions]);
 
   const tpGrantedCategoryRankCounts = useMemo(() => {
     const map = new Map<string, number>();
-    for (const tp of selectedApprenticeTrainingPackages) {
+    for (const tp of selectedLevellingTrainingPackages) {
       for (const rank of tp.categoryRanks ?? []) {
         map.set(rank.id, (map.get(rank.id) ?? 0) + rank.value);
       }
@@ -1399,11 +1405,11 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
       }
     }
     return map;
-  }, [selectedApprenticeTrainingPackages, tpResolutions]);
+  }, [selectedLevellingTrainingPackages, tpResolutions]);
 
   const tpGrantedSpellListRankCounts = useMemo(() => {
     const map = new Map<string, number>();
-    for (const tp of selectedApprenticeTrainingPackages) {
+    for (const tp of selectedLevellingTrainingPackages) {
       const res = tpResolutions.find((r) => r.tpId === tp.id);
       if (!res) continue;
       const choiceableSlRanks = (tp.spellListRanks ?? []).filter((r) => r.numChoices > 0);
@@ -1419,23 +1425,23 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
       }
     }
     return map;
-  }, [selectedApprenticeTrainingPackages, tpResolutions]);
+  }, [selectedLevellingTrainingPackages, tpResolutions]);
 
   const tpsRequiringResolution = useMemo(
-    () => selectedApprenticeTrainingPackages.filter(tpHasChoices),
-    [selectedApprenticeTrainingPackages],
+    () => selectedLevellingTrainingPackages.filter(tpHasChoices),
+    [selectedLevellingTrainingPackages],
   );
 
-  const apprenticeTrainingPackageDpCost = useMemo(() => {
-    return apprenticeTrainingPackageIds.reduce((total, tpId) => {
+  const levellingTrainingPackageDpCost = useMemo(() => {
+    return levellingTrainingPackageIds.reduce((total, tpId) => {
       return total + (tpCostMap.get(tpId) ?? 0);
     }, 0);
-  }, [apprenticeTrainingPackageIds, tpCostMap]);
+  }, [levellingTrainingPackageIds, tpCostMap]);
 
-  const apprenticeStatGainDpCost = apprenticeStatGains.length * STAT_GAIN_DP_COST;
+  const levellingStatGainDpCost = levellingStatGains.length * STAT_GAIN_DP_COST;
 
-  const apprenticeSkillDpCost = useMemo(() => {
-    return apprenticeSkillPurchases.reduce((total, p) => {
+  const levellingSkillDpCost = useMemo(() => {
+    return levellingSkillPurchases.reduce((total, p) => {
       const categoryId = skillCategoryMap.get(p.id);
       if (!categoryId) return total;
       const costElements = categoryCostMap.get(categoryId) ?? [];
@@ -1443,37 +1449,37 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
       const tpRanks = tpGrantedSkillRankCounts.get(p.id) ?? 0;
       return total + getSkillDpCostWithTpOffset(costElements, devType, p.purchases, tpRanks);
     }, 0);
-  }, [apprenticeSkillPurchases, categoryCostMap, skillDevTypeMap, skillCategoryMap, tpGrantedSkillRankCounts]);
+  }, [levellingSkillPurchases, categoryCostMap, skillDevTypeMap, skillCategoryMap, tpGrantedSkillRankCounts]);
 
-  const apprenticeCategoryDpCost = useMemo(() => {
-    return apprenticeCategoryPurchases.reduce((total, p) => {
+  const levellingCategoryDpCost = useMemo(() => {
+    return levellingCategoryPurchases.reduce((total, p) => {
       const costElements = categoryCostMap.get(p.id) ?? [];
       const tpRanks = tpGrantedCategoryRankCounts.get(p.id) ?? 0;
       return total + getCategoryDpCostWithTpOffset(costElements, p.purchases, tpRanks);
     }, 0);
-  }, [apprenticeCategoryPurchases, categoryCostMap, tpGrantedCategoryRankCounts]);
+  }, [levellingCategoryPurchases, categoryCostMap, tpGrantedCategoryRankCounts]);
 
-  const apprenticeSpellListDpCost = useMemo(() => {
-    return apprenticeSpellListPurchases.reduce((total, p) => {
+  const levellingSpellListDpCost = useMemo(() => {
+    return levellingSpellListPurchases.reduce((total, p) => {
       const catEntry = characterBuilder.categorySpellLists.find((c) => c.spellLists.includes(p.id));
       if (!catEntry) return total;
       const costElements = categoryCostMap.get(catEntry.category) ?? [];
       const tpRanks = tpGrantedSpellListRankCounts.get(p.id) ?? 0;
       return total + getCategoryDpCostWithTpOffset(costElements, p.purchases, tpRanks);
     }, 0);
-  }, [apprenticeSpellListPurchases, categoryCostMap, characterBuilder.categorySpellLists, tpGrantedSpellListRankCounts]);
+  }, [levellingSpellListPurchases, categoryCostMap, characterBuilder.categorySpellLists, tpGrantedSpellListRankCounts]);
 
-  const apprenticeTotalDpSpent = apprenticeTrainingPackageDpCost + apprenticeStatGainDpCost + apprenticeSkillDpCost + apprenticeCategoryDpCost + apprenticeSpellListDpCost;
-  const apprenticeDpRemaining = characterBuilder.developmentPoints - apprenticeTotalDpSpent;
+  const levellingTotalDpSpent = levellingTrainingPackageDpCost + levellingStatGainDpCost + levellingSkillDpCost + levellingCategoryDpCost + levellingSpellListDpCost;
+  const levellingDpRemaining = characterBuilder.developmentPoints - levellingTotalDpSpent;
 
-  const apprenticeTrainingPackageOptions = useMemo(() => {
-    const selectedSet = new Set(apprenticeTrainingPackageIds);
+  const levellingTrainingPackageOptions = useMemo(() => {
+    const selectedSet = new Set(levellingTrainingPackageIds);
     return availableTrainingPackages
       .filter((tp) => {
         if (selectedSet.has(tp.id)) return false;
-        if (tp.lifestyle && apprenticeSelectedLifestylePackageId !== null) return false;
+        if (tp.lifestyle && levellingSelectedLifestylePackageId !== null) return false;
         const cost = tpCostMap.get(tp.id) ?? 0;
-        if (cost > apprenticeDpRemaining) return false;
+        if (cost > levellingDpRemaining) return false;
         return true;
       })
       .sort((a, b) => a.name.localeCompare(b.name))
@@ -1487,10 +1493,10 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
           title: showDescriptions && tp.description ? tp.description : undefined,
         };
       });
-  }, [availableTrainingPackages, apprenticeTrainingPackageIds, apprenticeSelectedLifestylePackageId, tpCostMap, apprenticeDpRemaining, showDescriptions]);
+  }, [availableTrainingPackages, levellingTrainingPackageIds, levellingSelectedLifestylePackageId, tpCostMap, levellingDpRemaining, showDescriptions]);
 
-  const apprenticeAvailableSkills = useMemo(() => {
-    const selectedSet = new Set(apprenticeSkillPurchases.map((p) => p.id));
+  const levellingAvailableSkills = useMemo(() => {
+    const selectedSet = new Set(levellingSkillPurchases.map((p) => p.id));
     return skills.filter((s) => {
       if (selectedSet.has(s.id)) return false;
       const costElements = categoryCostMap.get(s.category) ?? [];
@@ -1498,10 +1504,10 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
       const tpRanks = tpGrantedSkillRankCounts.get(s.id) ?? 0;
       return getSkillMaxDpPurchases(costElements, devType, tpRanks) > 0;
     });
-  }, [skills, apprenticeSkillPurchases, categoryCostMap, skillDevTypeMap, tpGrantedSkillRankCounts]);
+  }, [skills, levellingSkillPurchases, categoryCostMap, skillDevTypeMap, tpGrantedSkillRankCounts]);
 
-  const apprenticeSkillCategoryOptions = useMemo((): RichSelectOption[] => {
-    const catIds = new Set(apprenticeAvailableSkills.map((s) => s.category));
+  const levellingSkillCategoryOptions = useMemo((): RichSelectOption[] => {
+    const catIds = new Set(levellingAvailableSkills.map((s) => s.category));
     return Array.from(catIds)
       .map((id): RichSelectOption => {
         const costElements = categoryCostMap.get(id) ?? [];
@@ -1515,11 +1521,11 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
         };
       })
       .sort((a, b) => (a.searchText ?? '').localeCompare(b.searchText ?? ''));
-  }, [apprenticeAvailableSkills, categoryNameById, categoryCostMap]);
+  }, [levellingAvailableSkills, categoryNameById, categoryCostMap]);
 
-  const apprenticeSkillOptions = useMemo(() => {
-    return apprenticeAvailableSkills
-      .filter((s) => !apprenticeSkillCategoryFilter || s.category === apprenticeSkillCategoryFilter)
+  const levellingSkillOptions = useMemo(() => {
+    return levellingAvailableSkills
+      .filter((s) => !levellingSkillCategoryFilter || s.category === levellingSkillCategoryFilter)
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((s): RichSelectOption => {
         const costElements = categoryCostMap.get(s.category) ?? [];
@@ -1533,10 +1539,10 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
           searchText: `${s.name} ${secondary}`,
         };
       });
-  }, [apprenticeAvailableSkills, apprenticeSkillCategoryFilter, categoryCostMap, skillDevTypeMap, tpGrantedSkillRankCounts]);
+  }, [levellingAvailableSkills, levellingSkillCategoryFilter, categoryCostMap, skillDevTypeMap, tpGrantedSkillRankCounts]);
 
-  const apprenticeCategoryOptions = useMemo(() => {
-    const selectedSet = new Set(apprenticeCategoryPurchases.map((p) => p.id));
+  const levellingCategoryOptions = useMemo(() => {
+    const selectedSet = new Set(levellingCategoryPurchases.map((p) => p.id));
     return categories
       .filter((c) => {
         if (selectedSet.has(c.id)) return false;
@@ -1561,9 +1567,9 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
           searchText: `${baseLabel} \u2014 ${secondary}`,
         };
       });
-  }, [categories, apprenticeCategoryPurchases, categoryCostMap, categoryNameById, tpGrantedCategoryRankCounts]);
+  }, [categories, levellingCategoryPurchases, categoryCostMap, categoryNameById, tpGrantedCategoryRankCounts]);
 
-  const apprenticeSpellCategoryOptions = useMemo(
+  const levellingSpellCategoryOptions = useMemo(
     () => characterBuilder.categorySpellLists
       .map((c): RichSelectOption => {
         const costElements = categoryCostMap.get(c.category) ?? [];
@@ -1580,16 +1586,16 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
     [characterBuilder.categorySpellLists, categoryNameById, categoryCostMap],
   );
 
-  const apprenticeSpellListsInSelectedCategory = useMemo(() => {
-    if (!apprenticeSelectedSpellCategory) return [];
-    const catEntry = characterBuilder.categorySpellLists.find((c) => c.category === apprenticeSelectedSpellCategory);
+  const levellingSpellListsInSelectedCategory = useMemo(() => {
+    if (!levellingSelectedSpellCategory) return [];
+    const catEntry = characterBuilder.categorySpellLists.find((c) => c.category === levellingSelectedSpellCategory);
     if (!catEntry) return [];
-    const purchasedIds = new Set(apprenticeSpellListPurchases.map((p) => p.id));
+    const purchasedIds = new Set(levellingSpellListPurchases.map((p) => p.id));
     return catEntry.spellLists
       .filter((slId) => !purchasedIds.has(slId))
       .map((slId) => ({ id: slId, name: spellListNameById.get(slId) ?? slId }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [apprenticeSelectedSpellCategory, characterBuilder.categorySpellLists, spellListNameById, apprenticeSpellListPurchases]);
+  }, [levellingSelectedSpellCategory, characterBuilder.categorySpellLists, spellListNameById, levellingSpellListPurchases]);
 
   useEffect(() => {
     if (!cultureTypeId) {
@@ -1773,11 +1779,11 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
           temporary: Number(roll.temporary) || 0,
           potential: roll.potential ?? 0,
           racialBonus: (race?.statBonuses.find((b) => b.id === roll.assignedStat)?.value ?? 0)
-            + apprenticeStatGains.filter((s) => s === roll.assignedStat).length,
+            + levellingStatGains.filter((s) => s === roll.assignedStat).length,
           totalBonus: 0,
         })),
     }));
-  }, [characterName, isMale, isPC, raceId, cultureTypeId, cultureId, professionId, selectedRealms, statRolls, race, apprenticeStatGains]);
+  }, [characterName, isMale, isPC, raceId, cultureTypeId, cultureId, professionId, selectedRealms, statRolls, race, levellingStatGains]);
 
   useEffect(() => {
     setCharacterBuilder((prev) => ({
@@ -1953,9 +1959,9 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
   useEffect(() => {
     setTpResolutions((prev) => {
       const resMap = new Map(prev.map((r) => [r.tpId, r]));
-      return selectedApprenticeTrainingPackages.map((tp) => resMap.get(tp.id) ?? createEmptyTpResolution(tp));
+      return selectedLevellingTrainingPackages.map((tp) => resMap.get(tp.id) ?? createEmptyTpResolution(tp));
     });
-  }, [selectedApprenticeTrainingPackages]);
+  }, [selectedLevellingTrainingPackages]);
 
   useEffect(() => {
     // Aggregate ranks from all selected training packages including resolved TP choices
@@ -1963,7 +1969,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
     const tpCategoryRanks: Array<{ id: string; value: number }> = [];
     const tpSpellListRanks: Array<{ id: string; value: number }> = [];
 
-    for (const tp of selectedApprenticeTrainingPackages) {
+    for (const tp of selectedLevellingTrainingPackages) {
       for (const rank of tp.skillRanks ?? []) {
         tpSkillRanks.push({ id: rank.id, ...(rank.subcategory ? { subcategory: rank.subcategory } : {}), value: rank.value });
       }
@@ -2015,8 +2021,8 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
       }
     }
 
-    // Add apprentice DP-purchased skill ranks
-    for (const p of apprenticeSkillPurchases) {
+    // Add levelling DP-purchased skill ranks
+    for (const p of levellingSkillPurchases) {
       const categoryId = skillCategoryMap.get(p.id);
       if (!categoryId) continue;
       const devType = skillDevTypeMap.get(p.id);
@@ -2029,15 +2035,15 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
       }
     }
 
-    // Add apprentice DP-purchased category ranks
-    for (const p of apprenticeCategoryPurchases) {
+    // Add levelling DP-purchased category ranks
+    for (const p of levellingCategoryPurchases) {
       if (p.purchases > 0) {
         tpCategoryRanks.push({ id: p.id, value: p.purchases });
       }
     }
 
-    // Add apprentice DP-purchased spell list ranks
-    for (const p of apprenticeSpellListPurchases) {
+    // Add levelling DP-purchased spell list ranks
+    for (const p of levellingSpellListPurchases) {
       if (p.purchases > 0) {
         tpSpellListRanks.push({ id: p.id, value: p.purchases });
       }
@@ -2051,7 +2057,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
       numHobbySkillRanks: (prev.hobbySkillRanks ?? []).reduce((sum, row) => sum + row.value, 0),
       numAdolescentSpellListRanks: tpSpellListRanks.reduce((sum, row) => sum + row.value, 0),
     }));
-  }, [selectedApprenticeTrainingPackages, apprenticeSkillPurchases, apprenticeCategoryPurchases, apprenticeSpellListPurchases, skillCategoryMap, skillDevTypeMap, tpResolutions]);
+  }, [selectedLevellingTrainingPackages, levellingSkillPurchases, levellingCategoryPurchases, levellingSpellListPurchases, skillCategoryMap, skillDevTypeMap, tpResolutions]);
 
   const validateInitial = (): string | undefined => {
     if (!characterName.trim()) return 'Name is required.';
@@ -2451,12 +2457,12 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
   };
 
   const validateApprenticeship = (): string | undefined => {
-    if (apprenticeTotalDpSpent > characterBuilder.developmentPoints) {
-      return `Development points overspent by ${apprenticeTotalDpSpent - characterBuilder.developmentPoints}.`;
+    if (levellingTotalDpSpent > characterBuilder.developmentPoints) {
+      return `Development points overspent by ${levellingTotalDpSpent - characterBuilder.developmentPoints}.`;
     }
 
     // Require all TP choices to be resolved before completing apprenticeship
-    if (tpsRequiringResolution.length > 0 && apprenticeSubstep !== 'purchasing') {
+    if (tpsRequiringResolution.length > 0 && levellingSubstep !== 'purchasing') {
       return 'Resolve all training package choices before completing apprenticeship.';
     }
     for (const tp of tpsRequiringResolution) {
@@ -2468,14 +2474,14 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
 
     // Check only one lifestyle package selected
     let lifestyleCount = 0;
-    for (const tpId of apprenticeTrainingPackageIds) {
+    for (const tpId of levellingTrainingPackageIds) {
       const tp = trainingPackages.find((t) => t.id === tpId);
       if (tp?.lifestyle) lifestyleCount++;
     }
     if (lifestyleCount > 1) return 'Only one lifestyle training package may be selected.';
 
     // Validate skill purchase subcategories
-    for (const p of apprenticeSkillPurchases) {
+    for (const p of levellingSkillPurchases) {
       if (p.purchases <= 0) continue;
       const skillName = skillNameById.get(p.id) ?? p.id;
       const isWeaponGroupSkill = weaponGroupSkillIds.has(p.id);
@@ -2483,16 +2489,16 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
       if (isWeaponGroupSkill && p.subcategory) {
         const validWeaponTypes = weaponTypeOptionsBySkillId.get(p.id) ?? [];
         if (!validWeaponTypes.some((wt) => wt.value === p.subcategory)) {
-          return `Apprentice Skill: invalid weapon type selected for ${skillName}.`;
+          return `Levelling Skill: invalid weapon type selected for ${skillName}.`;
         }
       }
 
       if (!isWeaponGroupSkill && mandatorySubcategorySkillIds.has(p.id) && !p.subcategory.trim()) {
-        return `Apprentice Skill: enter subcategory for ${skillName}.`;
+        return `Levelling Skill: enter subcategory for ${skillName}.`;
       }
 
       if (isWeaponGroupSkill && mandatorySubcategorySkillIds.has(p.id) && !p.subcategory) {
-        return `Apprentice Skill: select weapon type for ${skillName}.`;
+        return `Levelling Skill: select weapon type for ${skillName}.`;
       }
     }
 
@@ -2576,13 +2582,13 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
     backgroundLanguageRankSpent,
     backgroundLanguageRanksBudget,
     backgroundLanguageRankRemaining,
-    apprenticeTrainingPackageIds,
-    apprenticeStatGains,
-    apprenticeSkillPurchases,
-    apprenticeCategoryPurchases,
-    apprenticeSpellListPurchases,
-    apprenticeTotalDpSpent,
-    apprenticeSubstep,
+    levellingTrainingPackageIds,
+    levellingStatGains,
+    levellingSkillPurchases,
+    levellingCategoryPurchases,
+    levellingSpellListPurchases,
+    levellingTotalDpSpent,
+    levellingSubstep,
     tpResolutions,
   ]);
 
@@ -2720,7 +2726,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
             temporary: Number(assigned.temporary) || 0,
             potential: assigned.potential ?? 0,
             racialBonus: (race?.statBonuses.find((b) => b.id === stat)?.value ?? 0)
-              + apprenticeStatGains.filter((s) => s === stat).length,
+              + levellingStatGains.filter((s) => s === stat).length,
             totalBonus: 0,
           };
         });
@@ -2962,7 +2968,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
         );
 
         setCharacterBuilder(response);
-        setPreApprenticeshipRanks({
+        setPreLevellingRanks({
           skillRanks: response.skillRanks ?? [],
           categoryRanks: response.categoryRanks ?? [],
           spellListRanks: response.spellListRanks ?? [],
@@ -3262,20 +3268,20 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
     setHobbySpellListOptions([]);
     setHobbySpellListId('');
     resetBackgroundState();
-    setApprenticeTrainingPackageIds([]);
-    setApprenticeStatGains([]);
-    setApprenticeSkillPurchases([]);
-    setApprenticeSkillCategoryFilter('');
-    setApprenticeSkillPendingId('');
-    setApprenticeSkillPendingSubcategory('');
-    setApprenticeCategoryPurchases([]);
-    setApprenticeSpellListPurchases([]);
-    setApprenticeSelectedSpellCategory('');
-    setApprenticeAddingSpellList(false);
-    setApprenticeSubstep('selecting');
-    setApprenticeResolvingTpIndex(0);
+    setLevellingTrainingPackageIds([]);
+    setLevellingStatGains([]);
+    setLevellingSkillPurchases([]);
+    setLevellingSkillCategoryFilter('');
+    setLevellingSkillPendingId('');
+    setLevellingSkillPendingSubcategory('');
+    setLevellingCategoryPurchases([]);
+    setLevellingSpellListPurchases([]);
+    setLevellingSelectedSpellCategory('');
+    setLevellingAddingSpellList(false);
+    setLevellingSubstep('selecting');
+    setLevellingResolvingTpIndex(0);
     setTpResolutions([]);
-    setPreApprenticeshipRanks({ skillRanks: [], categoryRanks: [], spellListRanks: [] });
+    setPreLevellingRanks({ skillRanks: [], categoryRanks: [], spellListRanks: [] });
     setCharacterBuilder(createEmptyCharacterBuilder());
     setErrors({});
   };
@@ -3296,7 +3302,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
     setApplying(true);
     try {
       const totalStatGains: Stat[] = [];
-      for (const tp of selectedApprenticeTrainingPackages) {
+      for (const tp of selectedLevellingTrainingPackages) {
         for (const stat of tp.statGains ?? []) totalStatGains.push(stat);
         const res = tpResolutions.find((r) => r.tpId === tp.id);
         if (res) {
@@ -3305,7 +3311,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
           }
         }
       }
-      totalStatGains.push(...apprenticeStatGains);
+      totalStatGains.push(...levellingStatGains);
 
       const totalSkillsByKey = new Map<string, { id: string; subcategory?: string | undefined; ranks: number }>();
       const addSkillRanks = (id: string, subcategory: string | undefined, ranks: number) => {
@@ -3323,7 +3329,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
           });
         }
       };
-      for (const rank of preApprenticeshipRanks.skillRanks ?? []) {
+      for (const rank of preLevellingRanks.skillRanks ?? []) {
         addSkillRanks(rank.id, rank.subcategory, rank.value ?? 0);
       }
       for (const rank of characterBuilder.skillRanks ?? []) {
@@ -3335,7 +3341,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
         if (!id || ranks <= 0) return;
         totalCategoryRanks.set(id, (totalCategoryRanks.get(id) ?? 0) + ranks);
       };
-      for (const rank of preApprenticeshipRanks.categoryRanks ?? []) {
+      for (const rank of preLevellingRanks.categoryRanks ?? []) {
         addCategoryRanks(rank.id, rank.value ?? 0);
       }
       for (const rank of characterBuilder.categoryRanks ?? []) {
@@ -3350,15 +3356,15 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
         spellListTotals.set(spellListId, (spellListTotals.get(spellListId) ?? 0) + ranks);
       };
 
-      for (const rank of preApprenticeshipRanks.spellListRanks ?? []) {
+      for (const rank of preLevellingRanks.spellListRanks ?? []) {
         addSpellListRanks(rank.id, rank.value ?? 0);
       }
 
-      for (const p of apprenticeSpellListPurchases) {
+      for (const p of levellingSpellListPurchases) {
         if (p.purchases > 0) addSpellListRanks(p.id, p.purchases);
       }
 
-      for (const tp of selectedApprenticeTrainingPackages) {
+      for (const tp of selectedLevellingTrainingPackages) {
         const res = tpResolutions.find((r) => r.tpId === tp.id);
 
         const fixedSpellRows = (tp.spellListRanks ?? []).filter((r) => r.numChoices <= 0);
@@ -3422,8 +3428,8 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
 
       const payload: CharacterBuilder = {
         ...characterBuilder,
-        apprenticeshipTrainingPackages: apprenticeTrainingPackageIds,
-        apprenticeshipStatGains: totalStatGains,
+        levellingTrainingPackages: levellingTrainingPackageIds,
+        levellingStatGains: totalStatGains,
         skillRanks: Array.from(totalSkillsByKey.values())
           .filter((row) => row.ranks > 0)
           .sort((a, b) => skillChoiceKey(a.id, a.subcategory).localeCompare(skillChoiceKey(b.id, b.subcategory)))
@@ -3447,7 +3453,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
           .sort((a, b) => a.language.localeCompare(b.language)),
       };
 
-      const response = await applyApprenticeshipChoices(payload);
+      const response = await applyLevellingChoices(payload);
       setCharacterBuilder(response);
       toast({
         variant: 'success',
@@ -3606,7 +3612,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                   value={raceId}
                   onChange={(v) => {
                     setRaceId(v);
-                    setApprenticeTrainingPackageIds([]);
+                    setLevellingTrainingPackageIds([]);
                     resetBackgroundState();
                   }}
                   options={races
@@ -3621,7 +3627,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                   value={cultureTypeId}
                   onChange={(v) => {
                     setCultureTypeId(v);
-                    setApprenticeTrainingPackageIds([]);
+                    setLevellingTrainingPackageIds([]);
                     resetBackgroundState();
                   }}
                   options={cultureTypes
@@ -3636,7 +3642,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                   value={cultureId}
                   onChange={(v) => {
                     setCultureId(v);
-                    setApprenticeTrainingPackageIds([]);
+                    setLevellingTrainingPackageIds([]);
                   }}
                   options={availableCultures
                     .slice()
@@ -4337,7 +4343,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))' }}>
                           {sortedHobbySkillRows.map(({ row, index, label }) => (
                             <div key={`hskill-${row.id}-${index}`} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gap: 8 }}>
-                              <strong style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={label}>{label}</strong>
+                              <strong style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={showDescriptions ? (skillDescriptionById.get(row.id) ?? label) : label}>{label}</strong>
                               {mandatorySubcategorySkillIds.has(row.id) && (
                                 <LabeledInput
                                   label="Subcategory"
@@ -4781,23 +4787,23 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
             <section style={{ display: 'grid', gap: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ color: 'var(--muted)' }}>
-                  {apprenticeSubstep === 'selecting' && 'Select training packages. TPs with required choices must be resolved before spending extra development points.'}
-                  {apprenticeSubstep === 'resolving' && `Resolve training package choices (${apprenticeResolvingTpIndex + 1} of ${tpsRequiringResolution.length}).`}
-                  {apprenticeSubstep === 'purchasing' && 'Spend remaining development points on stat gains, skill ranks, category ranks, and spell list ranks. Unspent points carry to the next level.'}
+                  {levellingSubstep === 'selecting' && 'Select training packages. TPs with required choices must be resolved before spending extra development points.'}
+                  {levellingSubstep === 'resolving' && `Resolve training package choices (${levellingResolvingTpIndex + 1} of ${tpsRequiringResolution.length}).`}
+                  {levellingSubstep === 'purchasing' && 'Spend remaining development points on stat gains, skill ranks, category ranks, and spell list ranks. Unspent points carry to the next level.'}
                 </div>
                 <div style={{ fontWeight: 600, whiteSpace: 'nowrap', marginLeft: 16 }}>
-                  DP: {apprenticeDpRemaining} / {characterBuilder.developmentPoints}
+                  DP: {levellingDpRemaining} / {characterBuilder.developmentPoints}
                 </div>
               </div>
 
               {/* SELECTING sub-step */}
-              {apprenticeSubstep === 'selecting' && (
+              {levellingSubstep === 'selecting' && (
                 <>
                   <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
                     <h4 style={{ margin: '0 0 8px' }}>Training Packages</h4>
-                    {selectedApprenticeTrainingPackages.length > 0 && (
+                    {selectedLevellingTrainingPackages.length > 0 && (
                       <div style={{ display: 'grid', gap: 6, marginBottom: 8 }}>
-                        {selectedApprenticeTrainingPackages.map((tp) => {
+                        {selectedLevellingTrainingPackages.map((tp) => {
                           const cost = tpCostMap.get(tp.id) ?? 0;
                           return (
                             <div key={tp.id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -4807,7 +4813,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                               </span>
                               <button
                                 type="button"
-                                onClick={() => setApprenticeTrainingPackageIds((prev) => prev.filter((id) => id !== tp.id))}
+                                onClick={() => setLevellingTrainingPackageIds((prev) => prev.filter((id) => id !== tp.id))}
                               >
                                 Remove
                               </button>
@@ -4821,9 +4827,9 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                       hideLabel={true}
                       value=""
                       onChange={(v) => {
-                        if (v) setApprenticeTrainingPackageIds((prev) => [...prev, v]);
+                        if (v) setLevellingTrainingPackageIds((prev) => [...prev, v]);
                       }}
-                      options={apprenticeTrainingPackageOptions}
+                      options={levellingTrainingPackageOptions}
                       placeholderOption="— Add training package —"
                     />
                   </div>
@@ -4832,10 +4838,10 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                       type="button"
                       onClick={() => {
                         if (tpsRequiringResolution.length === 0) {
-                          setApprenticeSubstep('purchasing');
+                          setLevellingSubstep('purchasing');
                         } else {
-                          setApprenticeResolvingTpIndex(0);
-                          setApprenticeSubstep('resolving');
+                          setLevellingResolvingTpIndex(0);
+                          setLevellingSubstep('resolving');
                         }
                       }}
                     >
@@ -4846,8 +4852,8 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
               )}
 
               {/* RESOLVING sub-step */}
-              {apprenticeSubstep === 'resolving' && (() => {
-                const currentTp = tpsRequiringResolution[apprenticeResolvingTpIndex];
+              {levellingSubstep === 'resolving' && (() => {
+                const currentTp = tpsRequiringResolution[levellingResolvingTpIndex];
                 const currentResolution = currentTp ? tpResolutions.find((r) => r.tpId === currentTp.id) : undefined;
                 if (!currentTp || !currentResolution) return null;
                 const tpRealmStatGains = new Set<Stat>(
@@ -4866,7 +4872,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                   <div style={{ display: 'grid', gap: 10 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <h4 style={{ margin: 0 }}>{currentTp.name} — {tpCostMap.get(currentTp.id) ?? 0} DP</h4>
-                      <span style={{ color: 'var(--muted)' }}>TP {apprenticeResolvingTpIndex + 1} of {tpsRequiringResolution.length}</span>
+                      <span style={{ color: 'var(--muted)' }}>TP {levellingResolvingTpIndex + 1} of {tpsRequiringResolution.length}</span>
                     </div>
 
                     {currentTp.realmStatGain && characterBuilder.magicalRealms.length > 0 && (
@@ -5344,27 +5350,27 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                       <button
                         type="button"
                         onClick={() => {
-                          if (apprenticeResolvingTpIndex === 0) {
-                            setApprenticeSubstep('selecting');
+                          if (levellingResolvingTpIndex === 0) {
+                            setLevellingSubstep('selecting');
                           } else {
-                            setApprenticeResolvingTpIndex(apprenticeResolvingTpIndex - 1);
+                            setLevellingResolvingTpIndex(levellingResolvingTpIndex - 1);
                           }
                         }}
                       >
-                        ← {apprenticeResolvingTpIndex === 0 ? 'TP Selection' : 'Previous TP'}
+                        ← {levellingResolvingTpIndex === 0 ? 'TP Selection' : 'Previous TP'}
                       </button>
                       <button
                         type="button"
                         disabled={!!resError}
                         onClick={() => {
-                          if (apprenticeResolvingTpIndex + 1 >= tpsRequiringResolution.length) {
-                            setApprenticeSubstep('purchasing');
+                          if (levellingResolvingTpIndex + 1 >= tpsRequiringResolution.length) {
+                            setLevellingSubstep('purchasing');
                           } else {
-                            setApprenticeResolvingTpIndex(apprenticeResolvingTpIndex + 1);
+                            setLevellingResolvingTpIndex(levellingResolvingTpIndex + 1);
                           }
                         }}
                       >
-                        {apprenticeResolvingTpIndex + 1 >= tpsRequiringResolution.length ? 'Finish Resolving →' : 'Next TP →'}
+                        {levellingResolvingTpIndex + 1 >= tpsRequiringResolution.length ? 'Finish Resolving →' : 'Next TP →'}
                       </button>
                     </div>
                   </div>
@@ -5373,12 +5379,12 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
 
 
               {/* PURCHASING sub-step */}
-              {apprenticeSubstep === 'purchasing' && (
+              {levellingSubstep === 'purchasing' && (
                 <>
-                  {selectedApprenticeTrainingPackages.length > 0 && (
+                  {selectedLevellingTrainingPackages.length > 0 && (
                     <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
                       <h4 style={{ margin: '0 0 4px' }}>Selected Training Packages</h4>
-                      {selectedApprenticeTrainingPackages.map((tp) => (
+                      {selectedLevellingTrainingPackages.map((tp) => (
                         <div key={tp.id} style={{ color: 'var(--muted)' }}>
                           {tp.name}{tp.lifestyle ? ' (Lifestyle)' : ''} — {tpCostMap.get(tp.id) ?? 0} DP
                         </div>
@@ -5389,11 +5395,11 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                   {/* Stat Gain Rolls */}
                   <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
                     <h4 style={{ margin: '0 0 8px' }}>Stat Gain Rolls ({STAT_GAIN_DP_COST} DP each)</h4>
-                    {apprenticeStatGains.length > 0 && (
+                    {levellingStatGains.length > 0 && (
                       <div style={{ display: 'grid', gap: 6, marginBottom: 8 }}>
-                        {apprenticeStatGains.map((stat, i) => {
+                        {levellingStatGains.map((stat, i) => {
                           const availableOptions = STATS
-                            .filter((s) => !apprenticeStatGainsUnavailable.has(s) && (s === stat || !apprenticeStatGains.includes(s)))
+                            .filter((s) => !levellingStatGainsUnavailable.has(s) && (s === stat || !levellingStatGains.includes(s)))
                             .map((s) => ({ value: s, label: s }));
                           return (
                             <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -5401,13 +5407,13 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                                 label={`Stat Gain #${i + 1}`}
                                 value={stat}
                                 onChange={(v) => {
-                                  setApprenticeStatGains((prev) => prev.map((s, idx) => (idx === i ? v as Stat : s)));
+                                  setLevellingStatGains((prev) => prev.map((s, idx) => (idx === i ? v as Stat : s)));
                                 }}
                                 options={availableOptions}
                               />
                               <button
                                 type="button"
-                                onClick={() => setApprenticeStatGains((prev) => prev.filter((_, idx) => idx !== i))}
+                                onClick={() => setLevellingStatGains((prev) => prev.filter((_, idx) => idx !== i))}
                               >
                                 Remove
                               </button>
@@ -5419,12 +5425,12 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                     <button
                       type="button"
                       onClick={() => {
-                        const nextStat = STATS.find((s) => !apprenticeStatGainsUnavailable.has(s) && !apprenticeStatGains.includes(s));
-                        if (nextStat) setApprenticeStatGains((prev) => [...prev, nextStat]);
+                        const nextStat = STATS.find((s) => !levellingStatGainsUnavailable.has(s) && !levellingStatGains.includes(s));
+                        if (nextStat) setLevellingStatGains((prev) => [...prev, nextStat]);
                       }}
                       disabled={
-                        apprenticeDpRemaining < STAT_GAIN_DP_COST
-                        || STATS.every((s) => apprenticeStatGainsUnavailable.has(s) || apprenticeStatGains.includes(s))
+                        levellingDpRemaining < STAT_GAIN_DP_COST
+                        || STATS.every((s) => levellingStatGainsUnavailable.has(s) || levellingStatGains.includes(s))
                       }
                     >
                       Add Stat Gain Roll
@@ -5434,9 +5440,9 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                   {/* Skill Rank Purchases */}
                   <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
                     <h4 style={{ margin: '0 0 8px' }}>Skill Ranks</h4>
-                    {apprenticeSkillPurchases.length > 0 && (
+                    {levellingSkillPurchases.length > 0 && (
                       <div style={{ display: 'grid', gap: 8, marginBottom: 8 }}>
-                        {apprenticeSkillPurchases.map((purchase, i) => {
+                        {levellingSkillPurchases.map((purchase, i) => {
                           const skillName = skillNameById.get(purchase.id) ?? purchase.id;
                           const categoryId = skillCategoryMap.get(purchase.id) ?? '';
                           const costElements = categoryCostMap.get(categoryId) ?? [];
@@ -5451,7 +5457,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                             : 0;
                           const isWeaponGroupSkill = weaponGroupSkillIds.has(purchase.id);
                           const needsSubcategory = mandatorySubcategorySkillIds.has(purchase.id);
-                          const existingSkillRanks = preApprenticeshipRanks.skillRanks
+                          const existingSkillRanks = preLevellingRanks.skillRanks
                             .filter((r) => r.id === purchase.id && (purchase.subcategory ? r.subcategory === purchase.subcategory : true))
                             .reduce((sum, r) => sum + r.value, 0);
                           const afterSkillRanks = existingSkillRanks + tpRanksForSkill + totalRanks;
@@ -5474,7 +5480,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                                         label="Weapon type"
                                         hideLabel={true}
                                         value={purchase.subcategory}
-                                        onChange={(v) => setApprenticeSkillPurchases((prev) =>
+                                        onChange={(v) => setLevellingSkillPurchases((prev) =>
                                           prev.map((p, idx) => idx === i ? { ...p, subcategory: v } : p),
                                         )}
                                         options={weaponTypeOptionsBySkillId.get(purchase.id) ?? []}
@@ -5485,7 +5491,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                                         label="Subcategory"
                                         hideLabel={true}
                                         value={purchase.subcategory}
-                                        onChange={(v) => setApprenticeSkillPurchases((prev) =>
+                                        onChange={(v) => setLevellingSkillPurchases((prev) =>
                                           prev.map((p, idx) => idx === i ? { ...p, subcategory: v } : p),
                                         )}
                                         placeholder="Subcategory"
@@ -5497,7 +5503,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                                   <button
                                     type="button"
                                     disabled={purchase.purchases <= 0}
-                                    onClick={() => setApprenticeSkillPurchases((prev) =>
+                                    onClick={() => setLevellingSkillPurchases((prev) =>
                                       prev.map((p, idx) => idx === i ? { ...p, purchases: p.purchases - 1 } : p),
                                     )}
                                   >
@@ -5506,8 +5512,8 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                                   <span style={{ minWidth: 20, textAlign: 'center' }}>{purchase.purchases}</span>
                                   <button
                                     type="button"
-                                    disabled={purchase.purchases >= maxPurch || nextPurchaseCost > apprenticeDpRemaining}
-                                    onClick={() => setApprenticeSkillPurchases((prev) =>
+                                    disabled={purchase.purchases >= maxPurch || nextPurchaseCost > levellingDpRemaining}
+                                    onClick={() => setLevellingSkillPurchases((prev) =>
                                       prev.map((p, idx) => idx === i ? { ...p, purchases: p.purchases + 1 } : p),
                                     )}
                                   >
@@ -5516,7 +5522,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                                 </div>
                                 <button
                                   type="button"
-                                  onClick={() => setApprenticeSkillPurchases((prev) => prev.filter((_, idx) => idx !== i))}
+                                  onClick={() => setLevellingSkillPurchases((prev) => prev.filter((_, idx) => idx !== i))}
                                 >
                                   Remove
                                 </button>
@@ -5531,13 +5537,13 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                         <RichSelect
                           label="Skill Category"
                           hideLabel={true}
-                          value={apprenticeSkillCategoryFilter}
+                          value={levellingSkillCategoryFilter}
                           onChange={(v) => {
-                            setApprenticeSkillCategoryFilter(v);
-                            setApprenticeSkillPendingId('');
-                            setApprenticeSkillPendingSubcategory('');
+                            setLevellingSkillCategoryFilter(v);
+                            setLevellingSkillPendingId('');
+                            setLevellingSkillPendingSubcategory('');
                           }}
-                          options={apprenticeSkillCategoryOptions}
+                          options={levellingSkillCategoryOptions}
                           placeholderOption="— Filter by category —"
                         />
                         <RichSelect
@@ -5547,46 +5553,46 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                           onChange={(v) => {
                             if (!v) return;
                             if (mandatorySubcategorySkillIds.has(v)) {
-                              setApprenticeSkillPendingId(v);
-                              setApprenticeSkillPendingSubcategory('');
+                              setLevellingSkillPendingId(v);
+                              setLevellingSkillPendingSubcategory('');
                             } else {
-                              setApprenticeSkillPurchases((prev) => [...prev, { id: v, subcategory: '', purchases: 1 }]);
-                              setApprenticeSkillPendingId('');
-                              setApprenticeSkillPendingSubcategory('');
+                              setLevellingSkillPurchases((prev) => [...prev, { id: v, subcategory: '', purchases: 1 }]);
+                              setLevellingSkillPendingId('');
+                              setLevellingSkillPendingSubcategory('');
                             }
                           }}
-                          options={apprenticeSkillOptions}
-                          placeholderOption={apprenticeSkillCategoryFilter ? '— Select skill —' : '— Select a category first —'}
+                          options={levellingSkillOptions}
+                          placeholderOption={levellingSkillCategoryFilter ? '— Select skill —' : '— Select a category first —'}
                         />
                       </div>
-                      {apprenticeSkillPendingId && (
+                      {levellingSkillPendingId && (
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                          <span style={{ fontWeight: 500 }}>{skillNameById.get(apprenticeSkillPendingId) ?? apprenticeSkillPendingId}:</span>
-                          {weaponGroupSkillIds.has(apprenticeSkillPendingId) ? (
+                          <span style={{ fontWeight: 500 }}>{skillNameById.get(levellingSkillPendingId) ?? levellingSkillPendingId}:</span>
+                          {weaponGroupSkillIds.has(levellingSkillPendingId) ? (
                             <LabeledSelect
                               label="Weapon type"
                               hideLabel={true}
-                              value={apprenticeSkillPendingSubcategory}
-                              onChange={(v) => setApprenticeSkillPendingSubcategory(v)}
-                              options={weaponTypeOptionsBySkillId.get(apprenticeSkillPendingId) ?? []}
+                              value={levellingSkillPendingSubcategory}
+                              onChange={(v) => setLevellingSkillPendingSubcategory(v)}
+                              options={weaponTypeOptionsBySkillId.get(levellingSkillPendingId) ?? []}
                               placeholderOption="— Select weapon type —"
                             />
                           ) : (
                             <LabeledInput
                               label="Subcategory"
                               hideLabel={true}
-                              value={apprenticeSkillPendingSubcategory}
-                              onChange={(v) => setApprenticeSkillPendingSubcategory(v)}
+                              value={levellingSkillPendingSubcategory}
+                              onChange={(v) => setLevellingSkillPendingSubcategory(v)}
                               placeholder="Subcategory"
                             />
                           )}
                           <button
                             type="button"
-                            disabled={!apprenticeSkillPendingSubcategory.trim()}
+                            disabled={!levellingSkillPendingSubcategory.trim()}
                             onClick={() => {
-                              setApprenticeSkillPurchases((prev) => [...prev, { id: apprenticeSkillPendingId, subcategory: apprenticeSkillPendingSubcategory.trim(), purchases: 1 }]);
-                              setApprenticeSkillPendingId('');
-                              setApprenticeSkillPendingSubcategory('');
+                              setLevellingSkillPurchases((prev) => [...prev, { id: levellingSkillPendingId, subcategory: levellingSkillPendingSubcategory.trim(), purchases: 1 }]);
+                              setLevellingSkillPendingId('');
+                              setLevellingSkillPendingSubcategory('');
                             }}
                           >
                             Add
@@ -5594,8 +5600,8 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                           <button
                             type="button"
                             onClick={() => {
-                              setApprenticeSkillPendingId('');
-                              setApprenticeSkillPendingSubcategory('');
+                              setLevellingSkillPendingId('');
+                              setLevellingSkillPendingSubcategory('');
                             }}
                           >
                             Cancel
@@ -5608,9 +5614,9 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                   {/* Category Rank Purchases */}
                   <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
                     <h4 style={{ margin: '0 0 8px' }}>Skill Category Ranks</h4>
-                    {apprenticeCategoryPurchases.length > 0 && (
+                    {levellingCategoryPurchases.length > 0 && (
                       <div style={{ display: 'grid', gap: 6, marginBottom: 8 }}>
-                        {apprenticeCategoryPurchases.map((purchase, i) => {
+                        {levellingCategoryPurchases.map((purchase, i) => {
                           const catName = categoryNameById.get(purchase.id) ?? purchase.id;
                           const costElements = categoryCostMap.get(purchase.id) ?? [];
                           const tpRanksForCat = tpGrantedCategoryRankCounts.get(purchase.id) ?? 0;
@@ -5619,7 +5625,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                           const nextCost = purchase.purchases < maxPurch
                             ? getCategoryDpCostWithTpOffset(costElements, purchase.purchases + 1, tpRanksForCat) - totalCost
                             : 0;
-                          const existingCatRanks = preApprenticeshipRanks.categoryRanks
+                          const existingCatRanks = preLevellingRanks.categoryRanks
                             .filter((r) => r.id === purchase.id)
                             .reduce((sum, r) => sum + r.value, 0);
                           const afterCatRanks = existingCatRanks + tpRanksForCat + purchase.purchases;
@@ -5636,7 +5642,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                                 <button
                                   type="button"
                                   disabled={purchase.purchases <= 0}
-                                  onClick={() => setApprenticeCategoryPurchases((prev) =>
+                                  onClick={() => setLevellingCategoryPurchases((prev) =>
                                     prev.map((p, idx) => idx === i ? { ...p, purchases: p.purchases - 1 } : p),
                                   )}
                                 >
@@ -5645,8 +5651,8 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                                 <span style={{ minWidth: 20, textAlign: 'center' }}>{purchase.purchases}</span>
                                 <button
                                   type="button"
-                                  disabled={purchase.purchases >= maxPurch || nextCost > apprenticeDpRemaining}
-                                  onClick={() => setApprenticeCategoryPurchases((prev) =>
+                                  disabled={purchase.purchases >= maxPurch || nextCost > levellingDpRemaining}
+                                  onClick={() => setLevellingCategoryPurchases((prev) =>
                                     prev.map((p, idx) => idx === i ? { ...p, purchases: p.purchases + 1 } : p),
                                   )}
                                 >
@@ -5655,7 +5661,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                               </div>
                               <button
                                 type="button"
-                                onClick={() => setApprenticeCategoryPurchases((prev) => prev.filter((_, idx) => idx !== i))}
+                                onClick={() => setLevellingCategoryPurchases((prev) => prev.filter((_, idx) => idx !== i))}
                               >
                                 Remove
                               </button>
@@ -5670,10 +5676,10 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                       hideLabel={true}
                       onChange={(v) => {
                         if (v) {
-                          setApprenticeCategoryPurchases((prev) => [...prev, { id: v, purchases: 1 }]);
+                          setLevellingCategoryPurchases((prev) => [...prev, { id: v, purchases: 1 }]);
                         }
                       }}
-                      options={apprenticeCategoryOptions}
+                      options={levellingCategoryOptions}
                       placeholderOption="— Add category —"
                     />
                   </div>
@@ -5681,9 +5687,9 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                   {/* Spell List Rank Purchases */}
                   <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
                     <h4 style={{ margin: '0 0 8px' }}>Spell List Ranks</h4>
-                    {apprenticeSpellListPurchases.length > 0 && (
+                    {levellingSpellListPurchases.length > 0 && (
                       <div style={{ display: 'grid', gap: 6, marginBottom: 8 }}>
-                        {apprenticeSpellListPurchases.map((purchase, i) => {
+                        {levellingSpellListPurchases.map((purchase, i) => {
                           const slName = spellListNameById.get(purchase.id) ?? purchase.id;
                           const catEntry = characterBuilder.categorySpellLists.find((c) => c.spellLists.includes(purchase.id));
                           const costElements = catEntry ? (categoryCostMap.get(catEntry.category) ?? []) : [];
@@ -5693,7 +5699,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                           const nextCost = purchase.purchases < maxPurch
                             ? getCategoryDpCostWithTpOffset(costElements, purchase.purchases + 1, tpRanksForSl) - totalCost
                             : 0;
-                          const existingSlRanks = preApprenticeshipRanks.spellListRanks
+                          const existingSlRanks = preLevellingRanks.spellListRanks
                             .filter((r) => r.id === purchase.id)
                             .reduce((sum, r) => sum + r.value, 0);
                           const afterSlRanks = existingSlRanks + tpRanksForSl + purchase.purchases;
@@ -5710,7 +5716,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                                 <button
                                   type="button"
                                   disabled={purchase.purchases <= 0}
-                                  onClick={() => setApprenticeSpellListPurchases((prev) =>
+                                  onClick={() => setLevellingSpellListPurchases((prev) =>
                                     prev.map((p, idx) => idx === i ? { ...p, purchases: p.purchases - 1 } : p),
                                   )}
                                 >
@@ -5719,8 +5725,8 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                                 <span style={{ minWidth: 20, textAlign: 'center' }}>{purchase.purchases}</span>
                                 <button
                                   type="button"
-                                  disabled={purchase.purchases >= maxPurch || nextCost > apprenticeDpRemaining}
-                                  onClick={() => setApprenticeSpellListPurchases((prev) =>
+                                  disabled={purchase.purchases >= maxPurch || nextCost > levellingDpRemaining}
+                                  onClick={() => setLevellingSpellListPurchases((prev) =>
                                     prev.map((p, idx) => idx === i ? { ...p, purchases: p.purchases + 1 } : p),
                                   )}
                                 >
@@ -5729,7 +5735,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                               </div>
                               <button
                                 type="button"
-                                onClick={() => setApprenticeSpellListPurchases((prev) => prev.filter((_, idx) => idx !== i))}
+                                onClick={() => setLevellingSpellListPurchases((prev) => prev.filter((_, idx) => idx !== i))}
                               >
                                 Remove
                               </button>
@@ -5738,41 +5744,41 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                         })}
                       </div>
                     )}
-                    {apprenticeAddingSpellList ? (
+                    {levellingAddingSpellList ? (
                       <div style={{ display: 'grid', gap: 8 }}>
                         <RichSelect
                           label="Spell Category"
                           hideLabel={true}
-                          value={apprenticeSelectedSpellCategory}
-                          onChange={(v) => setApprenticeSelectedSpellCategory(v)}
-                          options={apprenticeSpellCategoryOptions}
+                          value={levellingSelectedSpellCategory}
+                          onChange={(v) => setLevellingSelectedSpellCategory(v)}
+                          options={levellingSpellCategoryOptions}
                           placeholderOption="— Select category —"
                         />
-                        {apprenticeSelectedSpellCategory && apprenticeSpellListsInSelectedCategory.length > 0 && (
+                        {levellingSelectedSpellCategory && levellingSpellListsInSelectedCategory.length > 0 && (
                           <RichSelect
                             label="Spell List"
                             hideLabel={true}
                             value=""
                             onChange={(v) => {
                               if (v) {
-                                setApprenticeSpellListPurchases((prev) => [...prev, { id: v, purchases: 1 }]);
-                                setApprenticeSelectedSpellCategory('');
-                                setApprenticeAddingSpellList(false);
+                                setLevellingSpellListPurchases((prev) => [...prev, { id: v, purchases: 1 }]);
+                                setLevellingSelectedSpellCategory('');
+                                setLevellingAddingSpellList(false);
                               }
                             }}
-                            options={apprenticeSpellListsInSelectedCategory.map((sl) => toSpellListRichOption(sl.id))}
+                            options={levellingSpellListsInSelectedCategory.map((sl) => toSpellListRichOption(sl.id))}
                             placeholderOption="— Select spell list —"
                           />
                         )}
-                        {apprenticeSelectedSpellCategory && apprenticeSpellListsInSelectedCategory.length === 0 && (
+                        {levellingSelectedSpellCategory && levellingSpellListsInSelectedCategory.length === 0 && (
                           <div style={{ color: 'var(--muted)' }}>No more spell lists available in this category.</div>
                         )}
                         <div>
                           <button
                             type="button"
                             onClick={() => {
-                              setApprenticeAddingSpellList(false);
-                              setApprenticeSelectedSpellCategory('');
+                              setLevellingAddingSpellList(false);
+                              setLevellingSelectedSpellCategory('');
                             }}
                           >
                             Cancel
@@ -5783,12 +5789,12 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                       <button
                         type="button"
                         disabled={
-                          apprenticeDpRemaining <= 0
+                          levellingDpRemaining <= 0
                           || characterBuilder.categorySpellLists.every((c) =>
-                            c.spellLists.every((slId) => apprenticeSpellListPurchases.some((p) => p.id === slId)),
+                            c.spellLists.every((slId) => levellingSpellListPurchases.some((p) => p.id === slId)),
                           )
                         }
-                        onClick={() => setApprenticeAddingSpellList(true)}
+                        onClick={() => setLevellingAddingSpellList(true)}
                       >
                         Add Spell List
                       </button>
@@ -5800,10 +5806,10 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                       type="button"
                       onClick={() => {
                         if (tpsRequiringResolution.length === 0) {
-                          setApprenticeSubstep('selecting');
+                          setLevellingSubstep('selecting');
                         } else {
-                          setApprenticeResolvingTpIndex(tpsRequiringResolution.length - 1);
-                          setApprenticeSubstep('resolving');
+                          setLevellingResolvingTpIndex(tpsRequiringResolution.length - 1);
+                          setLevellingSubstep('resolving');
                         }
                       }}
                     >
@@ -5840,8 +5846,8 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                   <li>Profession: {profession?.name ?? professionId}</li>
                   <li>Realms: {selectedRealms.join(', ') || 'None'}</li>
                   <li>Prime Stats: {primeStats.join(', ') || 'None'}</li>
-                  <li>Training packages: {selectedApprenticeTrainingPackages.length > 0 ? selectedApprenticeTrainingPackages.map((tp) => tp.name).join(', ') : 'None'}</li>
-                  <li>DP spent: {apprenticeTotalDpSpent} / {characterBuilder.developmentPoints}</li>
+                  <li>Training packages: {selectedLevellingTrainingPackages.length > 0 ? selectedLevellingTrainingPackages.map((tp) => tp.name).join(', ') : 'None'}</li>
+                  <li>DP spent: {levellingTotalDpSpent} / {characterBuilder.developmentPoints}</li>
                 </ul>
               </div>
 
