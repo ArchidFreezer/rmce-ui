@@ -93,9 +93,9 @@ export interface CharacterBuilder extends Named {
   backgroundCategorySpecialBonuses: PersistentValue[];
   backgroundItems?: string[] | undefined; // Item.id[]
 
-  /* Apprenticeship choices */
-  apprenticeshipTrainingPackages: string[]; // TrainingPackage.id[]
-  apprenticeshipStatGains: Stat[];
+  /* Levelling choices */
+  levellingTrainingPackages: string[]; // TrainingPackage.id[]
+  levellingStatGains: Stat[];
 
   /* Aggregated State */
   totalGold: number;
@@ -186,9 +186,9 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
     backgroundCategorySpecialBonuses: [],
     backgroundItems: [],
 
-    /* Apprenticeship choices */
-    apprenticeshipTrainingPackages: [],
-    apprenticeshipStatGains: [],
+    /* Levelling choices */
+    levellingTrainingPackages: [],
+    levellingStatGains: [],
 
     /* Aggregated State */
     totalGold: 0,
@@ -274,7 +274,7 @@ export interface Character extends Named {
   languageAbilities: LanguageAbility[];
   categories: CharacterCategory[];
   skills: CharacterSkill[];
-  spellListRanks: PersistentValue[];
+  spellListRanks?: PersistentValue[] | undefined;
 }
 
 export interface CharactersPayload {
