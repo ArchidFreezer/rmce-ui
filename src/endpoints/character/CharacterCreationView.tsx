@@ -50,7 +50,7 @@ import type {
   WeaponType,
 } from '../../types';
 
-import { DEVELOPMENT_STATS, SPELL_REALMS, STATS, getStatForRealm, type Realm, type SkillDevelopmentType, type Stat } from '../../types/enum';
+import { DEVELOPMENT_STATS, SPELL_REALMS, STATS, type Realm, type Stat } from '../../types/enum';
 import { isValidUnsignedInt, sanitizeUnsignedInt } from '../../utils';
 
 type CharacterStep =
@@ -291,21 +291,6 @@ function getSelectedBackgroundOptionsPayload(state: BackgroundOptionState): stri
   return out;
 }
 
-function parseCostString(cost: string): number[] {
-  if (!cost) return [];
-  return cost.split(':').map(Number).filter((n) => !isNaN(n) && n >= 0);
-}
-
-function getSkillRanksPerPurchase(devType: SkillDevelopmentType | undefined): number {
-  switch (devType) {
-    case 'Occupational': return 3;
-    case 'Everyman': return 2;
-    case 'Restricted': return 1;
-    case 'Standard':
-    default: return 1;
-  }
-}
-
 function getBuildLabel(modifier: number): string {
   if (modifier <= -10) return 'Skeletal';
   if (modifier <= -7) return 'Wasted';
@@ -333,7 +318,6 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
   const [categories, setCategories] = useState<SkillCategory[]>([]);
   const [groups, setGroups] = useState<SkillGroup[]>([]);
   const [spellLists, setSpellLists] = useState<SpellList[]>([]);
-  const [trainingPackages, setTrainingPackages] = useState<TrainingPackage[]>([]);
   const [weaponTypes, setWeaponTypes] = useState<WeaponType[]>([]);
 
   const [step, setStep] = useState<CharacterStep>('primary');
@@ -401,7 +385,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
   useEffect(() => {
     (async () => {
       try {
-        const [raceData, languageData, cultureTypeData, cultureData, professionData, skillData, categoryData, groupData, spellListData, tpData, weaponTypeData] = await Promise.all([
+        const [raceData, languageData, cultureTypeData, cultureData, professionData, skillData, categoryData, groupData, spellListData, weaponTypeData] = await Promise.all([
           fetchRaces(),
           fetchLanguages(),
           fetchCultureTypes(),
@@ -411,7 +395,6 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
           fetchSkillCategories(),
           fetchSkillGroups(),
           fetchSpellLists(),
-          fetchTrainingPackages(),
           fetchWeaponTypes(),
         ]);
 
@@ -424,7 +407,6 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
         setCategories(categoryData);
         setGroups(groupData);
         setSpellLists(spellListData);
-        setTrainingPackages(tpData);
         setWeaponTypes(weaponTypeData);
       } catch (e) {
         setError(String(e));
@@ -572,23 +554,9 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
     return map;
   }, [categories, groups]);
 
-  const categoryGroupNameById = useMemo(() => {
-    const groupNameById = new Map<string, string>();
-    for (const g of groups) groupNameById.set(g.id, g.name);
-    const map = new Map<string, string>();
-    for (const c of categories) map.set(c.id, groupNameById.get(c.group) ?? c.group);
-    return map;
-  }, [categories, groups]);
-
   const languageNameById = useMemo(() => {
     const map = new Map<string, string>();
     for (const l of languages) map.set(l.id, l.name);
-    return map;
-  }, [languages]);
-
-  const languageById = useMemo(() => {
-    const map = new Map<string, Language>();
-    for (const l of languages) map.set(l.id, l);
     return map;
   }, [languages]);
 
@@ -899,10 +867,6 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
     [backgroundState],
   );
 
-  const selectedBackgroundOptionsPayload = useMemo(() => {
-    return getSelectedBackgroundOptionsPayload(backgroundState);
-  }, [backgroundState]);
-
   const backgroundSkillBonusOptions = useMemo(
     (): RichSelectOption[] =>
       skills
@@ -956,43 +920,6 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
     () => backgroundCategoryBonusOptions.filter((opt) => !selectedBackgroundCategorySet.has(opt.value)),
     [backgroundCategoryBonusOptions, selectedBackgroundCategorySet],
   );
-
-  const availableTrainingPackages = useMemo(() => {
-    if (!raceId) return [];
-    const raceFiltered = trainingPackages.filter((tp) => {
-      const races = Array.isArray(tp.races) ? tp.races : [];
-      return races.length === 0 || races.includes(raceId);
-    });
-
-    if (!culture) return raceFiltered;
-
-    const modifierIds = new Set(culture.trainingPackageModifiers.map((m) => m.id));
-    const preferred = raceFiltered.filter((tp) => modifierIds.has(tp.id));
-    const rest = raceFiltered.filter((tp) => !modifierIds.has(tp.id));
-    return [...preferred, ...rest];
-  }, [trainingPackages, raceId, culture]);
-
-  const categoryCostMap = useMemo(() => {
-    const map = new Map<string, number[]>();
-    for (const row of characterBuilder.categoryCosts) {
-      map.set(row.category, parseCostString(row.cost));
-    }
-    return map;
-  }, [characterBuilder.categoryCosts]);
-
-  const skillDevTypeMap = useMemo(() => {
-    const map = new Map<string, SkillDevelopmentType>();
-    for (const row of characterBuilder.skillDevelopmentTypes) {
-      map.set(row.id, row.value);
-    }
-    return map;
-  }, [characterBuilder.skillDevelopmentTypes]);
-
-  const skillCategoryMap = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const s of skills) map.set(s.id, s.category);
-    return map;
-  }, [skills]);
 
   useEffect(() => {
     if (!cultureTypeId) {

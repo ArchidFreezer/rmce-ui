@@ -93,10 +93,6 @@ export interface CharacterBuilder extends Named {
   backgroundCategorySpecialBonuses: PersistentValue[];
   backgroundItems?: string[] | undefined; // Item.id[]
 
-  /* Levelling choices */
-  levellingTrainingPackages: string[]; // TrainingPackage.id[]
-  levellingStatGains: Stat[];
-
   /* Aggregated State */
   totalGold: number;
   languageAbilities: LanguageAbility[];
@@ -185,10 +181,6 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
     backgroundSkillSpecialBonuses: [],
     backgroundCategorySpecialBonuses: [],
     backgroundItems: [],
-
-    /* Levelling choices */
-    levellingTrainingPackages: [],
-    levellingStatGains: [],
 
     /* Aggregated State */
     totalGold: 0,
