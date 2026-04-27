@@ -1141,6 +1141,7 @@ export default function CharacterLevellingView({
         trainingPackageCosts: leveller?.trainingPackageCosts ?? [],
         trainingPackages: selectedTpIds,
         statGains: totalStatGains,
+        developmentPoints: dpRemaining,
         skillRanks: Array.from(totalSkillsByKey.values())
           .filter((row) => row.ranks > 0)
           .sort((a, b) => skillChoiceKey(a.id, a.subcategory).localeCompare(skillChoiceKey(b.id, b.subcategory)))
