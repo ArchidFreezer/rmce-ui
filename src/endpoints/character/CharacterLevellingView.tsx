@@ -1133,7 +1133,8 @@ export default function CharacterLevellingView({
       }
 
       const payload: CharacterLeveller = {
-        id: character.id,
+        id: leveller?.id ?? '',
+        character: character.id,
         trainingPackageCosts: leveller?.trainingPackageCosts ?? [],
         trainingPackages: selectedTpIds,
         statGains: totalStatGains,

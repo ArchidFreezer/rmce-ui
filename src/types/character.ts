@@ -274,6 +274,7 @@ export interface CharactersPayload {
 }
 
 export interface CharacterLeveller extends Persistent {
+  character: string;                       // Character.id being levelled
   trainingPackageCosts: PersistentValue[]; // TrainingPackage.id and cost
   trainingPackages: string[];              // TrainingPackage.id[]
   statGains: Stat[];

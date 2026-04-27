@@ -72,11 +72,22 @@ export async function setCharacterBackgroundChoices(
   return sendJson<CharacterBuilder>(SET_BACKGROUND_CHOICES_ENDPOINT, 'POST', payload);
 }
 
-/** Initial call – send only { id } to get back trainingPackageCosts from the server. */
+/** Initial call – send a CharacterLeveller payload with only 'character' populated to get back trainingPackageCosts from the server. */
 export async function initiateCharacterLevelUp(
-  id: string,
+  characterId: string,
 ): Promise<CharacterLeveller> {
-  return sendJson<CharacterLeveller>(LEVEL_UP_ENDPOINT, 'POST', { id });
+  const payload: CharacterLeveller = {
+    id: '',
+    character: characterId,
+    trainingPackageCosts: [],
+    trainingPackages: [],
+    statGains: [],
+    skills: [],
+    categories: [],
+    spellListRanks: [],
+    languageAbilities: [],
+  };
+  return sendJson<CharacterLeveller>(LEVEL_UP_ENDPOINT, 'POST', payload);
 }
 
 /** Final call – send completed CharacterLeveller payload to apply the level-up. */
