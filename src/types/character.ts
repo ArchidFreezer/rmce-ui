@@ -1,4 +1,4 @@
-import type { Named, PersistentValue, SkillValue, SkillDevelopmentTypeValue } from './base';
+import type { Named, PersistentValue, SkillValue, SkillDevelopmentTypeValue, Persistent } from './base';
 import type { Realm, ResistanceType, Stat, SkillDevelopmentType } from './enum';
 import type { LanguageAbility } from './language';
 
@@ -93,10 +93,6 @@ export interface CharacterBuilder extends Named {
   backgroundCategorySpecialBonuses: PersistentValue[];
   backgroundItems?: string[] | undefined; // Item.id[]
 
-  /* Levelling choices */
-  levellingTrainingPackages: string[]; // TrainingPackage.id[]
-  levellingStatGains: Stat[];
-
   /* Aggregated State */
   totalGold: number;
   languageAbilities: LanguageAbility[];
@@ -185,10 +181,6 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
     backgroundSkillSpecialBonuses: [],
     backgroundCategorySpecialBonuses: [],
     backgroundItems: [],
-
-    /* Levelling choices */
-    levellingTrainingPackages: [],
-    levellingStatGains: [],
 
     /* Aggregated State */
     totalGold: 0,
@@ -279,4 +271,15 @@ export interface Character extends Named {
 
 export interface CharactersPayload {
   characters: Character[];
+}
+
+export interface CharacterLeveller extends Persistent {
+  character: string;                       // Character.id being levelled
+  trainingPackageCosts: PersistentValue[]; // TrainingPackage.id and cost
+  trainingPackages: string[];              // TrainingPackage.id[]
+  statGains: Stat[];
+  skillRanks: SkillValue[];                // value = total ranks after the level up
+  categoryRanks: PersistentValue[];        // value = total ranks after the level up
+  spellListRanks: PersistentValue[];       // value = total ranks after the level up
+  languageAbilities: LanguageAbility[];
 }

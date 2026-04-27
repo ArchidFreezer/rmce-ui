@@ -1,6 +1,6 @@
 import { sendJson } from './client';
 
-import type { CharacterBuilder, PersistentValue, LanguageAbility, SkillValue } from '../types';
+import type { Character, CharacterBuilder, CharacterLeveller, PersistentValue, LanguageAbility, SkillValue } from '../types';
 
 export type SetCharacterBackgroundChoicesRequest = {
   id: string;
@@ -19,7 +19,7 @@ const SET_STATS_ENDPOINT = '/rmce/operations/character/set-stats';
 const SET_PHYSIQUE_ENDPOINT = '/rmce/operations/character/set-physique';
 const SET_HOBBY_CHOICES_ENDPOINT = '/rmce/operations/character/set-hobby-choices';
 const SET_BACKGROUND_CHOICES_ENDPOINT = '/rmce/operations/character/set-background-choices';
-const SET_LEVELLING_CHOICES_ENDPOINT = '/rmce/operations/character/set-levelling-choices';
+const LEVEL_UP_ENDPOINT = '/rmce/operations/character/levelup';
 
 export type StatRollRequest = {
   temporary: number;
@@ -72,8 +72,27 @@ export async function setCharacterBackgroundChoices(
   return sendJson<CharacterBuilder>(SET_BACKGROUND_CHOICES_ENDPOINT, 'POST', payload);
 }
 
-export async function applyLevellingChoices(
-  payload: CharacterBuilder,
-): Promise<CharacterBuilder> {
-  return sendJson<CharacterBuilder>(SET_LEVELLING_CHOICES_ENDPOINT, 'POST', payload);
+/** Initial call – send a CharacterLeveller payload with only 'character' populated to get back trainingPackageCosts from the server. */
+export async function initiateCharacterLevelUp(
+  characterId: string,
+): Promise<CharacterLeveller> {
+  const payload: CharacterLeveller = {
+    id: '',
+    character: characterId,
+    trainingPackageCosts: [],
+    trainingPackages: [],
+    statGains: [],
+    skillRanks: [],
+    categoryRanks: [],
+    spellListRanks: [],
+    languageAbilities: [],
+  };
+  return sendJson<CharacterLeveller>(LEVEL_UP_ENDPOINT, 'POST', payload);
+}
+
+/** Final call – send completed CharacterLeveller payload to apply the level-up. */
+export async function levelUpCharacter(
+  payload: CharacterLeveller,
+): Promise<Character> {
+  return sendJson<Character>(LEVEL_UP_ENDPOINT, 'POST', payload);
 }
