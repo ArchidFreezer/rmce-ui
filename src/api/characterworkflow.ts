@@ -68,14 +68,11 @@ export async function setCharacterHobbyChoices(
 
 export async function setCharacterBackgroundChoices(
   payload: SetCharacterBackgroundChoicesRequest,
-): Promise<CharacterBuilder> {
-  return sendJson<CharacterBuilder>(SET_BACKGROUND_CHOICES_ENDPOINT, 'POST', payload);
+): Promise<Character> {
+  return sendJson<Character>(SET_BACKGROUND_CHOICES_ENDPOINT, 'POST', payload);
 }
 
-/** Initial call – send a CharacterLeveller payload with only 'character' populated to get back trainingPackageCosts from the server. */
-export async function initiateCharacterLevelUp(
-  characterId: string,
-): Promise<CharacterLeveller> {
+export async function initiateCharacterLevelUp(characterId: string): Promise<CharacterLeveller> {
   const payload: CharacterLeveller = {
     id: '',
     character: characterId,
@@ -90,9 +87,6 @@ export async function initiateCharacterLevelUp(
   return sendJson<CharacterLeveller>(LEVEL_UP_ENDPOINT, 'POST', payload);
 }
 
-/** Final call – send completed CharacterLeveller payload to apply the level-up. */
-export async function levelUpCharacter(
-  payload: CharacterLeveller,
-): Promise<Character> {
+export async function levelUpCharacter(payload: CharacterLeveller): Promise<Character> {
   return sendJson<Character>(LEVEL_UP_ENDPOINT, 'POST', payload);
 }

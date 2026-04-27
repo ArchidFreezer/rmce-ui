@@ -36,6 +36,7 @@ import {
 import { createEmptyCharacterBuilder } from '../../types';
 
 import type {
+  Character,
   CharacterBuilder,
   Culture,
   CultureType,
@@ -303,7 +304,7 @@ function getBuildLabel(modifier: number): string {
   return 'Blubbery';
 }
 
-export default function CharacterCreationView({ onFinish }: { onFinish?: () => void } = {}) {
+export default function CharacterCreationView({ onFinish }: { onFinish?: (created: Character) => void } = {}) {
   const toast = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -375,6 +376,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
   const [backgroundSpecialItemsPoints, setBackgroundSpecialItemsPoints] = useState(0);
 
   const [characterBuilder, setCharacterBuilder] = useState<CharacterBuilder>(() => createEmptyCharacterBuilder());
+  const [createdCharacter, setCreatedCharacter] = useState<Character | null>(null);
   const [savingPrimaryDefinition, setSavingPrimaryDefinition] = useState(false);
   const [savingInitialChoices, setSavingInitialChoices] = useState(false);
   const [savingStats, setSavingStats] = useState(false);
@@ -2128,7 +2130,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
           buildBackgroundChoicesRequest(characterBuilder.id),
         );
 
-        setCharacterBuilder(response);
+        setCreatedCharacter(response);
       } catch (e) {
         toast({
           variant: 'danger',
@@ -2425,6 +2427,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
     setHobbySpellListId('');
     resetBackgroundState();
     setCharacterBuilder(createEmptyCharacterBuilder());
+    setCreatedCharacter(null);
     setErrors({});
   };
 
@@ -3758,8 +3761,8 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: () => v
                 <button type="button" onClick={resetWorkflow}>
                   New Character
                 </button>
-                {onFinish && (
-                  <button type="button" onClick={onFinish}>
+                {onFinish && createdCharacter && (
+                  <button type="button" onClick={() => onFinish(createdCharacter)}>
                     Finish
                   </button>
                 )}
