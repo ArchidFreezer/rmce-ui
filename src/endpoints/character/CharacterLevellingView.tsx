@@ -362,6 +362,7 @@ export default function CharacterLevellingView({
   const [leveller, setLeveller] = useState<CharacterLeveller | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       try {
         const [
@@ -384,6 +385,7 @@ export default function CharacterLevellingView({
           initiateCharacterLevelUp(character.id),
         ]);
 
+        if (cancelled) return;
         setSkills(skillData);
         setCategories(categoryData);
         setGroups(groupData);
@@ -393,11 +395,12 @@ export default function CharacterLevellingView({
         setLanguages(languageData);
         setLeveller(levellerData);
       } catch (e) {
-        setError(String(e instanceof Error ? e.message : e));
+        if (!cancelled) setError(String(e instanceof Error ? e.message : e));
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
+    return () => { cancelled = true; };
   }, [character.id]);
 
   /* ---------------------------------------------------------------- */
@@ -1138,11 +1141,11 @@ export default function CharacterLevellingView({
         trainingPackageCosts: leveller?.trainingPackageCosts ?? [],
         trainingPackages: selectedTpIds,
         statGains: totalStatGains,
-        skills: Array.from(totalSkillsByKey.values())
+        skillRanks: Array.from(totalSkillsByKey.values())
           .filter((row) => row.ranks > 0)
           .sort((a, b) => skillChoiceKey(a.id, a.subcategory).localeCompare(skillChoiceKey(b.id, b.subcategory)))
           .map(({ id, subcategory, ranks }) => ({ id, ...(subcategory ? { subcategory } : {}), value: ranks })),
-        categories: Array.from(totalCategoryRanks.entries())
+        categoryRanks: Array.from(totalCategoryRanks.entries())
           .filter(([, ranks]) => ranks > 0)
           .map(([id, ranks]) => ({ id, value: ranks }))
           .sort((a, b) => a.id.localeCompare(b.id)),

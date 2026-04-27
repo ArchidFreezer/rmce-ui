@@ -82,8 +82,8 @@ export async function initiateCharacterLevelUp(
     trainingPackageCosts: [],
     trainingPackages: [],
     statGains: [],
-    skills: [],
-    categories: [],
+    skillRanks: [],
+    categoryRanks: [],
     spellListRanks: [],
     languageAbilities: [],
   };

@@ -699,9 +699,9 @@ export default function CharacterView() {
         <Suspense fallback={<Spinner size={24} />}>
           <CharacterLevellingView
             character={levellingCharacter}
-            onFinish={(updated) => {
+            onFinish={(_updated) => {
               setLevellingCharacter(null);
-              setRows(prev => prev.map(r => r.id === updated.id ? updated : r));
+              setRefreshKey(k => k + 1);
             }}
             onCancel={() => setLevellingCharacter(null)}
           />

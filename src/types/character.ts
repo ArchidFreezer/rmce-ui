@@ -278,8 +278,8 @@ export interface CharacterLeveller extends Persistent {
   trainingPackageCosts: PersistentValue[]; // TrainingPackage.id and cost
   trainingPackages: string[];              // TrainingPackage.id[]
   statGains: Stat[];
-  skills: SkillValue[];                    // value = total ranks after the level up
-  categories: PersistentValue[];           // value = total ranks after the level up
+  skillRanks: SkillValue[];                // value = total ranks after the level up
+  categoryRanks: PersistentValue[];        // value = total ranks after the level up
   spellListRanks: PersistentValue[];       // value = total ranks after the level up
   languageAbilities: LanguageAbility[];
 }
