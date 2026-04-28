@@ -1154,7 +1154,7 @@ export default function CharacterLevellingView({
           .filter(([, ranks]) => ranks > 0)
           .map(([id, ranks]) => ({ id, value: ranks }))
           .sort((a, b) => a.id.localeCompare(b.id)),
-        languageAbilities: Array.from(totalLanguages.values())
+        languageRanks: Array.from(totalLanguages.values())
           .filter((row) => row.spoken > 0 || row.written > 0 || row.somatic > 0)
           .map((row) => ({
             language: row.language,

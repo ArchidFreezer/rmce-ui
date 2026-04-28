@@ -282,6 +282,6 @@ export interface CharacterLeveller extends Persistent {
   skillRanks: SkillValue[];                // value = total ranks after the level up
   categoryRanks: PersistentValue[];        // value = total ranks after the level up
   spellListRanks: PersistentValue[];       // value = total ranks after the level up
-  languageAbilities: LanguageAbility[];
+  languageRanks: LanguageAbility[];
   developmentPoints: number;               // unused DPs to carry over to the next level
 }
