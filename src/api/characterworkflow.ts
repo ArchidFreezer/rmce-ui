@@ -82,7 +82,7 @@ export async function initiateCharacterLevelUp(characterId: string): Promise<Cha
     skillRanks: [],
     categoryRanks: [],
     spellListRanks: [],
-    languageAbilities: [],
+    languageRanks: [],
     developmentPoints: 0,
   };
   return sendJson<CharacterLeveller>(LEVEL_UP_ENDPOINT, 'POST', payload);

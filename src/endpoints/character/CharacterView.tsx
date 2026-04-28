@@ -279,7 +279,7 @@ function DetailsTab({ char, ref: refs }: { char: Character; ref: RefData }) {
         </Card>
 
         {/* Languages */}
-        {char.languageAbilities.length > 0 && (
+        {char.languages.length > 0 && (
           <Card title="Languages">
             <table style={{ borderCollapse: 'collapse' }}>
               <colgroup>
@@ -297,12 +297,21 @@ function DetailsTab({ char, ref: refs }: { char: Character; ref: RefData }) {
                 </tr>
               </thead>
               <tbody>
-                {char.languageAbilities.map(la => (
-                  <tr key={la.language}>
-                    <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{resolve(refs.languages, la.language)}</td>
-                    <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{la.spoken ?? '—'}</td>
-                    <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{la.written ?? '—'}</td>
-                    <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>{la.somatic ?? '—'}</td>
+                {char.languages.map(lang => (
+                  <tr key={lang.id}>
+                    <td style={{ padding: '3px 10px 3px 0', fontSize: '0.9em' }}>{resolve(refs.languages, lang.id)}</td>
+                    <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>
+                      {lang.spokenRanks}
+                      {lang.spokenBonus !== 0 && <span style={{ color: 'var(--text-muted, #888)', marginLeft: 4 }}>({lang.spokenBonus})</span>}
+                    </td>
+                    <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>
+                      {lang.writtenRanks}
+                      {lang.writtenBonus !== 0 && <span style={{ color: 'var(--text-muted, #888)', marginLeft: 4 }}>({lang.writtenBonus})</span>}
+                    </td>
+                    <td style={{ padding: '3px 10px 3px 0', textAlign: 'center', fontSize: '0.9em' }}>
+                      {lang.somaticRanks}
+                      {lang.somaticBonus !== 0 && <span style={{ color: 'var(--text-muted, #888)', marginLeft: 4 }}>({lang.somaticBonus})</span>}
+                    </td>
                   </tr>
                 ))}
               </tbody>

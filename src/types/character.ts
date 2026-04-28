@@ -1,6 +1,6 @@
 import type { Named, PersistentValue, SkillValue, SkillDevelopmentTypeValue, Persistent } from './base';
 import type { Realm, ResistanceType, Stat, SkillDevelopmentType } from './enum';
-import type { LanguageAbility } from './language';
+import type { LanguageAbility, CharacterLanguage } from './language';
 
 export interface SkillSubcategory {
   id: string;
@@ -264,6 +264,7 @@ export interface Character extends Named {
   powerPoints: number;
 
   languageAbilities: LanguageAbility[];
+  languages: CharacterLanguage[];
   categories: CharacterCategory[];
   skills: CharacterSkill[];
   spellListRanks?: PersistentValue[] | undefined;
@@ -281,6 +282,6 @@ export interface CharacterLeveller extends Persistent {
   skillRanks: SkillValue[];                // value = total ranks after the level up
   categoryRanks: PersistentValue[];        // value = total ranks after the level up
   spellListRanks: PersistentValue[];       // value = total ranks after the level up
-  languageAbilities: LanguageAbility[];
+  languageRanks: LanguageAbility[];
   developmentPoints: number;               // unused DPs to carry over to the next level
 }

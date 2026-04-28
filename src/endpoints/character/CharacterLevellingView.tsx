@@ -1116,12 +1116,12 @@ export default function CharacterLevellingView({
         }
         return row;
       };
-      for (const row of character.languageAbilities) {
-        if (!row.language) continue;
-        const target = ensureLang(row.language);
-        target.spoken += Math.max(0, row.spoken ?? 0);
-        target.written += Math.max(0, row.written ?? 0);
-        target.somatic += Math.max(0, row.somatic ?? 0);
+      for (const row of character.languages) {
+        if (!row.id) continue;
+        const target = ensureLang(row.id);
+        target.spoken += Math.max(0, row.spokenRanks);
+        target.written += Math.max(0, row.writtenRanks);
+        target.somatic += Math.max(0, row.somaticRanks);
       }
       for (const res of tpResolutions) {
         for (const group of res.languageChoices ?? []) {
@@ -1154,7 +1154,7 @@ export default function CharacterLevellingView({
           .filter(([, ranks]) => ranks > 0)
           .map(([id, ranks]) => ({ id, value: ranks }))
           .sort((a, b) => a.id.localeCompare(b.id)),
-        languageAbilities: Array.from(totalLanguages.values())
+        languageRanks: Array.from(totalLanguages.values())
           .filter((row) => row.spoken > 0 || row.written > 0 || row.somatic > 0)
           .map((row) => ({
             language: row.language,
