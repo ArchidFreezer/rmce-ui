@@ -56,6 +56,16 @@ type LevellingSpellListPurchase = {
   purchases: number;
 };
 
+type LevellingLanguagePurchase = {
+  languageId: string;
+  spokenBase: number;
+  writtenBase: number;
+  somaticBase: number;
+  spoken: number;
+  written: number;
+  somatic: number;
+};
+
 type TpSkillAllocation = { id: string; subcategory: string; ranks: number };
 type TpSpellListAllocation = { id: string; ranks: number };
 type TpGroupCategoryAndSkillChoice = { categoryId: string; skillId: string; subcategory: string };
@@ -417,6 +427,7 @@ export default function CharacterLevellingView({
   const [skillCategoryFilter, setSkillCategoryFilter] = useState('');
   const [skillPendingId, setSkillPendingId] = useState('');
   const [skillPendingSubcategory, setSkillPendingSubcategory] = useState('');
+  const [languagePurchases, setLanguagePurchases] = useState<LevellingLanguagePurchase[]>([]);
   const [categoryPurchases, setCategoryPurchases] = useState<LevellingCategoryPurchase[]>([]);
   const [spellListPurchases, setSpellListPurchases] = useState<LevellingSpellListPurchase[]>([]);
   const [selectedSpellCategory, setSelectedSpellCategory] = useState('');
@@ -576,6 +587,33 @@ export default function CharacterLevellingView({
   const mandatorySubcategorySkillIds = useMemo(
     () => new Set(skills.filter((s) => s.mandatorySubcategory).map((s) => s.id)),
     [skills],
+  );
+
+  const languageSkillIds = useMemo(
+    () => new Set(skills.filter((s) => s.name.trim().toLowerCase() === 'languages').map((s) => s.id)),
+    [skills],
+  );
+
+  const communicationCategoryRanks = useMemo(() => {
+    const base = character.categories.find((c) => c.id === 'SKILLCATEGORY_COMMUNICATION')?.ranks ?? 0;
+    const purchased = categoryPurchases.find((p) => p.id === 'SKILLCATEGORY_COMMUNICATION')?.purchases ?? 0;
+    return base + purchased;
+  }, [character.categories, categoryPurchases]);
+
+  const currentLanguageRanksById = useMemo(() => {
+    const map = new Map<string, { spoken: number; written: number; somatic: number }>();
+    for (const l of character.languages) {
+      map.set(l.id, { spoken: l.spokenRanks, written: l.writtenRanks, somatic: l.somaticRanks });
+    }
+    return map;
+  }, [character.languages]);
+
+  const languageSelectOptions = useMemo(
+    () => languages
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((l) => ({ value: l.id, label: l.name })),
+    [languages],
   );
 
   const weaponTypeOptionsBySkillId = useMemo(() => {
@@ -764,7 +802,25 @@ export default function CharacterLevellingView({
     [spellListPurchases, character.spellListCategories, categoryCostMap, tpGrantedSpellListRankCounts],
   );
 
-  const totalDpSpent = tpDpCost + statGainDpCost + skillDpCost + categoryDpCost + spellListDpCost;
+  const languageDpCostPerRank = useMemo(() => {
+    const langSkillId = [...languageSkillIds][0];
+    if (!langSkillId) return 0;
+    const catId = skillCategoryMap.get(langSkillId);
+    if (!catId) return 0;
+    const costElements = categoryCostMap.get(catId) ?? [];
+    const devType = skillDevTypeMap.get(langSkillId);
+    return getSkillDpCostWithTpOffset(costElements, devType, 1, 0);
+  }, [languageSkillIds, skillCategoryMap, categoryCostMap, skillDevTypeMap]);
+
+  const languageDpCost = useMemo(
+    () => languagePurchases.reduce((total, lp) => {
+      const newRanks = (lp.spoken - lp.spokenBase) + (lp.written - lp.writtenBase) + (lp.somatic - lp.somaticBase);
+      return total + Math.max(0, newRanks) * languageDpCostPerRank;
+    }, 0),
+    [languagePurchases, languageDpCostPerRank],
+  );
+
+  const totalDpSpent = tpDpCost + statGainDpCost + skillDpCost + categoryDpCost + spellListDpCost + languageDpCost;
   const dpRemaining = character.developmentPoints - totalDpSpent;
 
   /* ---------------------------------------------------------------- */
@@ -823,12 +879,13 @@ export default function CharacterLevellingView({
     const selectedSet = new Set(skillPurchases.map((p) => p.id));
     return skills.filter((s) => {
       if (selectedSet.has(s.id)) return false;
+      if (languageSkillIds.has(s.id)) return true;
       const costElements = categoryCostMap.get(s.category) ?? [];
       const devType = skillDevTypeMap.get(s.id);
       const tpRanks = tpGrantedSkillRankCounts.get(s.id) ?? 0;
       return getSkillMaxDpPurchases(costElements, devType, tpRanks) > 0;
     });
-  }, [skills, skillPurchases, categoryCostMap, skillDevTypeMap, tpGrantedSkillRankCounts]);
+  }, [skills, skillPurchases, categoryCostMap, skillDevTypeMap, tpGrantedSkillRankCounts, languageSkillIds]);
 
   const skillCategoryOptions = useMemo((): RichSelectOption[] => {
     const catIds = new Set(availableSkills.map((s) => s.category));
@@ -1133,6 +1190,12 @@ export default function CharacterLevellingView({
             target.somatic += Math.max(0, alloc.somatic ?? 0);
           }
         }
+      }
+      for (const lp of languagePurchases) {
+        const target = ensureLang(lp.languageId);
+        target.spoken += lp.spoken - lp.spokenBase;
+        target.written += lp.written - lp.writtenBase;
+        target.somatic += lp.somatic - lp.somaticBase;
       }
 
       const payload: CharacterLeveller = {
@@ -1802,6 +1865,54 @@ export default function CharacterLevellingView({
           {/* Skill Rank Purchases */}
           <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
             <h4 style={{ margin: '0 0 8px' }}>Skill Ranks</h4>
+            {languagePurchases.length > 0 && (
+              <div style={{ display: 'grid', gap: 8, marginBottom: 8 }}>
+                {languagePurchases.map((lp, i) => {
+                  const lang = languageById.get(lp.languageId);
+                  const langName = languageNameById.get(lp.languageId) ?? lp.languageId;
+                  const max = communicationCategoryRanks;
+                  const newRanks = (lp.spoken - lp.spokenBase) + (lp.written - lp.writtenBase) + (lp.somatic - lp.somaticBase);
+                  const totalCost = Math.max(0, newRanks) * languageDpCostPerRank;
+                  const controls: Array<{ key: 'spoken' | 'written' | 'somatic'; label: string; base: number; value: number; disabled: boolean }> = [
+                    { key: 'spoken', label: 'Spoken', base: lp.spokenBase, value: lp.spoken, disabled: !(lang?.isSpoken ?? true) },
+                    { key: 'written', label: 'Written', base: lp.writtenBase, value: lp.written, disabled: !(lang?.isWritten ?? true) },
+                    { key: 'somatic', label: 'Somatic', base: lp.somaticBase, value: lp.somatic, disabled: !(lang?.isSomatic ?? true) },
+                  ];
+                  return (
+                    <div key={lp.languageId} style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+                        <div style={{ flex: 1 }}>
+                          <strong>{langName}</strong>
+                          <span style={{ color: 'var(--muted)', marginLeft: 6 }}>{totalCost} DP ({languageDpCostPerRank} DP / rank)</span>
+                          {controls.map((ctrl) => (
+                            <div key={ctrl.key} style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'nowrap' }}>
+                              <span style={{ minWidth: 60, whiteSpace: 'nowrap' }}>{ctrl.label}</span>
+                              {ctrl.disabled ? (
+                                <span style={{ color: 'var(--muted)', minWidth: 20, textAlign: 'center' }}>&mdash;</span>
+                              ) : (
+                                <>
+                                  <small style={{ color: 'var(--muted)', whiteSpace: 'nowrap' }}>Base: {ctrl.base}, Max: {max}</small>
+                                  <button type="button"
+                                    disabled={ctrl.value <= ctrl.base}
+                                    onClick={() => setLanguagePurchases((prev) => prev.map((p, idx) => idx !== i ? p : { ...p, [ctrl.key]: ctrl.value - 1 }))
+                                    }>-</button>
+                                  <span style={{ minWidth: 20, textAlign: 'center' }}>{ctrl.value}</span>
+                                  <button type="button"
+                                    disabled={ctrl.value >= max || dpRemaining <= 0}
+                                    onClick={() => setLanguagePurchases((prev) => prev.map((p, idx) => idx !== i ? p : { ...p, [ctrl.key]: ctrl.value + 1 }))
+                                    }>+</button>
+                                </>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        <button type="button" onClick={() => setLanguagePurchases((prev) => prev.filter((_, idx) => idx !== i))}>Remove</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             {skillPurchases.length > 0 && (
               <div style={{ display: 'grid', gap: 8, marginBottom: 8 }}>
                 {skillPurchases.map((purchase, i) => {
@@ -1873,7 +1984,10 @@ export default function CharacterLevellingView({
                   value=""
                   onChange={(v) => {
                     if (!v) return;
-                    if (mandatorySubcategorySkillIds.has(v)) {
+                    if (languageSkillIds.has(v)) {
+                      setSkillPendingId(v);
+                      setSkillPendingSubcategory('');
+                    } else if (mandatorySubcategorySkillIds.has(v)) {
                       setSkillPendingId(v);
                       setSkillPendingSubcategory('');
                     } else {
@@ -1886,9 +2000,32 @@ export default function CharacterLevellingView({
                   placeholderOption={skillCategoryFilter ? '— Select skill —' : '— Select a category first —'} />
               </div>
               {skillPendingId && (
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                   <span style={{ fontWeight: 500 }}>{skillNameById.get(skillPendingId) ?? skillPendingId}:</span>
-                  {weaponGroupSkillIds.has(skillPendingId) ? (
+                  {languageSkillIds.has(skillPendingId) ? (
+                    <LabeledSelect label="Language" hideLabel={true}
+                      value=""
+                      onChange={(v) => {
+                        if (!v) return;
+                        const existing = currentLanguageRanksById.get(v);
+                        setLanguagePurchases((prev) => [
+                          ...prev.filter((lp) => lp.languageId !== v),
+                          {
+                            languageId: v,
+                            spokenBase: existing?.spoken ?? 0,
+                            writtenBase: existing?.written ?? 0,
+                            somaticBase: existing?.somatic ?? 0,
+                            spoken: existing?.spoken ?? 0,
+                            written: existing?.written ?? 0,
+                            somatic: existing?.somatic ?? 0,
+                          },
+                        ]);
+                        setSkillPendingId('');
+                        setSkillPendingSubcategory('');
+                      }}
+                      options={languageSelectOptions.filter((opt) => !languagePurchases.some((lp) => lp.languageId === opt.value))}
+                      placeholderOption="— Select language —" />
+                  ) : weaponGroupSkillIds.has(skillPendingId) ? (
                     <LabeledSelect label="Weapon type" hideLabel={true}
                       value={skillPendingSubcategory}
                       onChange={(v) => setSkillPendingSubcategory(v)}
@@ -1900,12 +2037,14 @@ export default function CharacterLevellingView({
                       onChange={(v) => setSkillPendingSubcategory(v)}
                       placeholder="Subcategory" />
                   )}
-                  <button type="button" disabled={!skillPendingSubcategory.trim()}
-                    onClick={() => {
-                      setSkillPurchases((prev) => [...prev, { id: skillPendingId, subcategory: skillPendingSubcategory.trim(), purchases: 1 }]);
-                      setSkillPendingId('');
-                      setSkillPendingSubcategory('');
-                    }}>Add</button>
+                  {!languageSkillIds.has(skillPendingId) && (
+                    <button type="button" disabled={!skillPendingSubcategory.trim()}
+                      onClick={() => {
+                        setSkillPurchases((prev) => [...prev, { id: skillPendingId, subcategory: skillPendingSubcategory.trim(), purchases: 1 }]);
+                        setSkillPendingId('');
+                        setSkillPendingSubcategory('');
+                      }}>Add</button>
+                  )}
                   <button type="button" onClick={() => { setSkillPendingId(''); setSkillPendingSubcategory(''); }}>Cancel</button>
                 </div>
               )}
