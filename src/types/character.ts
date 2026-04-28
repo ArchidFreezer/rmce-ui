@@ -1,6 +1,6 @@
 import type { Named, PersistentValue, SkillValue, SkillDevelopmentTypeValue, Persistent } from './base';
 import type { Realm, ResistanceType, Stat, SkillDevelopmentType } from './enum';
-import type { LanguageAbility } from './language';
+import type { LanguageAbility, CharacterLanguage } from './language';
 
 export interface SkillSubcategory {
   id: string;
@@ -264,6 +264,7 @@ export interface Character extends Named {
   powerPoints: number;
 
   languageAbilities: LanguageAbility[];
+  languages: CharacterLanguage[];
   categories: CharacterCategory[];
   skills: CharacterSkill[];
   spellListRanks?: PersistentValue[] | undefined;

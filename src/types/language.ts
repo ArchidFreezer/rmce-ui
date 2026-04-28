@@ -22,3 +22,17 @@ export interface LanguageAbility {
   written?: number | undefined;
   somatic?: number | undefined;  // keeping backend spelling
 }
+
+export interface CharacterLanguage {
+  id: string;              // Language.id
+  progression: string;     // SkillProgressionType.id
+  developmentType: string; // SkillDevelopmentType
+  professionBonus: number;
+  specialBonus: number;
+  spokenRanks: number;
+  spokenBonus: number;
+  writtenRanks: number;
+  writtenBonus: number;
+  somaticRanks: number;
+  somaticBonus: number;
+}
