@@ -933,6 +933,7 @@ export default function CharacterLevellingView({
     return categories
       .filter((c) => {
         if (selectedSet.has(c.id)) return false;
+        if (c.categoryProgression === 'SKILLPROGRESSIONTYPE_NONE') return false;
         const costElements = categoryCostMap.get(c.id) ?? [];
         const tpRanks = tpGrantedCategoryRankCounts.get(c.id) ?? 0;
         return getCategoryMaxDpPurchases(costElements, tpRanks) > 0;
