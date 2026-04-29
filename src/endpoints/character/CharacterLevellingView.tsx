@@ -572,6 +572,12 @@ export default function CharacterLevellingView({
     return map;
   }, [character.spellListCategories]);
 
+  /** Set of category IDs that are spell list categories — excluded from Skill Ranks picker */
+  const spellListCategoryIds = useMemo(
+    () => new Set(character.spellListCategories.map((e) => e.category)),
+    [character.spellListCategories],
+  );
+
   const languageNameById = useMemo(() => {
     const map = new Map<string, string>();
     for (const l of languages) map.set(l.id, l.name);
@@ -879,13 +885,14 @@ export default function CharacterLevellingView({
     const selectedSet = new Set(skillPurchases.map((p) => p.id));
     return skills.filter((s) => {
       if (selectedSet.has(s.id)) return false;
+      if (spellListCategoryIds.has(s.category)) return false;
       if (languageSkillIds.has(s.id)) return true;
       const costElements = categoryCostMap.get(s.category) ?? [];
       const devType = skillDevTypeMap.get(s.id);
       const tpRanks = tpGrantedSkillRankCounts.get(s.id) ?? 0;
       return getSkillMaxDpPurchases(costElements, devType, tpRanks) > 0;
     });
-  }, [skills, skillPurchases, categoryCostMap, skillDevTypeMap, tpGrantedSkillRankCounts, languageSkillIds]);
+  }, [skills, skillPurchases, categoryCostMap, skillDevTypeMap, tpGrantedSkillRankCounts, languageSkillIds, spellListCategoryIds]);
 
   const skillCategoryOptions = useMemo((): RichSelectOption[] => {
     const catIds = new Set(availableSkills.map((s) => s.category));
