@@ -82,6 +82,7 @@ export async function initiateCharacterLevelUp(characterId: string): Promise<Cha
     skillRanks: [],
     categoryRanks: [],
     spellListRanks: [],
+    spellListCosts: [],
     languageRanks: [],
     developmentPoints: 0,
   };

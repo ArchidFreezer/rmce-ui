@@ -442,6 +442,15 @@ export default function CharacterLevellingView({
   /* Derived lookup maps from character data                          */
   /* ---------------------------------------------------------------- */
 
+  /** spell list id → cost elements (overrides from leveller.spellListCosts) */
+  const spellListCostOverrideMap = useMemo(() => {
+    const map = new Map<string, number[]>();
+    for (const entry of leveller?.spellListCosts ?? []) {
+      map.set(entry.id, parseCostString(entry.value));
+    }
+    return map;
+  }, [leveller]);
+
   /** category id → cost elements array (from character's existing category data) */
   const categoryCostMap = useMemo(() => {
     const map = new Map<string, number[]>();
@@ -799,13 +808,16 @@ export default function CharacterLevellingView({
 
   const spellListDpCost = useMemo(
     () => spellListPurchases.reduce((total, p) => {
-      const catEntry = character.spellListCategories.find((c) => c.spellLists.includes(p.id));
-      if (!catEntry) return total;
-      const costElements = categoryCostMap.get(catEntry.category) ?? [];
       const tpRanks = tpGrantedSpellListRankCounts.get(p.id) ?? 0;
+      const overrideCost = spellListCostOverrideMap.get(p.id);
+      const costElements = overrideCost
+        ?? (() => {
+          const catEntry = character.spellListCategories.find((c) => c.spellLists.includes(p.id));
+          return catEntry ? (categoryCostMap.get(catEntry.category) ?? []) : [];
+        })();
       return total + getCategoryDpCostWithTpOffset(costElements, p.purchases, tpRanks);
     }, 0),
-    [spellListPurchases, character.spellListCategories, categoryCostMap, tpGrantedSpellListRankCounts],
+    [spellListPurchases, character.spellListCategories, categoryCostMap, tpGrantedSpellListRankCounts, spellListCostOverrideMap],
   );
 
   const languageDpCostPerRank = useMemo(() => {
@@ -1225,6 +1237,7 @@ export default function CharacterLevellingView({
           .filter(([, ranks]) => ranks > 0)
           .map(([id, ranks]) => ({ id, value: ranks }))
           .sort((a, b) => a.id.localeCompare(b.id)),
+        spellListCosts: leveller?.spellListCosts ?? [],
         languageRanks: Array.from(totalLanguages.values())
           .filter((row) => row.spoken > 0 || row.written > 0 || row.somatic > 0)
           .map((row) => ({
@@ -2109,9 +2122,13 @@ export default function CharacterLevellingView({
               <div style={{ display: 'grid', gap: 6, marginBottom: 8 }}>
                 {spellListPurchases.map((purchase, i) => {
                   const slName = spellListNameById.get(purchase.id) ?? purchase.id;
-                  const catEntry = character.spellListCategories.find((c) => c.spellLists.includes(purchase.id));
-                  const costElements = catEntry ? (categoryCostMap.get(catEntry.category) ?? []) : [];
                   const tpRanksForSl = tpGrantedSpellListRankCounts.get(purchase.id) ?? 0;
+                  const overrideCost = spellListCostOverrideMap.get(purchase.id);
+                  const costElements = overrideCost
+                    ?? (() => {
+                      const catEntry = character.spellListCategories.find((c) => c.spellLists.includes(purchase.id));
+                      return catEntry ? (categoryCostMap.get(catEntry.category) ?? []) : [];
+                    })();
                   const maxPurch = getCategoryMaxDpPurchases(costElements, tpRanksForSl);
                   const totalCost = getCategoryDpCostWithTpOffset(costElements, purchase.purchases, tpRanksForSl);
                   const nextCost = purchase.purchases < maxPurch
