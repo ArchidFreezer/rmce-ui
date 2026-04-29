@@ -1,5 +1,6 @@
 import type { Named, PersistentValue, SkillValue, SkillDevelopmentTypeValue, Persistent } from './base';
-import type { Realm, ResistanceType, Stat, SkillDevelopmentType } from './enum';
+import type { SkillDevelopmentType } from './enum';
+import type { Realm, ResistanceType, Stat } from './enum';
 import type { LanguageAbility, CharacterLanguage } from './language';
 
 export interface SkillSubcategory {
@@ -225,6 +226,16 @@ export interface CharacterCategory {
   totalBonus: number;
 }
 
+export interface CharacterSpellList {
+  id: string;                        // SpellList.id
+  progression: string;               // SkillProgressionType.id
+  developmentType: SkillDevelopmentType;
+  professionBonus: number;
+  ranks: number;
+  specialBonus: number;
+  totalBonus: number;
+}
+
 export interface CharacterSkill {
   skillData: SkillSubcategory; // skill id + optional subcategory
   progression: string;          // SkillProgressionType.id
@@ -267,7 +278,7 @@ export interface Character extends Named {
   languages: CharacterLanguage[];
   categories: CharacterCategory[];
   skills: CharacterSkill[];
-  spellListRanks?: PersistentValue[] | undefined;
+  spellLists?: CharacterSpellList[] | undefined;
 }
 
 export interface CharactersPayload {

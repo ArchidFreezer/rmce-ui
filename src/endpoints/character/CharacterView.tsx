@@ -19,7 +19,7 @@ import {
 } from '../../components';
 
 import type {
-  Character, CharacterCategory, CharacterCategorySpellLists, CharacterSkill, Profession,
+  Character, CharacterCategory, CharacterCategorySpellLists, CharacterSkill, CharacterSpellList, Profession,
   Skill, SkillCategory, SkillGroup,
 } from '../../types';
 
@@ -366,11 +366,20 @@ function DetailsTab({ char, ref: refs }: { char: Character; ref: RefData }) {
 
 function SpellsTab({ char, refs }: { char: Character; refs: RefData }) {
   const sorted = useMemo(
-    () => [...(char.spellListRanks ?? [])].sort((a, b) =>
+    () => [...(char.spellLists ?? [])].sort((a, b) =>
       resolve(refs.spellLists, a.id).localeCompare(resolve(refs.spellLists, b.id))
     ),
-    [char.spellListRanks, refs.spellLists]
+    [char.spellLists, refs.spellLists]
   );
+
+  /** reverse lookup: SpellList.id → SkillCategory.id */
+  const slToCategory = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const entry of char.spellListCategories) {
+      for (const slId of entry.spellLists) map.set(slId, entry.category);
+    }
+    return map;
+  }, [char.spellListCategories]);
 
   return (
     <div style={{ padding: '12px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -381,16 +390,18 @@ function SpellsTab({ char, refs }: { char: Character; refs: RefData }) {
           <table style={{ borderCollapse: 'collapse', width: '100%' }}>
             <thead>
               <tr>
-                {['Spell List', 'Ranks'].map(h => (
-                  <th key={h} style={{ textAlign: h === 'Ranks' ? 'center' : 'left', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)' }}>{h}</th>
+                {['Category', 'Spell List', 'Ranks', 'Total Bonus'].map(h => (
+                  <th key={h} style={{ textAlign: (h === 'Ranks' || h === 'Total Bonus') ? 'center' : 'left', padding: '4px 10px 4px 0', borderBottom: '1px solid var(--border, #ccc)' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {sorted.map((sl) => (
+              {sorted.map((sl: CharacterSpellList) => (
                 <tr key={sl.id}>
+                  <td style={{ padding: '3px 10px 3px 0' }}>{resolve(refs.skillCategories, slToCategory.get(sl.id) ?? '')}</td>
                   <td style={{ padding: '3px 10px 3px 0' }}>{resolve(refs.spellLists, sl.id)}</td>
-                  <td style={{ padding: '3px 10px 3px 0', textAlign: 'center' }}>{sl.value}</td>
+                  <td style={{ padding: '3px 10px 3px 0', textAlign: 'center' }}>{sl.ranks}</td>
+                  <td style={{ padding: '3px 10px 3px 0', textAlign: 'center' }}>{sl.totalBonus}</td>
                 </tr>
               ))}
             </tbody>
@@ -766,9 +777,9 @@ export default function CharacterView() {
             <button style={tabStyle('categories')} onClick={() => setActiveTab('categories')}>
               Categories ({selected.categories.length})
             </button>
-            {(selected.spellListRanks?.length ?? 0) > 0 && (
+            {(selected.spellLists?.length ?? 0) > 0 && (
               <button style={tabStyle('spells')} onClick={() => setActiveTab('spells')}>
-                Spells ({selected.spellListRanks!.length})
+                Spells ({selected.spellLists!.length})
               </button>
             )}
           </div>
@@ -777,7 +788,7 @@ export default function CharacterView() {
             {activeTab === 'details' && <DetailsTab char={selected} ref={refs} />}
             {activeTab === 'skills' && <SkillsTab char={selected} refs={refs} />}
             {activeTab === 'categories' && <CategoriesTab char={selected} refs={refs} />}
-            {activeTab === 'spells' && (selected.spellListRanks?.length ?? 0) > 0 && <SpellsTab char={selected} refs={refs} />}
+            {activeTab === 'spells' && (selected.spellLists?.length ?? 0) > 0 && <SpellsTab char={selected} refs={refs} />}
           </div>
         </div>
       )}

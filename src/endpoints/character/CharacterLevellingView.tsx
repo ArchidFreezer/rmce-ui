@@ -493,11 +493,11 @@ export default function CharacterLevellingView({
   /** pre-levelling spell list ranks keyed by spell list id */
   const preLevellingSpellListRanks = useMemo(() => {
     const map = new Map<string, number>();
-    for (const sl of character.spellListRanks ?? []) {
-      map.set(sl.id, (map.get(sl.id) ?? 0) + sl.value);
+    for (const sl of character.spellLists ?? []) {
+      map.set(sl.id, sl.ranks);
     }
     return map;
-  }, [character.spellListRanks]);
+  }, [character.spellLists]);
 
   /* ---------------------------------------------------------------- */
   /* Derived lookup maps from reference data                          */
