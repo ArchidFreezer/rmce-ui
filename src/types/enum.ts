@@ -34,7 +34,7 @@ export const SPELL_TYPES: ReadonlyArray<SpellType> = ['Base', 'Closed', 'Open', 
 /** Enum for stats */
 export type Stat = 'Agility' | 'Constitution' | 'Empathy' | 'Intuition' | 'Memory' | 'Presence' | 'Quickness' | 'Reasoning' | 'Self Discipline' | 'Strength';
 export const STATS: ReadonlyArray<Stat> = ['Agility', 'Constitution', 'Empathy', 'Intuition', 'Memory', 'Presence', 'Quickness', 'Reasoning', 'Self Discipline', 'Strength'] as const;
-export const DEVELOPMENT_STATS: ReadonlyArray<Stat> = ['Agility', 'Constitution', 'Empathy', 'Intuition', 'Memory'] as const;
+export const DEVELOPMENT_STATS: ReadonlyArray<Stat> = ['Agility', 'Constitution', 'Memory', 'Reasoning', 'Self Discipline'] as const;
 export const REALM_STATS: ReadonlyArray<Stat> = ['Empathy', 'Intuition', 'Presence'] as const;
 
 export function getRealmForStat(stat: Stat): Realm | undefined {
