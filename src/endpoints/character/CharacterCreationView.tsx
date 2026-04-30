@@ -12,6 +12,7 @@ import {
   fetchSpellLists,
   fetchTrainingPackages,
   fetchWeaponTypes,
+  autoCharacterStats,
   getStatRollPotentials,
   setCharacterStats,
   setCharacterPhysique,
@@ -380,6 +381,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
   const [savingPrimaryDefinition, setSavingPrimaryDefinition] = useState(false);
   const [savingInitialChoices, setSavingInitialChoices] = useState(false);
   const [savingStats, setSavingStats] = useState(false);
+  const [autoingStats, setAutoingStats] = useState(false);
   const [savingHobbyChoices, setSavingHobbyChoices] = useState(false);
   const [savingBackgroundChoices, setSavingBackgroundChoices] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -617,7 +619,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
 
   /** Set of spell list IDs the character already knows (profession base choices + adolescent choice). */
   const knownSpellListIds = useMemo(() => {
-    const ids = new Set<string>(characterBuilder.baseSpellListChoices.filter(Boolean));
+    const ids = new Set<string>((characterBuilder.baseSpellListChoices ?? []).filter(Boolean));
     if (characterBuilder.adolescentSpellListChoice) ids.add(characterBuilder.adolescentSpellListChoice);
     return ids;
   }, [characterBuilder.baseSpellListChoices, characterBuilder.adolescentSpellListChoice]);
@@ -1877,6 +1879,109 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
     };
   };
 
+  const initHobbyStateFromStatsBuilder = (builderAfterStats: CharacterBuilder) => {
+    const baseSkillByKey = new Map<string, number>();
+    for (const row of builderAfterStats.skillRanks ?? []) {
+      const key = skillChoiceKey(row.id, row.subcategory);
+      baseSkillByKey.set(key, (baseSkillByKey.get(key) ?? 0) + (row.value ?? 0));
+    }
+
+    const baseCategoryById = new Map<string, number>();
+    for (const row of builderAfterStats.categoryRanks ?? []) {
+      baseCategoryById.set(row.id, (baseCategoryById.get(row.id) ?? 0) + (row.value ?? 0));
+    }
+
+    const baseLanguageById = new Map<string, { spoken: number; written: number; somatic: number }>();
+    for (const row of builderAfterStats.languageAbilities ?? []) {
+      baseLanguageById.set(row.language, {
+        spoken: row.spoken ?? 0,
+        written: row.written ?? 0,
+        somatic: row.somatic ?? 0,
+      });
+    }
+
+    const hobbySkillInit = (builderAfterStats.hobbySkillRankChoices ?? []).map((row) => {
+      const key = skillChoiceKey(row.id, row.subcategory);
+      const base = baseSkillByKey.get(key) ?? 0;
+      const max = base + Math.max(0, row.value ?? 0);
+      const prepopulatedSubcategory = row.subcategory?.trim();
+      return {
+        id: row.id,
+        subcategory: prepopulatedSubcategory || undefined,
+        subcategoryLocked: Boolean(prepopulatedSubcategory),
+        base,
+        max,
+        value: base,
+      };
+    });
+
+    const hobbyCategoryInit = (builderAfterStats.hobbyCategoryRankChoices ?? []).map((row) => {
+      const rowId = String(row.id);
+      const base = baseCategoryById.get(rowId) ?? 0;
+      const max = base + Math.max(0, row.value ?? 0);
+      return { id: rowId, base, max, value: base };
+    });
+
+    const hobbyLanguageInit = (race?.adolescentLanguages ?? []).map((row) => {
+      const base = baseLanguageById.get(row.language);
+      const baseSpoken = base?.spoken ?? 0;
+      const baseWritten = base?.written ?? 0;
+      const baseSomatic = base?.somatic ?? 0;
+      const maxSpoken = Math.max(baseSpoken, row.spoken ?? 0);
+      const maxWritten = Math.max(baseWritten, row.written ?? 0);
+      const maxSomatic = Math.max(baseSomatic, row.somatic ?? 0);
+      return {
+        language: row.language,
+        baseSpoken, baseWritten, baseSomatic,
+        maxSpoken, maxWritten, maxSomatic,
+        spoken: baseSpoken, written: baseWritten, somatic: baseSomatic,
+      };
+    });
+
+    const spellListOptions = (
+      builderAfterStats.categorySpellLists
+        .find((row) => row.category === OWN_REALM_OPEN_LISTS_CATEGORY_ID)
+        ?.spellLists ?? []
+    ).map((x) => String(x));
+    const spellListRankBudget = Math.max(
+      0,
+      builderAfterStats.numAdolescentSpellListRanks ?? cultureType?.spellListRanks ?? 0,
+    );
+    const existingSpellListId = spellListRankBudget > 0
+      ? (builderAfterStats.adolescentSpellListChoice ?? '')
+      : '';
+    const spellListSelection = spellListRankBudget > 0
+      ? (spellListOptions.includes(existingSpellListId) ? existingSpellListId : '')
+      : '';
+
+    setHobbyRanksBudget(Math.max(0, builderAfterStats.numHobbySkillRanks ?? cultureType?.hobbySkillRanks ?? 0));
+    setHobbySkillRows(hobbySkillInit);
+    setHobbyCategoryRows(hobbyCategoryInit);
+    setLanguageRanksBudget(Math.max(0, builderAfterStats.numAdolescentLanguageRanks ?? cultureType?.adolescentLanguageRanks ?? 0));
+    setHobbyLanguageRows(hobbyLanguageInit);
+    setSpellListRanksBudget(spellListRankBudget);
+    setHobbySpellListOptions(spellListOptions);
+    setHobbySpellListId(spellListSelection);
+  };
+
+  const handleAutoStats = async () => {
+    if (autoingStats) return;
+    setAutoingStats(true);
+    setSavingStats(true);
+    try {
+      const autoBuilder = await autoCharacterStats(characterBuilder);
+      setCharacterBuilder(autoBuilder);
+      initHobbyStateFromStatsBuilder(autoBuilder);
+      const next = STEP_ORDER[STEP_ORDER.indexOf('stats') + 1];
+      if (next) setStep(next);
+    } catch (e) {
+      toast({ variant: 'danger', title: 'Auto stats failed', description: String(e instanceof Error ? e.message : e) });
+    } finally {
+      setAutoingStats(false);
+      setSavingStats(false);
+    }
+  };
+
   const goNext = async () => {
     const idx = STEP_ORDER.indexOf(step);
     if (idx < 0 || idx >= STEP_ORDER.length - 1) return;
@@ -1971,115 +2076,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
         });
         setCharacterBuilder(statsResponse);
 
-        const builderAfterStats = statsResponse ?? characterBuilder;
-
-        const baseSkillByKey = new Map<string, number>();
-        for (const row of builderAfterStats.skillRanks ?? []) {
-          const key = skillChoiceKey(row.id, row.subcategory);
-          baseSkillByKey.set(key, (baseSkillByKey.get(key) ?? 0) + (row.value ?? 0));
-        }
-
-        const baseCategoryById = new Map<string, number>();
-        for (const row of builderAfterStats.categoryRanks ?? []) {
-          baseCategoryById.set(row.id, (baseCategoryById.get(row.id) ?? 0) + (row.value ?? 0));
-        }
-
-        const baseLanguageById = new Map<string, { spoken: number; written: number; somatic: number }>();
-        for (const row of builderAfterStats.languageAbilities ?? []) {
-          baseLanguageById.set(row.language, {
-            spoken: row.spoken ?? 0,
-            written: row.written ?? 0,
-            somatic: row.somatic ?? 0,
-          });
-        }
-
-        const hobbySkillInit = (builderAfterStats.hobbySkillRankChoices ?? []).map((row) => {
-          const key = skillChoiceKey(row.id, row.subcategory);
-          const base = baseSkillByKey.get(key) ?? 0;
-          const max = base + Math.max(0, row.value ?? 0);
-          const prepopulatedSubcategory = row.subcategory?.trim();
-          return {
-            id: row.id,
-            subcategory: prepopulatedSubcategory || undefined,
-            subcategoryLocked: Boolean(prepopulatedSubcategory),
-            base,
-            max,
-            value: base,
-          };
-        });
-
-        const hobbyCategoryInit = (builderAfterStats.hobbyCategoryRankChoices ?? []).map((row) => {
-          const rowId = String(row.id);
-          const base = baseCategoryById.get(rowId) ?? 0;
-          const max = base + Math.max(0, row.value ?? 0);
-          return {
-            id: rowId,
-            base,
-            max,
-            value: base,
-          };
-        });
-
-        const hobbyLanguageInit = (race?.adolescentLanguages ?? []).map((row) => {
-          const base = baseLanguageById.get(row.language);
-          const baseSpoken = base?.spoken ?? 0;
-          const baseWritten = base?.written ?? 0;
-          const baseSomatic = base?.somatic ?? 0;
-          const maxSpoken = Math.max(baseSpoken, row.spoken ?? 0);
-          const maxWritten = Math.max(baseWritten, row.written ?? 0);
-          const maxSomatic = Math.max(baseSomatic, row.somatic ?? 0);
-          return {
-            language: row.language,
-            baseSpoken,
-            baseWritten,
-            baseSomatic,
-            maxSpoken,
-            maxWritten,
-            maxSomatic,
-            spoken: baseSpoken,
-            written: baseWritten,
-            somatic: baseSomatic,
-          };
-        });
-
-        const spellListOptions = (
-          builderAfterStats.categorySpellLists
-            .find((row) => row.category === OWN_REALM_OPEN_LISTS_CATEGORY_ID)
-            ?.spellLists ?? []
-        ).map((x) => String(x));
-        const spellListRankBudget = Math.max(
-          0,
-          builderAfterStats.numAdolescentSpellListRanks
-          ?? cultureType?.spellListRanks
-          ?? 0,
-        );
-        const existingSpellListId = spellListRankBudget > 0
-          ? (builderAfterStats.adolescentSpellListChoice ?? '')
-          : '';
-        const spellListSelection = spellListRankBudget > 0
-          ? (spellListOptions.includes(existingSpellListId) ? existingSpellListId : '')
-          : '';
-
-        setHobbyRanksBudget(Math.max(
-          0,
-          builderAfterStats.numHobbySkillRanks
-          ?? cultureType?.hobbySkillRanks
-          ?? 0,
-        ));
-        setHobbySkillRows(hobbySkillInit);
-        setHobbyCategoryRows(hobbyCategoryInit);
-
-        setLanguageRanksBudget(Math.max(
-          0,
-          builderAfterStats.numAdolescentLanguageRanks
-          ?? cultureType?.adolescentLanguageRanks
-          ?? 0,
-        ));
-        setHobbyLanguageRows(hobbyLanguageInit);
-
-        setSpellListRanksBudget(spellListRankBudget);
-        setHobbySpellListOptions(spellListOptions);
-        setHobbySpellListId(spellListSelection);
+        initHobbyStateFromStatsBuilder(statsResponse ?? characterBuilder);
       } catch (e) {
         toast({
           variant: 'danger',
@@ -3868,6 +3865,11 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
           {step !== 'summary' && (<>
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="button" onClick={goPrev} disabled={step === 'primary'}>Back</button>
+              {step === 'stats' && (
+                <button type="button" onClick={handleAutoStats} disabled={autoingStats || savingStats}>
+                  {autoingStats ? 'Auto…' : 'Auto'}
+                </button>
+              )}
               <button type="button" onClick={goNext} disabled={!canGoNext || savingPrimaryDefinition || savingInitialChoices || savingStats || savingPhysique || savingHobbyChoices || savingBackgroundChoices}>Next</button>
             </div>
           </>)}
