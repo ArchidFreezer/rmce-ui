@@ -16,6 +16,7 @@ export type SetCharacterBackgroundChoicesRequest = {
 const PRIMARY_DEFINITION_ENDPOINT = '/rmce/operations/character/primary-definition';
 const PRIMARY_CHOICES_ENDPOINT = '/rmce/operations/character/primary-choices';
 const STAT_ROLLS_ENDPOINT = '/rmce/operations/character/stat-rolls';
+const AUTO_STATS_ENDPOINT = '/rmce/operations/character/auto-stats';
 const SET_STATS_ENDPOINT = '/rmce/operations/character/set-stats';
 const SET_PHYSIQUE_ENDPOINT = '/rmce/operations/character/set-physique';
 const SET_HOBBY_CHOICES_ENDPOINT = '/rmce/operations/character/set-hobby-choices';
@@ -47,6 +48,12 @@ export async function getStatRollPotentials(
   payload: StatRollRequest[],
 ): Promise<StatRollResponse[]> {
   return sendJson<StatRollResponse[]>(STAT_ROLLS_ENDPOINT, 'POST', payload);
+}
+
+export async function autoCharacterStats(
+  payload: CharacterBuilder,
+): Promise<CharacterBuilder> {
+  return sendJson<CharacterBuilder>(AUTO_STATS_ENDPOINT, 'POST', payload);
 }
 
 export async function setCharacterStats(
