@@ -645,7 +645,7 @@ export default function CharacterView() {
       id: 'actions',
       header: 'Actions',
       sortable: false,
-      width: 180,
+      width: 240,
       render: (row) => (
         <>
           <button onClick={() => { setSelected(row); setActiveTab('details'); }}>View</button>
