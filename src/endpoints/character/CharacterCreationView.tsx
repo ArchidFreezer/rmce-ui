@@ -615,6 +615,39 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
     return map;
   }, [spellLists]);
 
+  /** Set of spell list IDs the character already knows (profession base choices + adolescent choice). */
+  const knownSpellListIds = useMemo(() => {
+    const ids = new Set<string>(characterBuilder.baseSpellListChoices.filter(Boolean));
+    if (characterBuilder.adolescentSpellListChoice) ids.add(characterBuilder.adolescentSpellListChoice);
+    return ids;
+  }, [characterBuilder.baseSpellListChoices, characterBuilder.adolescentSpellListChoice]);
+
+  /** Set of skill IDs that belong to spell list categories for this character. */
+  const spellListGroupSkillIds = useMemo(() => {
+    const catIds = new Set(characterBuilder.categorySpellLists.map((e) => e.category));
+    return new Set(
+      skills.filter((skill) => catIds.has(skill.category)).map((skill) => skill.id),
+    );
+  }, [skills, characterBuilder.categorySpellLists]);
+
+  /** Map of skill ID → known spell list options for the category that skill belongs to. */
+  const spellListOptionsBySkillId = useMemo(() => {
+    const map = new Map<string, Array<{ value: string; label: string }>>();
+    for (const entry of characterBuilder.categorySpellLists) {
+      const known = entry.spellLists
+        .filter((slId) => knownSpellListIds.has(slId))
+        .map((slId) => ({ value: slId, label: spellListNameById.get(slId) ?? slId }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+      if (known.length === 0) continue;
+      for (const skill of skills) {
+        if (skill.category === entry.category) {
+          map.set(skill.id, known);
+        }
+      }
+    }
+    return map;
+  }, [characterBuilder.categorySpellLists, knownSpellListIds, spellListNameById, skills]);
+
   /** Global reverse map: spellListId → categoryId, covering all categories. */
   const spellListCategoryById = useMemo(() => {
     const map = new Map<string, string>();
@@ -884,7 +917,16 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
   );
 
   const backgroundSkillCategoryOptions = useMemo((): RichSelectOption[] => {
-    const catIds = new Set(skills.map((s) => s.category));
+    const spellListCatIds = new Set(characterBuilder.categorySpellLists.map((e) => e.category));
+    const catIds = new Set(
+      skills
+        .filter((s) => {
+          if (!spellListCatIds.has(s.category)) return true;
+          const entry = characterBuilder.categorySpellLists.find((e) => e.category === s.category);
+          return (entry?.spellLists ?? []).some((slId) => knownSpellListIds.has(slId));
+        })
+        .map((s) => s.category),
+    );
     return Array.from(catIds)
       .map((id): RichSelectOption => ({
         value: id,
@@ -892,16 +934,21 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
         searchText: categoryNameById.get(id) ?? id,
       }))
       .sort((a, b) => (a.searchText ?? '').localeCompare(b.searchText ?? ''));
-  }, [skills, categoryNameById]);
+  }, [skills, categoryNameById, characterBuilder.categorySpellLists, knownSpellListIds]);
 
   const availableBackgroundSkillBonusOptions = useMemo(
     () => backgroundSkillBonusOptions.filter((opt) => {
       const skill = skills.find((s) => s.id === opt.value);
       if (backgroundSkillCategoryFilter && skill?.category !== backgroundSkillCategoryFilter) return false;
+      const spellListOpts = spellListOptionsBySkillId.get(opt.value) ?? [];
+      if (spellListOpts.length > 0) {
+        const usedSlIds = new Set(backgroundSkillBonusRows.filter((r) => r.id === opt.value).map((r) => r.subcategory));
+        return spellListOpts.some((sl) => !usedSlIds.has(sl.value));
+      }
       const hasSubcategorySupport = (weaponTypeOptionsBySkillId.get(opt.value) ?? []).length > 0 || mandatorySubcategorySkillIds.has(opt.value);
       return hasSubcategorySupport || !selectedBackgroundSkillSet.has(opt.value);
     }),
-    [backgroundSkillBonusOptions, selectedBackgroundSkillSet, weaponTypeOptionsBySkillId, mandatorySubcategorySkillIds, backgroundSkillCategoryFilter, skills],
+    [backgroundSkillBonusOptions, selectedBackgroundSkillSet, weaponTypeOptionsBySkillId, mandatorySubcategorySkillIds, backgroundSkillCategoryFilter, skills, spellListOptionsBySkillId, backgroundSkillBonusRows],
   );
 
   const backgroundCategoryBonusOptions = useMemo(
@@ -1267,11 +1314,16 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
 
     setCharacterBuilder((prev) => ({
       ...prev,
-      skillProfessionalBonuses: backgroundState.skillBonuses.map((row) => ({
-        id: row.id,
-        subcategory: row.subcategory.trim() || undefined,
-        value: 10,
-      })),
+      skillProfessionalBonuses: backgroundState.skillBonuses
+        .filter((row) => !spellListGroupSkillIds.has(row.id))
+        .map((row) => ({
+          id: row.id,
+          subcategory: row.subcategory.trim() || undefined,
+          value: 10,
+        })),
+      spellListSpecialBonuses: backgroundState.skillBonuses
+        .filter((row) => spellListGroupSkillIds.has(row.id) && row.subcategory.trim())
+        .map((row) => ({ id: row.subcategory.trim(), value: 10 })),
       categoryProfessionalBonuses: backgroundState.categoryBonusIds.map((id) => ({
         id,
         value: 5,
@@ -1279,7 +1331,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
       backgroundLanguageChoices: mappedBackgroundLanguages,
       languageAbilities: mappedBackgroundLanguages,
     }));
-  }, [backgroundState]);
+  }, [backgroundState, spellListGroupSkillIds]);
 
   const validateInitial = (): string | undefined => {
     if (!characterName.trim()) return 'Name is required.';
@@ -1640,6 +1692,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
       if (!row) continue;
       const skillName = skillNameById.get(row.id) ?? row.id;
       const isWeaponGroupSkill = weaponGroupSkillIds.has(row.id);
+      const isSpellListGroupSkill = spellListGroupSkillIds.has(row.id);
       const weaponTypeOptions = weaponTypeOptionsBySkillId.get(row.id) ?? [];
 
       if (isWeaponGroupSkill && weaponTypeOptions.length === 0) {
@@ -1657,7 +1710,18 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
         }
       }
 
-      if (!isWeaponGroupSkill && mandatorySubcategorySkillIds.has(row.id) && !row.subcategory.trim()) {
+      if (isSpellListGroupSkill && !row.subcategory.trim()) {
+        return `Background Skill Bonus: select spell list for ${skillName}.`;
+      }
+
+      if (isSpellListGroupSkill && row.subcategory.trim()) {
+        const slOptions = spellListOptionsBySkillId.get(row.id) ?? [];
+        if (!slOptions.some((opt) => opt.value === row.subcategory.trim())) {
+          return `Background Skill Bonus: invalid spell list selected for ${skillName}.`;
+        }
+      }
+
+      if (!isWeaponGroupSkill && !isSpellListGroupSkill && mandatorySubcategorySkillIds.has(row.id) && !row.subcategory.trim()) {
         return `Background Skill Bonus: enter subcategory for ${skillName}.`;
       }
 
@@ -1784,11 +1848,17 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
         }))
       : [];
 
-    const backgroundSkillBonus = backgroundState.skillBonuses.map((row) => ({
-      id: row.id,
-      subcategory: row.subcategory.trim() || undefined,
-      value: 10,
-    }));
+    const backgroundSkillBonus = backgroundState.skillBonuses
+      .filter((row) => !spellListGroupSkillIds.has(row.id))
+      .map((row) => ({
+        id: row.id,
+        subcategory: row.subcategory.trim() || undefined,
+        value: 10,
+      }));
+
+    const spellListSpecialBonuses = backgroundState.skillBonuses
+      .filter((row) => spellListGroupSkillIds.has(row.id) && row.subcategory.trim())
+      .map((row) => ({ id: row.subcategory.trim(), value: 10 }));
 
     const backgroundCategoryBonus = backgroundState.categoryBonusIds.map((id) => ({
       id,
@@ -1803,6 +1873,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
       backgroundSkillBonus,
       backgroundCategoryBonus,
       backgroundItemCount: backgroundState.specialItemsPoints as 0 | 1 | 2,
+      spellListSpecialBonuses,
     };
   };
 
@@ -2292,7 +2363,9 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
 
     addSkillBonus(id: string) {
       if (!id) return;
-      const hasSubcategorySupport = (weaponTypeOptionsBySkillId.get(id) ?? []).length > 0 || mandatorySubcategorySkillIds.has(id);
+      const hasSubcategorySupport = (weaponTypeOptionsBySkillId.get(id) ?? []).length > 0
+        || mandatorySubcategorySkillIds.has(id)
+        || (spellListOptionsBySkillId.get(id) ?? []).length > 0;
       if (!hasSubcategorySupport && selectedBackgroundSkillSet.has(id)) return;
       if (!canSpendBackgroundPoints(1)) return;
       if (hasSubcategorySupport) {
@@ -3600,6 +3673,17 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
                             options={weaponTypeOptionsBySkillId.get(backgroundSkillPendingId) ?? []}
                             placeholderOption="— Select weapon type —"
                           />
+                        ) : spellListGroupSkillIds.has(backgroundSkillPendingId) ? (
+                          <LabeledSelect
+                            label="Spell list"
+                            hideLabel={true}
+                            value={backgroundSkillPendingSubcategory}
+                            onChange={(v) => setBackgroundSkillPendingSubcategory(v)}
+                            options={(spellListOptionsBySkillId.get(backgroundSkillPendingId) ?? []).filter(
+                              (sl) => !backgroundSkillBonusRows.some((r) => r.id === backgroundSkillPendingId && r.subcategory === sl.value)
+                            )}
+                            placeholderOption="— Select spell list —"
+                          />
                         ) : (
                           <LabeledInput
                             label="Subcategory"
@@ -3629,8 +3713,9 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
                     <div style={{ display: 'grid', gap: 6 }}>
                       {backgroundSkillBonusRows.map((row, rowIndex) => {
                         const isWeaponGroupSkill = weaponGroupSkillIds.has(row.id);
+                        const isSpellListGroupSkill = spellListGroupSkillIds.has(row.id);
                         const weaponTypeOptions = weaponTypeOptionsBySkillId.get(row.id) ?? [];
-                        const requiresFreeTextSubcategory = mandatorySubcategorySkillIds.has(row.id) && !isWeaponGroupSkill;
+                        const requiresFreeTextSubcategory = mandatorySubcategorySkillIds.has(row.id) && !isWeaponGroupSkill && !isSpellListGroupSkill;
 
                         return (
                           <div
@@ -3654,6 +3739,16 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
                                 helperText={weaponTypeOptions.length === 0 ? 'No weapon types available for selected skill.' : undefined}
                                 placeholderOption="— Select weapon type —"
                                 error={errors.background && weaponTypeOptions.length > 0 && !row.subcategory.trim() ? 'Required' : undefined}
+                              />
+                            ) : isSpellListGroupSkill ? (
+                              <LabeledSelect
+                                label={`Spell list for ${skillNameById.get(row.id) ?? row.id}`}
+                                hideLabel={true}
+                                value={row.subcategory}
+                                onChange={(value) => backgroundActions.updateSkillBonusSubcategory(rowIndex, value)}
+                                options={spellListOptionsBySkillId.get(row.id) ?? []}
+                                placeholderOption="— Select spell list —"
+                                error={errors.background && !row.subcategory.trim() ? 'Required' : undefined}
                               />
                             ) : requiresFreeTextSubcategory ? (
                               <LabeledInput

@@ -114,6 +114,7 @@ export interface CharacterBuilder extends Named {
   groupSpecialBonuses: PersistentValue[];
 
   spellListRanks: PersistentValue[];
+  spellListSpecialBonuses: PersistentValue[];
 
   items?: string[] | undefined; // Item.id[]
 }
@@ -203,6 +204,7 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
     groupSpecialBonuses: [],
 
     spellListRanks: [],
+    spellListSpecialBonuses: [],
     items: [],
   };
 }

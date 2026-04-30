@@ -10,6 +10,7 @@ export type SetCharacterBackgroundChoicesRequest = {
   backgroundSkillBonus: SkillValue[];
   backgroundCategoryBonus: PersistentValue[];
   backgroundItemCount: 0 | 1 | 2;
+  spellListSpecialBonuses: PersistentValue[];
 };
 
 const PRIMARY_DEFINITION_ENDPOINT = '/rmce/operations/character/primary-definition';
