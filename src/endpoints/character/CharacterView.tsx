@@ -638,7 +638,7 @@ export default function CharacterView() {
     { id: 'name', header: 'Name', accessor: (r) => r.name, sortType: 'string', minWidth: 160 },
     { id: 'race', header: 'Race', accessor: (r) => resolve(refs.races, r.race), sortType: 'string' },
     { id: 'profession', header: 'Profession', accessor: (r) => resolve(refs.professions, r.profession), sortType: 'string' },
-    { id: 'level', header: 'Level', accessor: (r) => r.level, sortType: 'number', align: 'right' },
+    { id: 'level', header: 'Level', accessor: (r) => r.level, sortType: 'number', align: 'center' },
     { id: 'gender', header: 'Gender', accessor: (r) => r.male ? 'Male' : 'Female', sortType: 'string' },
     { id: 'pc', header: 'PC', accessor: (r) => r.playerCharacter ? 'Yes' : 'No', sortType: 'string' },
     {
