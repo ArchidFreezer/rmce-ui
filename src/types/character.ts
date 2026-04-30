@@ -1,5 +1,6 @@
 import type { Named, PersistentValue, SkillValue, SkillDevelopmentTypeValue, Persistent } from './base';
-import type { Realm, ResistanceType, Stat, SkillDevelopmentType } from './enum';
+import type { SkillDevelopmentType } from './enum';
+import type { Realm, ResistanceType, Stat } from './enum';
 import type { LanguageAbility, CharacterLanguage } from './language';
 
 export interface SkillSubcategory {
@@ -113,6 +114,7 @@ export interface CharacterBuilder extends Named {
   groupSpecialBonuses: PersistentValue[];
 
   spellListRanks: PersistentValue[];
+  spellListSpecialBonuses: PersistentValue[];
 
   items?: string[] | undefined; // Item.id[]
 }
@@ -202,6 +204,7 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
     groupSpecialBonuses: [],
 
     spellListRanks: [],
+    spellListSpecialBonuses: [],
     items: [],
   };
 }
@@ -219,6 +222,16 @@ export interface CharacterCategory {
   id: string;            // SkillCategory.id
   progression: string;   // SkillProgressionType.id
   developmentCost: string;
+  professionBonus: number;
+  ranks: number;
+  specialBonus: number;
+  totalBonus: number;
+}
+
+export interface CharacterSpellList {
+  id: string;                        // SpellList.id
+  progression: string;               // SkillProgressionType.id
+  developmentType: SkillDevelopmentType;
   professionBonus: number;
   ranks: number;
   specialBonus: number;
@@ -267,7 +280,7 @@ export interface Character extends Named {
   languages: CharacterLanguage[];
   categories: CharacterCategory[];
   skills: CharacterSkill[];
-  spellListRanks?: PersistentValue[] | undefined;
+  spellLists?: CharacterSpellList[] | undefined;
 }
 
 export interface CharactersPayload {
@@ -282,6 +295,12 @@ export interface CharacterLeveller extends Persistent {
   skillRanks: SkillValue[];                // value = total ranks after the level up
   categoryRanks: PersistentValue[];        // value = total ranks after the level up
   spellListRanks: PersistentValue[];       // value = total ranks after the level up
+  spellListCosts: SpellListCost[];         // per-spell-list DP cost overrides
   languageRanks: LanguageAbility[];
   developmentPoints: number;               // unused DPs to carry over to the next level
+}
+
+export interface SpellListCost {
+  id: string;    // SpellList.id
+  value: string; // 0 to 3 colon-separated positive numbers
 }
