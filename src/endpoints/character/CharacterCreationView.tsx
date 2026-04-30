@@ -617,7 +617,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
 
   /** Set of spell list IDs the character already knows (profession base choices + adolescent choice). */
   const knownSpellListIds = useMemo(() => {
-    const ids = new Set<string>(characterBuilder.baseSpellListChoices.filter(Boolean));
+    const ids = new Set<string>((characterBuilder.baseSpellListChoices ?? []).filter(Boolean));
     if (characterBuilder.adolescentSpellListChoice) ids.add(characterBuilder.adolescentSpellListChoice);
     return ids;
   }, [characterBuilder.baseSpellListChoices, characterBuilder.adolescentSpellListChoice]);
