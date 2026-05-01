@@ -9,10 +9,12 @@ import {
 } from '../../api';
 
 import {
+  CheckboxGroup,
   DataTable, DataTableSearchInput, type ColumnDef, type DataTableHandle,
   LabeledInput,
   LabeledSelect,
   MarkupPreview,
+  PillList,
   Spinner,
   useConfirm, useToast,
 } from '../../components';
@@ -48,7 +50,7 @@ type FormState = {
   name: string;
   notes: string;
 
-  skill: string;
+  skills: string[];
   book: string;
   attackTable: string; // AttackTable.id or '' while editing
 
@@ -73,7 +75,7 @@ type FormState = {
 type FormErrors = {
   id?: string;
   name?: string;
-  skill?: string;
+  skills?: string;
   book?: string;
   attackTable?: string;
   fumble?: string;
@@ -93,7 +95,7 @@ const emptyVM = (): FormState => ({
   name: '',
   notes: '',
 
-  skill: '',
+  skills: [],
   book: '',
   attackTable: '',
 
@@ -120,7 +122,7 @@ const toVM = (x: WeaponType): FormState => ({
   name: x.name,
   notes: x.notes ?? '',
 
-  skill: x.skill,
+  skills: x.skills ?? [],
   book: x.book,
   attackTable: x.attackTable ?? '',
 
@@ -147,7 +149,7 @@ const fromVM = (vm: FormState): WeaponType => ({
   name: vm.name.trim(),
   notes: vm.notes.trim() || undefined,
 
-  skill: vm.skill.trim(),
+  skills: vm.skills,
   book: vm.book.trim(),
   attackTable: vm.attackTable.trim(),
 
@@ -288,8 +290,8 @@ export default function WeaponTypeView() {
 
     if (!nm) e.name = 'Name is required';
 
-    if (!draft.skill) e.skill = 'Skill is required';
-    else if (!skillNameById.has(draft.skill)) e.skill = 'Pick a valid Skill id';
+    if (draft.skills.length === 0) e.skills = 'At least one skill is required';
+    else if (draft.skills.some(id => !skillNameById.has(id))) e.skills = 'All skills must be valid Skill ids';
 
     if (!draft.book) e.book = 'Book is required';
     else if (!bookNameById.has(draft.book)) e.book = 'Pick a valid Book id';
@@ -377,8 +379,8 @@ export default function WeaponTypeView() {
     { id: 'id', header: 'ID', accessor: r => r.id, sortType: 'string', minWidth: 260 },
     { id: 'name', header: 'Name', accessor: r => r.name, sortType: 'string', minWidth: 180 },
     {
-      id: 'skill', header: 'Skill', accessor: r => r.skill, sortType: 'string', minWidth: 240,
-      render: r => skillNameById.get(r.skill) ? `${skillNameById.get(r.skill)}` : r.skill,
+      id: 'skills', header: 'Skills', accessor: r => r.skills.join(', '), sortType: 'string', minWidth: 240,
+      render: r => <PillList values={r.skills} getLabel={id => skillNameById.get(id) ?? id} />,
     },
     {
       id: 'book', header: 'Book', accessor: r => r.book, sortType: 'string', minWidth: 240,
@@ -409,7 +411,7 @@ export default function WeaponTypeView() {
   const globalFilter = (r: WeaponType, q: string) => {
     const s = q.toLowerCase();
     return [
-      r.id, r.name, r.skill, skillNameById.get(r.skill) ?? '',
+      r.id, r.name, r.skills.join(' '), r.skills.map(id => skillNameById.get(id) ?? '').join(' '),
       r.book, bookNameById.get(r.book) ?? '',
       r.attackTable,
       r.fumble, r.breakage,
@@ -418,7 +420,7 @@ export default function WeaponTypeView() {
   };
 
   const filteredRows = useMemo(
-    () => rows.filter((r) => !skillFilter || r.skill === skillFilter),
+    () => rows.filter((r) => !skillFilter || r.skills.includes(skillFilter)),
     [rows, skillFilter]
   );
 
@@ -692,14 +694,14 @@ export default function WeaponTypeView() {
                 disabled={viewing}
                 error={viewing ? undefined : errors.name}
               />
-              <LabeledSelect
-                label="Skill"
-                value={form.skill}
-                onChange={(v) => setForm(s => ({ ...s, skill: v }))}
+              <CheckboxGroup
+                label="Skills"
+                value={form.skills}
                 options={weaponSkillOptions}
+                onChange={(v) => setForm(s => ({ ...s, skills: v }))}
                 disabled={loading || viewing}
-                error={viewing ? undefined : errors.skill}
-                helperText={loading ? 'Loading skills…' : undefined}
+                error={viewing ? undefined : errors.skills}
+                {...(loading ? { helperText: 'Loading skills…' } : {})}
               />
               <LabeledSelect
                 label="Book"

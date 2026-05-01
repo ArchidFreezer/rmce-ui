@@ -567,9 +567,11 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
   const weaponTypeOptionsBySkillId = useMemo(() => {
     const map = new Map<string, Array<{ value: string; label: string }>>();
     for (const row of weaponTypes) {
-      const existing = map.get(row.skill) ?? [];
-      existing.push({ value: row.id, label: row.name });
-      map.set(row.skill, existing);
+      for (const skillId of row.skills) {
+        const existing = map.get(skillId) ?? [];
+        existing.push({ value: row.id, label: row.name });
+        map.set(skillId, existing);
+      }
     }
 
     for (const rows of map.values()) {
