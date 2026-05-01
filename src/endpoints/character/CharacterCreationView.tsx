@@ -10,7 +10,6 @@ import {
   fetchSkillGroups,
   fetchSkills,
   fetchSpellLists,
-  fetchTrainingPackages,
   fetchWeaponTypes,
   autoCharacterStats,
   getStatRollPotentials,
@@ -48,7 +47,6 @@ import type {
   SkillCategory,
   SkillGroup,
   SpellList,
-  TrainingPackage,
   WeaponType,
 } from '../../types';
 
