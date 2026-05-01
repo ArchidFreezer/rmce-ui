@@ -48,7 +48,9 @@ function fromJson(x: any): WeaponType {
     notes: x?.notes != null ? asString(x?.notes) : undefined,
 
     // references by id
-    skill: asString(x?.skill),
+    skills: Array.isArray(x?.skills)
+      ? x.skills.map(asString)
+      : x?.skill != null ? [asString(x.skill)] : [],
     book: asString(x?.book),
 
     // IMPORTANT: attackTable is a string id (AttackTable.id), not an enum

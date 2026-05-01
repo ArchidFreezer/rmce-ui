@@ -17,7 +17,7 @@ export interface WeaponType extends Named {
   notes?: string | undefined;
 
   /** references Skill.id */
-  skill: string;
+  skills: string[];
 
   /** references Book.id */
   book: string;

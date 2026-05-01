@@ -634,9 +634,11 @@ export default function CharacterLevellingView({
   const weaponTypeOptionsBySkillId = useMemo(() => {
     const map = new Map<string, Array<{ value: string; label: string }>>();
     for (const row of weaponTypes) {
-      const list = map.get(row.skill) ?? [];
-      list.push({ value: row.id, label: row.name });
-      map.set(row.skill, list);
+      for (const skillId of row.skills) {
+        const list = map.get(skillId) ?? [];
+        list.push({ value: row.id, label: row.name });
+        map.set(skillId, list);
+      }
     }
     for (const list of map.values()) list.sort((a, b) => a.label.localeCompare(b.label));
     return map;
