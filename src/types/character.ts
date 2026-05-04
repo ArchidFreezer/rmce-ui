@@ -35,6 +35,7 @@ export interface CharacterBuilder extends Named {
   autoBuilder: string;
   built: boolean;
   pc: boolean;
+  autoBuild: boolean;
   race: string; // Race.id
   culture: string; // Culture.id
   cultureType: string;  // CultureType.id
@@ -127,6 +128,7 @@ export function createEmptyCharacterBuilder(): CharacterBuilder {
     autoBuilder: '',
     built: false,
     pc: false,
+    autoBuild: false,
     race: '',
     culture: '',
     cultureType: '',

@@ -11,7 +11,6 @@ import {
   fetchSkills,
   fetchSpellLists,
   fetchWeaponTypes,
-  autoCharacterStats,
   getStatRollPotentials,
   setCharacterStats,
   setCharacterPhysique,
@@ -1969,7 +1968,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
     setAutoingStats(true);
     setSavingStats(true);
     try {
-      const autoBuilder = await autoCharacterStats(characterBuilder);
+      const autoBuilder = await setCharacterStats({ ...characterBuilder, autoBuild: true });
       setCharacterBuilder(autoBuilder);
       initHobbyStateFromStatsBuilder(autoBuilder);
       const next = STEP_ORDER[STEP_ORDER.indexOf('stats') + 1];
