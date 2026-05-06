@@ -3,6 +3,7 @@ import { fetchJson, sendJson } from './client';
 import type {
   SkillCategory, SkillCategoriesPayload,
 } from '../types';
+import type { CharacterTraits } from '../types/base';
 
 import {
   STATS, type Stat,
@@ -13,6 +14,22 @@ const BASE = '/rmce/data/skillcategory';
 const asString = (v: unknown) => String(v ?? '');
 const asBool = (v: unknown) => v === true || v === 'true' || v === 1 || v === '1';
 const STAT_SET = new Set<Stat>(STATS);
+const asTraitInt = (v: unknown): number => {
+  const n = parseInt(String(v ?? ''), 10);
+  return Number.isFinite(n) ? Math.min(9, Math.max(1, n)) : 5;
+};
+
+function traitsFromJson(t: unknown): CharacterTraits {
+  const x = (t && typeof t === 'object') ? t as Record<string, unknown> : {};
+  return {
+    caster: asTraitInt(x['caster']),
+    combat: asTraitInt(x['combat']),
+    information: asTraitInt(x['information']),
+    stealth: asTraitInt(x['stealth']),
+    support: asTraitInt(x['support']),
+    utility: asTraitInt(x['utility']),
+  };
+}
 
 /** Preserve order & duplicates but filter to known Stat values */
 function asStatArray(v: unknown): Stat[] {
@@ -39,6 +56,7 @@ export async function fetchSkillCategories(): Promise<SkillCategory[]> {
     skillProgression: asString(x.skillProgression),
     categoryProgression: asString(x.categoryProgression),
     stats: asStatArray((x as any).stats),
+    traits: traitsFromJson((x as any).traits),
   }));
 }
 

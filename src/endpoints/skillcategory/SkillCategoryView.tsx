@@ -8,6 +8,7 @@ import {
 
 import {
   DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
+  CharacterTraitsEditor,
   CheckboxInput,
   LabeledInput,
   LabeledSelect,
@@ -20,6 +21,7 @@ import type {
   SkillProgressionType,
   SkillGroup,
 } from '../../types';
+import type { CharacterTraits } from '../../types/base';
 
 import {
   STATS, type Stat,
@@ -44,6 +46,7 @@ type FormState = {
   stat1: Stat | '';
   stat2: Stat | '';
   stat3: Stat | '';
+  traits: CharacterTraits;
 };
 
 type FormErrors = {
@@ -65,6 +68,7 @@ const emptyVM = (): FormState => ({
   stat1: '',
   stat2: '',
   stat3: '',
+  traits: { caster: 5, combat: 5, information: 5, stealth: 5, support: 5, utility: 5 },
 });
 
 const toVM = (x: SkillCategory): FormState => ({
@@ -77,6 +81,7 @@ const toVM = (x: SkillCategory): FormState => ({
   stat1: x.stats[0] ?? '',
   stat2: x.stats[1] ?? '',
   stat3: x.stats[2] ?? '',
+  traits: x.traits ?? { caster: 5, combat: 5, information: 5, stealth: 5, support: 5, utility: 5 },
 });
 
 const fromVM = (vm: FormState): SkillCategory => {
@@ -92,6 +97,7 @@ const fromVM = (vm: FormState): SkillCategory => {
     skillProgression: vm.skillProgression.trim(),
     categoryProgression: vm.categoryProgression.trim(),
     stats,
+    traits: vm.traits,
   };
 };
 
@@ -604,6 +610,15 @@ export default function SkillCategoryView() {
                   />
                 </>
               )}
+            </div>
+
+            {/* Character Traits */}
+            <div style={{ marginTop: 12 }}>
+              <CharacterTraitsEditor
+                value={form.traits}
+                onChange={(t) => setForm(s => ({ ...s, traits: t }))}
+                disabled={viewing}
+              />
             </div>
 
             {/* Action buttons */}
