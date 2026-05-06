@@ -2,7 +2,7 @@
 // Skill
 // ------------------------
 import type { SkillActionType, Stat } from './enum';
-import type { Named } from './base';
+import type { CharacterTraits, Named } from './base';
 
 export interface Skill extends Named {
   /** references SkillCategory.id */
@@ -33,6 +33,9 @@ export interface Skill extends Named {
   /** floats */
   exhaustion: number;
   distanceMultiplier: number;
+
+  /** character traits */
+  traits: CharacterTraits;
 }
 
 export interface SkillsPayload {

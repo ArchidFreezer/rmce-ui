@@ -1,4 +1,5 @@
 export * from './AttackTableEditor';
+export * from './CharacterTraitsEditor';
 export * from './CheckboxGroup';
 export * from './CheckboxInput';
 export * from './ChoiceListEditor';

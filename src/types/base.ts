@@ -29,3 +29,12 @@ export interface MaladySymptom {
   severity: MaladySeverity;
   symptoms: string;
 }
+
+export interface CharacterTraits {
+  caster: number;
+  combat: number;
+  information: number;
+  stealth: number;
+  support: number;
+  utility: number;
+}

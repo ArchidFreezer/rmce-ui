@@ -9,6 +9,7 @@ import {
 
 import {
   DataTable, DataTableHandle, DataTableSearchInput, type ColumnDef,
+  CharacterTraitsEditor,
   CheckboxInput,
   LabeledInput,
   LabeledSelect,
@@ -23,6 +24,7 @@ import type {
   SkillCategory,
   SkillGroup,
 } from '../../types';
+import type { CharacterTraits } from '../../types/base';
 
 import {
   SKILL_ACTION_TYPES, type SkillActionType,
@@ -69,6 +71,8 @@ type FormState = {
   // floats as strings while typing
   exhaustion: string;
   distanceMultiplier: string;
+
+  traits: CharacterTraits;
 };
 
 type FormErrors = {
@@ -108,6 +112,8 @@ const emptyVM = (): FormState => ({
 
   exhaustion: '',
   distanceMultiplier: '',
+
+  traits: { caster: 5, combat: 5, information: 5, stealth: 5, support: 5, utility: 5 },
 });
 
 function toVM(x: Skill): FormState {
@@ -134,6 +140,7 @@ function toVM(x: Skill): FormState {
 
     exhaustion: String(Number.isFinite(x.exhaustion) ? x.exhaustion : ''),
     distanceMultiplier: String(Number.isFinite(x.distanceMultiplier) ? x.distanceMultiplier : ''),
+    traits: x.traits ?? { caster: 5, combat: 5, information: 5, stealth: 5, support: 5, utility: 5 },
   };
 }
 
@@ -167,6 +174,7 @@ function fromVM(vm: FormState): Skill {
     stats,
     exhaustion,
     distanceMultiplier,
+    traits: vm.traits,
   };
 }
 
@@ -299,11 +307,10 @@ export default function SkillView() {
     if (!draft.action) e.action = 'Action is required';
     else if (!(SKILL_ACTION_TYPES as readonly string[]).includes(draft.action)) e.action = 'Pick a valid SkillActionType';
 
-    // stats: require at least one
+    // stats: optional, but any selected must be valid
     const chosen: Stat[] = [draft.stat1, draft.stat2, draft.stat3].filter(Boolean) as Stat[];
     const validStats = new Set(STATS);
-    if (chosen.length === 0) e.stats = 'Select at least one Stat';
-    else if (!chosen.every(s => validStats.has(s))) e.stats = 'Stats must be valid';
+    if (chosen.length > 0 && !chosen.every(s => validStats.has(s))) e.stats = 'Stats must be valid';
 
     // floats: required and must parse
     const ex = draft.exhaustion.trim();
@@ -915,6 +922,15 @@ export default function SkillView() {
                   </div>
                 </>
               )}
+            </div>
+
+            {/* Character Traits */}
+            <div style={{ marginTop: 12 }}>
+              <CharacterTraitsEditor
+                value={form.traits}
+                onChange={(t) => setForm(s => ({ ...s, traits: t }))}
+                disabled={viewing}
+              />
             </div>
 
             {/* Action buttons */}
