@@ -377,6 +377,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
   const [createdCharacter, setCreatedCharacter] = useState<Character | null>(null);
   const [savingPrimaryDefinition, setSavingPrimaryDefinition] = useState(false);
   const [savingInitialChoices, setSavingInitialChoices] = useState(false);
+  const [autoingInitialChoices, setAutoingInitialChoices] = useState(false);
   const [savingStats, setSavingStats] = useState(false);
   const [autoingStats, setAutoingStats] = useState(false);
   const [savingHobbyChoices, setSavingHobbyChoices] = useState(false);
@@ -1961,6 +1962,23 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
     setSpellListRanksBudget(spellListRankBudget);
     setHobbySpellListOptions(spellListOptions);
     setHobbySpellListId(spellListSelection);
+  };
+
+  const handleAutoInitialChoices = async () => {
+    if (autoingInitialChoices) return;
+    setAutoingInitialChoices(true);
+    setSavingInitialChoices(true);
+    try {
+      const response = await setCharacterPrimaryChoices({ ...characterBuilder, autoBuild: true });
+      setCharacterBuilder(response);
+      const next = STEP_ORDER[STEP_ORDER.indexOf('initial') + 1];
+      if (next) setStep(next);
+    } catch (e) {
+      toast({ variant: 'danger', title: 'Auto initial choices failed', description: String(e instanceof Error ? e.message : e) });
+    } finally {
+      setAutoingInitialChoices(false);
+      setSavingInitialChoices(false);
+    }
   };
 
   const handleAutoStats = async () => {
@@ -3864,6 +3882,11 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
           {step !== 'summary' && (<>
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="button" onClick={goPrev} disabled={step === 'primary'}>Back</button>
+              {step === 'initial' && (
+                <button type="button" onClick={handleAutoInitialChoices} disabled={autoingInitialChoices || savingInitialChoices}>
+                  {autoingInitialChoices ? 'Auto…' : 'Auto'}
+                </button>
+              )}
               {step === 'stats' && (
                 <button type="button" onClick={handleAutoStats} disabled={autoingStats || savingStats}>
                   {autoingStats ? 'Auto…' : 'Auto'}
