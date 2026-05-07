@@ -1,5 +1,5 @@
 import type { Stat } from './enum';
-import type { Named, PersistentValue, SkillValue } from './base';
+import type { CharacterTraits, Named, PersistentValue, SkillValue } from './base';
 
 export interface TrainingPackageQualifier {
   qualifier: string;
@@ -97,6 +97,9 @@ export interface TrainingPackage extends Named {
   }>;
 
   languageChoices: TrainingPackageLanguageChoice[];
+
+  /** character traits */
+  traits: CharacterTraits;
 }
 
 export interface TrainingPackagesPayload {
