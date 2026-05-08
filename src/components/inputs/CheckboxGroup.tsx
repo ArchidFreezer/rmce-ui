@@ -6,7 +6,7 @@ export type CheckboxOption<T extends string = string> =
 
 export interface CheckboxGroupProps<T extends string = string> {
   /** Visible label for the group (rendered as <legend>) */
-  label: string;
+  label?: string;
 
   /** Selected values */
   value: readonly T[];
@@ -77,12 +77,12 @@ export function CheckboxGroup<T extends string = string>({
   const groupName = name ?? `${groupId}-name`;
 
   type Normalized<T extends string> = { label: string; value: T; disabled?: boolean | undefined };
- 
+
   const normalized: Normalized<T>[] = options.map(opt => {
-  if (typeof opt === 'string') return { label: opt, value: opt };
-  return (typeof opt.disabled === 'boolean')
-    ? { label: opt.label, value: opt.value, disabled: opt.disabled }
-    : { label: opt.label, value: opt.value };
+    if (typeof opt === 'string') return { label: opt, value: opt };
+    return (typeof opt.disabled === 'boolean')
+      ? { label: opt.label, value: opt.value, disabled: opt.disabled }
+      : { label: opt.label, value: opt.value };
   });
 
   const toggle = (v: T) => {
@@ -107,8 +107,8 @@ export function CheckboxGroup<T extends string = string>({
     direction === 'column'
       ? { display: 'grid', gap: 8 }
       : inline
-      ? { display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }
-      : {
+        ? { display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }
+        : {
           display: 'grid',
           gridTemplateColumns: `repeat(${Math.max(1, columns ?? 3)}, minmax(0, 1fr))`,
           gap: 10,
@@ -124,10 +124,11 @@ export function CheckboxGroup<T extends string = string>({
       disabled={disabled}
       style={{ margin: 0, padding: 0, border: 'none', minInlineSize: 0, opacity: disabled ? 0.75 : 1, }}
     >
-      <legend style={{ fontSize: 14, marginBottom: 6 }}>
-        {label}{required ? ' *' : ''}
-      </legend>
-
+      {label && (
+        <legend style={{ fontSize: 14, marginBottom: 6 }}>
+          {label}{required ? ' *' : ''}
+        </legend>
+      )}
 
       {showSelectAll && !disabled && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
