@@ -198,6 +198,7 @@ export default function SkillView() {
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [actionFilter, setActionFilter] = useState<SkillActionType | ''>('');
+  const [traitFilters, setTraitFilters] = useState<Partial<Record<keyof CharacterTraits, number>>>({});
   const [showDescriptionTooltip, setShowDescriptionTooltip] = useState<boolean>(() => {
     try {
       const raw = localStorage.getItem(showDescriptionTooltipStorageKey);
@@ -425,15 +426,20 @@ export default function SkillView() {
     return rows.filter((r) => {
       const matchesCategory = !categoryFilter || r.category === categoryFilter;
       const matchesAction = !actionFilter || r.action === actionFilter;
-      return matchesCategory && matchesAction;
+      if (!matchesCategory || !matchesAction) return false;
+      for (const [key, min] of Object.entries(traitFilters) as [keyof CharacterTraits, number][]) {
+        if (min !== undefined && r.traits[key] < min) return false;
+      }
+      return true;
     });
-  }, [rows, categoryFilter, actionFilter]);
+  }, [rows, categoryFilter, actionFilter, traitFilters]);
 
-  const hasActiveFilters = categoryFilter !== '' || actionFilter !== '';
+  const hasActiveTraitFilters = Object.keys(traitFilters).length > 0;
+  const hasActiveFilters = categoryFilter !== '' || actionFilter !== '' || hasActiveTraitFilters;
 
   useEffect(() => {
     setPage(1);
-  }, [categoryFilter, actionFilter]);
+  }, [categoryFilter, actionFilter, traitFilters]);
 
   useEffect(() => {
     try {
@@ -656,6 +662,7 @@ export default function SkillView() {
                 onClick={() => {
                   setCategoryFilter('');
                   setActionFilter('');
+                  setTraitFilters({});
                 }}
               >
                 Clear filters
@@ -666,6 +673,43 @@ export default function SkillView() {
             <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
             <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
           </div>
+          <details>
+            <summary style={{ cursor: 'pointer', userSelect: 'none' }}>
+              Traits{hasActiveTraitFilters ? ` (${Object.keys(traitFilters).length} active)` : ''}
+            </summary>
+            <div style={{ marginTop: 6 }}>
+              <p style={{ margin: '0 0 6px', fontSize: 13, color: 'var(--muted, #666)' }}>
+                Show only skills where each selected trait is at least the chosen value.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, auto)', gap: '8px 16px', alignItems: 'center' }}>
+                {(['caster', 'combat', 'information', 'stealth', 'support', 'utility'] as (keyof CharacterTraits)[]).map((key) => (
+                  <label key={key} style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
+                    <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{key}</span>
+                    <select
+                      value={traitFilters[key] ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setTraitFilters((prev) => {
+                          const next = { ...prev };
+                          if (val === '') {
+                            delete next[key];
+                          } else {
+                            next[key] = parseInt(val, 10);
+                          }
+                          return next;
+                        });
+                      }}
+                    >
+                      <option value="">Any</option>
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+                        <option key={n} value={n}>{n}+</option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </details>
         </div>
       )}
 

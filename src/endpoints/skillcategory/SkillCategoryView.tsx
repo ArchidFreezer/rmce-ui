@@ -120,6 +120,7 @@ export default function SkillCategoryView() {
   // table
   const [query, setQuery] = useState('');
   const [groupFilter, setGroupFilter] = useState('');
+  const [traitFilters, setTraitFilters] = useState<Partial<Record<keyof CharacterTraits, number>>>({});
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
@@ -336,13 +337,20 @@ export default function SkillCategoryView() {
   ], [groupNameById, sptNameById]);
 
   const filteredRows = useMemo(
-    () => rows.filter((r) => !groupFilter || r.group === groupFilter),
-    [rows, groupFilter]
+    () => rows.filter((r) => {
+      if (groupFilter && r.group !== groupFilter) return false;
+      for (const [key, min] of Object.entries(traitFilters) as [keyof CharacterTraits, number][]) {
+        if (min !== undefined && r.traits[key] < min) return false;
+      }
+      return true;
+    }),
+    [rows, groupFilter, traitFilters]
   );
 
-  const hasActiveFilters = groupFilter !== '';
+  const hasActiveTraitFilters = Object.keys(traitFilters).length > 0;
+  const hasActiveFilters = groupFilter !== '' || hasActiveTraitFilters;
 
-  useEffect(() => { setPage(1); }, [groupFilter]);
+  useEffect(() => { setPage(1); }, [groupFilter, traitFilters]);
 
   const globalFilter = (r: SkillCategory, q: string) => {
     const s = q.toLowerCase();
@@ -521,12 +529,49 @@ export default function SkillCategoryView() {
               </select>
             </label>
             {hasActiveFilters && (
-              <button onClick={() => setGroupFilter('')}>Clear filters</button>
+              <button onClick={() => { setGroupFilter(''); setTraitFilters({}); }}>Clear filters</button>
             )}
             {/* Reset and auto-fit column widths */}
             <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
             <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
           </div>
+          <details>
+            <summary style={{ cursor: 'pointer', userSelect: 'none' }}>
+              Traits{hasActiveTraitFilters ? ` (${Object.keys(traitFilters).length} active)` : ''}
+            </summary>
+            <div style={{ marginTop: 6 }}>
+              <p style={{ margin: '0 0 6px', fontSize: 13, color: 'var(--muted, #666)' }}>
+                Show only skill categories where each selected trait is at least the chosen value.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, auto)', gap: '8px 16px', alignItems: 'center' }}>
+                {(['caster', 'combat', 'information', 'stealth', 'support', 'utility'] as (keyof CharacterTraits)[]).map((key) => (
+                  <label key={key} style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
+                    <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{key}</span>
+                    <select
+                      value={traitFilters[key] ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setTraitFilters((prev) => {
+                          const next = { ...prev };
+                          if (val === '') {
+                            delete next[key];
+                          } else {
+                            next[key] = parseInt(val, 10);
+                          }
+                          return next;
+                        });
+                      }}
+                    >
+                      <option value="">Any</option>
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+                        <option key={n} value={n}>{n}+</option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </details>
         </div>
       )}
 
