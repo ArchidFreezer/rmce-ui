@@ -12,6 +12,7 @@ import {
 
 import {
   DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
+  CharacterTraitsEditor,
   CheckboxGroup,
   CheckboxInput,
   ChoiceListEditor,
@@ -46,6 +47,7 @@ import type {
   SkillValue,
   SpellList,
 } from '../../types';
+import type { CharacterTraits } from '../../types/base';
 
 import {
   REALMS, type Realm,
@@ -105,6 +107,7 @@ type FormState = {
   skillGroupSkillDevelopmentTypeChoices: IdChoiceVM[];
 
   skillCategoryCosts: CategoryCostVM[];
+  traits: CharacterTraits;
 };
 
 type FormErrors = {
@@ -157,6 +160,7 @@ const emptyVM = (): FormState => ({
   skillGroupSkillDevelopmentTypeChoices: [],
 
   skillCategoryCosts: [],
+  traits: { caster: 5, combat: 5, information: 5, stealth: 5, support: 5, utility: 5 },
 });
 
 // ---------- VM converters ----------
@@ -213,6 +217,7 @@ const toVM = (x: Profession): FormState => ({
     category: r.category,
     cost: r.cost,
   })),
+  traits: x.traits ?? { caster: 5, combat: 5, information: 5, stealth: 5, support: 5, utility: 5 },
 });
 
 const fromVM = (vm: FormState): Profession => ({
@@ -290,6 +295,7 @@ const fromVM = (vm: FormState): Profession => ({
     category: r.category,
     cost: r.cost,
   })),
+  traits: vm.traits,
 });
 
 /* ------------------------------------------------------------------ */
@@ -316,6 +322,7 @@ export default function ProfessionView() {
   const [query, setQuery] = useState('');
   const [spellUserTypeFilter, setSpellUserTypeFilter] = useState<SpellUserType | ''>('');
   const [realmFilters, setRealmFilters] = useState<Realm[]>([]);
+  const [traitFilters, setTraitFilters] = useState<Partial<Record<keyof CharacterTraits, number>>>({});
   const [showDescriptionTooltip, setShowDescriptionTooltip] = useState<boolean>(() => {
     try {
       const raw = localStorage.getItem(showDescriptionTooltipStorageKey);
@@ -626,15 +633,20 @@ export default function ProfessionView() {
     return rows.filter((r) => {
       const matchesSpellUserType = !spellUserTypeFilter || r.spellUserType === spellUserTypeFilter;
       const matchesRealms = realmFilters.length === 0 || realmFilters.every((realm) => r.realms.includes(realm));
-      return matchesSpellUserType && matchesRealms;
+      if (!matchesSpellUserType || !matchesRealms) return false;
+      for (const [key, min] of Object.entries(traitFilters) as [keyof CharacterTraits, number][]) {
+        if (min !== undefined && r.traits[key] < min) return false;
+      }
+      return true;
     });
-  }, [rows, spellUserTypeFilter, realmFilters]);
+  }, [rows, spellUserTypeFilter, realmFilters, traitFilters]);
 
-  const hasActiveFilters = spellUserTypeFilter !== '' || realmFilters.length > 0;
+  const hasActiveTraitFilters = Object.keys(traitFilters).length > 0;
+  const hasActiveFilters = spellUserTypeFilter !== '' || realmFilters.length > 0 || hasActiveTraitFilters;
 
   useEffect(() => {
     setPage(1);
-  }, [spellUserTypeFilter, realmFilters]);
+  }, [spellUserTypeFilter, realmFilters, traitFilters]);
 
   useEffect(() => {
     try {
@@ -856,6 +868,7 @@ export default function ProfessionView() {
                 onClick={() => {
                   setSpellUserTypeFilter('');
                   setRealmFilters([]);
+                  setTraitFilters({});
                 }}
               >
                 Clear filters
@@ -867,16 +880,57 @@ export default function ProfessionView() {
             <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-            <CheckboxGroup<Realm>
-              label="Realms"
-              value={realmFilters}
-              options={realmOptions}
-              onChange={setRealmFilters}
-              inline
-              showSelectAll
-            />
-          </div>
+          <details>
+            <summary style={{ cursor: 'pointer', userSelect: 'none' }}>
+              Realms{realmFilters.length > 0 ? ` (${realmFilters.length} selected)` : ''}
+            </summary>
+            <div style={{ marginTop: 6 }}>
+              <CheckboxGroup<Realm>
+                value={realmFilters}
+                options={realmOptions}
+                onChange={setRealmFilters}
+                inline
+                showSelectAll
+              />
+            </div>
+          </details>
+          <details>
+            <summary style={{ cursor: 'pointer', userSelect: 'none' }}>
+              Traits{hasActiveTraitFilters ? ` (${Object.keys(traitFilters).length} active)` : ''}
+            </summary>
+            <div style={{ marginTop: 6 }}>
+              <p style={{ margin: '0 0 6px', fontSize: 13, color: 'var(--muted, #666)' }}>
+                Show only professions where each selected trait is at least the chosen value.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, auto)', gap: '8px 16px', alignItems: 'center' }}>
+                {(['caster', 'combat', 'information', 'stealth', 'support', 'utility'] as (keyof CharacterTraits)[]).map((key) => (
+                  <label key={key} style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
+                    <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{key}</span>
+                    <select
+                      value={traitFilters[key] ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setTraitFilters((prev) => {
+                          const next = { ...prev };
+                          if (val === '') {
+                            delete next[key];
+                          } else {
+                            next[key] = parseInt(val, 10);
+                          }
+                          return next;
+                        });
+                      }}
+                    >
+                      <option value="">Any</option>
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+                        <option key={n} value={n}>{n}+</option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </details>
         </div>
       )}
 
@@ -995,6 +1049,15 @@ export default function ProfessionView() {
               </div>
               {errors.stats && <div style={{ color: '#b00020', marginTop: 6 }}>{errors.stats}</div>}
             </section>
+
+            {/* Character Traits */}
+            <div style={{ marginTop: 12 }}>
+              <CharacterTraitsEditor
+                value={form.traits}
+                onChange={(t) => setForm(s => ({ ...s, traits: t }))}
+                disabled={viewing}
+              />
+            </div>
 
             {/* Base Spell List Choices */}
             <section style={{ marginTop: 12 }}>

@@ -8,6 +8,7 @@ import type {
 } from './enum';
 
 import type { Named, PersistentValue, PersistentDevelopmentTypeValue, SkillDevelopmentTypeValue, SkillValue } from './base';
+import type { CharacterTraits } from './base';
 
 export interface ProfessionSpellListChoice {
   numChoices: number;
@@ -70,6 +71,7 @@ export interface Profession extends Named {
   skillGroupSkillDevelopmentTypeChoices: ProfessionGroupSkillDevelopmentTypeChoice[];
 
   skillCategoryCosts: ProfessionSkillCategoryCost[];
+  traits: CharacterTraits;
 }
 
 export interface ProfessionsPayload {
