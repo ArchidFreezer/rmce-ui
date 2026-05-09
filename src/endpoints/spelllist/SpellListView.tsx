@@ -7,6 +7,7 @@ import {
 
 import {
   DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
+  CharacterTraitsEditor,
   CheckboxGroup,
   CheckboxInput,
   LabeledInput,
@@ -20,6 +21,7 @@ import type {
   Book,
   SpellList,
 } from '../../types';
+import type { CharacterTraits } from '../../types/base';
 
 import {
   SPELL_TYPES, SpellType,
@@ -40,9 +42,12 @@ type FormState = {
   name: string;
   book: string;
   type: string;          // keep as string while typing; validate to SpellType
+  description: string;
   evil: boolean;
   summoning: boolean;
+  directed: boolean;
   realms: Realm[];       // keep as Realm[] in the form (CheckboxGroup)
+  traits: CharacterTraits;
 };
 
 type FormErrors = {
@@ -54,10 +59,10 @@ type FormErrors = {
 };
 
 function emptyVM(): FormState {
-  return { id: prefix, name: '', book: '', type: '', evil: false, summoning: false, realms: [] };
+  return { id: prefix, name: '', book: '', type: '', description: '', evil: false, summoning: false, directed: false, realms: [], traits: { caster: 5, combat: 5, information: 5, stealth: 5, support: 5, utility: 5 } };
 }
 function toVM(s: SpellList): FormState {
-  return { ...s, type: s.type };
+  return { ...s, type: s.type, traits: s.traits ?? { caster: 5, combat: 5, information: 5, stealth: 5, support: 5, utility: 5 } };
 }
 
 function fromVM(vm: FormState): SpellList {
@@ -66,9 +71,12 @@ function fromVM(vm: FormState): SpellList {
     name: vm.name.trim(),
     book: vm.book.trim(),
     type: vm.type.trim() as SpellType,        // safe after validation
+    description: vm.description.trim(),
     evil: !!vm.evil,
     summoning: !!vm.summoning,
+    directed: !!vm.directed,
     realms: [...vm.realms],
+    traits: vm.traits,
   };
 }
 
@@ -84,7 +92,9 @@ export default function SpellListView() {
   const [typeFilter, setTypeFilter] = useState<SpellType | ''>('');
   const [evilFilter, setEvilFilter] = useState('');
   const [summoningFilter, setSummoningFilter] = useState('');
+  const [bookFilters, setBookFilters] = useState<string[]>([]);
   const [realmFilters, setRealmFilters] = useState<Realm[]>([]);
+  const [traitFilters, setTraitFilters] = useState<Partial<Record<keyof CharacterTraits, number>>>({});
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
@@ -138,6 +148,21 @@ export default function SpellListView() {
     [books]
   );
 
+  const bookFilterOptions = useMemo(() => {
+    const ids = new Set<string>();
+    for (const row of rows) {
+      if (row.book) ids.add(row.book);
+    }
+    return Array.from(ids)
+      .map((id) => ({ value: id, label: bookNameById.get(id) ?? id }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [rows, bookNameById]);
+
+  useEffect(() => {
+    const allowed = new Set(bookFilterOptions.map((o) => o.value));
+    setBookFilters((prev) => prev.filter((id) => allowed.has(id)));
+  }, [bookFilterOptions]);
+
 
   /* ------------------------------------------------------------------ */
   /* Validation                                                         */
@@ -183,6 +208,7 @@ export default function SpellListView() {
     return [
       { id: 'id', header: 'ID', accessor: r => r.id, sortType: 'string', minWidth: 260 },
       { id: 'name', header: 'Name', accessor: r => r.name, sortType: 'string', minWidth: 160 },
+      { id: 'description', header: 'Description', accessor: r => r.description, sortType: 'string', minWidth: 200 },
 
       {
         id: 'book', header: 'Book', accessor: (r) => bookNameById.get(r.book) ?? r.book, sortType: 'string', minWidth: 240,
@@ -200,6 +226,10 @@ export default function SpellListView() {
       {
         id: 'summoning', header: 'Summoning', accessor: r => Number(r.summoning), sortType: 'number', minWidth: 90,
         render: r => (r.summoning ? 'Yes' : 'No'),
+      },
+      {
+        id: 'directed', header: 'Directed', accessor: r => Number(r.directed), sortType: 'number', minWidth: 90,
+        render: r => (r.directed ? 'Yes' : 'No'),
       },
       {
         id: 'realms', header: 'Realms', accessor: r => r.realms.length, sortType: 'number', minWidth: 260,
@@ -224,15 +254,20 @@ export default function SpellListView() {
       if (typeFilter && r.type !== typeFilter) return false;
       if (evilFilter !== '' && r.evil !== (evilFilter === 'true')) return false;
       if (summoningFilter !== '' && r.summoning !== (summoningFilter === 'true')) return false;
+      if (bookFilters.length > 0 && !bookFilters.includes(r.book)) return false;
       if (realmFilters.length > 0 && !realmFilters.every((realm) => r.realms.includes(realm))) return false;
+      for (const [key, min] of Object.entries(traitFilters) as [keyof CharacterTraits, number][]) {
+        if (min !== undefined && r.traits[key] < min) return false;
+      }
       return true;
     }),
-    [rows, typeFilter, evilFilter, summoningFilter, realmFilters]
+    [rows, typeFilter, evilFilter, summoningFilter, bookFilters, realmFilters, traitFilters]
   );
 
-  const hasActiveFilters = typeFilter !== '' || evilFilter !== '' || summoningFilter !== '' || realmFilters.length > 0;
+  const hasActiveTraitFilters = Object.keys(traitFilters).length > 0;
+  const hasActiveFilters = typeFilter !== '' || evilFilter !== '' || summoningFilter !== '' || bookFilters.length > 0 || realmFilters.length > 0 || hasActiveTraitFilters;
 
-  useEffect(() => { setPage(1); }, [typeFilter, evilFilter, summoningFilter, realmFilters]);
+  useEffect(() => { setPage(1); }, [typeFilter, evilFilter, summoningFilter, bookFilters, realmFilters, traitFilters]);
 
   const globalFilter = (r: SpellList, q: string) => {
     const s = q.toLowerCase();
@@ -425,21 +460,79 @@ export default function SpellListView() {
               </select>
             </label>
             {hasActiveFilters && (
-              <button onClick={() => { setTypeFilter(''); setEvilFilter(''); setSummoningFilter(''); setRealmFilters([]); }}>Clear filters</button>
+              <button onClick={() => { setTypeFilter(''); setEvilFilter(''); setSummoningFilter(''); setBookFilters([]); setRealmFilters([]); setTraitFilters({}); }}>Clear filters</button>
             )}
             {/* Reset and auto-fit column widths */}
             <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
             <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
           </div>
-          <CheckboxGroup<Realm>
-            label="Realms"
-            value={realmFilters}
-            options={SPELL_REALMS}
-            onChange={setRealmFilters}
-            inline
-            showSelectAll
-            columns={4}
-          />
+          <details>
+            <summary style={{ cursor: 'pointer', userSelect: 'none' }}>
+              Books{bookFilters.length > 0 ? ` (${bookFilters.length} selected)` : ''}
+            </summary>
+            <div style={{ marginTop: 6 }}>
+              <CheckboxGroup<string>
+                value={bookFilters}
+                options={bookFilterOptions}
+                onChange={setBookFilters}
+                inline
+                showSelectAll
+                columns={4}
+              />
+            </div>
+          </details>
+          <details>
+            <summary style={{ cursor: 'pointer', userSelect: 'none' }}>
+              Realms{realmFilters.length > 0 ? ` (${realmFilters.length} selected)` : ''}
+            </summary>
+            <div style={{ marginTop: 6 }}>
+              <CheckboxGroup<Realm>
+                value={realmFilters}
+                options={SPELL_REALMS}
+                onChange={setRealmFilters}
+                inline
+                showSelectAll
+                columns={5}
+              />
+            </div>
+          </details>
+          <details>
+            <summary style={{ cursor: 'pointer', userSelect: 'none' }}>
+              Traits{hasActiveTraitFilters ? ` (${Object.keys(traitFilters).length} active)` : ''}
+            </summary>
+            <div style={{ marginTop: 6 }}>
+              <p style={{ margin: '0 0 6px', fontSize: 13, color: 'var(--muted, #666)' }}>
+                Show only spell lists where each selected trait is at least the chosen value.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, auto)', gap: '8px 16px', alignItems: 'center' }}>
+                {(['caster', 'combat', 'information', 'stealth', 'support', 'utility'] as (keyof CharacterTraits)[]).map((key) => (
+                  <label key={key} style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
+                    <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{key}</span>
+                    <select
+                      value={traitFilters[key] ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setTraitFilters((prev) => {
+                          const next = { ...prev };
+                          if (val === '') {
+                            delete next[key];
+                          } else {
+                            next[key] = parseInt(val, 10);
+                          }
+                          return next;
+                        });
+                      }}
+                    >
+                      <option value="">Any</option>
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+                        <option key={n} value={n}>{n}+</option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </details>
         </div>
       )}
 
@@ -455,6 +548,10 @@ export default function SpellListView() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <LabeledInput label="ID" value={form.id} onChange={makeIDOnChange<typeof form>('id', setForm, prefix)} disabled={!!editingId || viewing} error={errors.id} />
               <LabeledInput label="Name" value={form.name} onChange={(v) => setForm(s => ({ ...s, name: v }))} disabled={viewing} error={errors.name} />
+
+              <div style={{ gridColumn: '1 / -1' }}>
+                <LabeledInput label="Description" value={form.description} onChange={(v) => setForm(s => ({ ...s, description: v }))} disabled={viewing} />
+              </div>
 
               <LabeledSelect
                 label="Book"
@@ -475,8 +572,11 @@ export default function SpellListView() {
                 error={viewing ? undefined : errors.type}
               />
 
-              <CheckboxInput label="Evil" checked={form.evil} onChange={(c) => setForm(s => ({ ...s, evil: c }))} disabled={viewing} />
-              <CheckboxInput label="Summoning" checked={form.summoning} onChange={(c) => setForm(s => ({ ...s, summoning: c }))} disabled={viewing} />
+              <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 24 }}>
+                <CheckboxInput label="Evil" checked={form.evil} onChange={(c) => setForm(s => ({ ...s, evil: c }))} disabled={viewing} />
+                <CheckboxInput label="Summoning" checked={form.summoning} onChange={(c) => setForm(s => ({ ...s, summoning: c }))} disabled={viewing} />
+                <CheckboxInput label="Directed" checked={form.directed} onChange={(c) => setForm(s => ({ ...s, directed: c }))} disabled={viewing} />
+              </div>
 
               <div style={{ gridColumn: '1 / -1' }}>
                 <CheckboxGroup<Realm>
@@ -487,10 +587,18 @@ export default function SpellListView() {
                   disabled={viewing}
                   error={viewing ? undefined : errors.realms}
                   helperText="Select at least one"
-                  columns={4}
+                  columns={5}
                   showSelectAll
                 />
               </div>
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              <CharacterTraitsEditor
+                value={form.traits}
+                onChange={(t) => setForm(s => ({ ...s, traits: t }))}
+                disabled={viewing}
+              />
             </div>
 
             {/* Action buttons */}

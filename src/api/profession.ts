@@ -15,6 +15,7 @@ import type {
   SkillDevelopmentTypeValue,
   SkillValue,
 } from '../types';
+import type { CharacterTraits } from '../types/base';
 
 const BASE = '/rmce/data/profession';
 
@@ -25,6 +26,22 @@ const asInt = (v: unknown) => {
 };
 const asStringArray = (v: unknown): string[] =>
   Array.isArray(v) ? v.map((x) => String(x ?? '')).filter(Boolean) : [];
+
+const asTraitInt = (v: unknown): number => {
+  const n = parseInt(String(v ?? ''), 10);
+  return Number.isFinite(n) ? Math.min(9, Math.max(1, n)) : 5;
+};
+function traitsFromJson(t: unknown): CharacterTraits {
+  const x = (t && typeof t === 'object') ? t as Record<string, unknown> : {};
+  return {
+    caster: asTraitInt(x['caster']),
+    combat: asTraitInt(x['combat']),
+    information: asTraitInt(x['information']),
+    stealth: asTraitInt(x['stealth']),
+    support: asTraitInt(x['support']),
+    utility: asTraitInt(x['utility']),
+  };
+}
 
 function spellListChoiceFromJson(x: any): ProfessionSpellListChoice {
   return {
@@ -178,6 +195,7 @@ function fromJson(x: any): Profession {
     skillCategoryCosts: Array.isArray(x?.skillCategoryCosts)
       ? x.skillCategoryCosts.map(skillCategoryCostFromJson)
       : [],
+    traits: traitsFromJson(x?.traits),
   };
 }
 

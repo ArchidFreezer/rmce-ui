@@ -51,6 +51,27 @@ function clearWidths(persistKey?: string) {
   } catch { }
 }
 
+function loadSort(persistKey?: string): SortState | null {
+  if (!persistKey) return null;
+  try {
+    const s = localStorage.getItem(`${persistKey}:sort`);
+    return s ? (JSON.parse(s) as SortState) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveSort(persistKey: string | undefined, sort: SortState | null) {
+  if (!persistKey) return;
+  try {
+    if (sort) {
+      localStorage.setItem(`${persistKey}:sort`, JSON.stringify(sort));
+    } else {
+      localStorage.removeItem(`${persistKey}:sort`);
+    }
+  } catch { }
+}
+
 export interface DataTableHandle {
   /** Clears persisted column widths and resets the current rendered widths. */
   resetColumnWidths: () => void;
@@ -280,7 +301,7 @@ const DataTableInner = <T,>(
   };
 
   // ---------- Controlled/uncontrolled sort ----------
-  const [innerSort, setInnerSort] = useState<SortState | null>(initialSort);
+  const [innerSort, setInnerSort] = useState<SortState | null>(() => loadSort(persistKey) ?? initialSort);
   const sortState = sortProp !== undefined ? sortProp : innerSort;
 
   // ---------- Filter ----------
@@ -380,7 +401,12 @@ const DataTableInner = <T,>(
       return { colId: col.id, dir: sortState.dir === 'asc' ? 'desc' : 'asc' as SortDir };
     })();
 
-    onSortChange ? onSortChange(next) : setInnerSort(next);
+    if (onSortChange) {
+      onSortChange(next);
+    } else {
+      setInnerSort(next);
+      saveSort(persistKey, next);
+    }
   };
 
   // ---------- Column resizing state ----------

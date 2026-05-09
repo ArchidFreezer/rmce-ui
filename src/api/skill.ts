@@ -3,6 +3,7 @@ import { fetchJson, sendJson } from './client';
 import type {
   Skill, SkillsPayload,
 } from '../types';
+import type { CharacterTraits } from '../types/base';
 
 const BASE = '/rmce/data/skill';
 
@@ -12,9 +13,25 @@ const asFloat = (v: unknown) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : NaN;
 };
+const asTraitInt = (v: unknown): number => {
+  const n = parseInt(String(v ?? ''), 10);
+  return Number.isFinite(n) ? Math.min(9, Math.max(1, n)) : 5;
+};
 
 function asStringArray(v: unknown): string[] {
   return Array.isArray(v) ? v.map(x => String(x ?? '')).filter(s => s.length > 0) : [];
+}
+
+function traitsFromJson(t: unknown): CharacterTraits {
+  const x = (t && typeof t === 'object') ? t as Record<string, unknown> : {};
+  return {
+    caster: asTraitInt(x['caster']),
+    combat: asTraitInt(x['combat']),
+    information: asTraitInt(x['information']),
+    stealth: asTraitInt(x['stealth']),
+    support: asTraitInt(x['support']),
+    utility: asTraitInt(x['utility']),
+  };
 }
 
 export async function fetchSkills(): Promise<Skill[]> {
@@ -38,6 +55,7 @@ export async function fetchSkills(): Promise<Skill[]> {
     stats: asStringArray(x.stats) as Skill['stats'],
     exhaustion: asFloat(x.exhaustion),
     distanceMultiplier: asFloat(x.distanceMultiplier),
+    traits: traitsFromJson(x.traits),
   }));
 }
 

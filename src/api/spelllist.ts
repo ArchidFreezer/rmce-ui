@@ -3,6 +3,7 @@ import { fetchJson, sendJson } from './client';
 import type {
   SpellList, SpellListsPayload,
 } from '../types';
+import type { CharacterTraits } from '../types/base';
 
 import {
   SPELL_TYPES, SpellType,
@@ -26,6 +27,21 @@ function asRealmArray(v: unknown): Realm[] {
 function asBool(v: unknown): boolean {
   return v === true || v === 'true' || v === 1 || v === '1';
 }
+const asTraitInt = (v: unknown): number => {
+  const n = parseInt(String(v ?? ''), 10);
+  return Number.isFinite(n) ? Math.min(9, Math.max(1, n)) : 5;
+};
+function traitsFromJson(t: unknown): CharacterTraits {
+  const x = (t && typeof t === 'object') ? t as Record<string, unknown> : {};
+  return {
+    caster: asTraitInt(x['caster']),
+    combat: asTraitInt(x['combat']),
+    information: asTraitInt(x['information']),
+    stealth: asTraitInt(x['stealth']),
+    support: asTraitInt(x['support']),
+    utility: asTraitInt(x['utility']),
+  };
+}
 
 /** GET /rmce/data/spelllist → { spelllists: SpellList[] } */
 export async function fetchSpellLists(): Promise<SpellList[]> {
@@ -38,9 +54,12 @@ export async function fetchSpellLists(): Promise<SpellList[]> {
     name: String(s.name),
     book: String(s.book ?? ''),
     type: asSpellType(s.type),
+    description: String(s.description ?? ''),
     evil: asBool(s.evil),
     summoning: asBool(s.summoning),
+    directed: asBool(s.directed),
     realms: asRealmArray(s.realms),
+    traits: traitsFromJson(s.traits),
   }));
 }
 

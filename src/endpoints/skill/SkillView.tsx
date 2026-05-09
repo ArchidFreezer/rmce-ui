@@ -9,6 +9,7 @@ import {
 
 import {
   DataTable, DataTableHandle, DataTableSearchInput, type ColumnDef,
+  CharacterTraitsEditor,
   CheckboxInput,
   LabeledInput,
   LabeledSelect,
@@ -23,6 +24,7 @@ import type {
   SkillCategory,
   SkillGroup,
 } from '../../types';
+import type { CharacterTraits } from '../../types/base';
 
 import {
   SKILL_ACTION_TYPES, type SkillActionType,
@@ -69,6 +71,8 @@ type FormState = {
   // floats as strings while typing
   exhaustion: string;
   distanceMultiplier: string;
+
+  traits: CharacterTraits;
 };
 
 type FormErrors = {
@@ -108,6 +112,8 @@ const emptyVM = (): FormState => ({
 
   exhaustion: '',
   distanceMultiplier: '',
+
+  traits: { caster: 5, combat: 5, information: 5, stealth: 5, support: 5, utility: 5 },
 });
 
 function toVM(x: Skill): FormState {
@@ -134,6 +140,7 @@ function toVM(x: Skill): FormState {
 
     exhaustion: String(Number.isFinite(x.exhaustion) ? x.exhaustion : ''),
     distanceMultiplier: String(Number.isFinite(x.distanceMultiplier) ? x.distanceMultiplier : ''),
+    traits: x.traits ?? { caster: 5, combat: 5, information: 5, stealth: 5, support: 5, utility: 5 },
   };
 }
 
@@ -167,6 +174,7 @@ function fromVM(vm: FormState): Skill {
     stats,
     exhaustion,
     distanceMultiplier,
+    traits: vm.traits,
   };
 }
 
@@ -190,6 +198,7 @@ export default function SkillView() {
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [actionFilter, setActionFilter] = useState<SkillActionType | ''>('');
+  const [traitFilters, setTraitFilters] = useState<Partial<Record<keyof CharacterTraits, number>>>({});
   const [showDescriptionTooltip, setShowDescriptionTooltip] = useState<boolean>(() => {
     try {
       const raw = localStorage.getItem(showDescriptionTooltipStorageKey);
@@ -299,11 +308,10 @@ export default function SkillView() {
     if (!draft.action) e.action = 'Action is required';
     else if (!(SKILL_ACTION_TYPES as readonly string[]).includes(draft.action)) e.action = 'Pick a valid SkillActionType';
 
-    // stats: require at least one
+    // stats: optional, but any selected must be valid
     const chosen: Stat[] = [draft.stat1, draft.stat2, draft.stat3].filter(Boolean) as Stat[];
     const validStats = new Set(STATS);
-    if (chosen.length === 0) e.stats = 'Select at least one Stat';
-    else if (!chosen.every(s => validStats.has(s))) e.stats = 'Stats must be valid';
+    if (chosen.length > 0 && !chosen.every(s => validStats.has(s))) e.stats = 'Stats must be valid';
 
     // floats: required and must parse
     const ex = draft.exhaustion.trim();
@@ -418,15 +426,20 @@ export default function SkillView() {
     return rows.filter((r) => {
       const matchesCategory = !categoryFilter || r.category === categoryFilter;
       const matchesAction = !actionFilter || r.action === actionFilter;
-      return matchesCategory && matchesAction;
+      if (!matchesCategory || !matchesAction) return false;
+      for (const [key, min] of Object.entries(traitFilters) as [keyof CharacterTraits, number][]) {
+        if (min !== undefined && r.traits[key] < min) return false;
+      }
+      return true;
     });
-  }, [rows, categoryFilter, actionFilter]);
+  }, [rows, categoryFilter, actionFilter, traitFilters]);
 
-  const hasActiveFilters = categoryFilter !== '' || actionFilter !== '';
+  const hasActiveTraitFilters = Object.keys(traitFilters).length > 0;
+  const hasActiveFilters = categoryFilter !== '' || actionFilter !== '' || hasActiveTraitFilters;
 
   useEffect(() => {
     setPage(1);
-  }, [categoryFilter, actionFilter]);
+  }, [categoryFilter, actionFilter, traitFilters]);
 
   useEffect(() => {
     try {
@@ -649,6 +662,7 @@ export default function SkillView() {
                 onClick={() => {
                   setCategoryFilter('');
                   setActionFilter('');
+                  setTraitFilters({});
                 }}
               >
                 Clear filters
@@ -659,6 +673,43 @@ export default function SkillView() {
             <button onClick={() => dtRef.current?.resetColumnWidths()} title="Reset all column widths" style={{ marginLeft: 'auto' }}>Reset column widths</button>
             <button onClick={() => dtRef.current?.autoFitAllColumns()}>Auto-fit all columns</button>
           </div>
+          <details>
+            <summary style={{ cursor: 'pointer', userSelect: 'none' }}>
+              Traits{hasActiveTraitFilters ? ` (${Object.keys(traitFilters).length} active)` : ''}
+            </summary>
+            <div style={{ marginTop: 6 }}>
+              <p style={{ margin: '0 0 6px', fontSize: 13, color: 'var(--muted, #666)' }}>
+                Show only skills where each selected trait is at least the chosen value.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, auto)', gap: '8px 16px', alignItems: 'center' }}>
+                {(['caster', 'combat', 'information', 'stealth', 'support', 'utility'] as (keyof CharacterTraits)[]).map((key) => (
+                  <label key={key} style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
+                    <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{key}</span>
+                    <select
+                      value={traitFilters[key] ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setTraitFilters((prev) => {
+                          const next = { ...prev };
+                          if (val === '') {
+                            delete next[key];
+                          } else {
+                            next[key] = parseInt(val, 10);
+                          }
+                          return next;
+                        });
+                      }}
+                    >
+                      <option value="">Any</option>
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+                        <option key={n} value={n}>{n}+</option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </details>
         </div>
       )}
 
@@ -915,6 +966,15 @@ export default function SkillView() {
                   </div>
                 </>
               )}
+            </div>
+
+            {/* Character Traits */}
+            <div style={{ marginTop: 12 }}>
+              <CharacterTraitsEditor
+                value={form.traits}
+                onChange={(t) => setForm(s => ({ ...s, traits: t }))}
+                disabled={viewing}
+              />
             </div>
 
             {/* Action buttons */}
