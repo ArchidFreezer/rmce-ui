@@ -380,6 +380,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
   const [autoingInitialChoices, setAutoingInitialChoices] = useState(false);
   const [savingStats, setSavingStats] = useState(false);
   const [autoingStats, setAutoingStats] = useState(false);
+  const [autoingHobbyChoices, setAutoingHobbyChoices] = useState(false);
   const [savingHobbyChoices, setSavingHobbyChoices] = useState(false);
   const [savingBackgroundChoices, setSavingBackgroundChoices] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -1996,6 +1997,23 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
     } finally {
       setAutoingStats(false);
       setSavingStats(false);
+    }
+  };
+
+  const handleAutoHobbyChoices = async () => {
+    if (autoingHobbyChoices) return;
+    setAutoingHobbyChoices(true);
+    setSavingHobbyChoices(true);
+    try {
+      const response = await setCharacterHobbyChoices({ ...characterBuilder, autoBuild: true });
+      setCharacterBuilder(response);
+      const next = STEP_ORDER[STEP_ORDER.indexOf('hobby') + 1];
+      if (next) setStep(next);
+    } catch (e) {
+      toast({ variant: 'danger', title: 'Auto hobby choices failed', description: String(e instanceof Error ? e.message : e) });
+    } finally {
+      setAutoingHobbyChoices(false);
+      setSavingHobbyChoices(false);
     }
   };
 
@@ -3890,6 +3908,11 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
               {step === 'stats' && (
                 <button type="button" onClick={handleAutoStats} disabled={autoingStats || savingStats}>
                   {autoingStats ? 'Auto…' : 'Auto'}
+                </button>
+              )}
+              {step === 'hobby' && (
+                <button type="button" onClick={handleAutoHobbyChoices} disabled={autoingHobbyChoices || savingHobbyChoices}>
+                  {autoingHobbyChoices ? 'Auto…' : 'Auto'}
                 </button>
               )}
               <button type="button" onClick={goNext} disabled={!canGoNext || savingPrimaryDefinition || savingInitialChoices || savingStats || savingPhysique || savingHobbyChoices || savingBackgroundChoices}>Next</button>
