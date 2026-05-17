@@ -4,6 +4,7 @@ import type { Character, CharacterBuilder, CharacterLeveller, PersistentValue, L
 
 export type SetCharacterBackgroundChoicesRequest = {
   id: string;
+  autoBuild?: boolean;
   statGains: boolean;
   extraMoney: 0 | 1 | 2;
   backgroundLanguages: LanguageAbility[];

@@ -382,6 +382,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
   const [autoingStats, setAutoingStats] = useState(false);
   const [autoingHobbyChoices, setAutoingHobbyChoices] = useState(false);
   const [savingHobbyChoices, setSavingHobbyChoices] = useState(false);
+  const [autoingBackgroundChoices, setAutoingBackgroundChoices] = useState(false);
   const [savingBackgroundChoices, setSavingBackgroundChoices] = useState(false);
   const [applying, setApplying] = useState(false);
 
@@ -2014,6 +2015,24 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
     } finally {
       setAutoingHobbyChoices(false);
       setSavingHobbyChoices(false);
+    }
+  };
+
+  const handleAutoBackgroundChoices = async () => {
+    if (autoingBackgroundChoices) return;
+    setAutoingBackgroundChoices(true);
+    setSavingBackgroundChoices(true);
+    try {
+      if (!characterBuilder.id) throw new Error('Character builder id is missing.');
+      const response = await setCharacterBackgroundChoices({ id: characterBuilder.id, autoBuild: true, statGains: false, extraMoney: 0, backgroundLanguages: [], backgroundSkillBonus: [], backgroundCategoryBonus: [], backgroundItemCount: 0, spellListSpecialBonuses: [] });
+      setCreatedCharacter(response);
+      const next = STEP_ORDER[STEP_ORDER.indexOf('background') + 1];
+      if (next) setStep(next);
+    } catch (e) {
+      toast({ variant: 'danger', title: 'Auto background choices failed', description: String(e instanceof Error ? e.message : e) });
+    } finally {
+      setAutoingBackgroundChoices(false);
+      setSavingBackgroundChoices(false);
     }
   };
 
@@ -3913,6 +3932,11 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
               {step === 'hobby' && (
                 <button type="button" onClick={handleAutoHobbyChoices} disabled={autoingHobbyChoices || savingHobbyChoices}>
                   {autoingHobbyChoices ? 'Auto…' : 'Auto'}
+                </button>
+              )}
+              {step === 'background' && (
+                <button type="button" onClick={handleAutoBackgroundChoices} disabled={autoingBackgroundChoices || savingBackgroundChoices}>
+                  {autoingBackgroundChoices ? 'Auto…' : 'Auto'}
                 </button>
               )}
               <button type="button" onClick={goNext} disabled={!canGoNext || savingPrimaryDefinition || savingInitialChoices || savingStats || savingPhysique || savingHobbyChoices || savingBackgroundChoices}>Next</button>
