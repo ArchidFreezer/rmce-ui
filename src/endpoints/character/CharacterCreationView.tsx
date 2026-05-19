@@ -18,6 +18,7 @@ import {
   setCharacterHobbyChoices,
   setCharacterPrimaryChoices,
   setPrimaryDefinition,
+  autoPrimaryCharacter,
   type SetCharacterBackgroundChoicesRequest,
 } from '../../api';
 
@@ -384,6 +385,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
   const [savingHobbyChoices, setSavingHobbyChoices] = useState(false);
   const [autoingBackgroundChoices, setAutoingBackgroundChoices] = useState(false);
   const [savingBackgroundChoices, setSavingBackgroundChoices] = useState(false);
+  const [autoingPrimary, setAutoingPrimary] = useState(false);
   const [applying, setApplying] = useState(false);
 
   useEffect(() => {
@@ -2033,6 +2035,28 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
     } finally {
       setAutoingBackgroundChoices(false);
       setSavingBackgroundChoices(false);
+    }
+  };
+
+  const handleAutoPrimary = async () => {
+    if (autoingPrimary) return;
+    setAutoingPrimary(true);
+    try {
+      const response = await autoPrimaryCharacter({
+        ...characterBuilder,
+        name: characterName.trim(),
+        pc: isPC,
+        race: raceId,
+        culture: cultureId,
+        profession: professionId,
+        magicalRealms: selectedRealms,
+      });
+      setCreatedCharacter(response);
+      setStep('summary');
+    } catch (e) {
+      toast({ variant: 'danger', title: 'Auto build failed', description: String(e instanceof Error ? e.message : e) });
+    } finally {
+      setAutoingPrimary(false);
     }
   };
 
@@ -3884,7 +3908,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
             </section>
           )}
 
-          {step === 'summary' && (
+          {step === 'summary' && createdCharacter && (
             <section style={{ display: 'grid', gap: 12 }}>
               <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10 }}>
                 <h4 style={{ margin: '0 0 8px' }}>Summary</h4>
@@ -3892,10 +3916,10 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
                   <li>Name: {characterName || 'None'}</li>
                   <li>Sex: {characterBuilder.male ? 'Male' : 'Female'}</li>
                   <li>Race: {race?.name ?? raceId}</li>
-                  <li>Height: {characterBuilder.height > 0 ? `${Math.floor(characterBuilder.height / 12)}' ${characterBuilder.height % 12}"` : 'Not generated'}</li>
-                  <li>Weight: {characterBuilder.weight > 0 ? `${characterBuilder.weight} lbs` : 'Not generated'}</li>
-                  <li>Build: {characterBuilder.buildDescription || 'Not generated'}</li>
-                  <li>Expected Lifespan: {characterBuilder.lifespan > 0 ? `${characterBuilder.lifespan} years` : 'Not generated'}</li>
+                  <li>Height: {createdCharacter.height > 0 ? `${Math.floor(createdCharacter.height / 12)}' ${createdCharacter.height % 12}"` : 'Not generated'}</li>
+                  <li>Weight: {createdCharacter.weight > 0 ? `${createdCharacter.weight} lbs` : 'Not generated'}</li>
+                  <li>Build: {createdCharacter.buildDescription || 'Not generated'}</li>
+                  <li>Expected Lifespan: {createdCharacter.lifespan > 0 ? `${createdCharacter.lifespan} years` : 'Not generated'}</li>
                   <li>Culture: {culture?.name ?? cultureId}</li>
                   <li>Profession: {profession?.name ?? professionId}</li>
                   <li>Realms: {selectedRealms.join(', ') || 'None'}</li>
@@ -3919,6 +3943,11 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
           {step !== 'summary' && (<>
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="button" onClick={goPrev} disabled={step === 'primary'}>Back</button>
+              {step === 'primary' && (
+                <button type="button" onClick={handleAutoPrimary} disabled={autoingPrimary}>
+                  {autoingPrimary ? 'Auto Build…' : 'Auto Build'}
+                </button>
+              )}
               {step === 'initial' && (
                 <button type="button" onClick={handleAutoInitialChoices} disabled={autoingInitialChoices || savingInitialChoices}>
                   {autoingInitialChoices ? 'Auto…' : 'Auto'}

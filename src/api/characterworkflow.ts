@@ -68,6 +68,12 @@ export async function setCharacterHobbyChoices(
   return sendJson<CharacterBuilder>(SET_HOBBY_CHOICES_ENDPOINT, 'POST', payload);
 }
 
+export async function autoPrimaryCharacter(
+  payload: CharacterBuilder,
+): Promise<Character> {
+  return sendJson<Character>('/rmce/operations/character/auto-primary', 'POST', payload);
+}
+
 export async function setCharacterBackgroundChoices(
   payload: SetCharacterBackgroundChoicesRequest,
 ): Promise<Character> {
