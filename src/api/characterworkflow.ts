@@ -4,6 +4,7 @@ import type { Character, CharacterBuilder, CharacterLeveller, PersistentValue, L
 
 export type SetCharacterBackgroundChoicesRequest = {
   id: string;
+  autoBuild?: boolean;
   statGains: boolean;
   extraMoney: 0 | 1 | 2;
   backgroundLanguages: LanguageAbility[];
@@ -65,6 +66,12 @@ export async function setCharacterHobbyChoices(
   payload: CharacterBuilder,
 ): Promise<CharacterBuilder> {
   return sendJson<CharacterBuilder>(SET_HOBBY_CHOICES_ENDPOINT, 'POST', payload);
+}
+
+export async function autoPrimaryCharacter(
+  payload: CharacterBuilder,
+): Promise<Character> {
+  return sendJson<Character>('/rmce/operations/character/auto-primary', 'POST', payload);
 }
 
 export async function setCharacterBackgroundChoices(
