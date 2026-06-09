@@ -9,6 +9,7 @@ import {
   DataTable, type DataTableHandle, DataTableSearchInput, type ColumnDef,
   LabeledInput,
   LabeledSelect,
+  MarkupPreview,
   Spinner,
   useConfirm, useToast,
 } from '../../components'
@@ -17,6 +18,10 @@ import type {
   Poison,
   PoisonType,
 } from '../../types';
+
+import {
+  MALADY_SEVERITIES, MaladySeverity,
+} from '../../types/enum';
 
 import {
   isValidID, makeIDOnChange,
@@ -32,40 +37,50 @@ type FormState = {
   id: string;
   name: string;
   type: string;
+  notes: string;
   level: number | '';
   levelVariance: string;
+  maxSeverity: MaladySeverity;
 }
 
 type FormErrors = {
   id?: string;
   name?: string;
   type?: string;
+  notes?: string;
   level?: string;
   variance?: string;
+  maxSeverity?: string;
 }
 
 const emptyVM = (): FormState => ({
   id: prefix,
   name: '',
   type: '',
+  notes: '',
   level: '',
   levelVariance: '',
+  maxSeverity: 'Extreme',
 });
 
 const toVM = (p: Poison): FormState => ({
   id: p.id,
   name: p.name,
   type: p.type,
+  notes: p.notes ?? '',
   level: p.level,
   levelVariance: p.levelVariance,
+  maxSeverity: p.maxSeverity,
 });
 
 const fromVM = (vm: FormState): Poison => ({
   id: vm.id.trim(),
   name: vm.name.trim(),
   type: vm.type.trim(),
+  notes: vm.notes.trim() || undefined,
   level: Number(vm.level),
   levelVariance: vm.levelVariance.trim(),
+  maxSeverity: vm.maxSeverity,
 });
 
 /* ------------------------------------------------------------------ */
@@ -94,6 +109,8 @@ export default function PoisonView() {
   const [viewing, setViewing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<FormState>(emptyVM());
+
+  const [previewNotes, setPreviewNotes] = useState(false);
 
   const toast = useToast();
   const confirm = useConfirm();
@@ -169,6 +186,10 @@ export default function PoisonView() {
     if (!draft.levelVariance.trim()) e.variance = `Level Variance is required`;
     else if (!/^[A-H]$/.test(draft.levelVariance.trim())) e.variance = 'Level Variance must be a single uppercase character between A and H';
 
+    // Max Severity
+    if (!draft.maxSeverity) e.maxSeverity = 'Max Severity is required';
+    else if (!MALADY_SEVERITIES.includes(draft.maxSeverity)) e.maxSeverity = `Max Severity must be one of: ${MALADY_SEVERITIES.join(', ')}`;
+
     return e;
   };
 
@@ -205,7 +226,7 @@ export default function PoisonView() {
   // ----- Search -----
   const globalFilter = (p: Poison, q: string) => {
     const s = q.toLowerCase();
-    return [p.id, p.name, poisonTypeById.get(p.type) ?? p.type, p.level, p.levelVariance]
+    return [p.id, p.name, poisonTypeById.get(p.type) ?? p.type, p.notes, p.level, p.levelVariance]
       .some(v => String(v ?? '').toLowerCase().includes(s));
   };
 
@@ -432,7 +453,47 @@ export default function PoisonView() {
               />
 
               <LabeledInput label="Level Variance" value={form.levelVariance} onChange={(v) => setForm((s) => ({ ...s, levelVariance: v }))} error={errors.variance} disabled={viewing} />
+
+              <LabeledSelect
+                label="Max Severity"
+                value={form.maxSeverity}
+                onChange={(v) => setForm(s => ({ ...s, maxSeverity: v as MaladySeverity }))}
+                options={MALADY_SEVERITIES.map(s => ({ value: s, label: s }))}
+                disabled={viewing}
+                error={viewing ? undefined : errors.maxSeverity}
+              />
+
             </div>
+
+            {/* Notes */}
+            <section style={{ marginTop: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h4 style={{ margin: '8px 0' }}>Notes</h4>
+                {!viewing && (
+                  <button type="button" onClick={() => setPreviewNotes((p) => !p)}>
+                    {previewNotes ? 'Edit' : 'Preview'}
+                  </button>
+                )}
+              </div>
+              {previewNotes || viewing ? (
+                <MarkupPreview
+                  content={form.notes}
+                  emptyHint="No notes"
+                  format="markdown"
+                  className="preview-html"
+                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
+                />
+              ) : (
+                <label style={{ display: 'grid', gap: 6 }}>
+                  <textarea
+                    value={form.notes}
+                    onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value }))}
+                    disabled={viewing}
+                    rows={5}
+                  />
+                </label>
+              )}
+            </section>
 
             {/* Action buttons */}
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
