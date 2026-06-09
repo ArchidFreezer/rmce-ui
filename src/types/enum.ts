@@ -98,8 +98,8 @@ export function asVegetationArray(v: unknown): EnvironmentVegetation[] {
 }
 
 /** Enum for Environment water bodies */
-export type EnvironmentWaterBody = 'Breaks' | 'Desert' | 'Fresh Coast' | 'Glacier' | 'Islet' | 'Lake' | 'Marsh' | 'Oasis' | 'Ocean' | 'Salt Coast';
-export const ENVIRONMENT_WATER_BODIES: ReadonlyArray<EnvironmentWaterBody> = ['Breaks', 'Desert', 'Fresh Coast', 'Glacier', 'Islet', 'Lake', 'Marsh', 'Oasis', 'Ocean', 'Salt Coast'] as const;
+export type EnvironmentWaterBody = 'Breaks' | 'Desert' | 'Freshwater Coast' | 'Glacier' | 'Islet' | 'Lake' | 'Marsh' | 'Oasis' | 'Ocean' | 'Saltwater Coast';
+export const ENVIRONMENT_WATER_BODIES: ReadonlyArray<EnvironmentWaterBody> = ['Breaks', 'Desert', 'Freshwater Coast', 'Glacier', 'Islet', 'Lake', 'Marsh', 'Oasis', 'Ocean', 'Saltwater Coast'] as const;
 const WATER_BODY_SET = new Set<EnvironmentWaterBody>(ENVIRONMENT_WATER_BODIES);
 export function asWaterBodyArray(v: unknown): EnvironmentWaterBody[] {
   if (!Array.isArray(v)) return [];
