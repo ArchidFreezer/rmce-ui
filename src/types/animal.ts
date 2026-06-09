@@ -1,4 +1,5 @@
 import { Named } from './base';
+import { Location } from './location';
 
 import type {
   AnimalOutlookType,
@@ -11,20 +12,10 @@ import type {
   CriticalSize,
   CriticalSizeTableType,
   CriticalType,
-  EnvironmentFeature,
-  EnvironmentTerrain,
-  EnvironmentVegetation,
-  EnvironmentWaterBody,
   LevelVarianceType,
 } from './enum';
 
-export interface AnimalLocation {
-  features: EnvironmentFeature[];
-  terrains: EnvironmentTerrain[];
-  vegetation: EnvironmentVegetation[];
-  waterSources: EnvironmentWaterBody[];
-  climates: string[];
-}
+export type { Location as AnimalLocation };
 
 export interface AnimalRange {
   min: number;
@@ -92,7 +83,7 @@ export interface Animal extends Named {
   criticalModifiers: CriticalModifierType[];
   encounterRange?: AnimalRange | undefined;
   numberYoungRange?: AnimalRange | undefined;
-  location?: AnimalLocation | undefined;
+  location?: Location | undefined;
   standardAttacks: AnimalStandardAttack[];
   rangedAttacks: AnimalRangedAttack[];
   conditionalAttacks: AnimalConditionalAttack[];

@@ -179,3 +179,11 @@ export const CRITICAL_TABLE_TYPES: ReadonlyArray<CriticalTableType> = ['Normal',
 export type ResistanceType = 'Arcane' | 'Channeling' | 'ChannelingEssence' | 'ChannelingMentalism' | 'Cold' | 'Disease' | 'Essence' | 'EssenceMentalism' | 'Fear' | 'Heat' | 'Mentalism' | 'Poison';
 export const RESISTANCE_TYPES: ReadonlyArray<ResistanceType> = ['Arcane', 'Channeling', 'ChannelingEssence', 'ChannelingMentalism', 'Cold', 'Disease', 'Essence', 'EssenceMentalism', 'Fear', 'Heat', 'Mentalism', 'Poison'] as const;
 export const BASE_RESISTANCE_TYPES: ReadonlyArray<ResistanceType> = ['Arcane', 'Channeling', 'Cold', 'Disease', 'Essence', 'Fear', 'Heat', 'Mentalism', 'Poison'] as const;
+
+/** Enum for foragable effect types */
+export type ForagableEffectType = 'Antidote' | 'Bone Repair' | 'Burn & Exposure Relief' | 'Circulatory Repair' | 'Circulatory Poison' | 'Concussion Relief' | 'Conversion Poison' | 'General Purpose' | 'Intoxicant' | 'Life Preservation' | 'Muscle Cartilage & Tendon Repair' | 'Muscle Poison' | 'Nerve Poison' | 'Nerve Repair' | 'Organ Repair & Preservation' | 'Physical Alteration & Enhancement' | 'Reduction Poison' | 'Respitory Poison' | 'Stat Modifier' | 'Stun Relief';
+export const FORAGABLE_EFFECT_TYPES: ReadonlyArray<ForagableEffectType> = ['Antidote', 'Bone Repair', 'Burn & Exposure Relief', 'Circulatory Repair', 'Circulatory Poison', 'Concussion Relief', 'Conversion Poison', 'General Purpose', 'Intoxicant', 'Life Preservation', 'Muscle Cartilage & Tendon Repair', 'Muscle Poison', 'Nerve Poison', 'Nerve Repair', 'Organ Repair & Preservation', 'Physical Alteration & Enhancement', 'Reduction Poison', 'Respitory Poison', 'Stat Modifier', 'Stun Relief'] as const;
+
+/** Enum for foragable preparation types */
+export type ForagablePreparationType = 'Apply' | 'Brew' | 'Ingest' | 'Liquid' | 'Paste' | 'Powder';
+export const FORAGABLE_PREPARATION_TYPES: ReadonlyArray<ForagablePreparationType> = ['Apply', 'Brew', 'Ingest', 'Liquid', 'Paste', 'Powder'] as const;

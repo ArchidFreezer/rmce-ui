@@ -1,6 +1,7 @@
 import { lazy, type LazyExoticComponent, type ComponentType } from 'react';
 
 const AnimalView = lazy(() => import('../endpoints/animal/AnimalView'));
+const ForagableView = lazy(() => import('../endpoints/foragable/ForagableView'));
 const ArmourTypeView = lazy(() => import('../endpoints/armourtype/ArmourTypeView'));
 const AttackTableView = lazy(() => import('../endpoints/attacktable/AttackTableView'));
 const BookView = lazy(() => import('../endpoints/book/BookView'));
@@ -38,6 +39,7 @@ export interface ResourceDef {
 
 const known: Record<string, ResourceDef> = {
   animal: { prefix: 'animal', label: 'Animals', path: '/animals', Component: AnimalView },
+  foragable: { prefix: 'foragable', label: 'Foragables', path: '/foragables', Component: ForagableView },
   armourtype: { prefix: 'armourtype', label: 'Armour Types', path: '/armourtypes', Component: ArmourTypeView },
   attacktable: { prefix: 'attacktable', label: 'Attack Tables', path: '/attacktables', Component: AttackTableView },
   book: { prefix: 'book', label: 'Books', path: '/books', Component: BookView },

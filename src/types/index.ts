@@ -1,5 +1,7 @@
 export * from './armourtype';
 export * from './animal';
+export * from './foragable';
+export * from './location';
 export * from './attacktable';
 export * from './base';
 export * from './book';
