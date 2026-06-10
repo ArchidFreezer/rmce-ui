@@ -70,8 +70,8 @@ export function asFeatureArray(v: unknown): EnvironmentFeature[] {
 }
 
 /** Enum for Environment terrain  */
-export type EnvironmentTerrain = 'Alpine' | 'Rough' | 'Underground' | 'Waste';
-export const ENVIRONMENT_TERRAINS: ReadonlyArray<EnvironmentTerrain> = ['Alpine', 'Rough', 'Underground', 'Waste'] as const;
+export type EnvironmentTerrain = 'Alpine' | 'Mountainous' | 'Rough' | 'Underground' | 'Waste';
+export const ENVIRONMENT_TERRAINS: ReadonlyArray<EnvironmentTerrain> = ['Alpine', 'Mountainous', 'Rough', 'Underground', 'Waste'] as const;
 const TERRAIN_SET = new Set<EnvironmentTerrain>(ENVIRONMENT_TERRAINS);
 export function asTerrainArray(v: unknown): EnvironmentTerrain[] {
   if (!Array.isArray(v)) return [];
