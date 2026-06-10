@@ -1,5 +1,6 @@
 export * from './armourtype';
 export * from './animal';
+export * from './foragable';
 export * from './attacktable';
 export * from './book';
 export * from './character';
