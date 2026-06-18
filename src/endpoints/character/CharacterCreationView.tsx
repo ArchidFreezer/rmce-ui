@@ -1873,6 +1873,7 @@ export default function CharacterCreationView({ onFinish }: { onFinish?: (create
 
     return {
       id: builderId,
+      autoBuild: false,
       statGains: backgroundState.extraStatGainRolls,
       extraMoney: backgroundState.extraMoneyPoints as 0 | 1 | 2,
       backgroundLanguages,
