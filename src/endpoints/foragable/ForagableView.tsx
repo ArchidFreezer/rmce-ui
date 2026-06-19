@@ -5,6 +5,7 @@ import {
   upsertForagable,
   deleteForagable,
   fetchClimates,
+  fetchSkills,
 } from '../../api';
 
 import {
@@ -26,6 +27,7 @@ import {
 import type {
   Climate,
   Foragable,
+  Skill,
 } from '../../types';
 
 import {
@@ -54,6 +56,12 @@ import {
 
 const prefix = 'FORAGABLE_';
 
+/** Skill IDs that may be selected as the lore skill for a foragable. */
+export const FORAGABLE_LORE_SKILL_IDS: readonly string[] = [
+  'SKILL_HERB_LORE',
+  'SKILL_POISON_LORE',
+];
+
 /* ------------------------------------------------------------------ */
 /* VM types                                                           */
 /* ------------------------------------------------------------------ */
@@ -61,6 +69,7 @@ const prefix = 'FORAGABLE_';
 type FormState = {
   id: string;
   name: string;
+  loreSkill: string;
   effectType: ForagableEffectType;
   form: string;
   difficulty: ManoeuvreDifficulty;
@@ -78,6 +87,7 @@ type FormState = {
 type FormErrors = {
   id?: string | undefined;
   name?: string | undefined;
+  loreSkill?: string | undefined;
   effectType?: string | undefined;
   difficulty?: string | undefined;
   preparationType?: string | undefined;
@@ -87,6 +97,7 @@ type FormErrors = {
 const emptyVM = (): FormState => ({
   id: prefix,
   name: '',
+  loreSkill: '',
   effectType: 'General Purpose',
   form: '',
   difficulty: 'Medium',
@@ -104,6 +115,7 @@ const emptyVM = (): FormState => ({
 const toVM = (x: Foragable): FormState => ({
   id: x.id,
   name: x.name,
+  loreSkill: x.loreSkill,
   effectType: x.effectType,
   form: x.form ?? '',
   difficulty: x.difficulty,
@@ -129,6 +141,7 @@ const fromVM = (vm: FormState): Foragable => {
   return {
     id: vm.id.trim(),
     name: vm.name.trim(),
+    loreSkill: vm.loreSkill,
     effectType: vm.effectType,
     form: vm.form.trim() || undefined,
     difficulty: vm.difficulty,
@@ -162,6 +175,7 @@ export default function ForagableView() {
   const hasErrors = Object.values(errors).some(Boolean);
 
   const [climates, setClimates] = useState<Climate[]>([]);
+  const [skills, setSkills] = useState<Skill[]>([]);
 
   const [query, setQuery] = useState('');
   const [effectTypeFilter, setEffectTypeFilter] = useState<ForagableEffectType | ''>('');
@@ -186,12 +200,14 @@ export default function ForagableView() {
   useEffect(() => {
     (async () => {
       try {
-        const [foragables, climateRows] = await Promise.all([
+        const [foragables, climateRows, skillRows] = await Promise.all([
           fetchForagables(),
           fetchClimates(),
+          fetchSkills(),
         ]);
         setRows(foragables);
         setClimates(climateRows);
+        setSkills(skillRows);
       } catch (e) {
         setError(String(e));
       } finally {
@@ -209,6 +225,19 @@ export default function ForagableView() {
     for (const row of climates) map.set(row.id, row.name);
     return map;
   }, [climates]);
+
+  const skillNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const s of skills) map.set(s.id, s.name);
+    return map;
+  }, [skills]);
+
+  const loreSkillOptions = useMemo(
+    () => skills
+      .filter((s) => (FORAGABLE_LORE_SKILL_IDS as string[]).includes(s.id))
+      .map((s) => ({ value: s.id, label: s.name })),
+    [skills],
+  );
 
   const climateOptions = useMemo(
     () => climates.map((row) => ({ value: row.id, label: row.name })),
@@ -246,6 +275,9 @@ export default function ForagableView() {
 
     if (!draft.name.trim()) next.name = 'Name is required';
 
+    if (!draft.loreSkill) next.loreSkill = 'Lore skill is required';
+    else if (!(FORAGABLE_LORE_SKILL_IDS as string[]).includes(draft.loreSkill)) next.loreSkill = 'Pick a valid lore skill';
+
     if (!draft.effectType) next.effectType = 'Effect type is required';
     if (!draft.difficulty) next.difficulty = 'Difficulty is required';
     if (!draft.preparationType) next.preparationType = 'Preparation type is required';
@@ -272,6 +304,14 @@ export default function ForagableView() {
 
   const columns: ColumnDef<Foragable>[] = useMemo(() => [
     { id: 'id', header: 'ID', accessor: (row) => row.id, sortType: 'string', minWidth: 260 },
+    {
+      id: 'loreSkill',
+      header: 'Lore Skill',
+      accessor: (row) => skillNameById.get(row.loreSkill) ?? row.loreSkill,
+      sortType: 'string',
+      minWidth: 160,
+      render: (row) => skillNameById.get(row.loreSkill) ?? row.loreSkill,
+    },
     { id: 'name', header: 'Name', accessor: (row) => row.name, sortType: 'string', minWidth: 180 },
     { id: 'effectType', header: 'Effect Type', accessor: (row) => row.effectType, sortType: 'string', minWidth: 200 },
     { id: 'difficulty', header: 'Difficulty', accessor: (row) => row.difficulty, sortType: 'string', minWidth: 120 },
@@ -290,7 +330,7 @@ export default function ForagableView() {
         </>
       ),
     },
-  ], []);
+  ], [skillNameById]);
 
   const globalFilter = (row: Foragable, q: string) =>
     [row.id, row.name, row.effectType, row.difficulty, row.preparationType, row.effect ?? '']
@@ -509,6 +549,14 @@ export default function ForagableView() {
                 onChange={(value) => setForm((state) => ({ ...state, name: value }))}
                 disabled={viewing}
                 error={viewing ? undefined : errors.name}
+              />
+              <LabeledSelect
+                label="Lore Skill"
+                value={form.loreSkill}
+                onChange={(value) => setForm((state) => ({ ...state, loreSkill: value }))}
+                options={loreSkillOptions}
+                disabled={viewing}
+                error={viewing ? undefined : errors.loreSkill}
               />
               <LabeledSelect
                 label="Effect Type"
