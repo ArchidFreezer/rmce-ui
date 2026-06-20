@@ -69,6 +69,7 @@ export const FORAGABLE_LORE_SKILL_IDS: readonly string[] = [
 type FormState = {
   id: string;
   name: string;
+  notes: string;
   loreSkill: string;
   effectType: ForagableEffectType;
   form: string;
@@ -97,6 +98,7 @@ type FormErrors = {
 const emptyVM = (): FormState => ({
   id: prefix,
   name: '',
+  notes: '',
   loreSkill: '',
   effectType: 'General Purpose',
   form: '',
@@ -115,6 +117,7 @@ const emptyVM = (): FormState => ({
 const toVM = (x: Foragable): FormState => ({
   id: x.id,
   name: x.name,
+  notes: x.notes ?? '',
   loreSkill: x.loreSkill,
   effectType: x.effectType,
   form: x.form ?? '',
@@ -141,6 +144,7 @@ const fromVM = (vm: FormState): Foragable => {
   return {
     id: vm.id.trim(),
     name: vm.name.trim(),
+    notes: vm.notes.trim() || undefined,
     loreSkill: vm.loreSkill,
     effectType: vm.effectType,
     form: vm.form.trim() || undefined,
@@ -188,6 +192,7 @@ export default function ForagableView() {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<FormState>(emptyVM());
 
+  const [previewNotes, setPreviewNotes] = useState(false);
   const [previewEffect, setPreviewEffect] = useState(false);
 
   const toast = useToast();
@@ -550,6 +555,38 @@ export default function ForagableView() {
                 disabled={viewing}
                 error={viewing ? undefined : errors.name}
               />
+            </div>
+
+            {/* Notes */}
+            <section style={{ marginTop: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h4 style={{ margin: '8px 0' }}>Notes</h4>
+                {!viewing && (
+                  <button type="button" onClick={() => setPreviewNotes((p) => !p)}>
+                    {previewNotes ? 'Edit' : 'Preview'}
+                  </button>
+                )}
+              </div>
+              {previewNotes || viewing ? (
+                <MarkupPreview
+                  content={form.notes}
+                  emptyHint="No notes"
+                  className="preview-html"
+                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
+                />
+              ) : (
+                <label style={{ display: 'grid', gap: 6 }}>
+                  <textarea
+                    value={form.notes}
+                    onChange={(e) => setForm((state) => ({ ...state, notes: e.target.value }))}
+                    disabled={viewing}
+                    rows={3}
+                  />
+                </label>
+              )}
+            </section>
+
+            <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <LabeledSelect
                 label="Lore Skill"
                 value={form.loreSkill}
