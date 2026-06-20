@@ -7,6 +7,7 @@ import type {
 } from './enum';
 
 export interface Foragable extends Named {
+  notes?: string | undefined;
   loreSkill: string; // Skill.id
   effectType: ForagableEffectType;
   form?: string | undefined;

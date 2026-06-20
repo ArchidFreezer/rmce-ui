@@ -37,6 +37,7 @@ function fromJson(x: any): Foragable {
   return {
     id: asString(x?.id),
     name: asString(x?.name),
+    notes: x?.notes != null ? asString(x.notes) : undefined,
     loreSkill: asString(x?.loreSkill),
     effectType: asEnumValue(FORAGABLE_EFFECT_TYPES, x?.effectType, 'General Purpose' as ForagableEffectType),
     form: x?.form != null ? asString(x.form) : undefined,
