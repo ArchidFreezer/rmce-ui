@@ -7,16 +7,17 @@ import type {
 } from './enum';
 
 export interface Foragable extends Named {
-  notes?: string | undefined;
   loreSkill: string; // Skill.id
-  effectType: ForagableEffectType;
-  form?: string | undefined;
-  difficulty: ManoeuvreDifficulty;
+  characteristics?: string | undefined;
+  medicinalUses?: string | undefined;
+  otherUses?: string | undefined;
+  warning?: string | undefined;
   preparationType: ForagablePreparationType;
+  effectType: ForagableEffectType;
+  findDifficulty: ManoeuvreDifficulty;
   addictionFactor: number;
   cost?: string | undefined;
   location?: Location | undefined;
-  effect?: string | undefined;
 }
 
 export interface ForagablesPayload {
