@@ -82,6 +82,11 @@ export function IdListEditor<TId extends string = string>({
     [rows, onChangeRows],
   );
 
+  const selectedSet = React.useMemo(
+    () => new Set(rows.filter(Boolean)),
+    [rows],
+  );
+
   const showComponent = viewing ? rows.length > 0 || showWhenEmpty : true;
   if (!showComponent) return null;
 
@@ -93,6 +98,7 @@ export function IdListEditor<TId extends string = string>({
         <button
           type="button"
           onClick={addRow}
+          disabled={options.length > 0 && rows.filter(Boolean).length >= options.length}
           style={{ marginBottom: 8 }}
         >
           {addButtonLabel}
@@ -110,29 +116,34 @@ export function IdListEditor<TId extends string = string>({
       >
         {showLabels && <div style={{ fontWeight: 600 }}>{columnLabel}</div>}
 
-        {rows.map((row, i) => (
-          <React.Fragment key={`${title}-${i}`}>
-            <LabeledSelect
-              label={columnLabel}
-              hideLabel
-              ariaLabel={columnLabel}
-              value={row}
-              onChange={(v) => updateRowAt(i, v as TId)}
-              options={options}
-              disabled={loading || viewing}
-            />
+        {rows.map((row, i) => {
+          const rowOptions = options.filter(
+            (opt) => !selectedSet.has(opt.value) || opt.value === row,
+          );
+          return (
+            <React.Fragment key={`${title}-${i}`}>
+              <LabeledSelect
+                label={columnLabel}
+                hideLabel
+                ariaLabel={columnLabel}
+                value={row}
+                onChange={(v) => updateRowAt(i, v as TId)}
+                options={rowOptions}
+                disabled={loading || viewing}
+              />
 
-            {showActions && (
-              <button
-                type="button"
-                onClick={() => removeRowAt(i)}
-                style={{ color: '#b00020' }}
-              >
-                {removeButtonLabel}
-              </button>
-            )}
-          </React.Fragment>
-        ))}
+              {showActions && (
+                <button
+                  type="button"
+                  onClick={() => removeRowAt(i)}
+                  style={{ color: '#b00020' }}
+                >
+                  {removeButtonLabel}
+                </button>
+              )}
+            </React.Fragment>
+          );
+        })}
       </div>
 
       {error && (
