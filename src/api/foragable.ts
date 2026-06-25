@@ -37,6 +37,7 @@ function fromJson(x: any): Foragable {
   return {
     id: asString(x?.id),
     name: asString(x?.name),
+    otherNames: x?.otherNames != null ? asString(x.otherNames) : undefined,
     loreSkill: asString(x?.loreSkill),
     characteristics: x?.characteristics != null ? asString(x.characteristics) : undefined,
     medicinalUses: x?.medicinalUses != null ? asString(x.medicinalUses) : undefined,

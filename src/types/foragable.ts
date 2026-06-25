@@ -7,6 +7,7 @@ import type {
 } from './enum';
 
 export interface Foragable extends Named {
+  otherNames?: string | undefined;
   loreSkill: string; // Skill.id
   characteristics?: string | undefined;
   medicinalUses?: string | undefined;

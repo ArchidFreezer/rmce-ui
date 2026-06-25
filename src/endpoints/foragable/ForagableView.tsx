@@ -69,6 +69,7 @@ export const FORAGABLE_LORE_SKILL_IDS: readonly string[] = [
 type FormState = {
   id: string;
   name: string;
+  otherNames: string;
   loreSkill: string;
   characteristics: string;
   medicinalUses: string;
@@ -99,6 +100,7 @@ type FormErrors = {
 const emptyVM = (): FormState => ({
   id: prefix,
   name: '',
+  otherNames: '',
   characteristics: '',
   medicinalUses: '',
   loreSkill: '',
@@ -119,6 +121,7 @@ const emptyVM = (): FormState => ({
 const toVM = (x: Foragable): FormState => ({
   id: x.id,
   name: x.name,
+  otherNames: x.otherNames ?? '',
   characteristics: x.characteristics ?? '',
   loreSkill: x.loreSkill,
   effectType: x.effectType,
@@ -147,6 +150,7 @@ const fromVM = (vm: FormState): Foragable => {
   return {
     id: vm.id.trim(),
     name: vm.name.trim(),
+    otherNames: vm.otherNames.trim() || undefined,
     characteristics: vm.characteristics.trim() || undefined,
     loreSkill: vm.loreSkill,
     effectType: vm.effectType,
@@ -344,7 +348,7 @@ export default function ForagableView() {
   ], [skillNameById]);
 
   const globalFilter = (row: Foragable, q: string) =>
-    [row.id, row.name, row.effectType, row.findDifficulty, row.preparationType, row.medicinalUses ?? '']
+    [row.id, row.name, row.otherNames ?? '']
       .some((value) => String(value).toLowerCase().includes(q.toLowerCase()));
 
   const filteredRows = useMemo(
@@ -560,6 +564,14 @@ export default function ForagableView() {
                 onChange={(value) => setForm((state) => ({ ...state, name: value }))}
                 disabled={viewing}
                 error={viewing ? undefined : errors.name}
+              />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginTop: 12 }}>
+              <LabeledInput
+                label="Other Names"
+                value={form.otherNames}
+                onChange={(value) => setForm((state) => ({ ...state, otherNames: value }))}
+                disabled={viewing}
               />
             </div>
 
