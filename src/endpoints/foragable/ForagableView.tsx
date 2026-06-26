@@ -69,12 +69,15 @@ export const FORAGABLE_LORE_SKILL_IDS: readonly string[] = [
 type FormState = {
   id: string;
   name: string;
-  notes: string;
+  otherNames: string;
   loreSkill: string;
-  effectType: ForagableEffectType;
-  form: string;
-  difficulty: ManoeuvreDifficulty;
+  characteristics: string;
+  medicinalUses: string;
+  otherUses: string;
+  warning: string;
   preparationType: ForagablePreparationType;
+  effectType: ForagableEffectType;
+  findDifficulty: ManoeuvreDifficulty;
   addictionFactor: string;
   cost: string;
   locationFeatures: EnvironmentFeature[];
@@ -82,7 +85,6 @@ type FormState = {
   locationVegetation: EnvironmentVegetation[];
   locationWaterSources: EnvironmentWaterBody[];
   locationClimates: string[];
-  effect: string;
 };
 
 type FormErrors = {
@@ -90,7 +92,7 @@ type FormErrors = {
   name?: string | undefined;
   loreSkill?: string | undefined;
   effectType?: string | undefined;
-  difficulty?: string | undefined;
+  findDifficulty?: string | undefined;
   preparationType?: string | undefined;
   addictionFactor?: string | undefined;
 };
@@ -98,11 +100,14 @@ type FormErrors = {
 const emptyVM = (): FormState => ({
   id: prefix,
   name: '',
-  notes: '',
+  otherNames: '',
+  characteristics: '',
+  medicinalUses: '',
   loreSkill: '',
   effectType: 'General Purpose',
-  form: '',
-  difficulty: 'Medium',
+  otherUses: '',
+  warning: '',
+  findDifficulty: 'Medium',
   preparationType: 'Ingest',
   addictionFactor: '0',
   cost: '',
@@ -111,17 +116,17 @@ const emptyVM = (): FormState => ({
   locationVegetation: [],
   locationWaterSources: [],
   locationClimates: [],
-  effect: '',
 });
 
 const toVM = (x: Foragable): FormState => ({
   id: x.id,
   name: x.name,
-  notes: x.notes ?? '',
+  otherNames: x.otherNames ?? '',
+  characteristics: x.characteristics ?? '',
   loreSkill: x.loreSkill,
   effectType: x.effectType,
-  form: x.form ?? '',
-  difficulty: x.difficulty,
+  otherUses: x.otherUses ?? '',
+  findDifficulty: x.findDifficulty,
   preparationType: x.preparationType,
   addictionFactor: String(x.addictionFactor),
   cost: x.cost ?? '',
@@ -130,7 +135,8 @@ const toVM = (x: Foragable): FormState => ({
   locationVegetation: x.location?.vegetation ?? [],
   locationWaterSources: x.location?.waterSources ?? [],
   locationClimates: x.location?.climates ?? [],
-  effect: x.effect ?? '',
+  medicinalUses: x.medicinalUses ?? '',
+  warning: x.warning ?? '',
 });
 
 const fromVM = (vm: FormState): Foragable => {
@@ -144,11 +150,12 @@ const fromVM = (vm: FormState): Foragable => {
   return {
     id: vm.id.trim(),
     name: vm.name.trim(),
-    notes: vm.notes.trim() || undefined,
+    otherNames: vm.otherNames.trim() || undefined,
+    characteristics: vm.characteristics.trim() || undefined,
     loreSkill: vm.loreSkill,
     effectType: vm.effectType,
-    form: vm.form.trim() || undefined,
-    difficulty: vm.difficulty,
+    otherUses: vm.otherUses.trim() || undefined,
+    findDifficulty: vm.findDifficulty,
     preparationType: vm.preparationType,
     addictionFactor: Number(vm.addictionFactor),
     cost: vm.cost.trim() || undefined,
@@ -161,7 +168,8 @@ const fromVM = (vm: FormState): Foragable => {
         climates: vm.locationClimates.slice(),
       }
       : undefined,
-    effect: vm.effect.trim() || undefined,
+    medicinalUses: vm.medicinalUses.trim() || undefined,
+    warning: vm.warning.trim() || undefined,
   };
 };
 
@@ -192,8 +200,10 @@ export default function ForagableView() {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<FormState>(emptyVM());
 
-  const [previewNotes, setPreviewNotes] = useState(false);
-  const [previewEffect, setPreviewEffect] = useState(false);
+  const [previewCharacteristics, setPreviewCharacteristics] = useState(false);
+  const [previewMedicinalUses, setPreviewMedicinalUses] = useState(false);
+  const [previewOtherUses, setPreviewOtherUses] = useState(false);
+  const [previewWarning, setPreviewWarning] = useState(false);
 
   const toast = useToast();
   const confirm = useConfirm();
@@ -284,7 +294,7 @@ export default function ForagableView() {
     else if (!(FORAGABLE_LORE_SKILL_IDS as string[]).includes(draft.loreSkill)) next.loreSkill = 'Pick a valid lore skill';
 
     if (!draft.effectType) next.effectType = 'Effect type is required';
-    if (!draft.difficulty) next.difficulty = 'Difficulty is required';
+    if (!draft.findDifficulty) next.findDifficulty = 'Difficulty is required';
     if (!draft.preparationType) next.preparationType = 'Preparation type is required';
 
     const af = draft.addictionFactor.trim();
@@ -319,7 +329,7 @@ export default function ForagableView() {
     },
     { id: 'name', header: 'Name', accessor: (row) => row.name, sortType: 'string', minWidth: 180 },
     { id: 'effectType', header: 'Effect Type', accessor: (row) => row.effectType, sortType: 'string', minWidth: 200 },
-    { id: 'difficulty', header: 'Difficulty', accessor: (row) => row.difficulty, sortType: 'string', minWidth: 120 },
+    { id: 'difficulty', header: 'Difficulty', accessor: (row) => row.findDifficulty, sortType: 'string', minWidth: 120 },
     { id: 'preparationType', header: 'Preparation', accessor: (row) => row.preparationType, sortType: 'string', minWidth: 120 },
     {
       id: 'actions',
@@ -338,7 +348,7 @@ export default function ForagableView() {
   ], [skillNameById]);
 
   const globalFilter = (row: Foragable, q: string) =>
-    [row.id, row.name, row.effectType, row.difficulty, row.preparationType, row.effect ?? '']
+    [row.id, row.name, row.otherNames ?? '']
       .some((value) => String(value).toLowerCase().includes(q.toLowerCase()));
 
   const filteredRows = useMemo(
@@ -556,29 +566,124 @@ export default function ForagableView() {
                 error={viewing ? undefined : errors.name}
               />
             </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginTop: 12 }}>
+              <LabeledInput
+                label="Other Names"
+                value={form.otherNames}
+                onChange={(value) => setForm((state) => ({ ...state, otherNames: value }))}
+                disabled={viewing}
+              />
+            </div>
 
-            {/* Notes */}
+            {/* Characteristics */}
             <section style={{ marginTop: 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <h4 style={{ margin: '8px 0' }}>Notes</h4>
+                <h4 style={{ margin: '8px 0' }}>Characteristics</h4>
                 {!viewing && (
-                  <button type="button" onClick={() => setPreviewNotes((p) => !p)}>
-                    {previewNotes ? 'Edit' : 'Preview'}
+                  <button type="button" onClick={() => setPreviewCharacteristics((p) => !p)}>
+                    {previewCharacteristics ? 'Edit' : 'Preview'}
                   </button>
                 )}
               </div>
-              {previewNotes || viewing ? (
+              {previewCharacteristics || viewing ? (
                 <MarkupPreview
-                  content={form.notes}
-                  emptyHint="No notes"
+                  content={form.characteristics}
+                  emptyHint="No characteristics"
                   className="preview-html"
                   style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
                 />
               ) : (
                 <label style={{ display: 'grid', gap: 6 }}>
                   <textarea
-                    value={form.notes}
-                    onChange={(e) => setForm((state) => ({ ...state, notes: e.target.value }))}
+                    value={form.characteristics}
+                    onChange={(e) => setForm((state) => ({ ...state, characteristics: e.target.value }))}
+                    disabled={viewing}
+                    rows={3}
+                  />
+                </label>
+              )}
+            </section>
+
+            {/* Medicinal Uses */}
+            <section style={{ marginTop: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h4 style={{ margin: '8px 0' }}>Medicinal Uses</h4>
+                {!viewing && (
+                  <button type="button" onClick={() => setPreviewMedicinalUses((p) => !p)}>
+                    {previewMedicinalUses ? 'Edit' : 'Preview'}
+                  </button>
+                )}
+              </div>
+              {previewMedicinalUses || viewing ? (
+                <MarkupPreview
+                  content={form.medicinalUses}
+                  emptyHint="No medicinal uses"
+                  className="preview-html"
+                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
+                />
+              ) : (
+                <label style={{ display: 'grid', gap: 6 }}>
+                  <textarea
+                    value={form.medicinalUses}
+                    onChange={(e) => setForm((state) => ({ ...state, medicinalUses: e.target.value }))}
+                    disabled={viewing}
+                    rows={3}
+                  />
+                </label>
+              )}
+            </section>
+
+            {/* Other Uses */}
+            <section style={{ marginTop: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h4 style={{ margin: '8px 0' }}>Other Uses</h4>
+                {!viewing && (
+                  <button type="button" onClick={() => setPreviewOtherUses((p) => !p)}>
+                    {previewOtherUses ? 'Edit' : 'Preview'}
+                  </button>
+                )}
+              </div>
+              {previewOtherUses || viewing ? (
+                <MarkupPreview
+                  content={form.otherUses}
+                  emptyHint="No other uses"
+                  className="preview-html"
+                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
+                />
+              ) : (
+                <label style={{ display: 'grid', gap: 6 }}>
+                  <textarea
+                    value={form.otherUses}
+                    onChange={(e) => setForm((state) => ({ ...state, otherUses: e.target.value }))}
+                    disabled={viewing}
+                    rows={3}
+                  />
+                </label>
+              )}
+            </section>
+
+            {/* Warning */}
+            <section style={{ marginTop: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <h4 style={{ margin: '8px 0' }}>Warning</h4>
+                {!viewing && (
+                  <button type="button" onClick={() => setPreviewWarning((p) => !p)}>
+                    {previewWarning ? 'Edit' : 'Preview'}
+                  </button>
+                )}
+              </div>
+              {previewWarning || viewing ? (
+                <MarkupPreview
+                  content={form.warning}
+                  emptyHint="No warning"
+                  className="preview-html"
+                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
+                />
+              ) : (
+                <label style={{ display: 'grid', gap: 6 }}>
+                  <textarea
+                    value={form.warning}
+                    onChange={(e) => setForm((state) => ({ ...state, warning: e.target.value }))}
                     disabled={viewing}
                     rows={3}
                   />
@@ -603,19 +708,13 @@ export default function ForagableView() {
                 disabled={viewing}
                 error={viewing ? undefined : errors.effectType}
               />
-              <LabeledInput
-                label="Form"
-                value={form.form}
-                onChange={(value) => setForm((state) => ({ ...state, form: value }))}
-                disabled={viewing}
-              />
               <LabeledSelect
                 label="Difficulty"
-                value={form.difficulty}
-                onChange={(value) => setForm((state) => ({ ...state, difficulty: value as ManoeuvreDifficulty }))}
+                value={form.findDifficulty}
+                onChange={(value) => setForm((state) => ({ ...state, findDifficulty: value as ManoeuvreDifficulty }))}
                 options={difficultyOptions}
                 disabled={viewing}
-                error={viewing ? undefined : errors.difficulty}
+                error={viewing ? undefined : errors.findDifficulty}
               />
               <LabeledSelect
                 label="Preparation Type"
@@ -640,35 +739,6 @@ export default function ForagableView() {
                 disabled={viewing}
               />
             </div>
-
-            {/* Effect */}
-            <section style={{ marginTop: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <h4 style={{ margin: '8px 0' }}>Effect</h4>
-                {!viewing && (
-                  <button type="button" onClick={() => setPreviewEffect((p) => !p)}>
-                    {previewEffect ? 'Edit' : 'Preview'}
-                  </button>
-                )}
-              </div>
-              {previewEffect || viewing ? (
-                <MarkupPreview
-                  content={form.effect}
-                  emptyHint="No effect"
-                  className="preview-html"
-                  style={{ border: '1px solid var(--border)', borderRadius: 6, padding: 8 }}
-                />
-              ) : (
-                <label style={{ display: 'grid', gap: 6 }}>
-                  <textarea
-                    value={form.effect}
-                    onChange={(e) => setForm((state) => ({ ...state, effect: e.target.value }))}
-                    disabled={viewing}
-                    rows={3}
-                  />
-                </label>
-              )}
-            </section>
 
             {/* Location */}
             <section style={{ marginTop: 16, display: 'grid', gap: 16 }}>
@@ -713,7 +783,7 @@ export default function ForagableView() {
                     onChange={(next) => setForm((state) => ({ ...state, locationFeatures: next as EnvironmentFeature[] }))}
                     options={featureOptions}
                     disabled={viewing}
-                    columns={2}
+                    columns={3}
                   />
                   <CheckboxGroup
                     label="Terrains"
@@ -721,7 +791,7 @@ export default function ForagableView() {
                     onChange={(next) => setForm((state) => ({ ...state, locationTerrains: next as EnvironmentTerrain[] }))}
                     options={terrainOptions}
                     disabled={viewing}
-                    columns={2}
+                    columns={3}
                   />
                   <CheckboxGroup
                     label="Vegetation"
@@ -729,7 +799,7 @@ export default function ForagableView() {
                     onChange={(next) => setForm((state) => ({ ...state, locationVegetation: next as EnvironmentVegetation[] }))}
                     options={vegetationOptions}
                     disabled={viewing}
-                    columns={2}
+                    columns={3}
                   />
                   <CheckboxGroup
                     label="Water Sources"
@@ -737,7 +807,7 @@ export default function ForagableView() {
                     onChange={(next) => setForm((state) => ({ ...state, locationWaterSources: next as EnvironmentWaterBody[] }))}
                     options={waterBodyOptions}
                     disabled={viewing}
-                    columns={2}
+                    columns={3}
                   />
                 </>
               )}

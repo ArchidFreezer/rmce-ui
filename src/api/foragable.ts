@@ -37,12 +37,16 @@ function fromJson(x: any): Foragable {
   return {
     id: asString(x?.id),
     name: asString(x?.name),
-    notes: x?.notes != null ? asString(x.notes) : undefined,
+    otherNames: x?.otherNames != null ? asString(x.otherNames) : undefined,
     loreSkill: asString(x?.loreSkill),
-    effectType: asEnumValue(FORAGABLE_EFFECT_TYPES, x?.effectType, 'General Purpose' as ForagableEffectType),
-    form: x?.form != null ? asString(x.form) : undefined,
-    difficulty: asEnumValue(MANOEUVRE_DIFFICULTIES, x?.difficulty, 'Medium' as ManoeuvreDifficulty),
+    characteristics: x?.characteristics != null ? asString(x.characteristics) : undefined,
+    medicinalUses: x?.medicinalUses != null ? asString(x.medicinalUses) : undefined,
+    otherUses: x?.otherUses != null ? asString(x.otherUses) : undefined,
+    warning: x?.warning != null ? asString(x.warning) : undefined,
     preparationType: asEnumValue(FORAGABLE_PREPARATION_TYPES, x?.preparationType, 'Ingest' as ForagablePreparationType),
+
+    effectType: asEnumValue(FORAGABLE_EFFECT_TYPES, x?.effectType, 'General Purpose' as ForagableEffectType),
+    findDifficulty: asEnumValue(MANOEUVRE_DIFFICULTIES, x?.findDifficulty, 'Medium' as ManoeuvreDifficulty),
     addictionFactor: asInt(x?.addictionFactor),
     cost: x?.cost != null ? asString(x.cost) : undefined,
     location: x?.location != null
@@ -54,7 +58,6 @@ function fromJson(x: any): Foragable {
         climates: asStringArray(x.location.climates),
       }
       : undefined,
-    effect: x?.effect != null ? asString(x.effect) : undefined,
   };
 }
 
