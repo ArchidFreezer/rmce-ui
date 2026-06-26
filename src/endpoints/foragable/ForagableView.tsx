@@ -783,7 +783,7 @@ export default function ForagableView() {
                     onChange={(next) => setForm((state) => ({ ...state, locationFeatures: next as EnvironmentFeature[] }))}
                     options={featureOptions}
                     disabled={viewing}
-                    columns={2}
+                    columns={3}
                   />
                   <CheckboxGroup
                     label="Terrains"
@@ -791,7 +791,7 @@ export default function ForagableView() {
                     onChange={(next) => setForm((state) => ({ ...state, locationTerrains: next as EnvironmentTerrain[] }))}
                     options={terrainOptions}
                     disabled={viewing}
-                    columns={2}
+                    columns={3}
                   />
                   <CheckboxGroup
                     label="Vegetation"
@@ -799,7 +799,7 @@ export default function ForagableView() {
                     onChange={(next) => setForm((state) => ({ ...state, locationVegetation: next as EnvironmentVegetation[] }))}
                     options={vegetationOptions}
                     disabled={viewing}
-                    columns={2}
+                    columns={3}
                   />
                   <CheckboxGroup
                     label="Water Sources"
@@ -807,7 +807,7 @@ export default function ForagableView() {
                     onChange={(next) => setForm((state) => ({ ...state, locationWaterSources: next as EnvironmentWaterBody[] }))}
                     options={waterBodyOptions}
                     disabled={viewing}
-                    columns={2}
+                    columns={3}
                   />
                 </>
               )}
