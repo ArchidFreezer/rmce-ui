@@ -48,7 +48,7 @@ export function CharacterTraitsEditor({ value, onChange, disabled = false, error
 
   const handleChange = (key: TraitKey, raw: string) => {
     const n = parseInt(raw, 10);
-    const clamped = Number.isFinite(n) ? Math.min(9, Math.max(1, n)) : value[key];
+    const clamped = Number.isFinite(n) ? Math.min(100, Math.max(1, n)) : value[key];
     onChange({ ...value, [key]: clamped });
   };
 
@@ -65,7 +65,7 @@ export function CharacterTraitsEditor({ value, onChange, disabled = false, error
                 id={inputId}
                 type="number"
                 min={1}
-                max={9}
+                max={100}
                 step={1}
                 value={value[key]}
                 onChange={(e) => handleChange(key, e.target.value)}
