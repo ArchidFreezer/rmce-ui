@@ -113,7 +113,7 @@ const emptyVM = (): FormState => ({
   exhaustion: '',
   distanceMultiplier: '',
 
-  traits: { caster: 5, combat: 5, information: 5, stealth: 5, support: 5, utility: 5 },
+  traits: { caster: 50, combat: 50, information: 50, stealth: 50, support: 50, utility: 50 },
 });
 
 function toVM(x: Skill): FormState {
@@ -140,7 +140,7 @@ function toVM(x: Skill): FormState {
 
     exhaustion: String(Number.isFinite(x.exhaustion) ? x.exhaustion : ''),
     distanceMultiplier: String(Number.isFinite(x.distanceMultiplier) ? x.distanceMultiplier : ''),
-    traits: x.traits ?? { caster: 5, combat: 5, information: 5, stealth: 5, support: 5, utility: 5 },
+    traits: x.traits ?? { caster: 50, combat: 50, information: 50, stealth: 50, support: 50, utility: 50 },
   };
 }
 
@@ -701,7 +701,7 @@ export default function SkillView() {
                       }}
                     >
                       <option value="">Any</option>
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+                      {[10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((n) => (
                         <option key={n} value={n}>{n}+</option>
                       ))}
                     </select>

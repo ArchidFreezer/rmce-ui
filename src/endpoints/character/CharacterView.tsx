@@ -654,7 +654,7 @@ export default function CharacterView() {
         </>
       ),
     },
-  ], [rows, refs]);
+  ], [rows, refs, submitting]);
 
   const globalFilter = (c: Character, q: string) =>
     [c.id, c.name, c.race, c.culture, c.profession]

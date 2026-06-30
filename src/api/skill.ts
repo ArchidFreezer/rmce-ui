@@ -15,7 +15,7 @@ const asFloat = (v: unknown) => {
 };
 const asTraitInt = (v: unknown): number => {
   const n = parseInt(String(v ?? ''), 10);
-  return Number.isFinite(n) ? Math.min(9, Math.max(1, n)) : 5;
+  return Number.isFinite(n) ? Math.min(100, Math.max(1, n)) : 50;
 };
 
 function asStringArray(v: unknown): string[] {
