@@ -7,6 +7,7 @@ import type {
 } from '../types';
 
 import {
+  asKoppenClimateSubgroupArray,
   asFeatureArray,
   asTerrainArray,
   asVegetationArray,
@@ -69,7 +70,7 @@ function fromJson(x: any): CultureType {
       ? x.skillCategorySkillRanks.map(rowCategoryRankFromJson)
       : [],
 
-    requiredClimates: x?.requiredClimates != null ? asStringArray(x?.requiredClimates) : undefined,
+    requiredClimates: x?.requiredClimates != null ? asKoppenClimateSubgroupArray(x?.requiredClimates) : undefined,
     requiredFeatures: x?.requiredFeatures != null ? asFeatureArray(x?.requiredFeatures) : undefined,
     requiredTerrains: x?.requiredTerrains != null ? asTerrainArray(x?.requiredTerrains) : undefined,
     requiredVegetations: x?.requiredVegetations != null ? asVegetationArray(x?.requiredVegetations) : undefined,

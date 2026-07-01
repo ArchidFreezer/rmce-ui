@@ -37,6 +37,7 @@ import {
   ENVIRONMENT_TERRAINS, asTerrainArray,
   ENVIRONMENT_VEGETATIONS, asVegetationArray,
   ENVIRONMENT_WATER_BODIES, asWaterBodyArray,
+  KOPPEN_CLIMATE_SUBGROUPS, asKoppenClimateSubgroupArray,
 } from '../../types/enum';
 
 import {
@@ -192,7 +193,7 @@ const fromVM = (vm: FormState): CultureType => ({
   skillCategoryRanks: vm.skillCategoryRanks.map(r => ({ id: r.id, value: Number(r.value) })),
   skillCategorySkillRanks: vm.skillCategorySkillRanks.map(r => ({ id: r.id, value: Number(r.value) })),
 
-  requiredClimates: vm.requiredClimates.length ? vm.requiredClimates.slice() : undefined,
+  requiredClimates: vm.requiredClimates.length ? asKoppenClimateSubgroupArray(vm.requiredClimates) : undefined,
 
   requiredFeatures: vm.requiredFeatures.length ? asFeatureArray(vm.requiredFeatures) : undefined,
   requiredTerrains: vm.requiredTerrains.length ? asTerrainArray(vm.requiredTerrains) : undefined,
@@ -301,7 +302,7 @@ export default function CultureTypeView() {
     [categories, sgNameById]
   );
   const climateOptions = useMemo(
-    () => climates.map(c => ({ value: c.id, label: c.name })),
+    () => KOPPEN_CLIMATE_SUBGROUPS.map(v => ({ value: v, label: v })),
     [climates]
   );
   const featureOptions = useMemo(
@@ -794,7 +795,6 @@ export default function CultureTypeView() {
                   rows={form.requiredClimates}
                   onChangeRows={(next) => setForm((s) => ({ ...s, requiredClimates: next }))}
                   options={climateOptions}
-                  loading={loading}
                   viewing={viewing}
                   columnLabel="Climate"
                   error={errors.requiredClimates}
