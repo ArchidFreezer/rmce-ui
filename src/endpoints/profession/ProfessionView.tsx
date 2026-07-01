@@ -160,7 +160,7 @@ const emptyVM = (): FormState => ({
   skillGroupSkillDevelopmentTypeChoices: [],
 
   skillCategoryCosts: [],
-  traits: { caster: 5, combat: 5, information: 5, stealth: 5, support: 5, utility: 5 },
+  traits: { caster: 50, combat: 50, information: 50, stealth: 50, support: 50, utility: 50 },
 });
 
 // ---------- VM converters ----------
@@ -217,7 +217,7 @@ const toVM = (x: Profession): FormState => ({
     category: r.category,
     cost: r.cost,
   })),
-  traits: x.traits ?? { caster: 5, combat: 5, information: 5, stealth: 5, support: 5, utility: 5 },
+  traits: x.traits ?? { caster: 50, combat: 50, information: 50, stealth: 50, support: 50, utility: 50 },
 });
 
 const fromVM = (vm: FormState): Profession => ({
@@ -922,7 +922,7 @@ export default function ProfessionView() {
                       }}
                     >
                       <option value="">Any</option>
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+                      {[10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((n) => (
                         <option key={n} value={n}>{n}+</option>
                       ))}
                     </select>
