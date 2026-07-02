@@ -1474,26 +1474,22 @@ export default function AnimalView() {
                 <>
                   {/* Climates */}
                   <div style={{ display: 'grid', gap: 12 }}>
-                    <IdListEditor
-                      title="Required Climate Groups"
-                      addButtonLabel='+ Add climate group'
-                      rows={form.locationClimateGroups}
-                      onChangeRows={(next) => setForm((state) => ({ ...state, locationClimateGroups: next as KoppenClimateGroup[] }))}
+                    <CheckboxGroup
+                      label="Climate Groups"
+                      value={form.locationClimateGroups}
+                      onChange={(next) => setForm((state) => ({ ...state, locationClimateGroups: next as KoppenClimateGroup[] }))}
                       options={climateGroupOptions}
-                      viewing={viewing}
-                      columnLabel="Climate"
+                      disabled={viewing}
+                      columns={3}
                     />
-
-                    <IdListEditor
-                      title="Required Climate Sub Groups"
-                      addButtonLabel='+ Add climate sub group'
-                      rows={form.locationClimateSubGroups}
-                      onChangeRows={(next) => setForm((state) => ({ ...state, locationClimateSubGroups: next as KoppenClimateSubgroup[] }))}
+                    <CheckboxGroup
+                      label="Climate Sub Groups"
+                      value={form.locationClimateSubGroups}
+                      onChange={(next) => setForm((state) => ({ ...state, locationClimateSubGroups: next as KoppenClimateSubgroup[] }))}
                       options={climateSubGroupOptions}
-                      viewing={viewing}
-                      columnLabel="Climate"
+                      disabled={viewing}
+                      columns={3}
                     />
-
                     <CheckboxGroup
                       label="Features"
                       value={form.locationFeatures}
