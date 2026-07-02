@@ -3,6 +3,8 @@ import type {
   EnvironmentTerrain,
   EnvironmentVegetation,
   EnvironmentWaterBody,
+  KoppenClimateGroup,
+  KoppenClimateSubgroup,
 } from './enum';
 
 export interface Location {
@@ -10,5 +12,6 @@ export interface Location {
   terrains: EnvironmentTerrain[];
   vegetation: EnvironmentVegetation[];
   waterSources: EnvironmentWaterBody[];
-  climates: string[];
+  climateGroups: KoppenClimateGroup[];
+  climateSubGroups: KoppenClimateSubgroup[];
 }
