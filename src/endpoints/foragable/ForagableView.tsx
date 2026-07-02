@@ -4,7 +4,6 @@ import {
   fetchForagables,
   upsertForagable,
   deleteForagable,
-  fetchClimates,
   fetchSkills,
 } from '../../api';
 
@@ -25,7 +24,6 @@ import {
 } from '../../components';
 
 import type {
-  Climate,
   Foragable,
   Skill,
 } from '../../types';
@@ -38,6 +36,10 @@ import {
   FORAGABLE_EFFECT_TYPES,
   FORAGABLE_PREPARATION_TYPES,
   MANOEUVRE_DIFFICULTIES,
+  KOPPEN_CLIMATE_GROUPS,
+  KOPPEN_CLIMATE_SUBGROUPS,
+  KoppenClimateGroup,
+  KoppenClimateSubgroup,
   type EnvironmentFeature,
   type EnvironmentTerrain,
   type EnvironmentVegetation,
@@ -84,7 +86,8 @@ type FormState = {
   locationTerrains: EnvironmentTerrain[];
   locationVegetation: EnvironmentVegetation[];
   locationWaterSources: EnvironmentWaterBody[];
-  locationClimates: string[];
+  locationClimateGroups: KoppenClimateGroup[];
+  locationClimateSubGroups: KoppenClimateSubgroup[];
 };
 
 type FormErrors = {
@@ -115,7 +118,8 @@ const emptyVM = (): FormState => ({
   locationTerrains: [],
   locationVegetation: [],
   locationWaterSources: [],
-  locationClimates: [],
+  locationClimateGroups: [],
+  locationClimateSubGroups: [],
 });
 
 const toVM = (x: Foragable): FormState => ({
@@ -134,7 +138,8 @@ const toVM = (x: Foragable): FormState => ({
   locationTerrains: x.location?.terrains ?? [],
   locationVegetation: x.location?.vegetation ?? [],
   locationWaterSources: x.location?.waterSources ?? [],
-  locationClimates: x.location?.climates ?? [],
+  locationClimateGroups: x.location?.climateGroups ?? [],
+  locationClimateSubGroups: x.location?.climateSubGroups ?? [],
   medicinalUses: x.medicinalUses ?? '',
   warning: x.warning ?? '',
 });
@@ -145,7 +150,8 @@ const fromVM = (vm: FormState): Foragable => {
     vm.locationTerrains.length > 0 ||
     vm.locationVegetation.length > 0 ||
     vm.locationWaterSources.length > 0 ||
-    vm.locationClimates.length > 0;
+    vm.locationClimateGroups.length > 0 ||
+    vm.locationClimateSubGroups.length > 0;
 
   return {
     id: vm.id.trim(),
@@ -165,7 +171,8 @@ const fromVM = (vm: FormState): Foragable => {
         terrains: vm.locationTerrains.slice(),
         vegetation: vm.locationVegetation.slice(),
         waterSources: vm.locationWaterSources.slice(),
-        climates: vm.locationClimates.slice(),
+        climateGroups: vm.locationClimateGroups.slice(),
+        climateSubGroups: vm.locationClimateSubGroups.slice(),
       }
       : undefined,
     medicinalUses: vm.medicinalUses.trim() || undefined,
@@ -186,7 +193,6 @@ export default function ForagableView() {
   const [errors, setErrors] = useState<FormErrors>({});
   const hasErrors = Object.values(errors).some(Boolean);
 
-  const [climates, setClimates] = useState<Climate[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
 
   const [query, setQuery] = useState('');
@@ -215,13 +221,11 @@ export default function ForagableView() {
   useEffect(() => {
     (async () => {
       try {
-        const [foragables, climateRows, skillRows] = await Promise.all([
+        const [foragables, skillRows] = await Promise.all([
           fetchForagables(),
-          fetchClimates(),
           fetchSkills(),
         ]);
         setRows(foragables);
-        setClimates(climateRows);
         setSkills(skillRows);
       } catch (e) {
         setError(String(e));
@@ -234,12 +238,6 @@ export default function ForagableView() {
   /* ------------------------------------------------------------------ */
   /* Options                                                           */
   /* ------------------------------------------------------------------ */
-
-  const climateNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const row of climates) map.set(row.id, row.name);
-    return map;
-  }, [climates]);
 
   const skillNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -254,11 +252,6 @@ export default function ForagableView() {
     [skills],
   );
 
-  const climateOptions = useMemo(
-    () => climates.map((row) => ({ value: row.id, label: row.name })),
-    [climates],
-  );
-
   const effectTypeOptions = useMemo(
     () => FORAGABLE_EFFECT_TYPES.map((value) => ({ value, label: value })),
     [],
@@ -271,6 +264,8 @@ export default function ForagableView() {
     () => FORAGABLE_PREPARATION_TYPES.map((value) => ({ value, label: value })),
     [],
   );
+  const climateGroupOptions = useMemo(() => KOPPEN_CLIMATE_GROUPS.map((value) => ({ value, label: value })), []);
+  const climateSubGroupOptions = useMemo(() => KOPPEN_CLIMATE_SUBGROUPS.map((value) => ({ value, label: value })), []);
   const featureOptions = useMemo(() => ENVIRONMENT_FEATURES.map((value) => ({ value, label: value })), []);
   const terrainOptions = useMemo(() => ENVIRONMENT_TERRAINS.map((value) => ({ value, label: value })), []);
   const vegetationOptions = useMemo(() => ENVIRONMENT_VEGETATIONS.map((value) => ({ value, label: value })), []);
@@ -741,74 +736,85 @@ export default function ForagableView() {
             </div>
 
             {/* Location */}
-            <section style={{ marginTop: 16, display: 'grid', gap: 16 }}>
-              <h4 style={{ margin: 0 }}>Location</h4>
+            <section style={{ marginTop: 12 }}>
               {viewing ? (
-                <>
-                  <div style={{ display: 'grid', gap: 6 }}>
-                    <span style={{ fontSize: 14 }}>Climates</span>
-                    <PillList
-                      values={form.locationClimates}
-                      getLabel={(value) => climateNameById.get(value) ?? value}
-                      emptyLabel="No climates"
-                    />
-                  </div>
-                  <div style={{ display: 'grid', gap: 6 }}>
-                    <span style={{ fontSize: 14 }}>Environment Tags</span>
-                    <PillList
-                      values={[
-                        ...form.locationFeatures.map((value) => `Feature: ${value}`),
-                        ...form.locationTerrains.map((value) => `Terrain: ${value}`),
-                        ...form.locationVegetation.map((value) => `Vegetation: ${value}`),
-                        ...form.locationWaterSources.map((value) => `Water Source: ${value}`),
-                      ]}
-                      emptyLabel="No environment tags"
-                    />
-                  </div>
-                </>
+                <div style={{ display: 'grid', gap: 6 }}>
+                  <span style={{ fontSize: 14 }}>Climate Tags</span>
+                  <PillList
+                    values={[
+                      ...form.locationClimateGroups.map((value) => `Climate Group: ${value}`),
+                      ...form.locationClimateSubGroups.map((value) => `Climate Sub Group: ${value}`),
+                    ]}
+                    emptyLabel="No climate tags"
+                  />
+                  <span style={{ fontSize: 14 }}>Environment Tags</span>
+                  <PillList
+                    values={[
+                      ...form.locationFeatures.map((value) => `Feature: ${value}`),
+                      ...form.locationTerrains.map((value) => `Terrain: ${value}`),
+                      ...form.locationVegetation.map((value) => `Vegetation: ${value}`),
+                      ...form.locationWaterSources.map((value) => `Water Source: ${value}`),
+                    ]}
+                    emptyLabel="No environment tags"
+                  />
+                </div>
               ) : (
                 <>
-                  <IdListEditor
-                    title="Climates"
-                    rows={form.locationClimates}
-                    onChangeRows={(next) => setForm((state) => ({ ...state, locationClimates: next }))}
-                    options={climateOptions}
-                    columnLabel="Climate"
-                    addButtonLabel="+ Add climate"
-                    viewing={viewing}
-                  />
-                  <CheckboxGroup
-                    label="Features"
-                    value={form.locationFeatures}
-                    onChange={(next) => setForm((state) => ({ ...state, locationFeatures: next as EnvironmentFeature[] }))}
-                    options={featureOptions}
-                    disabled={viewing}
-                    columns={3}
-                  />
-                  <CheckboxGroup
-                    label="Terrains"
-                    value={form.locationTerrains}
-                    onChange={(next) => setForm((state) => ({ ...state, locationTerrains: next as EnvironmentTerrain[] }))}
-                    options={terrainOptions}
-                    disabled={viewing}
-                    columns={3}
-                  />
-                  <CheckboxGroup
-                    label="Vegetation"
-                    value={form.locationVegetation}
-                    onChange={(next) => setForm((state) => ({ ...state, locationVegetation: next as EnvironmentVegetation[] }))}
-                    options={vegetationOptions}
-                    disabled={viewing}
-                    columns={3}
-                  />
-                  <CheckboxGroup
-                    label="Water Sources"
-                    value={form.locationWaterSources}
-                    onChange={(next) => setForm((state) => ({ ...state, locationWaterSources: next as EnvironmentWaterBody[] }))}
-                    options={waterBodyOptions}
-                    disabled={viewing}
-                    columns={3}
-                  />
+                  {/* Climates */}
+                  <div style={{ display: 'grid', gap: 6 }}>
+                    <IdListEditor
+                      title="Required Climate Groups"
+                      addButtonLabel='+ Add climate group'
+                      rows={form.locationClimateGroups}
+                      onChangeRows={(next) => setForm((state) => ({ ...state, locationClimateGroups: next as KoppenClimateGroup[] }))}
+                      options={climateGroupOptions}
+                      viewing={viewing}
+                      columnLabel="Climate"
+                    />
+
+                    <IdListEditor
+                      title="Required Climate Sub Groups"
+                      addButtonLabel='+ Add climate sub group'
+                      rows={form.locationClimateSubGroups}
+                      onChangeRows={(next) => setForm((state) => ({ ...state, locationClimateSubGroups: next as KoppenClimateSubgroup[] }))}
+                      options={climateSubGroupOptions}
+                      viewing={viewing}
+                      columnLabel="Climate"
+                    />
+
+                    <CheckboxGroup
+                      label="Features"
+                      value={form.locationFeatures}
+                      onChange={(next) => setForm((state) => ({ ...state, locationFeatures: next as EnvironmentFeature[] }))}
+                      options={featureOptions}
+                      disabled={viewing}
+                      columns={3}
+                    />
+                    <CheckboxGroup
+                      label="Terrains"
+                      value={form.locationTerrains}
+                      onChange={(next) => setForm((state) => ({ ...state, locationTerrains: next as EnvironmentTerrain[] }))}
+                      options={terrainOptions}
+                      disabled={viewing}
+                      columns={3}
+                    />
+                    <CheckboxGroup
+                      label="Vegetation"
+                      value={form.locationVegetation}
+                      onChange={(next) => setForm((state) => ({ ...state, locationVegetation: next as EnvironmentVegetation[] }))}
+                      options={vegetationOptions}
+                      disabled={viewing}
+                      columns={3}
+                    />
+                    <CheckboxGroup
+                      label="Water Sources"
+                      value={form.locationWaterSources}
+                      onChange={(next) => setForm((state) => ({ ...state, locationWaterSources: next as EnvironmentWaterBody[] }))}
+                      options={waterBodyOptions}
+                      disabled={viewing}
+                      columns={3}
+                    />
+                  </div>
                 </>
               )}
             </section>
