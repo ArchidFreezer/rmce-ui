@@ -6,7 +6,6 @@ export * from './attacktable';
 export * from './base';
 export * from './book';
 export * from './character';
-export * from './climate';
 export * from './creaturepace';
 export * from './culture';
 export * from './culturetype';

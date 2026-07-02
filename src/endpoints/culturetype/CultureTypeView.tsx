@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   fetchArmourTypes,
-  fetchClimates,
   fetchCultureTypes, upsertCultureType, deleteCultureType,
   fetchSkills,
   fetchSkillCategories,
@@ -24,7 +23,6 @@ import {
 
 import type {
   ArmourType,
-  Climate,
   CultureType,
   Skill,
   SkillCategory,
@@ -217,7 +215,6 @@ export default function CultureTypeView() {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [skillgroups, setSkillgroups] = useState<SkillGroup[]>([]);
   const [categories, setCategories] = useState<SkillCategory[]>([]);
-  const [climates, setClimates] = useState<Climate[]>([]);
 
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -240,14 +237,13 @@ export default function CultureTypeView() {
   useEffect(() => {
     (async () => {
       try {
-        const [tp, at, wt, s, c, g, cl] = await Promise.all([
+        const [tp, at, wt, s, c, g] = await Promise.all([
           fetchCultureTypes(),
           fetchArmourTypes(),
           fetchWeaponTypes(),
           fetchSkills(),
           fetchSkillCategories(),
           fetchSkillGroups(),
-          fetchClimates(),
         ]);
         setRows(tp);
         setArmours(at);
@@ -255,7 +251,6 @@ export default function CultureTypeView() {
         setSkills(s);
         setCategories(c);
         setSkillgroups(g);
-        setClimates(cl);
       } catch (e) {
         setError(String(e));
       } finally {
@@ -303,7 +298,7 @@ export default function CultureTypeView() {
   );
   const climateOptions = useMemo(
     () => KOPPEN_CLIMATE_SUBGROUPS.map(v => ({ value: v, label: v })),
-    [climates]
+    []
   );
   const featureOptions = useMemo(
     () => ENVIRONMENT_FEATURES.map(v => ({ value: v, label: v })),
