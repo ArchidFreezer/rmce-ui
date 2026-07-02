@@ -6,7 +6,6 @@ import {
   deleteAnimal,
   fetchArmourTypes,
   fetchAttackTables,
-  fetchClimates,
   fetchCreaturePaces,
   fetchDiseases,
   fetchPoisons,
@@ -34,13 +33,8 @@ import {
 import type {
   Animal,
   AnimalAttackBase,
-  AnimalConditionalAttack,
-  AnimalGroupAttack,
-  AnimalRangedAttack,
-  AnimalStandardAttack,
   ArmourType,
   AttackTable,
-  Climate,
   CreaturePace,
   Disease,
   Poison,
@@ -63,6 +57,10 @@ import {
   ENVIRONMENT_TERRAINS,
   ENVIRONMENT_VEGETATIONS,
   ENVIRONMENT_WATER_BODIES,
+  KOPPEN_CLIMATE_GROUPS,
+  KOPPEN_CLIMATE_SUBGROUPS,
+  KoppenClimateGroup,
+  KoppenClimateSubgroup,
   LEVEL_VARIANCE_TYPES,
   type AnimalOutlookType,
   type AttackSizeType,
@@ -159,7 +157,8 @@ type FormState = {
   locationTerrains: EnvironmentTerrain[];
   locationVegetation: EnvironmentVegetation[];
   locationWaterSources: EnvironmentWaterBody[];
-  locationClimates: string[];
+  locationClimateGroups: KoppenClimateGroup[];
+  locationClimateSubGroups: KoppenClimateSubgroup[];
   standardAttacks: StandardAttackVM[];
   rangedAttacks: RangedAttackVM[];
   conditionalAttacks: ConditionalAttackVM[];
@@ -248,7 +247,8 @@ const emptyVM = (): FormState => ({
   locationTerrains: [],
   locationVegetation: [],
   locationWaterSources: [],
-  locationClimates: [],
+  locationClimateGroups: [],
+  locationClimateSubGroups: [],
   standardAttacks: [],
   rangedAttacks: [],
   conditionalAttacks: [],
@@ -308,7 +308,8 @@ const toVM = (x: Animal): FormState => ({
   locationTerrains: x.location?.terrains ?? [],
   locationVegetation: x.location?.vegetation ?? [],
   locationWaterSources: x.location?.waterSources ?? [],
-  locationClimates: x.location?.climates ?? [],
+  locationClimateGroups: x.location?.climateGroups ?? [],
+  locationClimateSubGroups: x.location?.climateSubGroups ?? [],
   standardAttacks: (x.standardAttacks ?? []).map((attack) => ({
     ...toAttackBaseVM(attack, { includePoisonDisease: false, includeUseAllAttacks: true }),
     chanceMin: String(attack.chanceMin),
@@ -360,7 +361,8 @@ const fromVM = (vm: FormState): Animal => {
     vm.locationTerrains.length > 0 ||
     vm.locationVegetation.length > 0 ||
     vm.locationWaterSources.length > 0 ||
-    vm.locationClimates.length > 0;
+    vm.locationClimateGroups.length > 0 ||
+    vm.locationClimateSubGroups.length > 0;
 
   const hasEncounterRange =
     vm.encounterRangeMin.length > 0 || vm.encounterRangeMax.length > 0;
@@ -409,7 +411,8 @@ const fromVM = (vm: FormState): Animal => {
         terrains: vm.locationTerrains.slice(),
         vegetation: vm.locationVegetation.slice(),
         waterSources: vm.locationWaterSources.slice(),
-        climates: vm.locationClimates.slice(),
+        climateGroups: vm.locationClimateGroups.slice(),
+        climateSubGroups: vm.locationClimateSubGroups.slice(),
       }
       : undefined,
     standardAttacks: vm.standardAttacks.map((attack) => ({
@@ -451,7 +454,6 @@ export default function AnimalView() {
 
   const [armours, setArmours] = useState<ArmourType[]>([]);
   const [attackTables, setAttackTables] = useState<AttackTable[]>([]);
-  const [climates, setClimates] = useState<Climate[]>([]);
   const [paces, setPaces] = useState<CreaturePace[]>([]);
   const [diseases, setDiseases] = useState<Disease[]>([]);
   const [poisons, setPoisons] = useState<Poison[]>([]);
@@ -484,11 +486,10 @@ export default function AnimalView() {
   useEffect(() => {
     (async () => {
       try {
-        const [animals, armourRows, attackRows, climateRows, paceRows, diseaseRows, poisonRows, specialRows, treasureRows] = await Promise.all([
+        const [animals, armourRows, attackRows, paceRows, diseaseRows, poisonRows, specialRows, treasureRows] = await Promise.all([
           fetchAnimals(),
           fetchArmourTypes(),
           fetchAttackTables(),
-          fetchClimates(),
           fetchCreaturePaces(),
           fetchDiseases(),
           fetchPoisons(),
@@ -498,7 +499,6 @@ export default function AnimalView() {
         setRows(animals);
         setArmours(armourRows);
         setAttackTables(attackRows);
-        setClimates(climateRows);
         setPaces(paceRows);
         setDiseases(diseaseRows);
         setPoisons(poisonRows);
@@ -532,12 +532,6 @@ export default function AnimalView() {
     return map;
   }, [paces]);
 
-  const climateNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const row of climates) map.set(row.id, row.name);
-    return map;
-  }, [climates]);
-
   const treasureNameById = useMemo(() => {
     const map = new Map<string, string>();
     for (const row of treasureCodes) map.set(row.id, row.id);
@@ -552,9 +546,13 @@ export default function AnimalView() {
     () => attackTables.map((row) => ({ value: row.id, label: row.name })),
     [attackTables],
   );
-  const climateOptions = useMemo(
-    () => climates.map((row) => ({ value: row.id, label: row.name })),
-    [climates],
+  const climateGroupOptions = useMemo(
+    () => KOPPEN_CLIMATE_GROUPS.map((value) => ({ value, label: value })),
+    []
+  );
+  const climateSubGroupOptions = useMemo(
+    () => KOPPEN_CLIMATE_SUBGROUPS.map((value) => ({ value, label: value })),
+    []
   );
   const paceOptions = useMemo(
     () => paces.map((row) => ({ value: row.id, label: row.name })),
@@ -1450,30 +1448,17 @@ export default function AnimalView() {
               )}
             </section>
 
-            <section style={{ marginTop: 16, display: 'grid', gap: 16 }}>
-              <h4 style={{ margin: 0 }}>Location</h4>
+            <section style={{ marginTop: 12 }}>
               {viewing ? (
                 <div style={{ display: 'grid', gap: 6 }}>
-                  <span style={{ fontSize: 14 }}>Climates</span>
+                  <span style={{ fontSize: 14 }}>Climate Tags</span>
                   <PillList
-                    values={form.locationClimates}
-                    getLabel={(value) => climateNameById.get(value) ?? value}
-                    emptyLabel="No climates"
+                    values={[
+                      ...form.locationClimateGroups.map((value) => `Climate Group: ${value}`),
+                      ...form.locationClimateSubGroups.map((value) => `Climate Sub Group: ${value}`),
+                    ]}
+                    emptyLabel="No climate tags"
                   />
-                </div>
-              ) : (
-                <IdListEditor
-                  title="Climates"
-                  rows={form.locationClimates}
-                  onChangeRows={(next) => setForm((state) => ({ ...state, locationClimates: next }))}
-                  options={climateOptions}
-                  columnLabel="Climate"
-                  addButtonLabel="+ Add climate"
-                  viewing={viewing}
-                />
-              )}
-              {viewing ? (
-                <div style={{ display: 'grid', gap: 6 }}>
                   <span style={{ fontSize: 14 }}>Environment Tags</span>
                   <PillList
                     values={[
@@ -1487,38 +1472,61 @@ export default function AnimalView() {
                 </div>
               ) : (
                 <>
-                  <CheckboxGroup
-                    label="Features"
-                    value={form.locationFeatures}
-                    onChange={(next) => setForm((state) => ({ ...state, locationFeatures: next as EnvironmentFeature[] }))}
-                    options={featureOptions}
-                    disabled={viewing}
-                    columns={2}
-                  />
-                  <CheckboxGroup
-                    label="Terrains"
-                    value={form.locationTerrains}
-                    onChange={(next) => setForm((state) => ({ ...state, locationTerrains: next as EnvironmentTerrain[] }))}
-                    options={terrainOptions}
-                    disabled={viewing}
-                    columns={2}
-                  />
-                  <CheckboxGroup
-                    label="Vegetation"
-                    value={form.locationVegetation}
-                    onChange={(next) => setForm((state) => ({ ...state, locationVegetation: next as EnvironmentVegetation[] }))}
-                    options={vegetationOptions}
-                    disabled={viewing}
-                    columns={2}
-                  />
-                  <CheckboxGroup
-                    label="Water Sources"
-                    value={form.locationWaterSources}
-                    onChange={(next) => setForm((state) => ({ ...state, locationWaterSources: next as EnvironmentWaterBody[] }))}
-                    options={waterBodyOptions}
-                    disabled={viewing}
-                    columns={2}
-                  />
+                  {/* Climates */}
+                  <div style={{ display: 'grid', gap: 12 }}>
+                    <IdListEditor
+                      title="Required Climate Groups"
+                      addButtonLabel='+ Add climate group'
+                      rows={form.locationClimateGroups}
+                      onChangeRows={(next) => setForm((state) => ({ ...state, locationClimateGroups: next as KoppenClimateGroup[] }))}
+                      options={climateGroupOptions}
+                      viewing={viewing}
+                      columnLabel="Climate"
+                    />
+
+                    <IdListEditor
+                      title="Required Climate Sub Groups"
+                      addButtonLabel='+ Add climate sub group'
+                      rows={form.locationClimateSubGroups}
+                      onChangeRows={(next) => setForm((state) => ({ ...state, locationClimateSubGroups: next as KoppenClimateSubgroup[] }))}
+                      options={climateSubGroupOptions}
+                      viewing={viewing}
+                      columnLabel="Climate"
+                    />
+
+                    <CheckboxGroup
+                      label="Features"
+                      value={form.locationFeatures}
+                      onChange={(next) => setForm((state) => ({ ...state, locationFeatures: next as EnvironmentFeature[] }))}
+                      options={featureOptions}
+                      disabled={viewing}
+                      columns={3}
+                    />
+                    <CheckboxGroup
+                      label="Terrains"
+                      value={form.locationTerrains}
+                      onChange={(next) => setForm((state) => ({ ...state, locationTerrains: next as EnvironmentTerrain[] }))}
+                      options={terrainOptions}
+                      disabled={viewing}
+                      columns={3}
+                    />
+                    <CheckboxGroup
+                      label="Vegetation"
+                      value={form.locationVegetation}
+                      onChange={(next) => setForm((state) => ({ ...state, locationVegetation: next as EnvironmentVegetation[] }))}
+                      options={vegetationOptions}
+                      disabled={viewing}
+                      columns={3}
+                    />
+                    <CheckboxGroup
+                      label="Water Sources"
+                      value={form.locationWaterSources}
+                      onChange={(next) => setForm((state) => ({ ...state, locationWaterSources: next as EnvironmentWaterBody[] }))}
+                      options={waterBodyOptions}
+                      disabled={viewing}
+                      columns={3}
+                    />
+                  </div>
                 </>
               )}
             </section>
