@@ -12,6 +12,7 @@ export * from './LabeledInput';
 export * from './LabeledSelect';
 export * from './LanguageChoiceEditor';
 export * from './LanguageRankListEditor';
+export * from './LocationSection';
 export * from './MarkupPreview';
 export * from './MarkupPreviewList';
 export * from './SkillListEditor';
