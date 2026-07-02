@@ -56,8 +56,8 @@ export type TreasureValueType = 'Very Poor' | 'Poor' | 'Normal' | 'Rich' | 'Very
 export const TREASUREVALUETYPES: ReadonlyArray<TreasureValueType> = ['Very Poor', 'Poor', 'Normal', 'Rich', 'Very Rich', 'Special'] as const;
 
 /** Enum for Koppen climate groups  */
-export type KoppenClimateGroup = 'Tropical' | 'Dry' | 'Temperate' | 'Continental' | 'Polar';
-export const KOPPEN_CLIMATE_GROUPS: ReadonlyArray<KoppenClimateGroup> = ['Tropical', 'Dry', 'Temperate', 'Continental', 'Polar'] as const;
+export type KoppenClimateGroup = 'Tropical' | 'Dry' | 'Temperate' | 'Continental' | 'Polar' | 'Highland';
+export const KOPPEN_CLIMATE_GROUPS: ReadonlyArray<KoppenClimateGroup> = ['Tropical', 'Dry', 'Temperate', 'Continental', 'Polar', 'Highland'] as const;
 const KOPPEN_CLIMATE_GROUP_SET = new Set<KoppenClimateGroup>(KOPPEN_CLIMATE_GROUPS);
 export function asKoppenClimateGroupArray(v: unknown): KoppenClimateGroup[] {
   if (!Array.isArray(v)) return [];
@@ -69,8 +69,8 @@ export function asKoppenClimateGroupArray(v: unknown): KoppenClimateGroup[] {
   return out;
 }
 
-export type KoppenClimateSubgroup = 'Rainforest' | 'Monsoon' | 'Savanna' | 'Arid Desert' | 'Arid Steppe' | 'Mediterranean' | 'Humid Subtropical' | 'Marine West Coast' | 'Humid Continental Hot Summer' | 'Humid Continental Warm Summer' | 'Subarctic' | 'Tundra' | 'Ice Cap';
-export const KOPPEN_CLIMATE_SUBGROUPS: ReadonlyArray<KoppenClimateSubgroup> = ['Rainforest', 'Monsoon', 'Savanna', 'Arid Desert', 'Arid Steppe', 'Mediterranean', 'Humid Subtropical', 'Marine West Coast', 'Humid Continental Hot Summer', 'Humid Continental Warm Summer', 'Subarctic', 'Tundra', 'Ice Cap'] as const;
+export type KoppenClimateSubgroup = 'Rainforest' | 'Monsoon' | 'Savanna' | 'Arid Desert Cold' | 'Arid Desert Hot' | 'Arid Steppe Cold' | 'Arid Steppe Hot' | 'Mediterranean' | 'Humid Subtropical' | 'Marine West Coast' | 'Humid Continental Hot Summer' | 'Humid Continental Warm Summer' | 'Subarctic' | 'Tundra' | 'Ice Cap' | 'Highland';
+export const KOPPEN_CLIMATE_SUBGROUPS: ReadonlyArray<KoppenClimateSubgroup> = ['Rainforest', 'Monsoon', 'Savanna', 'Arid Desert Cold', 'Arid Desert Hot', 'Arid Steppe Cold', 'Arid Steppe Hot', 'Mediterranean', 'Humid Subtropical', 'Marine West Coast', 'Humid Continental Hot Summer', 'Humid Continental Warm Summer', 'Subarctic', 'Tundra', 'Ice Cap', 'Highland'] as const;
 const KOPPEN_CLIMATE_SUBGROUP_SET = new Set<KoppenClimateSubgroup>(KOPPEN_CLIMATE_SUBGROUPS);
 export function asKoppenClimateSubgroupArray(v: unknown): KoppenClimateSubgroup[] {
   if (!Array.isArray(v)) return [];
