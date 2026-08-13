@@ -51,14 +51,14 @@ function fromJson(x: any): Foragable {
     findDifficulty: asEnumValue(MANOEUVRE_DIFFICULTIES, x?.findDifficulty, 'Medium' as ManoeuvreDifficulty),
     addictionFactor: asInt(x?.addictionFactor),
     cost: x?.cost != null ? asString(x.cost) : undefined,
-    location: x?.location != null
+    habitat: x?.habitat != null
       ? {
-        features: asFeatureArray(x.location.features),
-        terrains: asTerrainArray(x.location.terrains),
-        vegetation: asVegetationArray(x.location.vegetation),
-        waterSources: asWaterBodyArray(x.location.waterSources),
-        climateGroups: asKoppenClimateGroupArray(x.location.climateGroups),
-        climateSubGroups: asKoppenClimateSubgroupArray(x.location.climateSubGroups),
+        features: asFeatureArray(x.habitat.features),
+        terrains: asTerrainArray(x.habitat.terrains),
+        vegetation: asVegetationArray(x.habitat.vegetation),
+        waterSources: asWaterBodyArray(x.habitat.waterSources),
+        climateGroups: asKoppenClimateGroupArray(x.habitat.climateGroups),
+        climateSubGroups: asKoppenClimateSubgroupArray(x.habitat.climateSubGroups),
       }
       : undefined,
   };

@@ -168,14 +168,14 @@ function fromJson(x: any): Animal {
     criticalModifiers: criticalModifiersFromJson(x?.criticalModifiers),
     encounterRange: rangeFromJson(x?.encounterRange),
     numberYoungRange: rangeFromJson(x?.numberYoungRange),
-    location: x?.location != null
+    habitat: x?.habitat != null
       ? {
-        features: asFeatureArray(x.location.features),
-        terrains: asTerrainArray(x.location.terrains),
-        vegetation: asVegetationArray(x.location.vegetation),
-        waterSources: asWaterBodyArray(x.location.waterSources),
-        climateGroups: asKoppenClimateGroupArray(x.location.climateGroups),
-        climateSubGroups: asKoppenClimateSubgroupArray(x.location.climateSubGroups),
+        features: asFeatureArray(x.habitat.features),
+        terrains: asTerrainArray(x.habitat.terrains),
+        vegetation: asVegetationArray(x.habitat.vegetation),
+        waterSources: asWaterBodyArray(x.habitat.waterSources),
+        climateGroups: asKoppenClimateGroupArray(x.habitat.climateGroups),
+        climateSubGroups: asKoppenClimateSubgroupArray(x.habitat.climateSubGroups),
       }
       : undefined,
     standardAttacks: Array.isArray(x?.standardAttacks) ? x.standardAttacks.map(standardAttackFromJson) : [],

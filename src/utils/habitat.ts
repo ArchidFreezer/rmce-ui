@@ -1,6 +1,6 @@
-import type { Location } from '../types';
+import type { Habitat } from '../types';
 
-export const emptyLocation = (): Location => ({
+export const emptyHabitat = (): Habitat => ({
   features: [],
   terrains: [],
   vegetation: [],

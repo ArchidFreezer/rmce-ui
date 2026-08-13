@@ -1,5 +1,5 @@
 import { Named } from './base';
-import { Location } from './location';
+import { Habitat } from './habitat';
 
 import type {
   AnimalOutlookType,
@@ -15,7 +15,7 @@ import type {
   LevelVarianceType,
 } from './enum';
 
-export type { Location as AnimalLocation };
+export type { Habitat as AnimalLocation };
 
 export interface AnimalRange {
   min: number;
@@ -83,7 +83,7 @@ export interface Animal extends Named {
   criticalModifiers: CriticalModifierType[];
   encounterRange?: AnimalRange | undefined;
   numberYoungRange?: AnimalRange | undefined;
-  location?: Location | undefined;
+  habitat?: Habitat | undefined;
   standardAttacks: AnimalStandardAttack[];
   rangedAttacks: AnimalRangedAttack[];
   conditionalAttacks: AnimalConditionalAttack[];

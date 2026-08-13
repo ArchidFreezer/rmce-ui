@@ -1,10 +1,10 @@
-import type { Location } from '../../types';
+import type { Habitat as c } from '../../types';
 import { PillList } from '../PillList';
 import { CheckboxGroup, type CheckboxOption } from './CheckboxGroup';
 
-export interface LocationSectionProps {
-  value: Location;
-  onChange: (next: Location) => void;
+export interface HabitatSectionProps {
+  value: c;
+  onChange: (next: c) => void;
   viewing?: boolean;
   climateGroupOptions: readonly CheckboxOption<string>[];
   climateSubGroupOptions: readonly CheckboxOption<string>[];
@@ -14,7 +14,7 @@ export interface LocationSectionProps {
   waterBodyOptions: readonly CheckboxOption<string>[];
 }
 
-export function LocationSection({
+export function HabitatSection({
   value,
   onChange,
   viewing = false,
@@ -24,9 +24,9 @@ export function LocationSection({
   terrainOptions,
   vegetationOptions,
   waterBodyOptions,
-}: LocationSectionProps) {
+}: HabitatSectionProps) {
   return (
-    <section style={{ marginTop: 12 }} aria-label="Location">
+    <section style={{ marginTop: 12 }} aria-label="Habitat">
       {viewing ? (
         <div style={{ display: 'grid', gap: 6 }}>
           <span style={{ fontSize: 14 }}>Climate Tags</span>
@@ -53,42 +53,42 @@ export function LocationSection({
           <CheckboxGroup<string>
             label="Climate Groups"
             value={value.climateGroups}
-            onChange={(next) => onChange({ ...value, climateGroups: next as Location['climateGroups'] })}
+            onChange={(next) => onChange({ ...value, climateGroups: next as c['climateGroups'] })}
             options={climateGroupOptions}
             columns={3}
           />
           <CheckboxGroup<string>
             label="Climate Sub Groups"
             value={value.climateSubGroups}
-            onChange={(next) => onChange({ ...value, climateSubGroups: next as Location['climateSubGroups'] })}
+            onChange={(next) => onChange({ ...value, climateSubGroups: next as c['climateSubGroups'] })}
             options={climateSubGroupOptions}
             columns={3}
           />
           <CheckboxGroup<string>
             label="Features"
             value={value.features}
-            onChange={(next) => onChange({ ...value, features: next as Location['features'] })}
+            onChange={(next) => onChange({ ...value, features: next as c['features'] })}
             options={featureOptions}
             columns={3}
           />
           <CheckboxGroup<string>
             label="Terrains"
             value={value.terrains}
-            onChange={(next) => onChange({ ...value, terrains: next as Location['terrains'] })}
+            onChange={(next) => onChange({ ...value, terrains: next as c['terrains'] })}
             options={terrainOptions}
             columns={3}
           />
           <CheckboxGroup<string>
             label="Vegetation"
             value={value.vegetation}
-            onChange={(next) => onChange({ ...value, vegetation: next as Location['vegetation'] })}
+            onChange={(next) => onChange({ ...value, vegetation: next as c['vegetation'] })}
             options={vegetationOptions}
             columns={3}
           />
           <CheckboxGroup<string>
             label="Water Sources"
             value={value.waterSources}
-            onChange={(next) => onChange({ ...value, waterSources: next as Location['waterSources'] })}
+            onChange={(next) => onChange({ ...value, waterSources: next as c['waterSources'] })}
             options={waterBodyOptions}
             columns={3}
           />

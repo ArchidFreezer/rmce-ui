@@ -7,7 +7,7 @@ import type {
   KoppenClimateSubgroup,
 } from './enum';
 
-export interface Location {
+export interface Habitat {
   features: EnvironmentFeature[];
   terrains: EnvironmentTerrain[];
   vegetation: EnvironmentVegetation[];
