@@ -1,5 +1,5 @@
 import { Named } from './base';
-import type { Location } from './location';
+import type { Habitat } from './habitat';
 import type {
   ForagableEffectType,
   ForagablePreparationType,
@@ -18,7 +18,7 @@ export interface Foragable extends Named {
   findDifficulty: ManoeuvreDifficulty;
   addictionFactor: number;
   cost?: string | undefined;
-  location?: Location | undefined;
+  habitat?: Habitat | undefined;
 }
 
 export interface ForagablesPayload {

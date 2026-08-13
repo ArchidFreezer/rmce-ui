@@ -23,7 +23,7 @@ import {
   LabeledInput,
   LabeledSelect,
   MarkupPreview,
-  LocationSection,
+  HabitatSection,
   Spinner,
   useConfirm,
   useToast,
@@ -36,7 +36,7 @@ import type {
   AttackTable,
   CreaturePace,
   Disease,
-  Location,
+  Habitat,
   Poison,
   SpecialAttackTable,
   TreasureCode,
@@ -81,7 +81,7 @@ import {
   sanitizeSignedInt,
   sanitizeUnsignedInt,
 } from '../../utils';
-import { emptyLocation } from '../../utils/location';
+import { emptyHabitat } from '../../utils/habitat';
 
 const prefix = 'ANIMAL_';
 const showDescriptionTooltipStorageKey = 'animal.showDescriptionTooltip';
@@ -148,7 +148,7 @@ type FormState = {
   encounterRangeMax: string;
   numberYoungRangeMin: string;
   numberYoungRangeMax: string;
-  location: Location;
+  habitat: Habitat;
   standardAttacks: StandardAttackVM[];
   rangedAttacks: RangedAttackVM[];
   conditionalAttacks: ConditionalAttackVM[];
@@ -233,7 +233,7 @@ const emptyVM = (): FormState => ({
   encounterRangeMax: '',
   numberYoungRangeMin: '',
   numberYoungRangeMax: '',
-  location: emptyLocation(),
+  habitat: emptyHabitat(),
   standardAttacks: [],
   rangedAttacks: [],
   conditionalAttacks: [],
@@ -289,7 +289,7 @@ const toVM = (x: Animal): FormState => ({
   encounterRangeMax: x.encounterRange != null ? String(x.encounterRange.max) : '',
   numberYoungRangeMin: x.numberYoungRange != null ? String(x.numberYoungRange.min) : '',
   numberYoungRangeMax: x.numberYoungRange != null ? String(x.numberYoungRange.max) : '',
-  location: x.location ?? emptyLocation(),
+  habitat: x.habitat ?? emptyHabitat(),
   standardAttacks: (x.standardAttacks ?? []).map((attack) => ({
     ...toAttackBaseVM(attack, { includePoisonDisease: false, includeUseAllAttacks: true }),
     chanceMin: String(attack.chanceMin),
@@ -337,12 +337,12 @@ function fromAttackBaseVM<T extends AttackBaseVM>(
 
 const fromVM = (vm: FormState): Animal => {
   const hasLocation =
-    vm.location.features.length > 0 ||
-    vm.location.terrains.length > 0 ||
-    vm.location.vegetation.length > 0 ||
-    vm.location.waterSources.length > 0 ||
-    vm.location.climateGroups.length > 0 ||
-    vm.location.climateSubGroups.length > 0;
+    vm.habitat.features.length > 0 ||
+    vm.habitat.terrains.length > 0 ||
+    vm.habitat.vegetation.length > 0 ||
+    vm.habitat.waterSources.length > 0 ||
+    vm.habitat.climateGroups.length > 0 ||
+    vm.habitat.climateSubGroups.length > 0;
 
   const hasEncounterRange =
     vm.encounterRangeMin.length > 0 || vm.encounterRangeMax.length > 0;
@@ -385,14 +385,14 @@ const fromVM = (vm: FormState): Animal => {
         max: Number(vm.numberYoungRangeMax),
       }
       : undefined,
-    location: hasLocation
+    habitat: hasLocation
       ? {
-        features: vm.location.features.slice(),
-        terrains: vm.location.terrains.slice(),
-        vegetation: vm.location.vegetation.slice(),
-        waterSources: vm.location.waterSources.slice(),
-        climateGroups: vm.location.climateGroups.slice(),
-        climateSubGroups: vm.location.climateSubGroups.slice(),
+        features: vm.habitat.features.slice(),
+        terrains: vm.habitat.terrains.slice(),
+        vegetation: vm.habitat.vegetation.slice(),
+        waterSources: vm.habitat.waterSources.slice(),
+        climateGroups: vm.habitat.climateGroups.slice(),
+        climateSubGroups: vm.habitat.climateSubGroups.slice(),
       }
       : undefined,
     standardAttacks: vm.standardAttacks.map((attack) => ({
@@ -1428,9 +1428,9 @@ export default function AnimalView() {
               )}
             </section>
 
-            <LocationSection
-              value={form.location}
-              onChange={(next) => setForm((state) => ({ ...state, location: next }))}
+            <HabitatSection
+              value={form.habitat}
+              onChange={(next) => setForm((state) => ({ ...state, habitat: next }))}
               viewing={viewing}
               climateGroupOptions={climateGroupOptions}
               climateSubGroupOptions={climateSubGroupOptions}

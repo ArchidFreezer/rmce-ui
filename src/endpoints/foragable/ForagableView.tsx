@@ -15,7 +15,7 @@ import {
   LabeledInput,
   LabeledSelect,
   MarkupPreview,
-  LocationSection,
+  HabitatSection,
   Spinner,
   useConfirm,
   useToast,
@@ -23,7 +23,7 @@ import {
 
 import type {
   Foragable,
-  Location,
+  Habitat,
   Skill,
 } from '../../types';
 
@@ -48,7 +48,7 @@ import {
   makeIDOnChange,
   sanitizeUnsignedInt,
 } from '../../utils';
-import { emptyLocation } from '../../utils/location';
+import { emptyHabitat } from '../../utils/habitat';
 
 const prefix = 'FORAGABLE_';
 
@@ -76,7 +76,7 @@ type FormState = {
   findDifficulty: ManoeuvreDifficulty;
   addictionFactor: string;
   cost: string;
-  location: Location;
+  habitat: Habitat;
 };
 
 type FormErrors = {
@@ -103,7 +103,7 @@ const emptyVM = (): FormState => ({
   preparationType: 'Ingest',
   addictionFactor: '0',
   cost: '',
-  location: emptyLocation(),
+  habitat: emptyHabitat(),
 });
 
 const toVM = (x: Foragable): FormState => ({
@@ -118,19 +118,19 @@ const toVM = (x: Foragable): FormState => ({
   preparationType: x.preparationType,
   addictionFactor: String(x.addictionFactor),
   cost: x.cost ?? '',
-  location: x.location ?? emptyLocation(),
+  habitat: x.habitat ?? emptyHabitat(),
   medicinalUses: x.medicinalUses ?? '',
   warning: x.warning ?? '',
 });
 
 const fromVM = (vm: FormState): Foragable => {
-  const hasLocation =
-    vm.location.features.length > 0 ||
-    vm.location.terrains.length > 0 ||
-    vm.location.vegetation.length > 0 ||
-    vm.location.waterSources.length > 0 ||
-    vm.location.climateGroups.length > 0 ||
-    vm.location.climateSubGroups.length > 0;
+  const hasHabitat =
+    vm.habitat.features.length > 0 ||
+    vm.habitat.terrains.length > 0 ||
+    vm.habitat.vegetation.length > 0 ||
+    vm.habitat.waterSources.length > 0 ||
+    vm.habitat.climateGroups.length > 0 ||
+    vm.habitat.climateSubGroups.length > 0;
 
   return {
     id: vm.id.trim(),
@@ -144,14 +144,14 @@ const fromVM = (vm: FormState): Foragable => {
     preparationType: vm.preparationType,
     addictionFactor: Number(vm.addictionFactor),
     cost: vm.cost.trim() || undefined,
-    location: hasLocation
+    habitat: hasHabitat
       ? {
-        features: vm.location.features.slice(),
-        terrains: vm.location.terrains.slice(),
-        vegetation: vm.location.vegetation.slice(),
-        waterSources: vm.location.waterSources.slice(),
-        climateGroups: vm.location.climateGroups.slice(),
-        climateSubGroups: vm.location.climateSubGroups.slice(),
+        features: vm.habitat.features.slice(),
+        terrains: vm.habitat.terrains.slice(),
+        vegetation: vm.habitat.vegetation.slice(),
+        waterSources: vm.habitat.waterSources.slice(),
+        climateGroups: vm.habitat.climateGroups.slice(),
+        climateSubGroups: vm.habitat.climateSubGroups.slice(),
       }
       : undefined,
     medicinalUses: vm.medicinalUses.trim() || undefined,
@@ -714,9 +714,9 @@ export default function ForagableView() {
               />
             </div>
 
-            <LocationSection
-              value={form.location}
-              onChange={(next) => setForm((state) => ({ ...state, location: next }))}
+            <HabitatSection
+              value={form.habitat}
+              onChange={(next) => setForm((state) => ({ ...state, habitat: next }))}
               viewing={viewing}
               climateGroupOptions={climateGroupOptions}
               climateSubGroupOptions={climateSubGroupOptions}
