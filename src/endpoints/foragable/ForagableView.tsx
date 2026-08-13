@@ -4,29 +4,26 @@ import {
   fetchForagables,
   upsertForagable,
   deleteForagable,
-  fetchClimates,
   fetchSkills,
 } from '../../api';
 
 import {
-  CheckboxGroup,
   DataTable,
   type DataTableHandle,
   DataTableSearchInput,
   type ColumnDef,
-  IdListEditor,
   LabeledInput,
   LabeledSelect,
   MarkupPreview,
-  PillList,
+  LocationSection,
   Spinner,
   useConfirm,
   useToast,
 } from '../../components';
 
 import type {
-  Climate,
   Foragable,
+  Location,
   Skill,
 } from '../../types';
 
@@ -38,10 +35,8 @@ import {
   FORAGABLE_EFFECT_TYPES,
   FORAGABLE_PREPARATION_TYPES,
   MANOEUVRE_DIFFICULTIES,
-  type EnvironmentFeature,
-  type EnvironmentTerrain,
-  type EnvironmentVegetation,
-  type EnvironmentWaterBody,
+  KOPPEN_CLIMATE_GROUPS,
+  KOPPEN_CLIMATE_SUBGROUPS,
   type ForagableEffectType,
   type ForagablePreparationType,
   type ManoeuvreDifficulty,
@@ -53,6 +48,7 @@ import {
   makeIDOnChange,
   sanitizeUnsignedInt,
 } from '../../utils';
+import { emptyLocation } from '../../utils/location';
 
 const prefix = 'FORAGABLE_';
 
@@ -80,11 +76,7 @@ type FormState = {
   findDifficulty: ManoeuvreDifficulty;
   addictionFactor: string;
   cost: string;
-  locationFeatures: EnvironmentFeature[];
-  locationTerrains: EnvironmentTerrain[];
-  locationVegetation: EnvironmentVegetation[];
-  locationWaterSources: EnvironmentWaterBody[];
-  locationClimates: string[];
+  location: Location;
 };
 
 type FormErrors = {
@@ -111,11 +103,7 @@ const emptyVM = (): FormState => ({
   preparationType: 'Ingest',
   addictionFactor: '0',
   cost: '',
-  locationFeatures: [],
-  locationTerrains: [],
-  locationVegetation: [],
-  locationWaterSources: [],
-  locationClimates: [],
+  location: emptyLocation(),
 });
 
 const toVM = (x: Foragable): FormState => ({
@@ -130,22 +118,19 @@ const toVM = (x: Foragable): FormState => ({
   preparationType: x.preparationType,
   addictionFactor: String(x.addictionFactor),
   cost: x.cost ?? '',
-  locationFeatures: x.location?.features ?? [],
-  locationTerrains: x.location?.terrains ?? [],
-  locationVegetation: x.location?.vegetation ?? [],
-  locationWaterSources: x.location?.waterSources ?? [],
-  locationClimates: x.location?.climates ?? [],
+  location: x.location ?? emptyLocation(),
   medicinalUses: x.medicinalUses ?? '',
   warning: x.warning ?? '',
 });
 
 const fromVM = (vm: FormState): Foragable => {
   const hasLocation =
-    vm.locationFeatures.length > 0 ||
-    vm.locationTerrains.length > 0 ||
-    vm.locationVegetation.length > 0 ||
-    vm.locationWaterSources.length > 0 ||
-    vm.locationClimates.length > 0;
+    vm.location.features.length > 0 ||
+    vm.location.terrains.length > 0 ||
+    vm.location.vegetation.length > 0 ||
+    vm.location.waterSources.length > 0 ||
+    vm.location.climateGroups.length > 0 ||
+    vm.location.climateSubGroups.length > 0;
 
   return {
     id: vm.id.trim(),
@@ -161,11 +146,12 @@ const fromVM = (vm: FormState): Foragable => {
     cost: vm.cost.trim() || undefined,
     location: hasLocation
       ? {
-        features: vm.locationFeatures.slice(),
-        terrains: vm.locationTerrains.slice(),
-        vegetation: vm.locationVegetation.slice(),
-        waterSources: vm.locationWaterSources.slice(),
-        climates: vm.locationClimates.slice(),
+        features: vm.location.features.slice(),
+        terrains: vm.location.terrains.slice(),
+        vegetation: vm.location.vegetation.slice(),
+        waterSources: vm.location.waterSources.slice(),
+        climateGroups: vm.location.climateGroups.slice(),
+        climateSubGroups: vm.location.climateSubGroups.slice(),
       }
       : undefined,
     medicinalUses: vm.medicinalUses.trim() || undefined,
@@ -186,7 +172,6 @@ export default function ForagableView() {
   const [errors, setErrors] = useState<FormErrors>({});
   const hasErrors = Object.values(errors).some(Boolean);
 
-  const [climates, setClimates] = useState<Climate[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
 
   const [query, setQuery] = useState('');
@@ -215,13 +200,11 @@ export default function ForagableView() {
   useEffect(() => {
     (async () => {
       try {
-        const [foragables, climateRows, skillRows] = await Promise.all([
+        const [foragables, skillRows] = await Promise.all([
           fetchForagables(),
-          fetchClimates(),
           fetchSkills(),
         ]);
         setRows(foragables);
-        setClimates(climateRows);
         setSkills(skillRows);
       } catch (e) {
         setError(String(e));
@@ -234,12 +217,6 @@ export default function ForagableView() {
   /* ------------------------------------------------------------------ */
   /* Options                                                           */
   /* ------------------------------------------------------------------ */
-
-  const climateNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const row of climates) map.set(row.id, row.name);
-    return map;
-  }, [climates]);
 
   const skillNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -254,11 +231,6 @@ export default function ForagableView() {
     [skills],
   );
 
-  const climateOptions = useMemo(
-    () => climates.map((row) => ({ value: row.id, label: row.name })),
-    [climates],
-  );
-
   const effectTypeOptions = useMemo(
     () => FORAGABLE_EFFECT_TYPES.map((value) => ({ value, label: value })),
     [],
@@ -271,96 +243,12 @@ export default function ForagableView() {
     () => FORAGABLE_PREPARATION_TYPES.map((value) => ({ value, label: value })),
     [],
   );
+  const climateGroupOptions = useMemo(() => KOPPEN_CLIMATE_GROUPS.map((value) => ({ value, label: value })), []);
+  const climateSubGroupOptions = useMemo(() => KOPPEN_CLIMATE_SUBGROUPS.map((value) => ({ value, label: value })), []);
   const featureOptions = useMemo(() => ENVIRONMENT_FEATURES.map((value) => ({ value, label: value })), []);
   const terrainOptions = useMemo(() => ENVIRONMENT_TERRAINS.map((value) => ({ value, label: value })), []);
   const vegetationOptions = useMemo(() => ENVIRONMENT_VEGETATIONS.map((value) => ({ value, label: value })), []);
   const waterBodyOptions = useMemo(() => ENVIRONMENT_WATER_BODIES.map((value) => ({ value, label: value })), []);
-
-  /* ------------------------------------------------------------------ */
-  /* Validation                                                         */
-  /* ------------------------------------------------------------------ */
-
-  const computeErrors = (draft: FormState): FormErrors => {
-    const next: FormErrors = {};
-
-    const id = draft.id.trim();
-    if (!id) next.id = 'ID is required';
-    else if (!editingId && rows.some((row) => row.id === id)) next.id = `ID "${id}" already exists`;
-    else if (!isValidID(id, prefix)) next.id = `ID must start with "${prefix}" and contain additional characters`;
-
-    if (!draft.name.trim()) next.name = 'Name is required';
-
-    if (!draft.loreSkill) next.loreSkill = 'Lore skill is required';
-    else if (!(FORAGABLE_LORE_SKILL_IDS as string[]).includes(draft.loreSkill)) next.loreSkill = 'Pick a valid lore skill';
-
-    if (!draft.effectType) next.effectType = 'Effect type is required';
-    if (!draft.findDifficulty) next.findDifficulty = 'Difficulty is required';
-    if (!draft.preparationType) next.preparationType = 'Preparation type is required';
-
-    const af = draft.addictionFactor.trim();
-    if (!isValidUnsignedInt(af)) {
-      next.addictionFactor = 'Addiction factor must be an integer between 0 and 100';
-    } else {
-      const n = Number(af);
-      if (n > 100) next.addictionFactor = 'Addiction factor must be between 0 and 100';
-    }
-
-    return next;
-  };
-
-  useEffect(() => {
-    if (!showForm || viewing) return;
-    setErrors(computeErrors(form));
-  }, [form, showForm, viewing]);
-
-  /* ------------------------------------------------------------------ */
-  /* Table                                                              */
-  /* ------------------------------------------------------------------ */
-
-  const columns: ColumnDef<Foragable>[] = useMemo(() => [
-    { id: 'id', header: 'ID', accessor: (row) => row.id, sortType: 'string', minWidth: 260 },
-    {
-      id: 'loreSkill',
-      header: 'Lore Skill',
-      accessor: (row) => skillNameById.get(row.loreSkill) ?? row.loreSkill,
-      sortType: 'string',
-      minWidth: 160,
-      render: (row) => skillNameById.get(row.loreSkill) ?? row.loreSkill,
-    },
-    { id: 'name', header: 'Name', accessor: (row) => row.name, sortType: 'string', minWidth: 180 },
-    { id: 'effectType', header: 'Effect Type', accessor: (row) => row.effectType, sortType: 'string', minWidth: 200 },
-    { id: 'difficulty', header: 'Difficulty', accessor: (row) => row.findDifficulty, sortType: 'string', minWidth: 120 },
-    { id: 'preparationType', header: 'Preparation', accessor: (row) => row.preparationType, sortType: 'string', minWidth: 120 },
-    {
-      id: 'actions',
-      header: 'Actions',
-      sortable: false,
-      width: 360,
-      render: (row) => (
-        <>
-          <button onClick={() => startView(row)}>View</button>
-          <button onClick={() => startEdit(row)}>Edit</button>
-          <button onClick={() => startDuplicate(row)}>Duplicate</button>
-          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
-        </>
-      ),
-    },
-  ], [skillNameById]);
-
-  const globalFilter = (row: Foragable, q: string) =>
-    [row.id, row.name, row.otherNames ?? '']
-      .some((value) => String(value).toLowerCase().includes(q.toLowerCase()));
-
-  const filteredRows = useMemo(
-    () => rows.filter((row) => !effectTypeFilter || row.effectType === effectTypeFilter),
-    [rows, effectTypeFilter],
-  );
-
-  const hasActiveFilters = effectTypeFilter !== '';
-
-  useEffect(() => {
-    setPage(1);
-  }, [effectTypeFilter]);
 
   /* ------------------------------------------------------------------ */
   /* Actions                                                            */
@@ -493,6 +381,92 @@ export default function ForagableView() {
       setSubmitting(false);
     }
   };
+
+  /* ------------------------------------------------------------------ */
+  /* Validation                                                         */
+  /* ------------------------------------------------------------------ */
+
+  const computeErrors = (draft: FormState): FormErrors => {
+    const next: FormErrors = {};
+
+    const id = draft.id.trim();
+    if (!id) next.id = 'ID is required';
+    else if (!editingId && rows.some((row) => row.id === id)) next.id = `ID "${id}" already exists`;
+    else if (!isValidID(id, prefix)) next.id = `ID must start with "${prefix}" and contain additional characters`;
+
+    if (!draft.name.trim()) next.name = 'Name is required';
+
+    if (!draft.loreSkill) next.loreSkill = 'Lore skill is required';
+    else if (!(FORAGABLE_LORE_SKILL_IDS as string[]).includes(draft.loreSkill)) next.loreSkill = 'Pick a valid lore skill';
+
+    if (!draft.effectType) next.effectType = 'Effect type is required';
+    if (!draft.findDifficulty) next.findDifficulty = 'Difficulty is required';
+    if (!draft.preparationType) next.preparationType = 'Preparation type is required';
+
+    const af = draft.addictionFactor.trim();
+    if (!isValidUnsignedInt(af)) {
+      next.addictionFactor = 'Addiction factor must be an integer between 0 and 100';
+    } else {
+      const n = Number(af);
+      if (n > 100) next.addictionFactor = 'Addiction factor must be between 0 and 100';
+    }
+
+    return next;
+  };
+
+  useEffect(() => {
+    if (!showForm || viewing) return;
+    setErrors(computeErrors(form));
+  }, [form, showForm, viewing]);
+
+  /* ------------------------------------------------------------------ */
+  /* Table                                                              */
+  /* ------------------------------------------------------------------ */
+
+  const columns: ColumnDef<Foragable>[] = useMemo(() => [
+    { id: 'id', header: 'ID', accessor: (row) => row.id, sortType: 'string', minWidth: 260 },
+    {
+      id: 'loreSkill',
+      header: 'Lore Skill',
+      accessor: (row) => skillNameById.get(row.loreSkill) ?? row.loreSkill,
+      sortType: 'string',
+      minWidth: 160,
+      render: (row) => skillNameById.get(row.loreSkill) ?? row.loreSkill,
+    },
+    { id: 'name', header: 'Name', accessor: (row) => row.name, sortType: 'string', minWidth: 180 },
+    { id: 'effectType', header: 'Effect Type', accessor: (row) => row.effectType, sortType: 'string', minWidth: 200 },
+    { id: 'difficulty', header: 'Difficulty', accessor: (row) => row.findDifficulty, sortType: 'string', minWidth: 120 },
+    { id: 'preparationType', header: 'Preparation', accessor: (row) => row.preparationType, sortType: 'string', minWidth: 120 },
+    {
+      id: 'actions',
+      header: 'Actions',
+      sortable: false,
+      width: 360,
+      render: (row) => (
+        <>
+          <button onClick={() => startView(row)}>View</button>
+          <button onClick={() => startEdit(row)}>Edit</button>
+          <button onClick={() => startDuplicate(row)}>Duplicate</button>
+          <button onClick={() => onDelete(row)} style={{ color: '#b00020' }}>Delete</button>
+        </>
+      ),
+    },
+  ], [skillNameById]);
+
+  const globalFilter = (row: Foragable, q: string) =>
+    [row.id, row.name, row.otherNames ?? '']
+      .some((value) => String(value).toLowerCase().includes(q.toLowerCase()));
+
+  const filteredRows = useMemo(
+    () => rows.filter((row) => !effectTypeFilter || row.effectType === effectTypeFilter),
+    [rows, effectTypeFilter],
+  );
+
+  const hasActiveFilters = effectTypeFilter !== '';
+
+  useEffect(() => {
+    setPage(1);
+  }, [effectTypeFilter]);
 
   /* ------------------------------------------------------------------ */
   /* Render                                                             */
@@ -740,78 +714,17 @@ export default function ForagableView() {
               />
             </div>
 
-            {/* Location */}
-            <section style={{ marginTop: 16, display: 'grid', gap: 16 }}>
-              <h4 style={{ margin: 0 }}>Location</h4>
-              {viewing ? (
-                <>
-                  <div style={{ display: 'grid', gap: 6 }}>
-                    <span style={{ fontSize: 14 }}>Climates</span>
-                    <PillList
-                      values={form.locationClimates}
-                      getLabel={(value) => climateNameById.get(value) ?? value}
-                      emptyLabel="No climates"
-                    />
-                  </div>
-                  <div style={{ display: 'grid', gap: 6 }}>
-                    <span style={{ fontSize: 14 }}>Environment Tags</span>
-                    <PillList
-                      values={[
-                        ...form.locationFeatures.map((value) => `Feature: ${value}`),
-                        ...form.locationTerrains.map((value) => `Terrain: ${value}`),
-                        ...form.locationVegetation.map((value) => `Vegetation: ${value}`),
-                        ...form.locationWaterSources.map((value) => `Water Source: ${value}`),
-                      ]}
-                      emptyLabel="No environment tags"
-                    />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <IdListEditor
-                    title="Climates"
-                    rows={form.locationClimates}
-                    onChangeRows={(next) => setForm((state) => ({ ...state, locationClimates: next }))}
-                    options={climateOptions}
-                    columnLabel="Climate"
-                    addButtonLabel="+ Add climate"
-                    viewing={viewing}
-                  />
-                  <CheckboxGroup
-                    label="Features"
-                    value={form.locationFeatures}
-                    onChange={(next) => setForm((state) => ({ ...state, locationFeatures: next as EnvironmentFeature[] }))}
-                    options={featureOptions}
-                    disabled={viewing}
-                    columns={3}
-                  />
-                  <CheckboxGroup
-                    label="Terrains"
-                    value={form.locationTerrains}
-                    onChange={(next) => setForm((state) => ({ ...state, locationTerrains: next as EnvironmentTerrain[] }))}
-                    options={terrainOptions}
-                    disabled={viewing}
-                    columns={3}
-                  />
-                  <CheckboxGroup
-                    label="Vegetation"
-                    value={form.locationVegetation}
-                    onChange={(next) => setForm((state) => ({ ...state, locationVegetation: next as EnvironmentVegetation[] }))}
-                    options={vegetationOptions}
-                    disabled={viewing}
-                    columns={3}
-                  />
-                  <CheckboxGroup
-                    label="Water Sources"
-                    value={form.locationWaterSources}
-                    onChange={(next) => setForm((state) => ({ ...state, locationWaterSources: next as EnvironmentWaterBody[] }))}
-                    options={waterBodyOptions}
-                    disabled={viewing}
-                    columns={3}
-                  />
-                </>
-              )}
-            </section>
+            <LocationSection
+              value={form.location}
+              onChange={(next) => setForm((state) => ({ ...state, location: next }))}
+              viewing={viewing}
+              climateGroupOptions={climateGroupOptions}
+              climateSubGroupOptions={climateSubGroupOptions}
+              featureOptions={featureOptions}
+              terrainOptions={terrainOptions}
+              vegetationOptions={vegetationOptions}
+              waterBodyOptions={waterBodyOptions}
+            />
 
             {/* Action buttons */}
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>

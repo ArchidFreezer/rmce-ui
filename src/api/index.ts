@@ -6,7 +6,6 @@ export * from './book';
 export * from './character';
 export * from './characterworkflow';
 export * from './client';
-export * from './climate';
 export * from './counts';
 export * from './creaturepace';
 export * from './culture';

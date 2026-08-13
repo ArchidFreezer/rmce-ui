@@ -9,6 +9,8 @@ import {
   FORAGABLE_EFFECT_TYPES,
   FORAGABLE_PREPARATION_TYPES,
   MANOEUVRE_DIFFICULTIES,
+  asKoppenClimateGroupArray,
+  asKoppenClimateSubgroupArray,
   asFeatureArray,
   asTerrainArray,
   asVegetationArray,
@@ -55,7 +57,8 @@ function fromJson(x: any): Foragable {
         terrains: asTerrainArray(x.location.terrains),
         vegetation: asVegetationArray(x.location.vegetation),
         waterSources: asWaterBodyArray(x.location.waterSources),
-        climates: asStringArray(x.location.climates),
+        climateGroups: asKoppenClimateGroupArray(x.location.climateGroups),
+        climateSubGroups: asKoppenClimateSubgroupArray(x.location.climateSubGroups),
       }
       : undefined,
   };

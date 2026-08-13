@@ -1,6 +1,6 @@
 // src/types/culturetype.ts
 import { Named, PersistentValue, SkillValue } from './base';
-import { EnvironmentFeature, EnvironmentTerrain, EnvironmentVegetation, EnvironmentWaterBody } from './enum';
+import { EnvironmentFeature, EnvironmentTerrain, EnvironmentVegetation, EnvironmentWaterBody, KoppenClimateSubgroup } from './enum';
 
 export interface CultureType extends Named {
   // Long HTML/text fields
@@ -36,10 +36,8 @@ export interface CultureType extends Named {
   /** per category; value is integer (as provided by your JSON) */
   skillCategorySkillRanks: PersistentValue[];
 
-  /** optional references to ClimateType.id */
-  requiredClimates?: string[] | undefined;
-
   /** enums from src/types/enum */
+  requiredClimates?: KoppenClimateSubgroup[] | undefined;
   requiredFeatures?: EnvironmentFeature[] | undefined;      // EnvironmentFeature
   requiredTerrains?: EnvironmentTerrain[] | undefined;      // EnvironmentTerrain
   requiredVegetations?: EnvironmentVegetation[] | undefined;   // EnvironmentVegetation

@@ -8,6 +8,8 @@ import type {
 
 import {
   ANIMAL_OUTLOOK_TYPES,
+  asKoppenClimateGroupArray,
+  asKoppenClimateSubgroupArray,
   asFeatureArray,
   asTerrainArray,
   asVegetationArray,
@@ -172,7 +174,8 @@ function fromJson(x: any): Animal {
         terrains: asTerrainArray(x.location.terrains),
         vegetation: asVegetationArray(x.location.vegetation),
         waterSources: asWaterBodyArray(x.location.waterSources),
-        climates: asStringArray(x.location.climates),
+        climateGroups: asKoppenClimateGroupArray(x.location.climateGroups),
+        climateSubGroups: asKoppenClimateSubgroupArray(x.location.climateSubGroups),
       }
       : undefined,
     standardAttacks: Array.isArray(x?.standardAttacks) ? x.standardAttacks.map(standardAttackFromJson) : [],
